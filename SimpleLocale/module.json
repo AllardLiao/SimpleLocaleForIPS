@@ -8,5 +8,13 @@
     "childRequirements": [],
     "implemented": [],
     "prefix": "IPSSL",
-    "url": "https://github.com/AllardLiao/SimpleLocaleForIPS/tree/stable/SimpleLocale"
+    "url": "https://github.com/AllardLiao/SimpleLocaleForIPS/tree/stable/SimpleLocale",
+    "translations": {
+        "de": {
+            "Simple Locale": "Simple Locale"
+        },
+        "en": {
+            "Simple Locale": "Simple Locale"
+        }
+    }
 }
