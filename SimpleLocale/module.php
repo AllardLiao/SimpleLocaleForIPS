@@ -118,10 +118,12 @@ class SimpleLocale extends IPSModuleStrict
 
                 case self::propertyObjectNames:
                     $element['columns'] = $this->BuildListColumns($sourceLanguage, $targetLanguages, false);
+                    $element['values'] = $this->DecodeRows(self::propertyObjectNames);
                     break;
 
                 case self::propertyObjectTexts:
                     $element['columns'] = $this->BuildListColumns($sourceLanguage, $targetLanguages, true);
+                    $element['values'] = $this->DecodeRows(self::propertyObjectTexts);
                     break;
             }
         }
