@@ -28,14 +28,24 @@
             "type": "List",
             "name": "TargetLanguages",
             "caption": "Zielsprachen",
-            "add": false,
-            "delete": false,
+            "add": true,
+            "delete": true,
             "rowCount": 10,
             "columns": [
-                { "caption": "Sprache", "name": "name", "width": "250px" },
-                { "caption": "Code", "name": "code", "width": "80px" },
-                { "caption": "Aktiv", "name": "enabled", "width": "80px", "add": false, "edit": { "type": "CheckBox" } }
-            ]
+                {
+                    "caption": "Sprache",
+                    "name": "code",
+                    "width": "300px",
+                    "add": "",
+                    "edit": {
+                        "type": "Select",
+                        "options": [
+                            { "caption": "English", "value": "en" }
+                        ]
+                    }
+                }
+            ],
+            "values": []
         },
         {
             "type": "List",
@@ -66,11 +76,6 @@
         }
     ],
     "actions": [
-        {
-            "type": "Button",
-            "caption": "Sprachliste von Google aktualisieren",
-            "onClick": "IPS_RequestAction($id, 'RefreshLanguageList', true);"
-        },
         {
             "type": "Button",
             "caption": "Baum jetzt neu einlesen",

@@ -18,11 +18,11 @@ trait SimpleLocaleConstants
     // Attribute
     private const attributeCurrentLanguage = 'CurrentLanguage';
     private const attributeAvailableLanguagesCache = 'AvailableLanguagesCache';
+    private const attributeAvailableLanguagesFetchedAt = 'AvailableLanguagesFetchedAt';
 
     // Idents (Variablen / RequestAction)
     private const identLanguage = 'Language';
     private const identRescan = 'Rescan';
-    private const identRefreshLanguageList = 'RefreshLanguageList';
 
     // Variablenprofil (kein führendes "~" - das ist Symcons System-Profilen vorbehalten)
     private const profileLanguage = 'IPSSL.Language';

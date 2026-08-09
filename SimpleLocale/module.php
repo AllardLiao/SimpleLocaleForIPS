@@ -36,6 +36,7 @@ class SimpleLocale extends IPSModuleStrict
 
         $this->RegisterAttributeString(self::attributeCurrentLanguage, '');
         $this->RegisterAttributeString(self::attributeAvailableLanguagesCache, '[]');
+        $this->RegisterAttributeInteger(self::attributeAvailableLanguagesFetchedAt, 0);
 
         // Profil muss existieren, bevor die Variable damit registriert werden kann
         $this->EnsureLanguageProfileExists();
@@ -88,16 +89,6 @@ class SimpleLocale extends IPSModuleStrict
                 $this->Rescan();
                 break;
 
-            case self::identRefreshLanguageList:
-                // Bewusst kein ReloadForm(): Die Konsole scheint den Checkbox-Zustand
-                // der Zielsprachen-Liste positionsbasiert statt datenbasiert
-                // beizubehalten, wenn sich die Zeilenzahl durch die (viel größere)
-                // Google-Liste ändert - ein erneutes Übernehmen direkt danach würde
-                // dann falsche Sprachen speichern. Die aktualisierte Liste steht beim
-                // nächsten Öffnen der Instanzkonfiguration zur Verfügung.
-                $this->FetchSupportedLanguages();
-                break;
-
             default:
                 throw new Exception('Invalid Ident: ' . $Ident);
         }
@@ -105,11 +96,18 @@ class SimpleLocale extends IPSModuleStrict
 
     public function GetConfigurationForm(): string
     {
+        // Sprachliste höchstens 1x/Tag automatisch aktualisieren, immer nur beim
+        // (frischen) Öffnen des Formulars - die Zielsprachen-Liste selbst wird dadurch
+        // nie mehr angefasst (sie wächst nur noch über den eingebauten "Hinzufügen"-
+        // Button, Zeile für Zeile), nur die Dropdown-Optionen für neue Zeilen.
+        $this->RefreshAvailableLanguagesIfStale();
+
         $form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
 
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
         $targetLanguages = $this->GetSelectedTargetLanguages();
         $languageOptions = $this->BuildLanguageOptions();
+        $targetLanguageOptions = $this->BuildTargetLanguageOptions($sourceLanguage);
 
         foreach ($form['elements'] as &$element) {
             switch ($element['name'] ?? '') {
@@ -118,7 +116,8 @@ class SimpleLocale extends IPSModuleStrict
                     break;
 
                 case self::propertyTargetLanguages:
-                    $element['values'] = $this->BuildTargetLanguageRows();
+                    $element['columns'][0]['edit']['options'] = $targetLanguageOptions;
+                    $element['values'] = $this->DecodeRows(self::propertyTargetLanguages);
                     break;
 
                 case self::propertyObjectNames:
@@ -417,6 +416,23 @@ class SimpleLocale extends IPSModuleStrict
         }, $translations);
     }
 
+    private const availableLanguagesMaxAgeSeconds = 86400;
+
+    private function RefreshAvailableLanguagesIfStale(): void
+    {
+        $apiKey = $this->ReadPropertyString(self::propertyGoogleTranslateAPIKey);
+        if ($apiKey === '') {
+            return;
+        }
+
+        $fetchedAt = $this->ReadAttributeInteger(self::attributeAvailableLanguagesFetchedAt);
+        if ((time() - $fetchedAt) < self::availableLanguagesMaxAgeSeconds) {
+            return;
+        }
+
+        $this->FetchSupportedLanguages();
+    }
+
     private function FetchSupportedLanguages(): void
     {
         $apiKey = $this->ReadPropertyString(self::propertyGoogleTranslateAPIKey);
@@ -452,6 +468,7 @@ class SimpleLocale extends IPSModuleStrict
         }, $languages);
 
         $this->WriteAttributeString(self::attributeAvailableLanguagesCache, json_encode($result));
+        $this->WriteAttributeInteger(self::attributeAvailableLanguagesFetchedAt, time());
     }
 
     // Gemeinsamer HTTP-Client für die Google Cloud Translate API (GET ohne Body, POST mit JSON-Body)
@@ -566,8 +583,12 @@ class SimpleLocale extends IPSModuleStrict
     }
 
     // "TargetLanguages" ist eine List mit einer CheckBox-Spalte (Mehrfachauswahl-Ersatz,
-    // da form.json keinen "SelectMultiple"-Typ kennt) - Property speichert Zeilen
-    // [{"code": "en", "name": "English", "enabled": true}, ...].
+    // da form.json keinen "SelectMultiple"-Typ kennt). Statt eine Zeile je bekannter
+    // Sprache mit Checkbox anzuzeigen (die bei jedem Sprachlisten-Refresh komplett neu
+    // aufgebaut werden müsste - siehe Git-Historie für die Probleme, die das gemacht
+    // hat), funktioniert die Liste wie eine klassische Add/Delete-Liste: leer starten,
+    // der Nutzer fügt über "Hinzufügen" gezielt einzelne Sprachen hinzu. Property
+    // speichert nur die tatsächlich hinzugefügten Zeilen [{"code": "en"}, ...].
     private function GetSelectedTargetLanguages(): array
     {
         $rows = json_decode($this->ReadPropertyString(self::propertyTargetLanguages), true);
@@ -577,35 +598,12 @@ class SimpleLocale extends IPSModuleStrict
 
         $codes = [];
         foreach ($rows as $row) {
-            if (($row['enabled'] ?? false) === true && isset($row['code'])) {
+            if (isset($row['code']) && $row['code'] !== '') {
                 $codes[] = $row['code'];
             }
         }
 
         return $codes;
-    }
-
-    private function BuildTargetLanguageRows(): array
-    {
-        $enabledByCode = [];
-        foreach ($this->GetSelectedTargetLanguages() as $code) {
-            $enabledByCode[$code] = true;
-        }
-
-        $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
-        $rows = [];
-        foreach ($this->GetKnownLanguages() as $language) {
-            if ($language['code'] === $sourceLanguage) {
-                continue;
-            }
-            $rows[] = [
-                'code'    => $language['code'],
-                'name'    => $language['name'],
-                'enabled' => $enabledByCode[$language['code']] ?? false,
-            ];
-        }
-
-        return $rows;
     }
 
     private function BuildLanguageOptions(): array
@@ -618,6 +616,28 @@ class SimpleLocale extends IPSModuleStrict
                 'value'   => $language['code'],
             ];
         }, $languages);
+    }
+
+    // Dropdown-Optionen für die "Hinzufügen"-Zeile der Zielsprachen-Liste. Ohne
+    // gespeicherten API-Key ist noch keine echte Sprachliste bekannt - statt einer
+    // leeren/irreführenden Auswahl gibt es dann einen erklärenden Platzhalter.
+    private function BuildTargetLanguageOptions(string $SourceLanguage): array
+    {
+        if ($this->ReadPropertyString(self::propertyGoogleTranslateAPIKey) === '') {
+            return [[
+                'caption' => $this->Translate('Bitte zuerst Google Cloud Translate API-Key eintragen und übernehmen'),
+                'value'   => '',
+            ]];
+        }
+
+        $options = [];
+        foreach ($this->BuildLanguageOptions() as $option) {
+            if ($option['value'] !== $SourceLanguage) {
+                $options[] = $option;
+            }
+        }
+
+        return $options;
     }
 
     private function GetLanguageDisplayName(string $Code): string
