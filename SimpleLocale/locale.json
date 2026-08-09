@@ -75,6 +75,7 @@
         "fr": {
             "Sprache": "Langue",
             "Pfad": "Chemin",
+            "Objekt-ID": "ID d'objet",
             "Name": "Nom",
             "Text": "Texte",
             "übersetzt": "traduit",
