@@ -4,9 +4,9 @@
     "author": "Kai J. Oey",
     "url": "https://github.com/AllardLiao/SimpleLocaleForIPS",
     "compatibility": {
-        "version": "8.1"
+        "version": "7.1"
     },
-    "version": "7.1",
+    "version": "0.1",
     "build": 0,
     "date": 0
 }
