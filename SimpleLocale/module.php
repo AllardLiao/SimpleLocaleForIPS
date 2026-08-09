@@ -102,11 +102,7 @@ class SimpleLocale extends IPSModuleStrict
     {
         $form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
 
-        $targetLanguages = json_decode($this->ReadPropertyString(self::propertyTargetLanguages), true);
-        if (!is_array($targetLanguages)) {
-            $targetLanguages = [];
-        }
-
+        $targetLanguages = $this->GetSelectedTargetLanguages();
         $languageOptions = $this->BuildLanguageOptions();
 
         foreach ($form['elements'] as &$element) {
@@ -116,7 +112,7 @@ class SimpleLocale extends IPSModuleStrict
                     break;
 
                 case self::propertyTargetLanguages:
-                    $element['options'] = $languageOptions;
+                    $element['values'] = $this->BuildTargetLanguageRows();
                     break;
 
                 case self::propertyObjectNames:
@@ -198,10 +194,7 @@ class SimpleLocale extends IPSModuleStrict
         $objectTexts = $this->MergeRows($this->DecodeRows(self::propertyObjectTexts), $scannedTexts, 'SourceContent');
 
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
-        $targetLanguages = json_decode($this->ReadPropertyString(self::propertyTargetLanguages), true);
-        if (!is_array($targetLanguages)) {
-            $targetLanguages = [];
-        }
+        $targetLanguages = $this->GetSelectedTargetLanguages();
 
         $objectNames = $this->FillMissingTranslations($objectNames, 'SourceName', $sourceLanguage, $targetLanguages);
         $objectTexts = $this->FillMissingTranslations($objectTexts, 'SourceContent', $sourceLanguage, $targetLanguages);
@@ -415,7 +408,7 @@ class SimpleLocale extends IPSModuleStrict
 
         $languages = array_merge(
             [$this->ReadPropertyString(self::propertySourceLanguage)],
-            json_decode($this->ReadPropertyString(self::propertyTargetLanguages), true) ?: []
+            $this->GetSelectedTargetLanguages()
         );
         $languages = array_unique($languages);
 
@@ -445,6 +438,49 @@ class SimpleLocale extends IPSModuleStrict
         }
 
         return $columns;
+    }
+
+    // "TargetLanguages" ist eine List mit einer CheckBox-Spalte (Mehrfachauswahl-Ersatz,
+    // da form.json keinen "SelectMultiple"-Typ kennt) - Property speichert Zeilen
+    // [{"code": "en", "name": "English", "enabled": true}, ...].
+    private function GetSelectedTargetLanguages(): array
+    {
+        $rows = json_decode($this->ReadPropertyString(self::propertyTargetLanguages), true);
+        if (!is_array($rows)) {
+            return [];
+        }
+
+        $codes = [];
+        foreach ($rows as $row) {
+            if (($row['enabled'] ?? false) === true && isset($row['code'])) {
+                $codes[] = $row['code'];
+            }
+        }
+
+        return $codes;
+    }
+
+    private function BuildTargetLanguageRows(): array
+    {
+        $enabledByCode = [];
+        foreach ($this->GetSelectedTargetLanguages() as $code) {
+            $enabledByCode[$code] = true;
+        }
+
+        $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
+        $rows = [];
+        foreach ($this->GetKnownLanguages() as $language) {
+            if ($language['code'] === $sourceLanguage) {
+                continue;
+            }
+            $rows[] = [
+                'code'    => $language['code'],
+                'name'    => $language['name'],
+                'enabled' => $enabledByCode[$language['code']] ?? false,
+            ];
+        }
+
+        return $rows;
     }
 
     private function BuildLanguageOptions(): array
