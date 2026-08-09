@@ -521,7 +521,8 @@ class SimpleLocale extends IPSModuleStrict
             $columns[] = ['caption' => $this->Translate('Name'), 'name' => 'Name', 'width' => '150px'];
         }
 
-        $columns[] = ['caption' => $this->Translate('Original-Import'), 'name' => self::langOriginalImport, 'width' => '200px'];
+        $originalCaption = $IsObjectTexts ? $this->Translate('Text') : $this->Translate('Original-Import');
+        $columns[] = ['caption' => $originalCaption, 'name' => self::langOriginalImport, 'width' => '200px'];
 
         if ($IsObjectTexts) {
             $columns[] = [
