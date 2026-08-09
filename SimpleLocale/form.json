@@ -61,7 +61,7 @@
                 { "caption": "Objekt-ID", "name": "ObjectID", "width": "80px" },
                 { "caption": "Pfad", "name": "Path", "width": "200px" },
                 { "caption": "Name", "name": "Name", "width": "150px" },
-                { "caption": "Original-Import", "name": "ORIGINAL_IMPORT", "width": "200px" }
+                { "caption": "Text", "name": "ORIGINAL_IMPORT", "width": "200px" }
             ]
         }
     ],
