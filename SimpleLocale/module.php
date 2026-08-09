@@ -637,6 +637,10 @@ class SimpleLocale extends IPSModuleStrict
             }
         }
 
+        usort($options, function ($a, $b) {
+            return strnatcasecmp($a['caption'], $b['caption']);
+        });
+
         return $options;
     }
 
