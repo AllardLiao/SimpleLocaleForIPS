@@ -10,7 +10,7 @@ trait SimpleLocaleConstants
     private const propertyRootCategoryID = 'RootCategoryID';
     private const propertySourceLanguage = 'SourceLanguage';
     private const propertyTargetLanguages = 'TargetLanguages';
-    private const propertyGoogleTranslateAPIKey = 'GoogleTranslateApiKey'; //AIzaSyDtYLSXKoNtO0QVjzUlERA6g8WiqE37ZAg
+    private const propertyGoogleTranslateAPIKey = 'GoogleTranslateAPIKey';
     private const propertyAutoRescanInterval = 'AutoRescanInterval';
     private const propertyObjectNames = 'ObjectNames';
     private const propertyObjectTexts = 'ObjectTexts';
