@@ -105,7 +105,6 @@ class SimpleLocale extends IPSModuleStrict
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
         $targetLanguages = $this->GetSelectedTargetLanguages();
         $languageOptions = $this->BuildLanguageOptions();
-        $listColumns = $this->BuildListColumns($sourceLanguage, $targetLanguages);
 
         foreach ($form['elements'] as &$element) {
             switch ($element['name'] ?? '') {
@@ -118,8 +117,11 @@ class SimpleLocale extends IPSModuleStrict
                     break;
 
                 case self::propertyObjectNames:
+                    $element['columns'] = $this->BuildListColumns($sourceLanguage, $targetLanguages, false);
+                    break;
+
                 case self::propertyObjectTexts:
-                    $element['columns'] = $listColumns;
+                    $element['columns'] = $this->BuildListColumns($sourceLanguage, $targetLanguages, true);
                     break;
             }
         }
@@ -209,8 +211,8 @@ class SimpleLocale extends IPSModuleStrict
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
         $targetLanguages = $this->GetSelectedTargetLanguages();
 
-        $objectNames = $this->FillMissingTranslations($objectNames, $sourceLanguage, $targetLanguages);
-        $objectTexts = $this->FillMissingTranslations($objectTexts, $sourceLanguage, $targetLanguages);
+        $objectNames = $this->FillMissingTranslations($objectNames, $sourceLanguage, $targetLanguages, false);
+        $objectTexts = $this->FillMissingTranslations($objectTexts, $sourceLanguage, $targetLanguages, true);
 
         IPS_SetProperty($this->InstanceID, self::propertyObjectNames, json_encode(array_values($objectNames)));
         IPS_SetProperty($this->InstanceID, self::propertyObjectTexts, json_encode(array_values($objectTexts)));
@@ -251,6 +253,10 @@ class SimpleLocale extends IPSModuleStrict
                     'ObjectID'                 => $childID,
                     'ValueObjectID'            => $stringVariableID,
                     'Path'                     => $path,
+                    // Name des Objekts als Kontext (z.B. "Hinweis:"), damit gleichnamige
+                    // Inhalte an unterschiedlichen Stellen unterscheidbar bleiben. Wie
+                    // ORIGINAL_IMPORT beim ersten Fund eingefroren, nicht die Live-Anzeige.
+                    'Name'                     => $name,
                     self::langOriginalImport   => GetValueString($stringVariableID),
                 ];
             }
@@ -311,19 +317,26 @@ class SimpleLocale extends IPSModuleStrict
         return $result;
     }
 
-    // Zwei Durchläufe: (1) ORIGINAL_IMPORT -> Quellsprache, ohne erzwungene Quellsprache
-    // bei Google - dadurch erkennt Google die tatsächliche Sprache selbst und poliert
-    // nebenbei Tippfehler im rohen Originaltext. (2) Quellsprache -> jede ausgewählte
-    // Zielsprache, jetzt mit bekannter, korrekter Quellsprache.
-    private function FillMissingTranslations(array $Rows, string $SourceLanguage, array $TargetLanguages): array
+    // Objektnamen sind meist kurz (Kategorie-/Kachel-Titel) - dort lohnt sich die
+    // separate Google-Bereinigungsrunde nicht, Original-Import dient direkt als
+    // Quellsprachen-Basis. Eigene Texte (oft längere Hinweistexte) durchlaufen
+    // zusätzlich einen ersten Durchlauf ORIGINAL_IMPORT -> Quellsprache ohne
+    // erzwungene Quellsprache bei Google - dadurch erkennt Google die tatsächliche
+    // Sprache selbst und poliert nebenbei Tippfehler im rohen Originaltext.
+    private function FillMissingTranslations(array $Rows, string $SourceLanguage, array $TargetLanguages, bool $CleanupSourceFromOriginal): array
     {
-        $Rows = $this->FillLanguageColumn($Rows, self::langOriginalImport, $SourceLanguage, null);
+        $baseField = self::langOriginalImport;
+
+        if ($CleanupSourceFromOriginal) {
+            $Rows = $this->FillLanguageColumn($Rows, self::langOriginalImport, $SourceLanguage, null);
+            $baseField = $SourceLanguage;
+        }
 
         foreach ($TargetLanguages as $language) {
             if ($language === $SourceLanguage) {
                 continue;
             }
-            $Rows = $this->FillLanguageColumn($Rows, $SourceLanguage, $language, $SourceLanguage);
+            $Rows = $this->FillLanguageColumn($Rows, $baseField, $language, $SourceLanguage);
         }
 
         return $Rows;
@@ -492,20 +505,33 @@ class SimpleLocale extends IPSModuleStrict
     // Baut die Spalten für die "ObjectNames"/"ObjectTexts"-Listen dynamisch anhand
     // der Quell-/Zielsprachen zusammen (Symcon-Formulare kennen keine Spalten mit
     // dynamischer Anzahl, daher wird das Formular bei jedem Öffnen neu erzeugt).
-    private function BuildListColumns(string $SourceLanguage, array $TargetLanguages): array
+    // "Eigene Texte" bekommt zusätzlich eine Name-Kontextspalte (welche Kachel ist
+    // das?) und die editierbare Quellsprachen-Spalte (Basis für die Zielsprachen,
+    // da Inhalte oft länger sind und von der Google-Bereinigung profitieren).
+    // "Objektnamen" verzichtet auf beides - Original-Import dient dort direkt als
+    // Quellsprachen-Basis.
+    private function BuildListColumns(string $SourceLanguage, array $TargetLanguages, bool $IsObjectTexts): array
     {
         $columns = [
             ['caption' => 'Objekt-ID', 'name' => 'ObjectID', 'width' => '80px'],
             ['caption' => $this->Translate('Pfad'), 'name' => 'Path', 'width' => '200px'],
-            ['caption' => $this->Translate('Original-Import'), 'name' => self::langOriginalImport, 'width' => '200px'],
-            [
+        ];
+
+        if ($IsObjectTexts) {
+            $columns[] = ['caption' => $this->Translate('Name'), 'name' => 'Name', 'width' => '150px'];
+        }
+
+        $columns[] = ['caption' => $this->Translate('Original-Import'), 'name' => self::langOriginalImport, 'width' => '200px'];
+
+        if ($IsObjectTexts) {
+            $columns[] = [
                 'caption' => sprintf('%s (%s)', $this->GetLanguageDisplayName($SourceLanguage), $this->Translate('Quelle')),
                 'name'    => $SourceLanguage,
                 'width'   => '200px',
                 'add'     => '',
                 'edit'    => ['type' => 'ValidationTextBox'],
-            ],
-        ];
+            ];
+        }
 
         foreach ($TargetLanguages as $language) {
             if ($language === $SourceLanguage) {
