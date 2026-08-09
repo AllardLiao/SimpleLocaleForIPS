@@ -140,7 +140,7 @@ class SimpleLocale extends IPSModuleStrict
 
         foreach ($this->DecodeRows(self::propertyObjectTexts) as $row) {
             if (($row['ObjectID'] ?? null) === $ObjectID) {
-                return $this->ResolveRowValue($row, $currentLanguage, $sourceLanguage);
+                return $this->ResolveRowValue($row, $currentLanguage, $sourceLanguage, self::langOriginalImportText);
             }
         }
 
@@ -165,7 +165,7 @@ class SimpleLocale extends IPSModuleStrict
                 continue;
             }
 
-            IPS_SetName($objectID, $this->ResolveRowValue($row, $Language, $sourceLanguage));
+            IPS_SetName($objectID, $this->ResolveRowValue($row, $Language, $sourceLanguage, self::langOriginalImport));
         }
 
         foreach ($this->DecodeRows(self::propertyObjectTexts) as $row) {
@@ -176,12 +176,12 @@ class SimpleLocale extends IPSModuleStrict
                 continue;
             }
 
-            SetValueString($valueObjectID, $this->ResolveRowValue($row, $Language, $sourceLanguage));
+            SetValueString($valueObjectID, $this->ResolveRowValue($row, $Language, $sourceLanguage, self::langOriginalImportText));
         }
     }
 
-    // Fallback-Kette: gewünschte Sprache -> Quellsprache (bereinigt) -> ORIGINAL_IMPORT (roh)
-    private function ResolveRowValue(array $Row, string $Language, string $SourceLanguage): string
+    // Fallback-Kette: gewünschte Sprache -> Quellsprache (bereinigt) -> Rohtext ($RawField)
+    private function ResolveRowValue(array $Row, string $Language, string $SourceLanguage, string $RawField): string
     {
         if (($Row[$Language] ?? '') !== '') {
             return $Row[$Language];
@@ -190,7 +190,7 @@ class SimpleLocale extends IPSModuleStrict
             return $Row[$SourceLanguage];
         }
 
-        return $Row[self::langOriginalImport] ?? '';
+        return $Row[$RawField] ?? '';
     }
 
     private function ScanRootTree(): void
@@ -211,8 +211,8 @@ class SimpleLocale extends IPSModuleStrict
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
         $targetLanguages = $this->GetSelectedTargetLanguages();
 
-        $objectNames = $this->FillMissingTranslations($objectNames, $sourceLanguage, $targetLanguages, false);
-        $objectTexts = $this->FillMissingTranslations($objectTexts, $sourceLanguage, $targetLanguages, true);
+        $objectNames = $this->FillMissingTranslations($objectNames, self::langOriginalImport, $sourceLanguage, $targetLanguages, false);
+        $objectTexts = $this->FillMissingTranslations($objectTexts, self::langOriginalImportText, $sourceLanguage, $targetLanguages, true);
 
         IPS_SetProperty($this->InstanceID, self::propertyObjectNames, json_encode(array_values($objectNames)));
         IPS_SetProperty($this->InstanceID, self::propertyObjectTexts, json_encode(array_values($objectTexts)));
@@ -250,14 +250,14 @@ class SimpleLocale extends IPSModuleStrict
             $stringVariableID = $this->ResolveStringVariableID($childID, $object);
             if ($stringVariableID !== null) {
                 $ScannedTexts[$childID] = [
-                    'ObjectID'                 => $childID,
-                    'ValueObjectID'            => $stringVariableID,
-                    'Path'                     => $path,
+                    'ObjectID'                       => $childID,
+                    'ValueObjectID'                  => $stringVariableID,
+                    'Path'                           => $path,
                     // Name des Objekts als Kontext (z.B. "Hinweis:"), damit gleichnamige
                     // Inhalte an unterschiedlichen Stellen unterscheidbar bleiben. Wie
-                    // ORIGINAL_IMPORT beim ersten Fund eingefroren, nicht die Live-Anzeige.
-                    'Name'                     => $name,
-                    self::langOriginalImport   => GetValueString($stringVariableID),
+                    // der Inhalt beim ersten Fund eingefroren, nicht die Live-Anzeige.
+                    self::fieldOriginalImportName    => $name,
+                    self::langOriginalImportText     => GetValueString($stringVariableID),
                 ];
             }
 
@@ -323,12 +323,12 @@ class SimpleLocale extends IPSModuleStrict
     // zusätzlich einen ersten Durchlauf ORIGINAL_IMPORT -> Quellsprache ohne
     // erzwungene Quellsprache bei Google - dadurch erkennt Google die tatsächliche
     // Sprache selbst und poliert nebenbei Tippfehler im rohen Originaltext.
-    private function FillMissingTranslations(array $Rows, string $SourceLanguage, array $TargetLanguages, bool $CleanupSourceFromOriginal): array
+    private function FillMissingTranslations(array $Rows, string $RawField, string $SourceLanguage, array $TargetLanguages, bool $CleanupSourceFromOriginal): array
     {
-        $baseField = self::langOriginalImport;
+        $baseField = $RawField;
 
         if ($CleanupSourceFromOriginal) {
-            $Rows = $this->FillLanguageColumn($Rows, self::langOriginalImport, $SourceLanguage, null);
+            $Rows = $this->FillLanguageColumn($Rows, $RawField, $SourceLanguage, null);
             $baseField = $SourceLanguage;
         }
 
@@ -518,11 +518,19 @@ class SimpleLocale extends IPSModuleStrict
         ];
 
         if ($IsObjectTexts) {
-            $columns[] = ['caption' => $this->Translate('Name'), 'name' => 'Name', 'width' => '150px'];
+            $columns[] = [
+                'caption' => $this->Translate('Original-Import (Name)'),
+                'name'    => self::fieldOriginalImportName,
+                'width'   => '150px',
+            ];
+            $columns[] = [
+                'caption' => $this->Translate('Original-Import (Text)'),
+                'name'    => self::langOriginalImportText,
+                'width'   => '200px',
+            ];
+        } else {
+            $columns[] = ['caption' => $this->Translate('Original-Import'), 'name' => self::langOriginalImport, 'width' => '200px'];
         }
-
-        $originalCaption = $IsObjectTexts ? $this->Translate('Text') : $this->Translate('Original-Import');
-        $columns[] = ['caption' => $originalCaption, 'name' => self::langOriginalImport, 'width' => '200px'];
 
         if ($IsObjectTexts) {
             $columns[] = [

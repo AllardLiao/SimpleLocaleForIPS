@@ -29,7 +29,11 @@ trait SimpleLocaleConstants
 
     // Reservierter Pseudo-Sprachcode für den unangetasteten Rohtext beim ersten Scan
     // (Tippfehler inklusive). Nicht vom Gast über die Sprachauswahl erreichbar.
+    // Objektnamen: ein Feld (Name des Objekts). Eigene Texte: zwei getrennte Felder
+    // (Objektname als Kontext + eigentlicher Inhalt).
     private const langOriginalImport = 'ORIGINAL_IMPORT';
+    private const fieldOriginalImportName = 'ORIGINAL_IMPORT_Name';
+    private const langOriginalImportText = 'ORIGINAL_IMPORT_Text';
 
     // Timer: Präfix als Salt auf den Namen, falls im jeweiligen IPS-System
     // bereits ein Timer/Objekt mit demselben Basisnamen existieren sollte.
