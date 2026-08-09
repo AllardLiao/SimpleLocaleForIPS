@@ -363,13 +363,13 @@ class SimpleLocale extends IPSModuleStrict
             $rawField = $group['raw'];
             $sourceField = $group['prefix'] . $SourceLanguage;
 
-            $Rows = $this->FillLanguageColumn($Rows, $rawField, $sourceField, null);
+            $Rows = $this->FillLanguageColumn($Rows, $rawField, $sourceField, null, $SourceLanguage);
 
             foreach ($TargetLanguages as $language) {
                 if ($language === $SourceLanguage) {
                     continue;
                 }
-                $Rows = $this->FillLanguageColumn($Rows, $sourceField, $group['prefix'] . $language, $SourceLanguage);
+                $Rows = $this->FillLanguageColumn($Rows, $sourceField, $group['prefix'] . $language, $SourceLanguage, $language);
             }
         }
 
@@ -379,7 +379,9 @@ class SimpleLocale extends IPSModuleStrict
     // Übersetzt für alle Zeilen, bei denen $ToField noch leer ist, den Text aus
     // $FromField nach $ToField (gebatcht in einem API-Aufruf). $ForceSource = null
     // lässt Google die Quellsprache selbst erkennen.
-    private function FillLanguageColumn(array $Rows, string $FromField, string $ToField, ?string $ForceSource): array
+    // $ToField ist der Property-Feldname zum Speichern (kann präfixiert sein, z.B.
+    // "Text_de"), $TargetLanguageCode der reine Sprachcode, der an Google geht.
+    private function FillLanguageColumn(array $Rows, string $FromField, string $ToField, ?string $ForceSource, string $TargetLanguageCode): array
     {
         $pending = [];
         foreach ($Rows as $index => $row) {
@@ -393,7 +395,7 @@ class SimpleLocale extends IPSModuleStrict
             return $Rows;
         }
 
-        $translated = $this->TranslateBatch(array_values($pending), $ForceSource, $ToField);
+        $translated = $this->TranslateBatch(array_values($pending), $ForceSource, $TargetLanguageCode);
 
         $i = 0;
         foreach (array_keys($pending) as $index) {
