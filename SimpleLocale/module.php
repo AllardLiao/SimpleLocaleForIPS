@@ -167,12 +167,14 @@ class SimpleLocale extends IPSModuleStrict
         }
 
         foreach ($this->DecodeRows(self::propertyObjectTexts) as $row) {
-            $objectID = (int) ($row['ObjectID'] ?? 0);
-            if ($objectID === 0 || !@IPS_ObjectExists($objectID)) {
+            // Bei Links auf eine String-Variable ist ValueObjectID die Zielvariable,
+            // die den eigentlichen Wert hält - sonst identisch mit ObjectID.
+            $valueObjectID = (int) ($row['ValueObjectID'] ?? $row['ObjectID'] ?? 0);
+            if ($valueObjectID === 0 || !@IPS_ObjectExists($valueObjectID)) {
                 continue;
             }
 
-            SetValueString($objectID, $this->ResolveRowValue($row, $Language, $sourceLanguage));
+            SetValueString($valueObjectID, $this->ResolveRowValue($row, $Language, $sourceLanguage));
         }
     }
 
@@ -214,8 +216,10 @@ class SimpleLocale extends IPSModuleStrict
         IPS_SetProperty($this->InstanceID, self::propertyObjectTexts, json_encode(array_values($objectTexts)));
         IPS_ApplyChanges($this->InstanceID);
 
-        $this->UpdateFormField(self::propertyObjectNames, 'values', json_encode(array_values($objectNames)));
-        $this->UpdateFormField(self::propertyObjectTexts, 'values', json_encode(array_values($objectTexts)));
+        // Kompletter Formular-Neuaufbau statt UpdateFormField: ein offenes Formular hat
+        // sonst noch den alten (leeren) Stand im Speicher und würde ihn bei "Übernehmen"
+        // über die gerade gespeicherten Scan-Ergebnisse zurückschreiben.
+        $this->ReloadForm();
     }
 
     // $ParentPath enthält die Namen der Vorfahren ab der Root-Kategorie (ohne den
@@ -237,26 +241,53 @@ class SimpleLocale extends IPSModuleStrict
                 self::langOriginalImport   => $name,
             ];
 
-            if ($object['ObjectType'] === OBJECTTYPE_VARIABLE) {
-                $variable = IPS_GetVariable($childID);
-                if ($variable['VariableType'] === VARIABLETYPE_STRING) {
-                    $ScannedTexts[$childID] = [
-                        'ObjectID'                 => $childID,
-                        'Path'                     => $path,
-                        self::langOriginalImport   => GetValueString($childID),
-                    ];
-                }
+            // Viele "Hinweis"-Objekte in der Kachel-Visualisierung sind Verknüpfungen
+            // (Links) auf eine String-Variable an anderer Stelle im Baum, nicht die
+            // Variable selbst - deren Wert (und beim Sprachwechsel: Schreibziel) ist
+            // dann die verlinkte Zielvariable, nicht das Link-Objekt.
+            $stringVariableID = $this->ResolveStringVariableID($childID, $object);
+            if ($stringVariableID !== null) {
+                $ScannedTexts[$childID] = [
+                    'ObjectID'                 => $childID,
+                    'ValueObjectID'            => $stringVariableID,
+                    'Path'                     => $path,
+                    self::langOriginalImport   => GetValueString($stringVariableID),
+                ];
             }
 
             $this->WalkTree($childID, $ScannedNames, $ScannedTexts, array_merge($ParentPath, [$name]));
         }
     }
 
+    // Ermittelt die tatsächliche String-Variablen-ID für ein Scan-Objekt: entweder das
+    // Objekt selbst (wenn es eine String-Variable ist) oder - falls es eine Verknüpfung
+    // ist - deren Zielvariable, sofern diese ebenfalls vom Typ String ist. Liefert null,
+    // wenn das Objekt keine (verlinkte) String-Variable ist.
+    private function ResolveStringVariableID(int $ObjectID, array $Object): ?int
+    {
+        $variableID = null;
+
+        if ($Object['ObjectType'] === OBJECTTYPE_VARIABLE) {
+            $variableID = $ObjectID;
+        } elseif ($Object['ObjectType'] === OBJECTTYPE_LINK) {
+            $targetID = IPS_GetLink($ObjectID)['TargetID'];
+            if ($targetID > 0 && IPS_VariableExists($targetID)) {
+                $variableID = $targetID;
+            }
+        }
+
+        if ($variableID === null) {
+            return null;
+        }
+
+        return IPS_GetVariable($variableID)['VariableType'] === VARIABLETYPE_STRING ? $variableID : null;
+    }
+
     // Merged bereits gespeicherte Zeilen mit frisch gescannten Objekt-IDs. ORIGINAL_IMPORT
-    // und alle Übersetzungen bleiben für bereits bekannte Objekte unangetastet (nur der
-    // Pfad wird aktualisiert, falls das Objekt im Baum verschoben wurde) - so bleibt der
-    // roh vorgefundene Text auch dann erhalten, wenn die Live-Anzeige gerade in einer
-    // anderen Sprache steht.
+    // und alle Übersetzungen bleiben für bereits bekannte Objekte unangetastet (nur Pfad
+    // und Ziel-Variablen-ID werden aktualisiert, falls sich der Baum geändert hat) - so
+    // bleibt der roh vorgefundene Text auch dann erhalten, wenn die Live-Anzeige gerade
+    // in einer anderen Sprache steht.
     private function MergeRows(array $ExistingRows, array $ScannedByObjectID): array
     {
         $result = [];
@@ -264,6 +295,9 @@ class SimpleLocale extends IPSModuleStrict
             $objectID = $row['ObjectID'] ?? null;
             if ($objectID !== null && isset($ScannedByObjectID[$objectID])) {
                 $row['Path'] = $ScannedByObjectID[$objectID]['Path'];
+                if (isset($ScannedByObjectID[$objectID]['ValueObjectID'])) {
+                    $row['ValueObjectID'] = $ScannedByObjectID[$objectID]['ValueObjectID'];
+                }
                 unset($ScannedByObjectID[$objectID]);
             }
             $result[] = $row;
