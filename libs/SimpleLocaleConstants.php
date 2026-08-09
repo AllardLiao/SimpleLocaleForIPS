@@ -35,6 +35,12 @@ trait SimpleLocaleConstants
     private const fieldOriginalImportName = 'ORIGINAL_IMPORT_Name';
     private const langOriginalImportText = 'ORIGINAL_IMPORT_Text';
 
+    // Präfixe für die Übersetzungsspalten von "Eigene Texte" - dort gibt es sowohl
+    // Name- als auch Inhalts-Übersetzungen, die Sprachcodes allein wären sonst
+    // mehrdeutig (z.B. "en" für Name UND Inhalt gleichzeitig).
+    private const fieldNamePrefix = 'Name_';
+    private const fieldTextPrefix = 'Text_';
+
     // Timer: Präfix als Salt auf den Namen, falls im jeweiligen IPS-System
     // bereits ein Timer/Objekt mit demselben Basisnamen existieren sollte.
     private const timerPrefix = 'IPSSL_TIMER_';
