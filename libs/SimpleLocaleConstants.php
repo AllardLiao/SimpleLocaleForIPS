@@ -27,6 +27,10 @@ trait SimpleLocaleConstants
     // Variablenprofil (kein führendes "~" - das ist Symcons System-Profilen vorbehalten)
     private const profileLanguage = 'IPSSL.Language';
 
+    // Reservierter Pseudo-Sprachcode für den unangetasteten Rohtext beim ersten Scan
+    // (Tippfehler inklusive). Nicht vom Gast über die Sprachauswahl erreichbar.
+    private const langOriginalImport = 'ORIGINAL_IMPORT';
+
     // Timer: Präfix als Salt auf den Namen, falls im jeweiligen IPS-System
     // bereits ein Timer/Objekt mit demselben Basisnamen existieren sollte.
     private const timerPrefix = 'IPSSL_TIMER_';

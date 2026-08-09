@@ -102,8 +102,10 @@ class SimpleLocale extends IPSModuleStrict
     {
         $form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
 
+        $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
         $targetLanguages = $this->GetSelectedTargetLanguages();
         $languageOptions = $this->BuildLanguageOptions();
+        $listColumns = $this->BuildListColumns($sourceLanguage, $targetLanguages);
 
         foreach ($form['elements'] as &$element) {
             switch ($element['name'] ?? '') {
@@ -116,11 +118,8 @@ class SimpleLocale extends IPSModuleStrict
                     break;
 
                 case self::propertyObjectNames:
-                    $element['columns'] = $this->BuildListColumns('SourceName', $this->Translate('Objektname'), $targetLanguages);
-                    break;
-
                 case self::propertyObjectTexts:
-                    $element['columns'] = $this->BuildListColumns('SourceContent', $this->Translate('Inhalt'), $targetLanguages);
+                    $element['columns'] = $listColumns;
                     break;
             }
         }
@@ -135,12 +134,11 @@ class SimpleLocale extends IPSModuleStrict
     public function TranslateText(int $ObjectID): string
     {
         $currentLanguage = $this->ReadAttributeString(self::attributeCurrentLanguage);
+        $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
 
         foreach ($this->DecodeRows(self::propertyObjectTexts) as $row) {
             if (($row['ObjectID'] ?? null) === $ObjectID) {
-                $value = $row[$currentLanguage] ?? '';
-
-                return $value !== '' ? $value : ($row['SourceContent'] ?? '');
+                return $this->ResolveRowValue($row, $currentLanguage, $sourceLanguage);
             }
         }
 
@@ -157,14 +155,15 @@ class SimpleLocale extends IPSModuleStrict
         $this->SetValue(self::identLanguage, $Language);
         $this->WriteAttributeString(self::attributeCurrentLanguage, $Language);
 
+        $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
+
         foreach ($this->DecodeRows(self::propertyObjectNames) as $row) {
             $objectID = (int) ($row['ObjectID'] ?? 0);
             if ($objectID === 0 || !@IPS_ObjectExists($objectID)) {
                 continue;
             }
 
-            $name = $row[$Language] ?? '';
-            IPS_SetName($objectID, $name !== '' ? $name : ($row['SourceName'] ?? ''));
+            IPS_SetName($objectID, $this->ResolveRowValue($row, $Language, $sourceLanguage));
         }
 
         foreach ($this->DecodeRows(self::propertyObjectTexts) as $row) {
@@ -173,9 +172,21 @@ class SimpleLocale extends IPSModuleStrict
                 continue;
             }
 
-            $content = $row[$Language] ?? '';
-            SetValueString($objectID, $content !== '' ? $content : ($row['SourceContent'] ?? ''));
+            SetValueString($objectID, $this->ResolveRowValue($row, $Language, $sourceLanguage));
         }
+    }
+
+    // Fallback-Kette: gewünschte Sprache -> Quellsprache (bereinigt) -> ORIGINAL_IMPORT (roh)
+    private function ResolveRowValue(array $Row, string $Language, string $SourceLanguage): string
+    {
+        if (($Row[$Language] ?? '') !== '') {
+            return $Row[$Language];
+        }
+        if (($Row[$SourceLanguage] ?? '') !== '') {
+            return $Row[$SourceLanguage];
+        }
+
+        return $Row[self::langOriginalImport] ?? '';
     }
 
     private function ScanRootTree(): void
@@ -188,16 +199,16 @@ class SimpleLocale extends IPSModuleStrict
 
         $scannedNames = [];
         $scannedTexts = [];
-        $this->WalkTree($rootID, $scannedNames, $scannedTexts);
+        $this->WalkTree($rootID, $scannedNames, $scannedTexts, []);
 
-        $objectNames = $this->MergeRows($this->DecodeRows(self::propertyObjectNames), $scannedNames, 'SourceName');
-        $objectTexts = $this->MergeRows($this->DecodeRows(self::propertyObjectTexts), $scannedTexts, 'SourceContent');
+        $objectNames = $this->MergeRows($this->DecodeRows(self::propertyObjectNames), $scannedNames);
+        $objectTexts = $this->MergeRows($this->DecodeRows(self::propertyObjectTexts), $scannedTexts);
 
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
         $targetLanguages = $this->GetSelectedTargetLanguages();
 
-        $objectNames = $this->FillMissingTranslations($objectNames, 'SourceName', $sourceLanguage, $targetLanguages);
-        $objectTexts = $this->FillMissingTranslations($objectTexts, 'SourceContent', $sourceLanguage, $targetLanguages);
+        $objectNames = $this->FillMissingTranslations($objectNames, $sourceLanguage, $targetLanguages);
+        $objectTexts = $this->FillMissingTranslations($objectTexts, $sourceLanguage, $targetLanguages);
 
         IPS_SetProperty($this->InstanceID, self::propertyObjectNames, json_encode(array_values($objectNames)));
         IPS_SetProperty($this->InstanceID, self::propertyObjectTexts, json_encode(array_values($objectTexts)));
@@ -207,41 +218,52 @@ class SimpleLocale extends IPSModuleStrict
         $this->UpdateFormField(self::propertyObjectTexts, 'values', json_encode(array_values($objectTexts)));
     }
 
-    private function WalkTree(int $ID, array &$ScannedNames, array &$ScannedTexts): void
+    // $ParentPath enthält die Namen der Vorfahren ab der Root-Kategorie (ohne den
+    // Namen des Objekts selbst), damit gleichnamige Texte an unterschiedlichen
+    // Stellen im Baum unterscheidbar bleiben.
+    private function WalkTree(int $ID, array &$ScannedNames, array &$ScannedTexts, array $ParentPath): void
     {
         foreach (IPS_GetChildrenIDs($ID) as $childID) {
             $object = IPS_GetObject($childID);
+            $name = IPS_GetName($childID);
+            $path = implode(' > ', $ParentPath);
 
             // Objekt-ID ist der eindeutige, stabile Schlüssel - Idents sind bei
             // handangelegten Objekten (Kategorien/Variablen über die Konsole) meist gar
             // nicht gesetzt.
             $ScannedNames[$childID] = [
-                'ObjectID'   => $childID,
-                'SourceName' => IPS_GetName($childID),
+                'ObjectID'                 => $childID,
+                'Path'                     => $path,
+                self::langOriginalImport   => $name,
             ];
 
             if ($object['ObjectType'] === OBJECTTYPE_VARIABLE) {
                 $variable = IPS_GetVariable($childID);
                 if ($variable['VariableType'] === VARIABLETYPE_STRING) {
                     $ScannedTexts[$childID] = [
-                        'ObjectID'      => $childID,
-                        'SourceContent' => GetValueString($childID),
+                        'ObjectID'                 => $childID,
+                        'Path'                     => $path,
+                        self::langOriginalImport   => GetValueString($childID),
                     ];
                 }
             }
 
-            $this->WalkTree($childID, $ScannedNames, $ScannedTexts);
+            $this->WalkTree($childID, $ScannedNames, $ScannedTexts, array_merge($ParentPath, [$name]));
         }
     }
 
-    // Merged bereits gespeicherte Zeilen (inkl. manueller Übersetzungen) mit frisch gescannten Objekt-IDs
-    private function MergeRows(array $ExistingRows, array $ScannedByObjectID, string $SourceField): array
+    // Merged bereits gespeicherte Zeilen mit frisch gescannten Objekt-IDs. ORIGINAL_IMPORT
+    // und alle Übersetzungen bleiben für bereits bekannte Objekte unangetastet (nur der
+    // Pfad wird aktualisiert, falls das Objekt im Baum verschoben wurde) - so bleibt der
+    // roh vorgefundene Text auch dann erhalten, wenn die Live-Anzeige gerade in einer
+    // anderen Sprache steht.
+    private function MergeRows(array $ExistingRows, array $ScannedByObjectID): array
     {
         $result = [];
         foreach ($ExistingRows as $row) {
             $objectID = $row['ObjectID'] ?? null;
             if ($objectID !== null && isset($ScannedByObjectID[$objectID])) {
-                $row[$SourceField] = $ScannedByObjectID[$objectID][$SourceField];
+                $row['Path'] = $ScannedByObjectID[$objectID]['Path'];
                 unset($ScannedByObjectID[$objectID]);
             }
             $result[] = $row;
@@ -255,48 +277,69 @@ class SimpleLocale extends IPSModuleStrict
         return $result;
     }
 
-    private function FillMissingTranslations(array $Rows, string $SourceField, string $SourceLanguage, array $TargetLanguages): array
+    // Zwei Durchläufe: (1) ORIGINAL_IMPORT -> Quellsprache, ohne erzwungene Quellsprache
+    // bei Google - dadurch erkennt Google die tatsächliche Sprache selbst und poliert
+    // nebenbei Tippfehler im rohen Originaltext. (2) Quellsprache -> jede ausgewählte
+    // Zielsprache, jetzt mit bekannter, korrekter Quellsprache.
+    private function FillMissingTranslations(array $Rows, string $SourceLanguage, array $TargetLanguages): array
     {
-        if ($TargetLanguages === []) {
-            return $Rows;
-        }
+        $Rows = $this->FillLanguageColumn($Rows, self::langOriginalImport, $SourceLanguage, null);
 
-        foreach ($Rows as &$row) {
-            $sourceText = $row[$SourceField] ?? '';
-            if ($sourceText === '') {
+        foreach ($TargetLanguages as $language) {
+            if ($language === $SourceLanguage) {
                 continue;
             }
-
-            foreach ($TargetLanguages as $language) {
-                if ($language === $SourceLanguage) {
-                    continue;
-                }
-                if (($row[$language] ?? '') !== '') {
-                    continue;
-                }
-
-                $translated = $this->TranslateBatch([$sourceText], $SourceLanguage, $language);
-                $row[$language] = $translated[0] ?? '';
-            }
+            $Rows = $this->FillLanguageColumn($Rows, $SourceLanguage, $language, $SourceLanguage);
         }
-        unset($row);
 
         return $Rows;
     }
 
-    private function TranslateBatch(array $Texts, string $Source, string $Target): array
+    // Übersetzt für alle Zeilen, bei denen $ToField noch leer ist, den Text aus
+    // $FromField nach $ToField (gebatcht in einem API-Aufruf). $ForceSource = null
+    // lässt Google die Quellsprache selbst erkennen.
+    private function FillLanguageColumn(array $Rows, string $FromField, string $ToField, ?string $ForceSource): array
+    {
+        $pending = [];
+        foreach ($Rows as $index => $row) {
+            $fromText = $row[$FromField] ?? '';
+            if ($fromText !== '' && ($row[$ToField] ?? '') === '') {
+                $pending[$index] = $fromText;
+            }
+        }
+
+        if ($pending === []) {
+            return $Rows;
+        }
+
+        $translated = $this->TranslateBatch(array_values($pending), $ForceSource, $ToField);
+
+        $i = 0;
+        foreach (array_keys($pending) as $index) {
+            $Rows[$index][$ToField] = $translated[$i] ?? '';
+            $i++;
+        }
+
+        return $Rows;
+    }
+
+    // $Source = null lässt Google die Quellsprache des Texts selbst erkennen.
+    private function TranslateBatch(array $Texts, ?string $Source, string $Target): array
     {
         $apiKey = $this->ReadPropertyString(self::propertyGoogleTranslateAPIKey);
         if ($apiKey === '' || $Texts === []) {
             return array_fill(0, count($Texts), '');
         }
 
-        $payload = json_encode([
+        $body = [
             'q'      => $Texts,
-            'source' => $Source,
             'target' => $Target,
             'format' => 'text',
-        ]);
+        ];
+        if ($Source !== null) {
+            $body['source'] = $Source;
+        }
+        $payload = json_encode($body);
 
         $response = $this->CallGoogleTranslateAPI(
             'https://translation.googleapis.com/language/translate/v2?key=' . urlencode($apiKey),
@@ -413,20 +456,31 @@ class SimpleLocale extends IPSModuleStrict
     }
 
     // Baut die Spalten für die "ObjectNames"/"ObjectTexts"-Listen dynamisch anhand
-    // der aktuell ausgewählten Zielsprachen zusammen (Symcon-Formulare kennen keine
-    // Spalten mit dynamischer Anzahl, daher wird das Formular bei jedem Öffnen neu erzeugt).
-    private function BuildListColumns(string $SourceField, string $SourceCaption, array $TargetLanguages): array
+    // der Quell-/Zielsprachen zusammen (Symcon-Formulare kennen keine Spalten mit
+    // dynamischer Anzahl, daher wird das Formular bei jedem Öffnen neu erzeugt).
+    private function BuildListColumns(string $SourceLanguage, array $TargetLanguages): array
     {
         $columns = [
-            ['caption' => 'Objekt-ID', 'name' => 'ObjectID', 'width' => '100px'],
-            ['caption' => $SourceCaption, 'name' => $SourceField, 'width' => '250px'],
+            ['caption' => 'Objekt-ID', 'name' => 'ObjectID', 'width' => '80px'],
+            ['caption' => $this->Translate('Pfad'), 'name' => 'Path', 'width' => '200px'],
+            ['caption' => $this->Translate('Original-Import'), 'name' => self::langOriginalImport, 'width' => '200px'],
+            [
+                'caption' => sprintf('%s (%s)', $this->GetLanguageDisplayName($SourceLanguage), $this->Translate('Quelle')),
+                'name'    => $SourceLanguage,
+                'width'   => '200px',
+                'add'     => '',
+                'edit'    => ['type' => 'ValidationTextBox'],
+            ],
         ];
 
         foreach ($TargetLanguages as $language) {
+            if ($language === $SourceLanguage) {
+                continue;
+            }
             $columns[] = [
                 'caption' => $this->GetLanguageDisplayName($language),
                 'name'    => $language,
-                'width'   => '250px',
+                'width'   => '200px',
                 'add'     => '',
                 'edit'    => ['type' => 'ValidationTextBox'],
             ];

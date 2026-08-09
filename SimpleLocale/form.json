@@ -45,8 +45,9 @@
             "delete": true,
             "rowCount": 10,
             "columns": [
-                { "caption": "Objekt-ID", "name": "ObjectID", "width": "100px" },
-                { "caption": "SourceName", "name": "SourceName", "width": "250px" }
+                { "caption": "Objekt-ID", "name": "ObjectID", "width": "80px" },
+                { "caption": "Pfad", "name": "Path", "width": "200px" },
+                { "caption": "Original-Import", "name": "ORIGINAL_IMPORT", "width": "200px" }
             ]
         },
         {
@@ -57,8 +58,9 @@
             "delete": true,
             "rowCount": 10,
             "columns": [
-                { "caption": "Objekt-ID", "name": "ObjectID", "width": "100px" },
-                { "caption": "SourceContent", "name": "SourceContent", "width": "250px" }
+                { "caption": "Objekt-ID", "name": "ObjectID", "width": "80px" },
+                { "caption": "Pfad", "name": "Path", "width": "200px" },
+                { "caption": "Original-Import", "name": "ORIGINAL_IMPORT", "width": "200px" }
             ]
         }
     ],

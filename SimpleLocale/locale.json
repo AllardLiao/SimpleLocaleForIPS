@@ -2,8 +2,9 @@
     "translations": {
         "en": {
             "Sprache": "Language",
-            "Objektname": "Object name",
-            "Inhalt": "Content",
+            "Pfad": "Path",
+            "Original-Import": "Original import",
+            "Quelle": "Source",
             "Root-Kategorie (Gäste-Sichtbereich)": "Root category (guest-facing area)",
             "Basissprache": "Source language",
             "Zielsprachen": "Target languages",
