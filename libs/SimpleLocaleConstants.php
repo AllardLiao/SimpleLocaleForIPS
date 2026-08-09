@@ -24,8 +24,8 @@ trait SimpleLocaleConstants
     private const identRescan = 'Rescan';
     private const identRefreshLanguageList = 'RefreshLanguageList';
 
-    // Variablenprofil
-    private const profileLanguage = '~IPSSL.Language';
+    // Variablenprofil (kein führendes "~" - das ist Symcons System-Profilen vorbehalten)
+    private const profileLanguage = 'IPSSL.Language';
 
     // Timer: Präfix als Salt auf den Namen, falls im jeweiligen IPS-System
     // bereits ein Timer/Objekt mit demselben Basisnamen existieren sollte.
