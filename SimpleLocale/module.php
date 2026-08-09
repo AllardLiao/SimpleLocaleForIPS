@@ -377,13 +377,32 @@ class SimpleLocale extends IPSModuleStrict
     }
 
     // $Source = null lässt Google die Quellsprache des Texts selbst erkennen.
+    // Google Cloud Translate lehnt Anfragen mit mehr als 128 Texten in einem
+    // Aufruf komplett ab ("Too many text segments") - größere Batches werden
+    // daher in mehrere Aufrufe aufgeteilt.
+    private const translateMaxTextsPerRequest = 128;
+
     private function TranslateBatch(array $Texts, ?string $Source, string $Target): array
     {
+        if ($Texts === []) {
+            return [];
+        }
+
         $apiKey = $this->ReadPropertyString(self::propertyGoogleTranslateAPIKey);
-        if ($apiKey === '' || $Texts === []) {
+        if ($apiKey === '') {
             return array_fill(0, count($Texts), '');
         }
 
+        $results = [];
+        foreach (array_chunk($Texts, self::translateMaxTextsPerRequest) as $chunk) {
+            $results = array_merge($results, $this->TranslateChunk($chunk, $Source, $Target, $apiKey));
+        }
+
+        return $results;
+    }
+
+    private function TranslateChunk(array $Texts, ?string $Source, string $Target, string $ApiKey): array
+    {
         $body = [
             'q'      => $Texts,
             'target' => $Target,
@@ -395,7 +414,7 @@ class SimpleLocale extends IPSModuleStrict
         $payload = json_encode($body);
 
         $response = $this->CallGoogleTranslateAPI(
-            'https://translation.googleapis.com/language/translate/v2?key=' . urlencode($apiKey),
+            'https://translation.googleapis.com/language/translate/v2?key=' . urlencode($ApiKey),
             $payload
         );
 
