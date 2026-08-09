@@ -14,6 +14,11 @@
             ]
         },
         {
+            "type": "PasswordTextBox",
+            "name": "GoogleTranslateAPIKey",
+            "caption": "Google Cloud Translate API-Key"
+        },
+        {
             "type": "List",
             "name": "TargetLanguages",
             "caption": "Zielsprachen",
@@ -25,11 +30,6 @@
                 { "caption": "Code", "name": "code", "width": "80px" },
                 { "caption": "Aktiv", "name": "enabled", "width": "80px", "add": false, "edit": { "type": "CheckBox" } }
             ]
-        },
-        {
-            "type": "PasswordTextBox",
-            "name": "GoogleTranslateAPIKey",
-            "caption": "Google Cloud Translate API-Key"
         },
         {
             "type": "NumberSpinner",

@@ -16,6 +16,57 @@
             "Baum jetzt neu einlesen": "Rescan tree now",
             "Root-Kategorie nicht gesetzt": "Root category not set",
             "Google Translate Fehler - bitte API-Key prüfen": "Google Translate error - please check the API key"
+        },
+        "es": {
+            "Sprache": "Idioma",
+            "Pfad": "Ruta",
+            "Original-Import": "Importación original",
+            "Quelle": "Fuente",
+            "Root-Kategorie der Visualisierung": "Categoría raíz de la visualización",
+            "Basissprache": "Idioma de origen",
+            "Zielsprachen": "Idiomas de destino",
+            "Google Cloud Translate API-Key": "Clave de API de Google Cloud Translate",
+            "Automatischer Rescan (Minuten, 0 = aus)": "Nuevo escaneo automático (minutos, 0 = desactivado)",
+            "Objektnamen": "Nombres de objetos",
+            "Eigene Texte": "Textos personalizados",
+            "Sprachliste von Google aktualisieren": "Actualizar lista de idiomas de Google",
+            "Baum jetzt neu einlesen": "Volver a escanear el árbol ahora",
+            "Root-Kategorie nicht gesetzt": "Categoría raíz no establecida",
+            "Google Translate Fehler - bitte API-Key prüfen": "Error de Google Translate: compruebe la clave de API"
+        },
+        "it": {
+            "Sprache": "Lingua",
+            "Pfad": "Percorso",
+            "Original-Import": "Importazione originale",
+            "Quelle": "Fonte",
+            "Root-Kategorie der Visualisierung": "Categoria radice della visualizzazione",
+            "Basissprache": "Lingua di origine",
+            "Zielsprachen": "Lingue di destinazione",
+            "Google Cloud Translate API-Key": "Chiave API di Google Cloud Translate",
+            "Automatischer Rescan (Minuten, 0 = aus)": "Nuova scansione automatica (minuti, 0 = disattivato)",
+            "Objektnamen": "Nomi degli oggetti",
+            "Eigene Texte": "Testi personalizzati",
+            "Sprachliste von Google aktualisieren": "Aggiorna elenco lingue da Google",
+            "Baum jetzt neu einlesen": "Rileggi ora l'albero",
+            "Root-Kategorie nicht gesetzt": "Categoria radice non impostata",
+            "Google Translate Fehler - bitte API-Key prüfen": "Errore di Google Translate - controllare la chiave API"
+        },
+        "fr": {
+            "Sprache": "Langue",
+            "Pfad": "Chemin",
+            "Original-Import": "Importation originale",
+            "Quelle": "Source",
+            "Root-Kategorie der Visualisierung": "Catégorie racine de la visualisation",
+            "Basissprache": "Langue source",
+            "Zielsprachen": "Langues cibles",
+            "Google Cloud Translate API-Key": "Clé API Google Cloud Translate",
+            "Automatischer Rescan (Minuten, 0 = aus)": "Nouvelle analyse automatique (minutes, 0 = désactivé)",
+            "Objektnamen": "Noms des objets",
+            "Eigene Texte": "Textes personnalisés",
+            "Sprachliste von Google aktualisieren": "Actualiser la liste des langues depuis Google",
+            "Baum jetzt neu einlesen": "Réanalyser l'arborescence maintenant",
+            "Root-Kategorie nicht gesetzt": "Catégorie racine non définie",
+            "Google Translate Fehler - bitte API-Key prüfen": "Erreur Google Translate - veuillez vérifier la clé API"
         }
     }
 }
