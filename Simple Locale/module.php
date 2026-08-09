@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-class SimpleLocale extends IPSModule
+class SimpleLocale extends IPSModuleStrict
 {
     private const STATUS_ROOT_CATEGORY_MISSING = 201;
     private const STATUS_TRANSLATE_ERROR = 203;
@@ -17,7 +17,7 @@ class SimpleLocale extends IPSModule
         ['code' => 'nl', 'name' => 'Nederlands'],
     ];
 
-    public function Create()
+    public function Create():void
     {
         //Never delete this line!
         parent::Create();
@@ -39,13 +39,13 @@ class SimpleLocale extends IPSModule
         $this->RegisterTimer('AutoRescan', 0, 'IPSSL_Rescan($_IPS[\'TARGET\']);');
     }
 
-    public function Destroy()
+    public function Destroy():void
     {
         //Never delete this line!
         parent::Destroy();
     }
 
-    public function ApplyChanges()
+    public function ApplyChanges():void
     {
         //Never delete this line!
         parent::ApplyChanges();
@@ -70,7 +70,7 @@ class SimpleLocale extends IPSModule
         $this->SetTimerInterval('AutoRescan', $interval > 0 ? $interval * 60 * 1000 : 0);
     }
 
-    public function RequestAction($Ident, $Value)
+    public function RequestAction($Ident, $Value):void
     {
         switch ($Ident) {
             case 'Language':
@@ -91,7 +91,7 @@ class SimpleLocale extends IPSModule
         }
     }
 
-    public function GetConfigurationForm()
+    public function GetConfigurationForm():string
     {
         $form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
 
