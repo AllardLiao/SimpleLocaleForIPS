@@ -18,6 +18,12 @@
             "name": "GoogleTranslateAPIKey",
             "caption": "Google Cloud Translate API-Key"
         },
+                {
+            "type": "NumberSpinner",
+            "name": "AutoRescanInterval",
+            "caption": "Automatischer Rescan (Minuten, 0 = aus)",
+            "minimum": 0
+        },
         {
             "type": "List",
             "name": "TargetLanguages",
@@ -30,12 +36,6 @@
                 { "caption": "Code", "name": "code", "width": "80px" },
                 { "caption": "Aktiv", "name": "enabled", "width": "80px", "add": false, "edit": { "type": "CheckBox" } }
             ]
-        },
-        {
-            "type": "NumberSpinner",
-            "name": "AutoRescanInterval",
-            "caption": "Automatischer Rescan (Minuten, 0 = aus)",
-            "minimum": 0
         },
         {
             "type": "List",

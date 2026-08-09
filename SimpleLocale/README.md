@@ -48,7 +48,7 @@ Name                            | Beschreibung
 -------------------------------- | ------------------
 Root-Kategorie                  | Kategorie im Objektbaum, deren Inhalt (Namen + Werte von String-Variablen) übersetzt wird. Sollte nur die Gäste-Sichtbereich-Kacheln enthalten, nicht die Admin-Oberfläche.
 Basissprache                    | Sprache, in der die Objektnamen/-werte ursprünglich gepflegt sind (Quellsprache für Google Translate).
-Zielsprachen                    | Sprachen, in die übersetzt werden soll. Auswahl-Optionen kommen von Google (Button "Sprachliste von Google aktualisieren").
+Zielsprachen                    | Sprachen, in die übersetzt werden soll. Auswahl-Optionen kommen von Google (Button "Sprachliste von Google aktualisieren"). Wichtig: Nach dem Klick auf "Sprachliste aktualisieren" die Instanzkonfiguration einmal schließen und neu öffnen, bevor Häkchen gesetzt werden - sonst kann die Konsole falsche Sprachen speichern.
 Google Cloud Translate API-Key  | API-Key für die Cloud Translation API v2. Muss vor dem ersten Rescan/Sprachlisten-Refresh gespeichert ("Übernehmen") werden.
 Automatischer Rescan (Minuten)  | Intervall für automatisches Neu-Einlesen des Baums, 0 = nur manuell über den Button.
 Objektnamen / Eigene Texte      | Listen der gefundenen Objekte mit Quelltext und je einer Spalte pro Zielsprache. Übersetzungen sind hier direkt editierbar; leere Zellen werden beim nächsten Rescan automatisch übersetzt.

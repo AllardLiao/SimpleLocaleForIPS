@@ -89,8 +89,13 @@ class SimpleLocale extends IPSModuleStrict
                 break;
 
             case self::identRefreshLanguageList:
+                // Bewusst kein ReloadForm(): Die Konsole scheint den Checkbox-Zustand
+                // der Zielsprachen-Liste positionsbasiert statt datenbasiert
+                // beizubehalten, wenn sich die Zeilenzahl durch die (viel größere)
+                // Google-Liste ändert - ein erneutes Übernehmen direkt danach würde
+                // dann falsche Sprachen speichern. Die aktualisierte Liste steht beim
+                // nächsten Öffnen der Instanzkonfiguration zur Verfügung.
                 $this->FetchSupportedLanguages();
-                $this->ReloadForm();
                 break;
 
             default:
