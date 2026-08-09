@@ -45,7 +45,7 @@
             "delete": true,
             "rowCount": 10,
             "columns": [
-                { "caption": "Ident", "name": "Ident", "width": "150px" },
+                { "caption": "Objekt-ID", "name": "ObjectID", "width": "100px" },
                 { "caption": "SourceName", "name": "SourceName", "width": "250px" }
             ]
         },
@@ -57,7 +57,7 @@
             "delete": true,
             "rowCount": 10,
             "columns": [
-                { "caption": "Ident", "name": "Ident", "width": "150px" },
+                { "caption": "Objekt-ID", "name": "ObjectID", "width": "100px" },
                 { "caption": "SourceContent", "name": "SourceContent", "width": "250px" }
             ]
         }

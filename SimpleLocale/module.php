@@ -132,12 +132,12 @@ class SimpleLocale extends IPSModuleStrict
     // Symcon registriert öffentliche Methoden automatisch als globale Funktion
     // "<prefix>_<Methodenname>" (Prefix "IPSSL" aus module.json) - daher genügt
     // hier die public-Methode, ein eigenes "function IPSSL_..." ist nicht nötig.
-    public function TranslateText(string $Ident): string
+    public function TranslateText(int $ObjectID): string
     {
         $currentLanguage = $this->ReadAttributeString(self::attributeCurrentLanguage);
 
         foreach ($this->DecodeRows(self::propertyObjectTexts) as $row) {
-            if (($row['Ident'] ?? null) === $Ident) {
+            if (($row['ObjectID'] ?? null) === $ObjectID) {
                 $value = $row[$currentLanguage] ?? '';
 
                 return $value !== '' ? $value : ($row['SourceContent'] ?? '');
@@ -211,26 +211,22 @@ class SimpleLocale extends IPSModuleStrict
     {
         foreach (IPS_GetChildrenIDs($ID) as $childID) {
             $object = IPS_GetObject($childID);
-            $ident = $object['ObjectIdent'];
 
-            if ($ident === '') {
-                $this->SendDebug('ScanRootTree', sprintf('Objekt %d ("%s") hat keinen Ident und wird übersprungen', $childID, IPS_GetName($childID)), 0);
-            } else {
-                $ScannedNames[$ident] = [
-                    'Ident'      => $ident,
-                    'ObjectID'   => $childID,
-                    'SourceName' => IPS_GetName($childID),
-                ];
+            // Objekt-ID ist der eindeutige, stabile Schlüssel - Idents sind bei
+            // handangelegten Objekten (Kategorien/Variablen über die Konsole) meist gar
+            // nicht gesetzt.
+            $ScannedNames[$childID] = [
+                'ObjectID'   => $childID,
+                'SourceName' => IPS_GetName($childID),
+            ];
 
-                if ($object['ObjectType'] === OBJECTTYPE_VARIABLE) {
-                    $variable = IPS_GetVariable($childID);
-                    if ($variable['VariableType'] === VARIABLETYPE_STRING) {
-                        $ScannedTexts[$ident] = [
-                            'Ident'         => $ident,
-                            'ObjectID'      => $childID,
-                            'SourceContent' => GetValueString($childID),
-                        ];
-                    }
+            if ($object['ObjectType'] === OBJECTTYPE_VARIABLE) {
+                $variable = IPS_GetVariable($childID);
+                if ($variable['VariableType'] === VARIABLETYPE_STRING) {
+                    $ScannedTexts[$childID] = [
+                        'ObjectID'      => $childID,
+                        'SourceContent' => GetValueString($childID),
+                    ];
                 }
             }
 
@@ -238,22 +234,21 @@ class SimpleLocale extends IPSModuleStrict
         }
     }
 
-    // Merged bereits gespeicherte Zeilen (inkl. manueller Übersetzungen) mit frisch gescannten Idents
-    private function MergeRows(array $ExistingRows, array $ScannedByIdent, string $SourceField): array
+    // Merged bereits gespeicherte Zeilen (inkl. manueller Übersetzungen) mit frisch gescannten Objekt-IDs
+    private function MergeRows(array $ExistingRows, array $ScannedByObjectID, string $SourceField): array
     {
         $result = [];
         foreach ($ExistingRows as $row) {
-            $ident = $row['Ident'] ?? null;
-            if ($ident !== null && isset($ScannedByIdent[$ident])) {
-                $row['ObjectID'] = $ScannedByIdent[$ident]['ObjectID'];
-                $row[$SourceField] = $ScannedByIdent[$ident][$SourceField];
-                unset($ScannedByIdent[$ident]);
+            $objectID = $row['ObjectID'] ?? null;
+            if ($objectID !== null && isset($ScannedByObjectID[$objectID])) {
+                $row[$SourceField] = $ScannedByObjectID[$objectID][$SourceField];
+                unset($ScannedByObjectID[$objectID]);
             }
             $result[] = $row;
         }
 
-        // verbleibende, bisher unbekannte Idents neu anhängen
-        foreach ($ScannedByIdent as $newRow) {
+        // verbleibende, bisher unbekannte Objekt-IDs neu anhängen
+        foreach ($ScannedByObjectID as $newRow) {
             $result[] = $newRow;
         }
 
@@ -423,7 +418,7 @@ class SimpleLocale extends IPSModuleStrict
     private function BuildListColumns(string $SourceField, string $SourceCaption, array $TargetLanguages): array
     {
         $columns = [
-            ['caption' => 'Ident', 'name' => 'Ident', 'width' => '150px'],
+            ['caption' => 'Objekt-ID', 'name' => 'ObjectID', 'width' => '100px'],
             ['caption' => $SourceCaption, 'name' => $SourceField, 'width' => '250px'],
         ];
 

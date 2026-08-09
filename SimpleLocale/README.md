@@ -22,8 +22,9 @@ Beschreibung des Moduls.
   aufgerufen, nie für bereits vorhandene (auch manuell korrigierte) Werte.
 * Übersetzungen sind direkt im Modul-Formular überprüf- und korrigierbar.
 * Der Objektbaum wird manuell (Button) oder automatisch (Timer-Intervall)
-  erneut eingelesen; dabei werden nur neue Idents/Sprachen ergänzt, nichts
-  wird überschrieben oder gelöscht.
+  erneut eingelesen; dabei werden nur neue Objekte/Sprachen ergänzt, nichts
+  wird überschrieben oder gelöscht. Objekte werden über ihre Objekt-ID
+  identifiziert - ein gesetzter Ident ist nicht erforderlich.
 * Eine Sprachauswahl-Variable (`Language`) kann per WebFront/Kachel-Dropdown
   bedient werden und löst den Sprachwechsel aus.
 
@@ -77,13 +78,13 @@ Text in der aktuell aktiven Sprache.
 
 ### 7. PHP-Befehlsreferenz
 
-`string IPSSL_TranslateText(integer $InstanzID, string $Ident);`
-Liefert den Inhalt der "Eigene Texte"-Zeile mit dem angegebenen Ident in der
-aktuell aktiven Sprache (Fallback: Quelltext), z. B. für Popup-Inhalte in
-eigenen HTMLBox-Skripten.
+`string IPSSL_TranslateText(integer $InstanzID, integer $ObjektID);`
+Liefert den Inhalt der "Eigene Texte"-Zeile für die angegebene Objekt-ID
+(die String-Variable im Root-Baum) in der aktuell aktiven Sprache
+(Fallback: Quelltext), z. B. für Popup-Inhalte in eigenen HTMLBox-Skripten.
 
 Beispiel:
-`IPSSL_TranslateText(12345, "Hinweis");`
+`IPSSL_TranslateText(12345, 67890);`
 
 `void IPSSL_Rescan(integer $InstanzID);`
 Liest die konfigurierte Root-Kategorie neu ein und übersetzt neu gefundene
