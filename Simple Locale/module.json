@@ -1,0 +1,12 @@
+{
+    "id": "{1A2E3892-FE35-9E4E-A3A8-B983B0C41F64}",
+    "name": "Simple Locale",
+    "type": 3,
+    "vendor": "IP Symcon",
+    "aliases": [],
+    "parentRequirements": [],
+    "childRequirements": [],
+    "implemented": [],
+    "prefix": "IPSSL",
+    "url": ""
+}

@@ -1,0 +1,22 @@
+# VS Code
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# PHP / Composer (falls später genutzt)
+/vendor/
+composer.lock
+
+# Symcon Module Helper Testartefakte
+/tests/output/
+.ips_stubs/
+
+# Cache-/Konfigurationsdateien mit persönlichen Daten (API-Keys etc.)
+# Nur relevant, falls du wie in der Skript-Variante lokale JSON-Configs ablegst –
+# im fertigen Modul liegt der API-Key als Instanz-Property, nicht als Datei.
+config.json
+*.local.json
+
+# Betriebssystem
+.DS_Store
+Thumbs.db
