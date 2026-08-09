@@ -26,7 +26,7 @@ class SimpleLocale extends IPSModuleStrict
         //Never delete this line!
         parent::Create();
 
-        $this->RegisterPropertyInteger(self::propertyRootCategoryID, 0);
+        /**  $this->RegisterPropertyInteger(self::propertyRootCategoryID, 0);
         $this->RegisterPropertyString(self::propertySourceLanguage, 'de');
         $this->RegisterPropertyString(self::propertyTargetLanguages, '[]');
         $this->RegisterPropertyString(self::propertyGoogleTranslateAPIKey, '');
@@ -44,7 +44,7 @@ class SimpleLocale extends IPSModuleStrict
         $this->EnableAction(self::identLanguage);
 
         $this->RegisterTimer($this->GetAutoRescanTimerIdent(), 0, 'IPSSL_Rescan($_IPS[\'TARGET\']);');
-    }
+    */}
 
     public function Destroy(): void
     {
