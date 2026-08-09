@@ -13,7 +13,19 @@ Beschreibung des Moduls.
 
 ### 1. Funktionsumfang
 
-*
+* Übersetzt live die Namen aller Objekte (Kategorien, Variablen, Kacheln, Links)
+  innerhalb einer frei wählbaren Root-Kategorie, per `IPS_SetName`.
+* Übersetzt zusätzlich den Wert aller String-Variablen innerhalb dieser
+  Root-Kategorie (z. B. Hinweis-/Popup-Texte), per `SetValueString`.
+* Automatische Übersetzung über die Google Cloud Translate API, inkl.
+  persistentem Cache – Google wird nur für neue oder noch unübersetzte Einträge
+  aufgerufen, nie für bereits vorhandene (auch manuell korrigierte) Werte.
+* Übersetzungen sind direkt im Modul-Formular überprüf- und korrigierbar.
+* Der Objektbaum wird manuell (Button) oder automatisch (Timer-Intervall)
+  erneut eingelesen; dabei werden nur neue Idents/Sprachen ergänzt, nichts
+  wird überschrieben oder gelöscht.
+* Eine Sprachauswahl-Variable (`Language`) kann per WebFront/Kachel-Dropdown
+  bedient werden und löst den Sprachwechsel aus.
 
 ### 2. Voraussetzungen
 
@@ -31,10 +43,14 @@ Beschreibung des Moduls.
 
 __Konfigurationsseite__:
 
-Name     | Beschreibung
--------- | ------------------
-         |
-         |
+Name                            | Beschreibung
+-------------------------------- | ------------------
+Root-Kategorie                  | Kategorie im Objektbaum, deren Inhalt (Namen + Werte von String-Variablen) übersetzt wird. Sollte nur die Gäste-Sichtbereich-Kacheln enthalten, nicht die Admin-Oberfläche.
+Basissprache                    | Sprache, in der die Objektnamen/-werte ursprünglich gepflegt sind (Quellsprache für Google Translate).
+Zielsprachen                    | Sprachen, in die übersetzt werden soll. Auswahl-Optionen kommen von Google (Button "Sprachliste von Google aktualisieren").
+Google Cloud Translate API-Key  | API-Key für die Cloud Translation API v2. Muss vor dem ersten Rescan/Sprachlisten-Refresh gespeichert ("Übernehmen") werden.
+Automatischer Rescan (Minuten)  | Intervall für automatisches Neu-Einlesen des Baums, 0 = nur manuell über den Button.
+Objektnamen / Eigene Texte      | Listen der gefundenen Objekte mit Quelltext und je einer Spalte pro Zielsprache. Übersetzungen sind hier direkt editierbar; leere Zellen werden beim nächsten Rescan automatisch übersetzt.
 
 ### 5. Statusvariablen und Profile
 
@@ -42,26 +58,37 @@ Die Statusvariablen/Kategorien werden automatisch angelegt. Das Löschen einzeln
 
 #### Statusvariablen
 
-Name   | Typ     | Beschreibung
------- | ------- | ------------
-       |         |
-       |         |
+Name       | Typ     | Beschreibung
+---------- | ------- | ------------
+`Language` | String  | Aktuell aktive Sprache (Ident-Aktion, z. B. per Dropdown in der Kachel-Visualisierung bedienbar)
 
 #### Profile
 
-Name   | Typ
------- | -------
-       |
-       |
+Name              | Typ
+----------------- | -------
+`~IPSSL.Language` | String (Assoziationen: ein Wert je Basis-/Zielsprache)
 
 ### 6. Visualisierung
 
-Die Funktionalität, die das Modul in der Visualisierung bietet.
+Die `Language`-Variable kann als Dropdown/Auswahl-Element direkt in der
+Kachel-Visualisierung platziert werden. Für eigene HTMLBox-Popups oder Hinweise
+außerhalb der live umbenannten Objekte liefert `IPSSL_TranslateText()` den
+Text in der aktuell aktiven Sprache.
 
 ### 7. PHP-Befehlsreferenz
 
-`boolean IPSSL_BeispielFunktion(integer $InstanzID);`
-Erklärung der Funktion.
+`string IPSSL_TranslateText(integer $InstanzID, string $Ident);`
+Liefert den Inhalt der "Eigene Texte"-Zeile mit dem angegebenen Ident in der
+aktuell aktiven Sprache (Fallback: Quelltext), z. B. für Popup-Inhalte in
+eigenen HTMLBox-Skripten.
 
 Beispiel:
-`IPSSL_BeispielFunktion(12345);`
+`IPSSL_TranslateText(12345, "Hinweis");`
+
+`void IPSSL_Rescan(integer $InstanzID);`
+Liest die konfigurierte Root-Kategorie neu ein und übersetzt neu gefundene
+oder noch unübersetzte Einträge. Entspricht dem Button "Baum jetzt neu
+einlesen" im Modul-Formular.
+
+Beispiel:
+`IPSSL_Rescan(12345);`

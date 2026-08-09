@@ -1,5 +1,84 @@
 {
-    "elements": [],
-    "actions": [],
-    "status": []
+    "elements": [
+        {
+            "type": "SelectCategory",
+            "name": "RootCategoryID",
+            "caption": "Root-Kategorie (Gäste-Sichtbereich)"
+        },
+        {
+            "type": "Select",
+            "name": "SourceLanguage",
+            "caption": "Basissprache",
+            "options": [
+                { "caption": "Deutsch", "value": "de" }
+            ]
+        },
+        {
+            "type": "SelectMultiple",
+            "name": "TargetLanguages",
+            "caption": "Zielsprachen",
+            "options": [
+                { "caption": "English", "value": "en" }
+            ]
+        },
+        {
+            "type": "PasswordTextBox",
+            "name": "GoogleTranslateAPIKey",
+            "caption": "Google Cloud Translate API-Key"
+        },
+        {
+            "type": "NumberSpinner",
+            "name": "AutoRescanInterval",
+            "caption": "Automatischer Rescan (Minuten, 0 = aus)",
+            "minimum": 0
+        },
+        {
+            "type": "List",
+            "name": "ObjectNames",
+            "caption": "Objektnamen",
+            "add": false,
+            "delete": true,
+            "rowCount": 10,
+            "columns": [
+                { "caption": "Ident", "name": "Ident", "width": "150px" },
+                { "caption": "SourceName", "name": "SourceName", "width": "250px" }
+            ]
+        },
+        {
+            "type": "List",
+            "name": "ObjectTexts",
+            "caption": "Eigene Texte",
+            "add": false,
+            "delete": true,
+            "rowCount": 10,
+            "columns": [
+                { "caption": "Ident", "name": "Ident", "width": "150px" },
+                { "caption": "SourceContent", "name": "SourceContent", "width": "250px" }
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "type": "Button",
+            "caption": "Sprachliste von Google aktualisieren",
+            "onClick": "IPS_RequestAction($id, 'RefreshLanguageList', true);"
+        },
+        {
+            "type": "Button",
+            "caption": "Baum jetzt neu einlesen",
+            "onClick": "IPS_RequestAction($id, 'Rescan', true);"
+        }
+    ],
+    "status": [
+        {
+            "code": 201,
+            "icon": "error",
+            "caption": "Root-Kategorie nicht gesetzt"
+        },
+        {
+            "code": 203,
+            "icon": "error",
+            "caption": "Google Translate Fehler - bitte API-Key prüfen"
+        }
+    ]
 }

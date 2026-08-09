@@ -1,8 +1,20 @@
 {
     "translations": {
-        "de": {
-            "Translation 1": "Übersetzung 1",
-            "Translation 2": "Übersetzung 2"
+        "en": {
+            "Sprache": "Language",
+            "Objektname": "Object name",
+            "Inhalt": "Content",
+            "Root-Kategorie (Gäste-Sichtbereich)": "Root category (guest-facing area)",
+            "Basissprache": "Source language",
+            "Zielsprachen": "Target languages",
+            "Google Cloud Translate API-Key": "Google Cloud Translate API key",
+            "Automatischer Rescan (Minuten, 0 = aus)": "Automatic rescan (minutes, 0 = off)",
+            "Objektnamen": "Object names",
+            "Eigene Texte": "Custom texts",
+            "Sprachliste von Google aktualisieren": "Refresh language list from Google",
+            "Baum jetzt neu einlesen": "Rescan tree now",
+            "Root-Kategorie nicht gesetzt": "Root category not set",
+            "Google Translate Fehler - bitte API-Key prüfen": "Google Translate error - please check the API key"
         }
     }
 }

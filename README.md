@@ -8,15 +8,20 @@ Visualisierungen (Admin, eigene Steuerung) unverändert bleiben.
 
 ## Funktionsweise
 
-Das Modul unterscheidet zwei Textarten:
+Eine konfigurierte Root-Kategorie (der Gäste-Sichtbereich) wird eingelesen und liefert
+zwei Textarten, die beide automatisch via Google Cloud Translate übersetzt und
+persistent im Modul-Formular gecacht werden:
 
 | Textart | Quelle | Mechanismus |
 |---|---|---|
-| **Eigene Texte** (Popup-Texte, Hinweise, Beschreibungen) | im Modul hinterlegte Quelltexte | Automatische Übersetzung via Google Cloud Translate, mit persistentem Cache |
-| **Objektbaum-Texte** (Kategorie-/Variablen-/Kachelnamen) | vom Nutzer gepflegte Referenzdatei je Sprache | Wird bei Sprachwechsel per `IPS_SetName` auf den konfigurierten Objektbaum angewendet |
+| **Objektnamen** (Kategorie-/Variablen-/Kachelnamen) | Namen aller Objekte im Root-Baum | Wird bei Sprachwechsel per `IPS_SetName` live auf den Objektbaum angewendet |
+| **Eigene Texte** (Popup-/Hinweistexte) | Wert aller String-Variablen im Root-Baum (z. B. eine Variable "Hinweis") | Wird bei Sprachwechsel per `SetValueString` live geschrieben, alternativ per `IPSSL_TranslateText()` abfragbar |
 
-Eine Dropdown-Variable in der Zielvisualisierung erlaubt Gästen die Sprachauswahl; alle
-Umbenennungen bleiben auf die konfigurierte Root-Kategorie beschränkt.
+Übersetzungen sind im Modul-Formular direkt einsehbar und korrigierbar (Google übersetzt
+nicht immer perfekt); ein Rescan (manuell oder per Timer) übersetzt nur neue oder noch
+leere Einträge nach, bestehende Werte bleiben unangetastet. Eine Dropdown-Variable
+(`Language`) in der Zielvisualisierung erlaubt Gästen die Sprachauswahl; alle
+Umbenennungen/Wertänderungen bleiben auf die konfigurierte Root-Kategorie beschränkt.
 
 ## Installation
 
@@ -30,7 +35,9 @@ Folgende Module beinhaltet das Simple Locale for IP Symcon Repository:
 
 ## Konfiguration
 
-Wird ergänzt, sobald `form.json` steht.
+Siehe [Konfigurationsseite in der Moduldokumentation](Simple%20Locale/README.md#4-einrichten-der-instanzen-in-symcon)
+für die Übersicht aller Formularfelder. Kurzfassung: Root-Kategorie, Basis-/Zielsprachen
+und Google-Translate-API-Key setzen, "Übernehmen", dann "Baum jetzt neu einlesen" klicken.
 
 ## Entwicklung
 
