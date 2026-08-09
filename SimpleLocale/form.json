@@ -3,7 +3,7 @@
         {
             "type": "SelectCategory",
             "name": "RootCategoryID",
-            "caption": "Root-Kategorie (Gäste-Sichtbereich)"
+            "caption": "Root-Kategorie der Visualisierung"
         },
         {
             "type": "Select",
