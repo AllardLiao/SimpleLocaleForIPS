@@ -30,7 +30,7 @@
             "caption": "Zielsprachen",
             "add": true,
             "delete": true,
-            "rowCount": 10,
+            "rowCount": 5,
             "columns": [
                 {
                     "caption": "Sprache",
