@@ -2,10 +2,14 @@
 
 declare(strict_types=1);
 
+// Include Helper classes/traits.
+require_once __DIR__ . '/../libs/SimpleLocaleConstants.php';
+
+use SimpleLocaleConstants\GUIDs;
+
 class SimpleLocale extends IPSModuleStrict
 {
-    private const STATUS_ROOT_CATEGORY_MISSING = 201;
-    private const STATUS_TRANSLATE_ERROR = 203;
+    use SimpleLocaleConstants\SimpleLocaleConstants;
 
     // Fallback-Liste, solange noch keine Sprachliste von Google geladen wurde
     private const DEFAULT_LANGUAGES = [
@@ -17,40 +21,43 @@ class SimpleLocale extends IPSModuleStrict
         ['code' => 'nl', 'name' => 'Nederlands'],
     ];
 
-    public function Create():void
+    public function Create(): void
     {
         //Never delete this line!
         parent::Create();
 
-        $this->RegisterPropertyInteger('RootCategoryID', 0);
-        $this->RegisterPropertyString('SourceLanguage', 'de');
-        $this->RegisterPropertyString('TargetLanguages', '[]');
-        $this->RegisterPropertyString('GoogleTranslateAPIKey', '');
-        $this->RegisterPropertyInteger('AutoRescanInterval', 0);
-        $this->RegisterPropertyString('ObjectNames', '[]');
-        $this->RegisterPropertyString('ObjectTexts', '[]');
+        $this->RegisterPropertyInteger(self::propertyRootCategoryID, 0);
+        $this->RegisterPropertyString(self::propertySourceLanguage, 'de');
+        $this->RegisterPropertyString(self::propertyTargetLanguages, '[]');
+        $this->RegisterPropertyString(self::propertyGoogleTranslateAPIKey, '');
+        $this->RegisterPropertyInteger(self::propertyAutoRescanInterval, 0);
+        $this->RegisterPropertyString(self::propertyObjectNames, '[]');
+        $this->RegisterPropertyString(self::propertyObjectTexts, '[]');
 
-        $this->RegisterAttributeString('CurrentLanguage', '');
-        $this->RegisterAttributeString('AvailableLanguagesCache', '[]');
+        $this->RegisterAttributeString(self::attributeCurrentLanguage, '');
+        $this->RegisterAttributeString(self::attributeAvailableLanguagesCache, '[]');
 
-        $this->RegisterVariableString('Language', $this->Translate('Sprache'), '~IPSSL.Language');
-        $this->EnableAction('Language');
+        // Profil muss existieren, bevor die Variable damit registriert werden kann
+        $this->EnsureLanguageProfileExists();
 
-        $this->RegisterTimer('AutoRescan', 0, 'IPSSL_Rescan($_IPS[\'TARGET\']);');
+        $this->RegisterVariableString(self::identLanguage, $this->Translate('Sprache'), self::profileLanguage);
+        $this->EnableAction(self::identLanguage);
+
+        $this->RegisterTimer($this->GetAutoRescanTimerIdent(), 0, 'IPSSL_Rescan($_IPS[\'TARGET\']);');
     }
 
-    public function Destroy():void
+    public function Destroy(): void
     {
         //Never delete this line!
         parent::Destroy();
     }
 
-    public function ApplyChanges():void
+    public function ApplyChanges(): void
     {
         //Never delete this line!
         parent::ApplyChanges();
 
-        $rootID = $this->ReadPropertyInteger('RootCategoryID');
+        $rootID = $this->ReadPropertyInteger(self::propertyRootCategoryID);
         if ($rootID === 0 || !@IPS_ObjectExists($rootID)) {
             $this->SetStatus(self::STATUS_ROOT_CATEGORY_MISSING);
         } else {
@@ -60,28 +67,28 @@ class SimpleLocale extends IPSModuleStrict
         $this->UpdateLanguageProfile();
 
         // Beim allerersten Aufbau: aktive Sprache auf die Basissprache setzen
-        if ($this->ReadAttributeString('CurrentLanguage') === '') {
-            $sourceLanguage = $this->ReadPropertyString('SourceLanguage');
-            $this->WriteAttributeString('CurrentLanguage', $sourceLanguage);
-            $this->SetValue('Language', $sourceLanguage);
+        if ($this->ReadAttributeString(self::attributeCurrentLanguage) === '') {
+            $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
+            $this->WriteAttributeString(self::attributeCurrentLanguage, $sourceLanguage);
+            $this->SetValue(self::identLanguage, $sourceLanguage);
         }
 
-        $interval = $this->ReadPropertyInteger('AutoRescanInterval');
-        $this->SetTimerInterval('AutoRescan', $interval > 0 ? $interval * 60 * 1000 : 0);
+        $interval = $this->ReadPropertyInteger(self::propertyAutoRescanInterval);
+        $this->SetTimerInterval($this->GetAutoRescanTimerIdent(), $interval > 0 ? $interval * 60 * 1000 : 0);
     }
 
-    public function RequestAction($Ident, $Value):void
+    public function RequestAction(string $Ident, mixed $Value): void
     {
         switch ($Ident) {
-            case 'Language':
+            case self::identLanguage:
                 $this->ApplyLanguage((string) $Value);
                 break;
 
-            case 'Rescan':
+            case self::identRescan:
                 $this->Rescan();
                 break;
 
-            case 'RefreshLanguageList':
+            case self::identRefreshLanguageList:
                 $this->FetchSupportedLanguages();
                 $this->ReloadForm();
                 break;
@@ -91,11 +98,11 @@ class SimpleLocale extends IPSModuleStrict
         }
     }
 
-    public function GetConfigurationForm():string
+    public function GetConfigurationForm(): string
     {
         $form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
 
-        $targetLanguages = json_decode($this->ReadPropertyString('TargetLanguages'), true);
+        $targetLanguages = json_decode($this->ReadPropertyString(self::propertyTargetLanguages), true);
         if (!is_array($targetLanguages)) {
             $targetLanguages = [];
         }
@@ -104,19 +111,19 @@ class SimpleLocale extends IPSModuleStrict
 
         foreach ($form['elements'] as &$element) {
             switch ($element['name'] ?? '') {
-                case 'SourceLanguage':
+                case self::propertySourceLanguage:
                     $element['options'] = $languageOptions;
                     break;
 
-                case 'TargetLanguages':
+                case self::propertyTargetLanguages:
                     $element['options'] = $languageOptions;
                     break;
 
-                case 'ObjectNames':
+                case self::propertyObjectNames:
                     $element['columns'] = $this->BuildListColumns('SourceName', $this->Translate('Objektname'), $targetLanguages);
                     break;
 
-                case 'ObjectTexts':
+                case self::propertyObjectTexts:
                     $element['columns'] = $this->BuildListColumns('SourceContent', $this->Translate('Inhalt'), $targetLanguages);
                     break;
             }
@@ -131,9 +138,9 @@ class SimpleLocale extends IPSModuleStrict
     // hier die public-Methode, ein eigenes "function IPSSL_..." ist nicht nötig.
     public function TranslateText(string $Ident): string
     {
-        $currentLanguage = $this->ReadAttributeString('CurrentLanguage');
+        $currentLanguage = $this->ReadAttributeString(self::attributeCurrentLanguage);
 
-        foreach ($this->DecodeRows('ObjectTexts') as $row) {
+        foreach ($this->DecodeRows(self::propertyObjectTexts) as $row) {
             if (($row['Ident'] ?? null) === $Ident) {
                 $value = $row[$currentLanguage] ?? '';
 
@@ -151,10 +158,10 @@ class SimpleLocale extends IPSModuleStrict
 
     private function ApplyLanguage(string $Language): void
     {
-        $this->SetValue('Language', $Language);
-        $this->WriteAttributeString('CurrentLanguage', $Language);
+        $this->SetValue(self::identLanguage, $Language);
+        $this->WriteAttributeString(self::attributeCurrentLanguage, $Language);
 
-        foreach ($this->DecodeRows('ObjectNames') as $row) {
+        foreach ($this->DecodeRows(self::propertyObjectNames) as $row) {
             $objectID = (int) ($row['ObjectID'] ?? 0);
             if ($objectID === 0 || !@IPS_ObjectExists($objectID)) {
                 continue;
@@ -164,7 +171,7 @@ class SimpleLocale extends IPSModuleStrict
             IPS_SetName($objectID, $name !== '' ? $name : ($row['SourceName'] ?? ''));
         }
 
-        foreach ($this->DecodeRows('ObjectTexts') as $row) {
+        foreach ($this->DecodeRows(self::propertyObjectTexts) as $row) {
             $objectID = (int) ($row['ObjectID'] ?? 0);
             if ($objectID === 0 || !@IPS_ObjectExists($objectID)) {
                 continue;
@@ -177,7 +184,7 @@ class SimpleLocale extends IPSModuleStrict
 
     private function ScanRootTree(): void
     {
-        $rootID = $this->ReadPropertyInteger('RootCategoryID');
+        $rootID = $this->ReadPropertyInteger(self::propertyRootCategoryID);
         if ($rootID === 0 || !@IPS_ObjectExists($rootID)) {
             $this->SetStatus(self::STATUS_ROOT_CATEGORY_MISSING);
             return;
@@ -187,11 +194,11 @@ class SimpleLocale extends IPSModuleStrict
         $scannedTexts = [];
         $this->WalkTree($rootID, $scannedNames, $scannedTexts);
 
-        $objectNames = $this->MergeRows($this->DecodeRows('ObjectNames'), $scannedNames, 'SourceName');
-        $objectTexts = $this->MergeRows($this->DecodeRows('ObjectTexts'), $scannedTexts, 'SourceContent');
+        $objectNames = $this->MergeRows($this->DecodeRows(self::propertyObjectNames), $scannedNames, 'SourceName');
+        $objectTexts = $this->MergeRows($this->DecodeRows(self::propertyObjectTexts), $scannedTexts, 'SourceContent');
 
-        $sourceLanguage = $this->ReadPropertyString('SourceLanguage');
-        $targetLanguages = json_decode($this->ReadPropertyString('TargetLanguages'), true);
+        $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
+        $targetLanguages = json_decode($this->ReadPropertyString(self::propertyTargetLanguages), true);
         if (!is_array($targetLanguages)) {
             $targetLanguages = [];
         }
@@ -199,12 +206,12 @@ class SimpleLocale extends IPSModuleStrict
         $objectNames = $this->FillMissingTranslations($objectNames, 'SourceName', $sourceLanguage, $targetLanguages);
         $objectTexts = $this->FillMissingTranslations($objectTexts, 'SourceContent', $sourceLanguage, $targetLanguages);
 
-        IPS_SetProperty($this->InstanceID, 'ObjectNames', json_encode(array_values($objectNames)));
-        IPS_SetProperty($this->InstanceID, 'ObjectTexts', json_encode(array_values($objectTexts)));
+        IPS_SetProperty($this->InstanceID, self::propertyObjectNames, json_encode(array_values($objectNames)));
+        IPS_SetProperty($this->InstanceID, self::propertyObjectTexts, json_encode(array_values($objectTexts)));
         IPS_ApplyChanges($this->InstanceID);
 
-        $this->UpdateFormField('ObjectNames', 'values', json_encode(array_values($objectNames)));
-        $this->UpdateFormField('ObjectTexts', 'values', json_encode(array_values($objectTexts)));
+        $this->UpdateFormField(self::propertyObjectNames, 'values', json_encode(array_values($objectNames)));
+        $this->UpdateFormField(self::propertyObjectTexts, 'values', json_encode(array_values($objectTexts)));
     }
 
     private function WalkTree(int $ID, array &$ScannedNames, array &$ScannedTexts): void
@@ -291,7 +298,7 @@ class SimpleLocale extends IPSModuleStrict
 
     private function TranslateBatch(array $Texts, string $Source, string $Target): array
     {
-        $apiKey = $this->ReadPropertyString('GoogleTranslateAPIKey');
+        $apiKey = $this->ReadPropertyString(self::propertyGoogleTranslateAPIKey);
         if ($apiKey === '' || $Texts === []) {
             return array_fill(0, count($Texts), '');
         }
@@ -327,14 +334,14 @@ class SimpleLocale extends IPSModuleStrict
 
     private function FetchSupportedLanguages(): void
     {
-        $apiKey = $this->ReadPropertyString('GoogleTranslateAPIKey');
+        $apiKey = $this->ReadPropertyString(self::propertyGoogleTranslateAPIKey);
         if ($apiKey === '') {
             $this->SetStatus(self::STATUS_TRANSLATE_ERROR);
 
             return;
         }
 
-        $target = $this->ReadPropertyString('SourceLanguage');
+        $target = $this->ReadPropertyString(self::propertySourceLanguage);
         $url = 'https://translation.googleapis.com/language/translate/v2/languages'
             . '?key=' . urlencode($apiKey)
             . '&target=' . urlencode($target);
@@ -359,7 +366,7 @@ class SimpleLocale extends IPSModuleStrict
             ];
         }, $languages);
 
-        $this->WriteAttributeString('AvailableLanguagesCache', json_encode($result));
+        $this->WriteAttributeString(self::attributeAvailableLanguagesCache, json_encode($result));
     }
 
     // Gemeinsamer HTTP-Client für die Google Cloud Translate API (GET ohne Body, POST mit JSON-Body)
@@ -390,20 +397,25 @@ class SimpleLocale extends IPSModuleStrict
         return $response;
     }
 
+    private function EnsureLanguageProfileExists(): void
+    {
+        if (!IPS_VariableProfileExists(self::profileLanguage)) {
+            IPS_CreateVariableProfile(self::profileLanguage, VARIABLETYPE_STRING);
+        }
+    }
+
     private function UpdateLanguageProfile(): void
     {
-        $profileName = '~IPSSL.Language';
-        if (!IPS_VariableProfileExists($profileName)) {
-            IPS_CreateVariableProfile($profileName, VARIABLETYPE_STRING);
-        }
+        $profileName = self::profileLanguage;
+        $this->EnsureLanguageProfileExists();
 
         foreach (IPS_GetVariableProfile($profileName)['Associations'] as $association) {
             IPS_SetVariableProfileAssociation($profileName, $association['Value'], '', '', -1);
         }
 
         $languages = array_merge(
-            [$this->ReadPropertyString('SourceLanguage')],
-            json_decode($this->ReadPropertyString('TargetLanguages'), true) ?: []
+            [$this->ReadPropertyString(self::propertySourceLanguage)],
+            json_decode($this->ReadPropertyString(self::propertyTargetLanguages), true) ?: []
         );
         $languages = array_unique($languages);
 
@@ -460,7 +472,7 @@ class SimpleLocale extends IPSModuleStrict
 
     private function GetKnownLanguages(): array
     {
-        $cached = json_decode($this->ReadAttributeString('AvailableLanguagesCache'), true);
+        $cached = json_decode($this->ReadAttributeString(self::attributeAvailableLanguagesCache), true);
         if (!is_array($cached) || $cached === []) {
             return self::DEFAULT_LANGUAGES;
         }
@@ -479,5 +491,12 @@ class SimpleLocale extends IPSModuleStrict
         $rows = json_decode($this->ReadPropertyString($PropertyName), true);
 
         return is_array($rows) ? $rows : [];
+    }
+
+    // Salt auf den Timer-Namen (Präfix + Instanz-ID), falls im System bereits
+    // ein Timer/Objekt mit demselben Basisnamen existieren sollte.
+    private function GetAutoRescanTimerIdent(): string
+    {
+        return self::timerPrefix . $this->InstanceID . self::timerIdentAutoRescan;
     }
 }
