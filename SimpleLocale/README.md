@@ -197,6 +197,19 @@ Vollversion:
   Zeitpunkt dieses Dokuments noch nicht fest. Der Schlüssel wird komplett
   offline geprüft (signiert, keine Internetverbindung zur Prüfung nötig).
 
+**Zeitlich begrenzte Marketing-Aktionen:** Zusätzlich zu den 5 dauerhaft
+kostenfreien Testversion-Sprachen können für alle Installationen gleichzeitig
+weitere Sprachen für einen festgelegten Zeitraum kostenfrei freigeschaltet
+werden (z. B. "die Sprachen aller teilnehmenden Nationen sind während der
+Fußball-Weltmeisterschaft kostenfrei"). Das gilt sowohl für noch laufende als
+auch für bereits abgelaufene Testphasen einzelner Instanzen - ein netter
+Anlass, nochmal vorbeizuschauen. Läuft die Aktion ab, ohne dass die
+betroffenen Zeilen zuvor tatsächlich übersetzt wurden, zeigt die Kachel für
+diese Sprache einfach den unübersetzten Original-Text (kein Absturz, keine
+leere Anzeige). Konfiguriert wird das nicht im Formular, sondern bewusst fest
+im Modul-Code (`PROMOTIONAL_LANGUAGE_CAMPAIGNS` in `module.php`), damit jede
+Installation die Aktion automatisch mit dem nächsten Update mitbekommt.
+
 Für Entwickler: Ob ein Build die Testversion-Einschränkungen überhaupt
 anwendet, steuert die Konstante `IS_TRIAL_BUILD` in `module.php` - für einen
 Vollversion-Build (z. B. an zahlende Kunden nach Kauf) dort auf `false`

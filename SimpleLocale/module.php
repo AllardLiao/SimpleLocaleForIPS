@@ -48,6 +48,45 @@ class SimpleLocale extends IPSModuleStrict
     // Mechanismus, aber ohne die Sprachen, die man in der Praxis tatsächlich braucht.
     private const TRIAL_LANGUAGE_CODES = ['is', 'cy', 'zu', 'mi', 'la'];
 
+    // Marketing: zeitlich begrenzte Aktionen, die für ALLE Installationen
+    // gleichzeitig zusätzliche Sprachen kostenfrei freischalten (zusätzlich zu
+    // TRIAL_LANGUAGE_CODES, siehe GetFreeLanguageCodes) - bewusst hart im
+    // Modul-Code hinterlegt statt irgendwo konfigurierbar, damit "für alle
+    // Installationen gleich" auch wirklich stimmt: jede Instanz bekommt die Aktion
+    // automatisch mit dem nächsten Update, ganz ohne eigenes Zutun des Nutzers.
+    // Wirkt zweifach: (1) admin-seitig als zusätzlich wählbare Zielsprache
+    // während der Aktion (auch für noch laufende Testphasen), (2) gast-seitig
+    // darf ein Sprachwechsel in eine gerade aktive Aktionssprache sogar dann
+    // stattfinden, wenn die eigene 30-Tage-Testphase der Instanz längst
+    // abgelaufen ist (siehe IsLanguageBlockedByTrial) - ein netter Anlass,
+    // testweise nochmal vorbeizuschauen. Frisch generiert werden Übersetzungen
+    // dafür trotzdem nur, wenn ohnehin schon rescannt werden darf (aktive
+    // Testphase oder Lizenz) - eine abgelaufene, unlizenzierte Instanz liefert
+    // für noch nie übersetzte Zeilen weiterhin nur den Rohtext (siehe
+    // ResolveRowValue), keinen Absturz und keine leere Anzeige.
+    //
+    // Ideen für sympathische, zum Schmunzeln anregende Aktionen (jeweils als
+    // eigener Array-Eintrag unten aktivierbar):
+    // - Fußball-/Sport-Großereignis: Sprachen der teilnehmenden Nationen für die
+    //   Turnierlaufzeit ("Hurra, Weltmeisterschaft! ...").
+    // - Europäischer Tag der Sprachen (26. September): 24h alle EU-Amtssprachen.
+    // - Hieronymustag/Internationaler Übersetzertag (30. September): Dank an alle
+    //   Übersetzer der Welt, 24h alle Sprachen kostenfrei.
+    // - Dezember/Nikolaus: Finnisch ("die Sprache des Weihnachtsmanns") den ganzen
+    //   Monat gratis.
+    // - Tag der Deutschen Einheit (3. Oktober): die Sprachen aller neun deutschen
+    //   Nachbarländer für diesen einen Tag.
+    // - Esperanto-Tag (26. Juli): Esperanto - "die Sprache, die alle verbindet".
+    private const PROMOTIONAL_LANGUAGE_CAMPAIGNS = [
+        // Beispiel, bis zu einer echten Aktion auskommentiert:
+        // [
+        //     'name'     => 'Fußball-WM 2026',
+        //     'codes'    => ['en', 'es', 'fr', 'pt', 'ja', 'ko', 'ar'],
+        //     'startsAt' => 1749600000, // 11.06.2026
+        //     'endsAt'   => 1752960000, // 19.07.2026 (exklusiv)
+        // ],
+    ];
+
     // Geheimnis zur Prüfung von Lizenzschlüsseln (HMAC-Signatur, siehe
     // ValidateLicenseKey). PLATZHALTER - vor dem echten Release durch ein
     // echtes, nur dem eigenen Verkaufssystem bekanntes Geheimnis ersetzen. Mit
@@ -176,16 +215,19 @@ class SimpleLocale extends IPSModuleStrict
     {
         switch ($Ident) {
             case self::identLanguage:
-                if ($this->IsTrialLocked()) {
+                $language = (string) $Value;
+                if ($this->IsLanguageBlockedByTrial($language)) {
                     // Statt der gewünschten Sprache zurück auf die Original-Importe
                     // (verhindert dauerhaft eingefrorene/unvollständige Übersetzungen)
                     // und ein Hinweis-Popup mit Link zum Lizenzerwerb, live übersetzt
-                    // in die eigentlich gewünschte Sprache.
+                    // in die eigentlich gewünschte Sprache. Aktuell kostenfreie Sprachen
+                    // (Testphase-Sprachen + laufende Marketing-Aktionen) landen dagegen
+                    // im else-Zweig, auch wenn die eigene Testphase längst abgelaufen ist.
                     $this->ResetToOriginalLanguageIfNeeded();
                     $this->PushVisualizationUpdate();
-                    $this->PushTrialExpiredAlert((string) $Value);
+                    $this->PushTrialExpiredAlert($language);
                 } else {
-                    $this->ApplyLanguage((string) $Value);
+                    $this->ApplyLanguage($language);
                 }
                 break;
 
@@ -418,6 +460,49 @@ class SimpleLocale extends IPSModuleStrict
         return self::IS_TRIAL_BUILD && !$this->HasFullLicense() && $this->IsTrialExpired();
     }
 
+    // Sprachcodes aus PROMOTIONAL_LANGUAGE_CAMPAIGNS, deren Zeitraum gerade läuft
+    // (startsAt inklusive, endsAt exklusiv).
+    private function GetActivePromotionalLanguageCodes(): array
+    {
+        $now = time();
+        $codes = [];
+        foreach (self::PROMOTIONAL_LANGUAGE_CAMPAIGNS as $campaign) {
+            if ($now >= $campaign['startsAt'] && $now < $campaign['endsAt']) {
+                $codes = array_merge($codes, $campaign['codes']);
+            }
+        }
+
+        return $codes;
+    }
+
+    // Alle aktuell ohne Lizenz nutzbaren Sprachen: die dauerhaften TRIAL_LANGUAGE_CODES
+    // plus gerade laufende Marketing-Aktionen (siehe PROMOTIONAL_LANGUAGE_CAMPAIGNS).
+    private function GetFreeLanguageCodes(): array
+    {
+        return array_values(array_unique(array_merge(
+            self::TRIAL_LANGUAGE_CODES,
+            $this->GetActivePromotionalLanguageCodes()
+        )));
+    }
+
+    // Ob ein Sprachwechsel-Versuch des Gasts an der abgelaufenen Testphase scheitert.
+    // Die Basissprache und "Original" sind nie blockiert (das ist ja gerade der
+    // Rückfall-Zustand), ebenso jede aktuell kostenfreie Sprache (siehe
+    // GetFreeLanguageCodes) - auch dann, wenn die eigene 30-Tage-Testphase dieser
+    // Instanz für sich genommen längst abgelaufen ist (Marketing-Aktionen wirken
+    // unabhängig vom individuellen Testphase-Ablauf, siehe PROMOTIONAL_LANGUAGE_CAMPAIGNS).
+    private function IsLanguageBlockedByTrial(string $Language): bool
+    {
+        if (!$this->IsTrialLocked()) {
+            return false;
+        }
+        if ($Language === self::langOriginalImport || $Language === $this->ReadPropertyString(self::propertySourceLanguage)) {
+            return false;
+        }
+
+        return !in_array($Language, $this->GetFreeLanguageCodes(), true);
+    }
+
     // Schwenkt bei abgelaufener Testphase auf die unbearbeiteten Original-Importe
     // zurück, statt eine ggf. längst veraltete/unvollständige Übersetzung dauerhaft
     // eingefroren stehen zu lassen (führt sonst zu Beschwerden). Wird bei jeder
@@ -426,7 +511,13 @@ class SimpleLocale extends IPSModuleStrict
     // eigener Timer nötig.
     private function ResetToOriginalLanguageIfNeeded(): void
     {
-        if ($this->ReadPropertyString(self::propertyCurrentLanguage) !== self::langOriginalImport) {
+        // Absichtlich IsLanguageBlockedByTrial() statt nur "!= ORIGINAL_IMPORT": eine
+        // gerade aktive, kostenfreie Sprache (Testphase-Sprache oder laufende
+        // Marketing-Aktion, siehe GetFreeLanguageCodes) soll bei abgelaufener
+        // Testphase bestehen bleiben, nicht bei jedem ApplyChanges/Rescan erneut
+        // zurückgesetzt werden.
+        $currentLanguage = $this->ReadPropertyString(self::propertyCurrentLanguage);
+        if ($this->IsLanguageBlockedByTrial($currentLanguage)) {
             $this->ApplyLanguage(self::langOriginalImport);
         }
     }
@@ -1443,16 +1534,18 @@ class SimpleLocale extends IPSModuleStrict
         }
 
         // Testversion: nur die bewusst wenig praxisrelevanten TRIAL_LANGUAGE_CODES
-        // anbieten, damit der komplette Mechanismus testbar bleibt, ohne die
-        // Vollversion vorwegzunehmen.
+        // plus gerade laufende Marketing-Aktionen anbieten (siehe GetFreeLanguageCodes),
+        // damit der komplette Mechanismus testbar bleibt, ohne die Vollversion
+        // vorwegzunehmen.
         $restrictToTrialLanguages = self::IS_TRIAL_BUILD && !$this->HasFullLicense();
+        $freeLanguageCodes = $this->GetFreeLanguageCodes();
 
         $options = [];
         foreach ($this->BuildLanguageOptions() as $option) {
             if ($option['value'] === $SourceLanguage) {
                 continue;
             }
-            if ($restrictToTrialLanguages && !in_array($option['value'], self::TRIAL_LANGUAGE_CODES, true)) {
+            if ($restrictToTrialLanguages && !in_array($option['value'], $freeLanguageCodes, true)) {
                 continue;
             }
             $options[] = $option;
