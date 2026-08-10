@@ -129,6 +129,17 @@ class SimpleLocale extends IPSModuleStrict
                 case self::propertyTargetLanguages:
                     $element['columns'][0]['edit']['options'] = $targetLanguageOptions;
                     $element['values'] = $this->DecodeRows(self::propertyTargetLanguages);
+
+                    // "Hinzufügen" nur erlauben, wenn wirklich eine geladene Sprachliste
+                    // zur Auswahl steht - verhindert strukturell, dass der eingebaute
+                    // Zeilen-Editor-Popup nur den Platzhalter zur Auswahl anbietet und
+                    // dessen "OK" eine Fake-Zeile in die Liste einträgt.
+                    if ($this->HasCachedLanguages()) {
+                        $element['add'] = true;
+                    } else {
+                        $element['add'] = false;
+                        $element['caption'] .= ' (' . $this->Translate('bitte zuerst gültigen API-Key speichern und Formular neu öffnen') . ')';
+                    }
                     break;
 
                 case self::propertyObjectNames:

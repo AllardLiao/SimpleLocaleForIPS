@@ -27,7 +27,8 @@
             "API-Key fehlt": "API key missing",
             "Bitte zuerst einen Google Cloud Translate API-Key eintragen und über \"Übernehmen\" speichern, bevor Zielsprachen hinzugefügt werden.": "Please enter a Google Cloud Translate API key first and save it via \"Apply\" before adding target languages.",
             "Sprachliste nicht verfügbar": "Language list unavailable",
-            "Die Sprachliste konnte nicht von Google geladen werden. Bitte den Google Cloud Translate API-Key prüfen (z.B. Tippfehler, abgelaufen, fehlende Berechtigung).": "The language list could not be loaded from Google. Please check the Google Cloud Translate API key (e.g. typo, expired, missing permission)."
+            "Die Sprachliste konnte nicht von Google geladen werden. Bitte den Google Cloud Translate API-Key prüfen (z.B. Tippfehler, abgelaufen, fehlende Berechtigung).": "The language list could not be loaded from Google. Please check the Google Cloud Translate API key (e.g. typo, expired, missing permission).",
+            "bitte zuerst gültigen API-Key speichern und Formular neu öffnen": "please save a valid API key first and reopen the form"
         },
         "es": {
             "Sprache": "Idioma",
@@ -56,7 +57,8 @@
             "API-Key fehlt": "Falta la clave de API",
             "Bitte zuerst einen Google Cloud Translate API-Key eintragen und über \"Übernehmen\" speichern, bevor Zielsprachen hinzugefügt werden.": "Introduzca primero una clave de API de Google Cloud Translate y guárdela con \"Aplicar\" antes de añadir idiomas de destino.",
             "Sprachliste nicht verfügbar": "Lista de idiomas no disponible",
-            "Die Sprachliste konnte nicht von Google geladen werden. Bitte den Google Cloud Translate API-Key prüfen (z.B. Tippfehler, abgelaufen, fehlende Berechtigung).": "No se pudo cargar la lista de idiomas de Google. Compruebe la clave de API de Google Cloud Translate (p. ej. error tipográfico, caducada, permiso faltante)."
+            "Die Sprachliste konnte nicht von Google geladen werden. Bitte den Google Cloud Translate API-Key prüfen (z.B. Tippfehler, abgelaufen, fehlende Berechtigung).": "No se pudo cargar la lista de idiomas de Google. Compruebe la clave de API de Google Cloud Translate (p. ej. error tipográfico, caducada, permiso faltante).",
+            "bitte zuerst gültigen API-Key speichern und Formular neu öffnen": "guarde primero una clave de API válida y vuelva a abrir el formulario"
         },
         "it": {
             "Sprache": "Lingua",
@@ -85,7 +87,8 @@
             "API-Key fehlt": "Chiave API mancante",
             "Bitte zuerst einen Google Cloud Translate API-Key eintragen und über \"Übernehmen\" speichern, bevor Zielsprachen hinzugefügt werden.": "Inserire prima una chiave API di Google Cloud Translate e salvarla con \"Applica\" prima di aggiungere lingue di destinazione.",
             "Sprachliste nicht verfügbar": "Elenco lingue non disponibile",
-            "Die Sprachliste konnte nicht von Google geladen werden. Bitte den Google Cloud Translate API-Key prüfen (z.B. Tippfehler, abgelaufen, fehlende Berechtigung).": "Impossibile caricare l'elenco delle lingue da Google. Controllare la chiave API di Google Cloud Translate (es. errore di battitura, scaduta, permesso mancante)."
+            "Die Sprachliste konnte nicht von Google geladen werden. Bitte den Google Cloud Translate API-Key prüfen (z.B. Tippfehler, abgelaufen, fehlende Berechtigung).": "Impossibile caricare l'elenco delle lingue da Google. Controllare la chiave API di Google Cloud Translate (es. errore di battitura, scaduta, permesso mancante).",
+            "bitte zuerst gültigen API-Key speichern und Formular neu öffnen": "salvare prima una chiave API valida e riaprire il modulo"
         },
         "fr": {
             "Sprache": "Langue",
@@ -114,7 +117,8 @@
             "API-Key fehlt": "Clé API manquante",
             "Bitte zuerst einen Google Cloud Translate API-Key eintragen und über \"Übernehmen\" speichern, bevor Zielsprachen hinzugefügt werden.": "Veuillez d'abord saisir une clé API Google Cloud Translate et l'enregistrer via \"Appliquer\" avant d'ajouter des langues cibles.",
             "Sprachliste nicht verfügbar": "Liste des langues indisponible",
-            "Die Sprachliste konnte nicht von Google geladen werden. Bitte den Google Cloud Translate API-Key prüfen (z.B. Tippfehler, abgelaufen, fehlende Berechtigung).": "Impossible de charger la liste des langues depuis Google. Veuillez vérifier la clé API Google Cloud Translate (ex. faute de frappe, expirée, autorisation manquante)."
+            "Die Sprachliste konnte nicht von Google geladen werden. Bitte den Google Cloud Translate API-Key prüfen (z.B. Tippfehler, abgelaufen, fehlende Berechtigung).": "Impossible de charger la liste des langues depuis Google. Veuillez vérifier la clé API Google Cloud Translate (ex. faute de frappe, expirée, autorisation manquante).",
+            "bitte zuerst gültigen API-Key speichern und Formular neu öffnen": "veuillez d'abord enregistrer une clé API valide et rouvrir le formulaire"
         }
     }
 }
