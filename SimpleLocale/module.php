@@ -752,20 +752,13 @@ class SimpleLocale extends IPSModuleStrict
     // Visualisierung gezogen wird (aktiviert per SetVisualizationType in Create()).
     // Wird nur einmal beim Laden der Kachel aufgerufen - Aktualisierungen (z.B. nach
     // einem Sprachwechsel) laufen über UpdateVisualizationValue()/PushVisualizationUpdate().
+    // HTML-Gerüst liegt in module.html (Standard-Symcon-Vorgehen, siehe HTML-SDK) -
+    // hier wird nur der dynamische Teil per Platzhalter eingesetzt.
     public function GetVisualizationTile(): string
     {
-        return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>'
-            . '<body style="margin:0;">'
-            . '<div id="ipssl-select-wrapper">' . $this->BuildLanguageSelectHtml() . '</div>'
-            . '<script>'
-            . 'function handleMessage(data) {'
-            . 'let message; try { message = JSON.parse(data); } catch (e) { return; }'
-            . 'if (message.action === "REFRESH" && message.payload && typeof message.payload.html === "string") {'
-            . 'document.getElementById("ipssl-select-wrapper").innerHTML = message.payload.html;'
-            . '}'
-            . '}'
-            . '</script>'
-            . '</body></html>';
+        $html = file_get_contents(__DIR__ . '/module.html');
+
+        return str_replace('<!--LANGUAGE_SELECT-->', $this->BuildLanguageSelectHtml(), $html);
     }
 
     // Schickt bereits geöffneten Kacheln (z.B. andere Browser-Tabs/Geräte) die
@@ -796,13 +789,10 @@ class SimpleLocale extends IPSModuleStrict
             $optionsHtml .= "<option value=\"{$value}\"{$selected}>{$label}</option>";
         }
 
-        return '<div style="display:flex;align-items:center;gap:8px;">'
-            . '<span style="font-size:20px;line-height:1;" aria-hidden="true">🌐</span>'
-            . '<select style="flex:1;padding:8px;font-size:16px;border-radius:6px;"'
-            . ' onchange="requestAction(\'' . self::identLanguage . '\', this.value);">'
+        return '<span class="ipssl-globe" aria-hidden="true">🌐</span>'
+            . '<select onchange="requestAction(\'' . self::identLanguage . '\', this.value);">'
             . $optionsHtml
-            . '</select>'
-            . '</div>';
+            . '</select>';
     }
 
     // "Name - code" mit vorangestellter Flagge (z.B. "🇬🇧 English - en"), Name live
