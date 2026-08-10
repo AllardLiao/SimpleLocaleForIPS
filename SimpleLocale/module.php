@@ -1095,6 +1095,17 @@ private const LANGUAGE_FLAGS = [
     // erneut triggert.
     private function WriteTrackedValueString(int $ValueObjectID, string $Value): void
     {
+        // Über die Symcon-Konsole gesperrte Variablen ("Objekt sperren") lehnen
+        // SetValueString() mit einer Warnung ab (live gefunden: mehrere Warnungen in
+        // Folge führten zu einem Fatal-Error der ganzen Instanz) - überspringen statt
+        // die komplette Sprachumschaltung daran scheitern zu lassen. Die Variable
+        // bleibt dann einfach beim zuletzt gesetzten (ggf. fremdsprachigen) Wert
+        // stehen, bis sie manuell entsperrt wird.
+        $variable = @IPS_GetVariable($ValueObjectID);
+        if (!is_array($variable) || ($variable['VariableIsLocked'] ?? false)) {
+            return;
+        }
+
         SetValueString($ValueObjectID, $Value);
 
         $lastWritten = json_decode($this->ReadAttributeString(self::attributeLastSelfWrittenValues), true);
