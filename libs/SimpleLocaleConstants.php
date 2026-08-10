@@ -15,6 +15,15 @@ trait SimpleLocaleConstants
     private const propertyObjectNames = 'ObjectNames';
     private const propertyObjectTexts = 'ObjectTexts';
 
+    // Beschriftungen (Caption/Prefix/Suffix) von Variablen-Präsentationen im Root-Baum
+    // (Legacy-Profil-Assoziationen, Enumeration, oder jede andere Präsentationsart -
+    // generisch per Feldname erkannt, siehe ExtractTranslatableFields) - eine Zeile je
+    // (ObjectID, Feld-Pfad). Wird beim Sprachwechsel NIE auf das ggf. geteilte Profil/
+    // Template selbst zurückgeschrieben, sondern immer als eigene Custom Presentation
+    // nur auf die eine getrackte Variable (siehe ApplyLanguage) - andere Variablen, die
+    // zufällig dasselbe Profil/Template nutzen, bleiben unangetastet.
+    private const propertyEnumerationOptions = 'EnumerationOptions';
+
     // Aktuell aktive Gast-Sprache - bewusst eine Property (instanzgebunden wie ein
     // Attribut, aber zusätzlich im Konfigurationsformular sicht- und änderbar), nicht
     // ein Variablenprofil (das wäre in Symcon global über alle Instanzen hinweg geteilt).
@@ -64,6 +73,18 @@ trait SimpleLocaleConstants
     // die zugehörige VM_UPDATE-Nachricht erneut auslöst und sich selbst in eine
     // Endlosschleife übersetzt.
     private const attributeLastSelfWrittenValues = 'LastSelfWrittenValues';
+
+    // Zustand der VariableCustomPresentation (JSON, roh - genau das Array, das
+    // IPS_GetVariable($id)['VariableCustomPresentation'] vor dem allerersten eigenen
+    // Fork-Schreibvorgang zurückgegeben hat) je ValueObjectID, unmittelbar bevor
+    // SimpleLocale zum ersten Mal IPS_SetVariableCustomPresentation() auf diese
+    // Variable anwendet (siehe ApplyEnumerationOptionsToVariable). Wird beim Wechsel
+    // zurück auf die Original-/Basissprache exakt wiederhergestellt (statt nur
+    // denselben Text erneut inline zu schreiben) - damit greift wieder live das
+    // zugrunde liegende, ggf. geteilte Profil/Template (inkl. künftiger dortiger
+    // Änderungen), und ein davor bereits vorhandener eigener Custom-Presentation-Stand
+    // (von einem anderen Modul oder manuell vom Admin gesetzt) geht nicht verloren.
+    private const attributeEnumerationPresentationBackup = 'EnumerationPresentationBackup';
 
     // Objekte ohne Namen, die beim letzten Rescan im Root-Baum gefunden wurden (JSON-
     // Array aus ObjectID+Path) - ein Rescan bricht ab, sobald welche existieren, bevor

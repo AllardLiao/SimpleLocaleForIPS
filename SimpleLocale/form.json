@@ -184,6 +184,46 @@
                             "save": true
                         }
                     ]
+                },
+                {
+                    "type": "List",
+                    "name": "EnumerationOptions",
+                    "caption": "Beschriftungen",
+                    "add": false,
+                    "delete": true,
+                    "rowCount": 10,
+                    "columns": [
+                        {
+                            "caption": "Objekt-ID",
+                            "name": "ObjectID",
+                            "width": "80px",
+                            "save": true
+                        },
+                        {
+                            "caption": "Wert-Objekt-ID",
+                            "name": "ValueObjectID",
+                            "width": "90px",
+                            "save": true
+                        },
+                        {
+                            "caption": "Feld",
+                            "name": "FieldPath",
+                            "width": "120px",
+                            "save": true
+                        },
+                        {
+                            "caption": "Pfad",
+                            "name": "Path",
+                            "width": "200px",
+                            "save": true
+                        },
+                        {
+                            "caption": "Original-Import",
+                            "name": "ORIGINAL_IMPORT",
+                            "width": "200px",
+                            "save": true
+                        }
+                    ]
                 }
             ]
         },

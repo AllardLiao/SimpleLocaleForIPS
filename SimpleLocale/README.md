@@ -56,6 +56,14 @@ Beschreibung des Moduls.
   VariableManager-Update-Nachrichten (`VM_UPDATE`), siehe
   [Abschnitt 2](#2-bekannte-einschränkungen) für die eine Voraussetzung
   dabei.
+* Übersetzt zusätzlich die Beschriftungen von Variablen mit einer
+  Wert-Aufzählung (z. B. Integer-Variablen mit klassischem Profil oder
+  moderner Enumeration-Presentation, etwa "Abwesend/Anwesend" oder
+  "Aktiv/Inaktiv") - unabhängig davon, ob diese Beschriftungen aus einem
+  ggf. installationsweit **geteilten** Profil/Template stammen. Das
+  zugrunde liegende Profil/Template selbst wird dabei **nie** verändert,
+  siehe den Fork-Mechanismus in
+  [Abschnitt 2](#2-bekannte-einschränkungen).
 
 ### 2. Bekannte Einschränkungen
 
@@ -102,10 +110,49 @@ Beschreibung des Moduls.
   Die betroffenen Objekt-IDs samt Pfad erscheinen dann als Liste im
   Konfigurationsformular - erst benennen, dann erneut "Baum neu einlesen"
   klicken.
+* **Beschriftungen (Abschnitt 1): der "Fork"-Mechanismus und seine Grenzen.**
+  Eine Variable im Root-Baum kann ihre Wert-Beschriftungen von einem
+  klassischen Profil oder einer modernen Template-Presentation beziehen -
+  beides sind in Symcon **geteilte, benannte Objekte**, die auch von anderen,
+  nicht getrackten Variablen (in anderen Kategorien, anderen Visus, sogar
+  anderen Instanzen) verwendet werden können. Simple Locale schreibt beim
+  Sprachwechsel **niemals** in dieses geteilte Profil/Template selbst -
+  stattdessen wird für **genau die eine getrackte Variable** eine eigene,
+  in sich geschlossene Kopie der Beschriftungen hinterlegt
+  (`IPS_SetVariableCustomPresentation`, ohne Profil-/Template-Referenz -
+  ein "Fork"). Andere Variablen, die zufällig dasselbe Profil/Template
+  nutzen, lesen es unverändert weiter und bleiben komplett unberührt. Beim
+  Zurückwechseln auf die Basissprache wird der Fork wieder vollständig
+  aufgehoben (der exakte Zustand vor dem ersten Fork wird dafür gesichert),
+  die Variable liest ihre Beschriftungen dann wieder live vom
+  ursprünglichen, nie veränderten Profil/Template.
+
+  Zwei Dinge löst der Fork bewusst **nicht**:
+  - Steht dieselbe physische Variable (nicht nur dasselbe Profil) über eine
+    Verknüpfung in mehreren Visualisierungen gleichzeitig, ändert sich ihre
+    Beschriftung überall dort mit - genau wie bei Objektnamen und Eigene
+    Texte auch (siehe die "eine Sprache pro Instanz"-Einschränkung oben).
+    Praktisch meist unkritisch, da Gäste einer Ferienwohnung/eines Airbnb
+    typischerweise zeitlich versetzt anreisen, nicht gleichzeitig
+    unterschiedliche Sprachen benötigen.
+  - Übersetzt werden nur Felder, die Symcon selbst `Caption`, `Prefix` oder
+    `Suffix` nennt (unabhängig von Groß-/Kleinschreibung) - das deckt
+    klassische Profile und Enumeration-Presentations vollständig ab.
+    Intervallbasierte numerische Darstellungen (z. B. eine Heizungsmodus-
+    Kachel mit Wertebereichen statt Einzelwerten) werden dagegen bewusst
+    **nicht** unterstützt: die Struktur ist zu variabel, um sicher zwischen
+    Anzeigetext und technischen Feldern (Icon-Bezeichner, Farbwerte,
+    Schwellwerte) zu unterscheiden - lieber eine unbekannte Beschriftung
+    übersehen als versehentlich einen Icon-Bezeichner kaputtübersetzen und
+    damit ein Icon zum Verschwinden bringen.
 
 ### 3. Voraussetzungen
 
 - Symcon ab Version 7.1
+- Für die Übersetzung von Beschriftungen (Abschnitt 1/2): Symcon ab Version
+  8.0 (Variable Presentations). Auf älteren Versionen bleibt dieser
+  Teilbereich einfach komplett inaktiv (kein Fehler) - Objektnamen und
+  Eigene Texte funktionieren unabhängig davon bereits ab 7.1.
 - Alle Objekte innerhalb der konfigurierten Root-Kategorie müssen einen
   echten Namen haben (kein leerer Name, kein von Symcon selbst vergebener
   Platzhalter wie "Unnamed Object (ID: ...)") - siehe
@@ -152,7 +199,15 @@ Automatischer Rescan (Minuten)  | Intervall für automatisches Neu-Einlesen des 
 Name                            | Beschreibung
 -------------------------------- | ------------------
 Zielsprachen                    | Sprachen, in die übersetzt werden soll. Auswahl-Optionen kommen von Google, sobald ein gültiger API-Key gespeichert ist. Ausgegraut, sobald entweder noch kein API-Key gespeichert ist oder das Sprachlimit einer "Spezialversion"-Lizenz erreicht ist (siehe Abschnitt 8). Wichtig: Nach dem Klick auf "Sprachliste aktualisieren" die Instanzkonfiguration einmal schließen und neu öffnen, bevor Häkchen gesetzt werden - sonst kann die Konsole falsche Sprachen speichern.
-Objektnamen / Eigene Texte      | Listen der gefundenen Objekte mit Quelltext und je einer Spalte pro Zielsprache. Übersetzungen sind hier direkt editierbar; leere Zellen werden beim nächsten Rescan automatisch übersetzt.
+Objektnamen / Eigene Texte / Beschriftungen | Listen der gefundenen Objekte mit Quelltext und je einer Spalte pro Zielsprache. Übersetzungen sind hier direkt editierbar; leere Zellen werden beim nächsten Rescan automatisch übersetzt. "Beschriftungen" siehe [Abschnitt 2](#2-bekannte-einschränkungen) (Fork-Mechanismus).
+
+**Wann sollte ein Rescan ausgeführt werden?**
+
+Inhaltstyp        | Neue/verschobene Objekte | Inhaltliche Änderungen
+------------------ | ------------------------- | ------------------------
+Objektnamen        | Nur per Rescan (manuell/Timer) erkannt. | Ändert sich ein Name selten spontan; falls doch, Zelle im Formular leeren + Rescan.
+Eigene Texte (Werte) | Nur per Rescan erkannt. | Automatisch (siehe Abschnitt 1, `VM_UPDATE`) - **kein** Rescan nötig, solange die Basissprache stimmt.
+Beschriftungen      | Nur per Rescan erkannt. | **Kein** automatisches Erkennen von Änderungen am zugrunde liegenden Profil/Template - Symcon liefert dafür keine Update-Benachrichtigung. Ändert ein anderes Modul/der Admin die Beschriftungen eines Profils, das eine bereits geforkte Variable nutzt, wird das erst nach manuellem Löschen der betroffenen Original-Import-Zelle + Rescan übernommen.
 
 **Lizenz:**
 

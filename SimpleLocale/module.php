@@ -115,19 +115,120 @@ class SimpleLocale extends IPSModuleStrict
 
     // Rein dekorativ fürs Gast-Dropdown (GetVisualizationTile) - nicht erschöpfend,
     // unbekannte Sprachcodes bekommen einfach keine Flagge vorangestellt.
-    private const LANGUAGE_FLAGS = [
-        'de' => '🇩🇪', 'en' => '🇬🇧', 'fr' => '🇫🇷', 'es' => '🇪🇸', 'it' => '🇮🇹',
-        'nl' => '🇳🇱', 'pt' => '🇵🇹', 'pl' => '🇵🇱', 'ru' => '🇷🇺', 'tr' => '🇹🇷',
-        'ar' => '🇸🇦', 'zh' => '🇨🇳', 'zh-CN' => '🇨🇳', 'zh-TW' => '🇹🇼', 'ja' => '🇯🇵',
-        'ko' => '🇰🇷', 'da' => '🇩🇰', 'sv' => '🇸🇪', 'no' => '🇳🇴', 'nb' => '🇳🇴',
-        'fi' => '🇫🇮', 'cs' => '🇨🇿', 'sk' => '🇸🇰', 'hu' => '🇭🇺', 'ro' => '🇷🇴',
-        'bg' => '🇧🇬', 'el' => '🇬🇷', 'uk' => '🇺🇦', 'he' => '🇮🇱', 'hi' => '🇮🇳',
-        'th' => '🇹🇭', 'vi' => '🇻🇳', 'id' => '🇮🇩', 'ms' => '🇲🇾', 'hr' => '🇭🇷',
-        'sl' => '🇸🇮', 'et' => '🇪🇪', 'lv' => '🇱🇻', 'lt' => '🇱🇹', 'sr' => '🇷🇸',
-        'fa' => '🇮🇷', 'ur' => '🇵🇰', 'bn' => '🇧🇩', 'sw' => '🇰🇪', 'af' => '🇿🇦',
-        'is' => '🇮🇸', 'ga' => '🇮🇪', 'mt' => '🇲🇹', 'ca' => '🇪🇸', 'eu' => '🇪🇸',
-        'gl' => '🇪🇸',
-    ];
+private const LANGUAGE_FLAGS = [
+    'af' => '🇿🇦', // Afrikaans
+    'am' => '🇪🇹', // Amharisch
+    'ar' => '🇸🇦',
+    'az' => '🇦🇿',
+    'be' => '🇧🇾',
+    'bg' => '🇧🇬',
+    'bn' => '🇧🇩',
+    'bs' => '🇧🇦',
+    'ca' => '🇪🇸',
+    'ceb' => '🇵🇭',
+    'co' => '🇫🇷',
+    'cs' => '🇨🇿',
+    'cy' => '🏴', // Walisisch
+    'da' => '🇩🇰',
+    'de' => '🇩🇪',
+    'el' => '🇬🇷',
+    'en' => '🇬🇧',
+    'eo' => '🌍', // Esperanto
+    'es' => '🇪🇸',
+    'et' => '🇪🇪',
+    'eu' => '🇪🇸',
+    'fa' => '🇮🇷',
+    'fi' => '🇫🇮',
+    'fil' => '🇵🇭',
+    'fr' => '🇫🇷',
+    'fy' => '🇳🇱', // Friesisch
+    'ga' => '🇮🇪',
+    'gd' => '🏴', // Schottisch-Gälisch
+    'gl' => '🇪🇸',
+    'gu' => '🇮🇳',
+    'ha' => '🇳🇬',
+    'haw' => '🇺🇸',
+    'he' => '🇮🇱',
+    'hi' => '🇮🇳',
+    'hmn' => '🇨🇳',
+    'hr' => '🇭🇷',
+    'ht' => '🇭🇹',
+    'hu' => '🇭🇺',
+    'hy' => '🇦🇲',
+    'id' => '🇮🇩',
+    'ig' => '🇳🇬',
+    'is' => '🇮🇸',
+    'it' => '🇮🇹',
+    'iw' => '🇮🇱', // alter Google-Code für Hebräisch
+    'ja' => '🇯🇵',
+    'jw' => '🇮🇩', // Javanisch
+    'ka' => '🇬🇪',
+    'kk' => '🇰🇿',
+    'km' => '🇰🇭',
+    'kn' => '🇮🇳',
+    'ko' => '🇰🇷',
+    'ku' => '🇹🇷', // Kurdisch
+    'ky' => '🇰🇬',
+    'la' => '🇻🇦',
+    'lb' => '🇱🇺',
+    'lo' => '🇱🇦',
+    'lt' => '🇱🇹',
+    'lv' => '🇱🇻',
+    'mg' => '🇲🇬',
+    'mi' => '🇳🇿',
+    'mk' => '🇲🇰',
+    'ml' => '🇮🇳',
+    'mn' => '🇲🇳',
+    'mr' => '🇮🇳',
+    'ms' => '🇲🇾',
+    'mt' => '🇲🇹',
+    'my' => '🇲🇲',
+    'ne' => '🇳🇵',
+    'nl' => '🇳🇱',
+    'no' => '🇳🇴',
+    'nb' => '🇳🇴',
+    'ny' => '🇲🇼',
+    'or' => '🇮🇳',
+    'pa' => '🇮🇳',
+    'pl' => '🇵🇱',
+    'ps' => '🇦🇫',
+    'pt' => '🇵🇹',
+    'ro' => '🇷🇴',
+    'ru' => '🇷🇺',
+    'sd' => '🇵🇰',
+    'si' => '🇱🇰',
+    'sk' => '🇸🇰',
+    'sl' => '🇸🇮',
+    'sm' => '🇼🇸',
+    'sn' => '🇿🇼',
+    'so' => '🇸🇴',
+    'sq' => '🇦🇱',
+    'sr' => '🇷🇸',
+    'st' => '🇱🇸',
+    'su' => '🇮🇩',
+    'sv' => '🇸🇪',
+    'sw' => '🇰🇪',
+    'ta' => '🇮🇳',
+    'te' => '🇮🇳',
+    'tg' => '🇹🇯',
+    'th' => '🇹🇭',
+    'tk' => '🇹🇲',
+    'tl' => '🇵🇭',
+    'tr' => '🇹🇷',
+    'tt' => '🇷🇺',
+    'ug' => '🇨🇳',
+    'uk' => '🇺🇦',
+    'ur' => '🇵🇰',
+    'uz' => '🇺🇿',
+    'vi' => '🇻🇳',
+    'xh' => '🇿🇦',
+    'yi' => '🇮🇱',
+    'yo' => '🇳🇬',
+    'zh' => '🇨🇳',
+    'zh-CN' => '🇨🇳',
+    'zh-TW' => '🇹🇼',
+    'zu' => '🇿🇦',
+];
 
     public function Create(): void
     {
@@ -141,6 +242,7 @@ class SimpleLocale extends IPSModuleStrict
         $this->RegisterPropertyInteger(self::propertyAutoRescanInterval, 0);
         $this->RegisterPropertyString(self::propertyObjectNames, '[]');
         $this->RegisterPropertyString(self::propertyObjectTexts, '[]');
+        $this->RegisterPropertyString(self::propertyEnumerationOptions, '[]');
 
         // Bewusst eine Property statt Variable/Profil für die aktive Sprache: Profile
         // sind in Symcon immer global, nicht instanzgebunden - bei mehreren Instanzen
@@ -174,6 +276,7 @@ class SimpleLocale extends IPSModuleStrict
         $this->RegisterAttributeString(self::attributeActivationLog, '[]');
         $this->RegisterAttributeString(self::attributeRegisteredValueObjectIDs, '[]');
         $this->RegisterAttributeString(self::attributeLastSelfWrittenValues, '{}');
+        $this->RegisterAttributeString(self::attributeEnumerationPresentationBackup, '{}');
 
         $this->SetVisualizationType(1);
 
@@ -354,13 +457,18 @@ class SimpleLocale extends IPSModuleStrict
                     break;
 
                 case self::propertyObjectNames:
-                    $element['columns'] = $this->BuildListColumns($sourceLanguage, $targetLanguages, false);
+                    $element['columns'] = $this->BuildListColumns($sourceLanguage, $targetLanguages, 'names');
                     $element['values'] = $this->DecodeRows(self::propertyObjectNames);
                     break;
 
                 case self::propertyObjectTexts:
-                    $element['columns'] = $this->BuildListColumns($sourceLanguage, $targetLanguages, true);
+                    $element['columns'] = $this->BuildListColumns($sourceLanguage, $targetLanguages, 'texts');
                     $element['values'] = $this->DecodeRows(self::propertyObjectTexts);
+                    break;
+
+                case self::propertyEnumerationOptions:
+                    $element['columns'] = $this->BuildListColumns($sourceLanguage, $targetLanguages, 'options');
+                    $element['values'] = $this->DecodeRows(self::propertyEnumerationOptions);
                     break;
 
                 case self::propertyCurrentLanguage:
@@ -831,6 +939,134 @@ class SimpleLocale extends IPSModuleStrict
                 self::langOriginalImportText
             ));
         }
+
+        $optionsByVariable = [];
+        foreach ($this->DecodeRows(self::propertyEnumerationOptions) as $row) {
+            $valueObjectID = (int) ($row['ValueObjectID'] ?? 0);
+            if ($valueObjectID === 0) {
+                continue;
+            }
+            $optionsByVariable[$valueObjectID][(string) ($row['FieldPath'] ?? '')] = $row;
+        }
+        foreach ($optionsByVariable as $valueObjectID => $rowsByValue) {
+            $this->ApplyEnumerationOptionsToVariable($valueObjectID, $rowsByValue, $Language, $sourceLanguage);
+        }
+    }
+
+    // Schreibt die (ggf. übersetzten) Beschriftungen als eigene Custom Presentation NUR
+    // auf diese eine Variable - der "Fork" (siehe propertyEnumerationOptions in
+    // SimpleLocaleConstants). Das zugrunde liegende, ggf. geteilte Profil bzw. die
+    // Presentation-Pool-Quelle wird dabei nie angefasst; andere Variablen, die
+    // zufällig dasselbe Profil nutzen, bleiben unberührt. Wertemenge, Icon und Farbe
+    // kommen live von dort (kein Informationsverlust bei Optionen, die es noch nicht
+    // in $RowsByValue gibt, z.B. weil seit dem letzten Rescan neu hinzugekommen) - nur
+    // die Beschriftung wird ersetzt, und auch nur, wenn eine Übersetzungszeile
+    // existiert.
+    private function ApplyEnumerationOptionsToVariable(int $ValueObjectID, array $RowsByValue, string $Language, string $SourceLanguage): void
+    {
+        if (!@IPS_ObjectExists($ValueObjectID)) {
+            return;
+        }
+
+        $backups = json_decode($this->ReadAttributeString(self::attributeEnumerationPresentationBackup), true);
+        if (!is_array($backups)) {
+            $backups = [];
+        }
+        $backupKey = (string) $ValueObjectID;
+
+        if ($Language === self::langOriginalImport || $Language === $SourceLanguage) {
+            // Zurück auf Original/Basissprache: den Fork wieder vollständig aufheben,
+            // statt nur denselben (Original-)Text erneut inline zu schreiben - siehe
+            // attributeEnumerationPresentationBackup. Damit greift ab sofort wieder
+            // live das zugrunde liegende, ggf. geteilte Profil/Template (inkl.
+            // künftiger dort vorgenommener Änderungen), und ein vor unserem ersten
+            // Fork ggf. bereits vorhandener eigener Custom-Presentation-Stand (von
+            // einem anderen Modul oder manuell vom Admin gesetzt) bleibt erhalten
+            // statt überschrieben zu werden. War nie geforkt: nichts zu tun.
+            if (array_key_exists($backupKey, $backups)) {
+                IPS_SetVariableCustomPresentation($ValueObjectID, $backups[$backupKey]);
+                unset($backups[$backupKey]);
+                $this->WriteAttributeString(self::attributeEnumerationPresentationBackup, json_encode($backups));
+            }
+
+            return;
+        }
+
+        $presentation = @IPS_GetVariablePresentation($ValueObjectID);
+        if (!is_array($presentation) || $presentation === []) {
+            // Variable hat inzwischen keine (unterstützte) Präsentation mehr - nichts
+            // zu tun, wird beim nächsten Rescan aus der Liste bereinigt.
+            return;
+        }
+
+        // Legacy-Profile referenzieren nur einen Namen, keine inline Captions - für den
+        // Schreibvorgang müssen wir daher (wie beim Lesen, siehe ReadTranslatableCaptions)
+        // erst eine vollwertige Enumeration-Struktur aus den Profil-Assoziationen bauen,
+        // auf die dann derselbe generische Mechanismus angewendet werden kann.
+        if (($presentation['PRESENTATION'] ?? '') === VARIABLE_PRESENTATION_LEGACY) {
+            $profileName = $presentation['PROFILE'] ?? '';
+            if ($profileName === '' || !@IPS_VariableProfileExists($profileName)) {
+                return;
+            }
+            $associations = IPS_GetVariableProfile($profileName)['Associations'] ?? [];
+            $writeBase = [
+                'PRESENTATION' => VARIABLE_PRESENTATION_ENUMERATION,
+                'OPTIONS'      => json_encode(array_map(fn ($a) => [
+                    'Value'      => $a['Value'] ?? '',
+                    'Caption'    => $a['Name'] ?? '',
+                    'IconActive' => ($a['Icon'] ?? '') !== '',
+                    'IconValue'  => $a['Icon'] ?? '',
+                    'Color'      => $a['Color'] ?? -1,
+                ], $associations)),
+            ];
+        } else {
+            // TEMPLATE darf beim Schreiben nicht mitgegeben werden: eine gleichzeitig
+            // gesetzte TEMPLATE-Referenz würde unsere inline OPTIONS überstimmen (die
+            // Variable würde einfach weiter live vom Template lesen) - das ist ja genau
+            // der Fork, den wir hier bewusst herstellen. Alle anderen Felder (z.B.
+            // GROUP/LAYOUT/ICON/DISPLAY) bleiben unverändert erhalten.
+            $writeBase = $presentation;
+            unset($writeBase['TEMPLATE']);
+        }
+
+        // Für jede getrackte Zeile dieser Variable die aktuell für $Language
+        // aufzulösende Übersetzung bestimmen (Pfad => Text) - nur tatsächlich befüllte
+        // Übersetzungen ersetzen etwas, alles andere bleibt so, wie es live ist.
+        $replacements = [];
+        foreach ($RowsByValue as $fieldPath => $row) {
+            $resolved = $this->ResolveRowValue($row, $Language, $Language, $SourceLanguage, self::langOriginalImport);
+            if ($resolved !== '') {
+                $replacements[$fieldPath] = $resolved;
+            }
+        }
+        if ($replacements === []) {
+            return;
+        }
+
+        // Vor dem allerersten eigenen Schreibvorgang auf diese Variable: den exakten
+        // vorherigen Zustand sichern, damit ein Zurückwechseln auf Original ihn später
+        // wiederherstellen kann. WICHTIG (live an Variable 54695 getestet):
+        // IPS_SetVariableCustomPresentation($id, []) fällt NICHT automatisch auf die
+        // Basis (VariablePresentation, z.B. das Legacy-Profil) zurück, sondern
+        // hinterlässt die Variable ohne jede Darstellung (roher Wert statt Caption).
+        // Ist noch kein eigener Custom-Stand vorhanden, sichern wir daher stattdessen
+        // explizit die Basis - das ist weiterhin nur eine Referenz auf das (ggf.
+        // geteilte) Profil/Template, keine Kopie seiner Inhalte, bleibt also live und
+        // rührt das Profil/Template selbst nie an.
+        if (!array_key_exists($backupKey, $backups)) {
+            $variable = IPS_GetVariable($ValueObjectID);
+            $existingCustom = $variable['VariableCustomPresentation'] ?? [];
+            $backups[$backupKey] = $existingCustom !== [] ? $existingCustom : ($variable['VariablePresentation'] ?? []);
+            $this->WriteAttributeString(self::attributeEnumerationPresentationBackup, json_encode($backups));
+        }
+
+        // Reiner Inline-Write: die übersetzten Werte werden direkt in die eigene
+        // VariableCustomPresentation DIESER EINEN Variable eingebettet - keine Referenz
+        // auf das (ggf. geteilte) Profil/Template, von dem die Werte urspruenglich
+        // gelesen wurden. Das Profil/Template selbst bleibt unverändert; andere
+        // Variablen, die es referenzieren, lesen es beim nächsten Zugriff unverändert
+        // weiter.
+        IPS_SetVariableCustomPresentation($ValueObjectID, $this->ApplyTranslatableFields($writeBase, '', $replacements));
     }
 
     // Schreibt einen Wert UND merkt ihn als "von der Instanz selbst geschrieben"
@@ -1000,7 +1236,8 @@ class SimpleLocale extends IPSModuleStrict
 
         $scannedNames = [];
         $scannedTexts = [];
-        $this->WalkTree($rootID, $scannedNames, $scannedTexts, []);
+        $scannedOptions = [];
+        $this->WalkTree($rootID, $scannedNames, $scannedTexts, $scannedOptions, []);
 
         // Vorab-Check, bevor überhaupt übersetzt wird: ein Objekt ohne echten Namen
         // lässt sich nicht sinnvoll übersetzen und würde als Platzhalter-Text in der
@@ -1025,6 +1262,12 @@ class SimpleLocale extends IPSModuleStrict
         $objectNames = $this->MergeRows($this->DecodeRows(self::propertyObjectNames), $scannedNames);
         $objectTexts = $this->MergeRows($this->DecodeRows(self::propertyObjectTexts), $scannedTexts);
 
+        $existingOptions = [];
+        foreach ($this->DecodeRows(self::propertyEnumerationOptions) as $row) {
+            $existingOptions[] = $row;
+        }
+        $objectOptions = $this->MergeEnumerationOptions($existingOptions, $scannedOptions);
+
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
         $targetLanguages = $this->GetSelectedTargetLanguages();
 
@@ -1037,8 +1280,13 @@ class SimpleLocale extends IPSModuleStrict
             ['raw' => self::langOriginalImportText, 'prefix' => self::fieldTextPrefix, 'capitalizeFirst' => false],
         ], $sourceLanguage, $targetLanguages);
 
+        $objectOptions = $this->FillMissingTranslations($objectOptions, [
+            ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => false],
+        ], $sourceLanguage, $targetLanguages);
+
         IPS_SetProperty($this->InstanceID, self::propertyObjectNames, json_encode(array_values($objectNames)));
         IPS_SetProperty($this->InstanceID, self::propertyObjectTexts, json_encode(array_values($objectTexts)));
+        IPS_SetProperty($this->InstanceID, self::propertyEnumerationOptions, json_encode(array_values($objectOptions)));
         IPS_ApplyChanges($this->InstanceID);
 
         // Kompletter Formular-Neuaufbau statt UpdateFormField: ein offenes Formular hat
@@ -1063,7 +1311,7 @@ class SimpleLocale extends IPSModuleStrict
     // $ParentPath enthält die Namen der Vorfahren ab der Root-Kategorie (ohne den
     // Namen des Objekts selbst), damit gleichnamige Texte an unterschiedlichen
     // Stellen im Baum unterscheidbar bleiben.
-    private function WalkTree(int $ID, array &$ScannedNames, array &$ScannedTexts, array $ParentPath): void
+    private function WalkTree(int $ID, array &$ScannedNames, array &$ScannedTexts, array &$ScannedOptions, array $ParentPath): void
     {
         foreach (IPS_GetChildrenIDs($ID) as $childID) {
             $object = IPS_GetObject($childID);
@@ -1097,32 +1345,169 @@ class SimpleLocale extends IPSModuleStrict
                 ];
             }
 
-            $this->WalkTree($childID, $ScannedNames, $ScannedTexts, array_merge($ParentPath, [$name]));
+            // Beschriftungen (Caption/Prefix/Suffix, egal in welcher Präsentationsart
+            // und egal wie tief verschachtelt - siehe ReadTranslatableCaptions) einer
+            // Variable jedes Typs - auch verlinkt, wie bei "Eigene Texte" oben.
+            $captionVariableID = $this->ResolveLinkedVariableID($childID, $object);
+            if ($captionVariableID !== null) {
+                foreach ($this->ReadTranslatableCaptions($captionVariableID) ?? [] as $fieldPath => $text) {
+                    $ScannedOptions["$childID:$fieldPath"] = [
+                        'ObjectID'                => $childID,
+                        'ValueObjectID'           => $captionVariableID,
+                        'FieldPath'               => $fieldPath,
+                        'Path'                    => $path,
+                        self::langOriginalImport  => $text,
+                    ];
+                }
+            }
+
+            $this->WalkTree($childID, $ScannedNames, $ScannedTexts, $ScannedOptions, array_merge($ParentPath, [$name]));
         }
     }
 
-    // Ermittelt die tatsächliche String-Variablen-ID für ein Scan-Objekt: entweder das
-    // Objekt selbst (wenn es eine String-Variable ist) oder - falls es eine Verknüpfung
-    // ist - deren Zielvariable, sofern diese ebenfalls vom Typ String ist. Liefert null,
-    // wenn das Objekt keine (verlinkte) String-Variable ist.
-    private function ResolveStringVariableID(int $ObjectID, array $Object): ?int
+    // Ermittelt die tatsächliche Variablen-ID für ein Scan-Objekt: entweder das Objekt
+    // selbst (wenn es eine Variable ist) oder - falls es eine Verknüpfung ist - deren
+    // Zielvariable. Liefert null, wenn das Objekt keine (verlinkte) Variable ist. Anders
+    // als ResolveStringVariableID unten ohne Typ-Filter, da Enum-Präsentationen an
+    // Variablen jedes Typs (typischerweise Integer) hängen können, nicht nur String.
+    private function ResolveLinkedVariableID(int $ObjectID, array $Object): ?int
     {
-        $variableID = null;
-
         if ($Object['ObjectType'] === OBJECTTYPE_VARIABLE) {
-            $variableID = $ObjectID;
-        } elseif ($Object['ObjectType'] === OBJECTTYPE_LINK) {
+            return $ObjectID;
+        }
+        if ($Object['ObjectType'] === OBJECTTYPE_LINK) {
             $targetID = IPS_GetLink($ObjectID)['TargetID'];
             if ($targetID > 0 && IPS_VariableExists($targetID)) {
-                $variableID = $targetID;
+                return $targetID;
             }
         }
 
+        return null;
+    }
+
+    // Wie ResolveLinkedVariableID, aber nur für "Eigene Texte" (String-Variable
+    // erforderlich).
+    private function ResolveStringVariableID(int $ObjectID, array $Object): ?int
+    {
+        $variableID = $this->ResolveLinkedVariableID($ObjectID, $Object);
         if ($variableID === null) {
             return null;
         }
 
         return IPS_GetVariable($variableID)['VariableType'] === VARIABLETYPE_STRING ? $variableID : null;
+    }
+
+    // Liest die aktuell wirksamen Enum-Optionen einer Variable (Value+Caption+Icon+
+    // Color je Option), unabhängig davon, ob sie über ein klassisches, ggf. geteiltes
+    // Profil (VARIABLE_PRESENTATION_LEGACY) oder eine moderne Enumeration-Presentation
+    // kommen - liefert null, wenn die Variable keine (mehr passende) Enum-Darstellung
+    // hat. Wird sowohl beim Scan (Rohtext einlesen) als auch beim Sprachwechsel
+    // (Ausgangsbasis fürs Zurückschreiben, siehe ApplyLanguage) verwendet - einzige
+    // Stelle, die weiß, wie beide Präsentationsarten aussehen.
+    // Liefert je Variable eine flache Liste [Pfad => Text] aller aktuell sichtbaren
+    // Caption/Prefix/Suffix-Werte - unabhängig von der konkreten Präsentationsart
+    // (Enumeration, Legacy-Profil, Template-referenziert, oder jede unbekannte/
+    // künftige Art wie z.B. eine intervallbasierte Numeric-Darstellung), da generisch
+    // per FeldNAME statt per bekannter Struktur gesucht wird (siehe
+    // ExtractTranslatableFields). Alle anderen Felder (Icon, Color, Value, Min/Max,
+    // Layout, ...) werden dabei nie angefasst - das ist bewusst konservativ: lieber
+    // eine unbekannte Beschriftung übersehen als versehentlich einen technischen
+    // Bezeichner (z.B. einen Icon-Namen) kaputtübersetzen. Liefert null, wenn nichts
+    // Übersetzbares gefunden wurde.
+    private function ReadTranslatableCaptions(int $VariableID): ?array
+    {
+        if (!function_exists('IPS_GetVariablePresentation')) {
+            // Symcon < 8.0 kennt Presentations noch nicht - Feature bleibt komplett
+            // inert, kein Fehler.
+            return null;
+        }
+
+        $presentation = @IPS_GetVariablePresentation($VariableID);
+        if (!is_array($presentation) || $presentation === []) {
+            return null;
+        }
+
+        // Legacy-Profile referenzieren nur einen Namen - der eigentliche Text liegt
+        // nicht inline in der Presentation, sondern muss separat aus dem (ggf.
+        // geteilten) Profil gelesen werden. Auf eine Enumeration-ähnliche Struktur
+        // gebracht, damit ab hier derselbe generische Mechanismus greift.
+        if (($presentation['PRESENTATION'] ?? '') === VARIABLE_PRESENTATION_LEGACY) {
+            $profileName = $presentation['PROFILE'] ?? '';
+            if ($profileName === '' || !@IPS_VariableProfileExists($profileName)) {
+                return null;
+            }
+            $associations = IPS_GetVariableProfile($profileName)['Associations'] ?? [];
+            $presentation = ['OPTIONS' => array_map(fn ($a) => ['Caption' => $a['Name'] ?? ''], $associations)];
+        }
+
+        $fields = $this->ExtractTranslatableFields($presentation);
+
+        return $fields === [] ? null : $fields;
+    }
+
+    // Sucht rekursiv (auch durch JSON-kodierte String-Felder wie OPTIONS hindurch)
+    // nach Feldern namens Caption/Prefix/Suffix und liefert sie als [Pfad => Text].
+    // Rein lesend.
+    private function ExtractTranslatableFields($Node, string $PathPrefix = ''): array
+    {
+        if (is_string($Node)) {
+            $decoded = json_decode($Node, true);
+
+            return is_array($decoded) ? $this->ExtractTranslatableFields($decoded, $PathPrefix) : [];
+        }
+
+        if (!is_array($Node)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($Node as $key => $value) {
+            $path = $PathPrefix === '' ? (string) $key : $PathPrefix . '.' . $key;
+            if ($this->IsTranslatableFieldName($key) && is_string($value) && $value !== '') {
+                $result[$path] = $value;
+            } elseif (is_array($value) || is_string($value)) {
+                $result += $this->ExtractTranslatableFields($value, $path);
+            }
+        }
+
+        return $result;
+    }
+
+    // Symcon selbst ist bei der Groß-/Kleinschreibung dieser Feldnamen inkonsistent:
+    // verschachtelte Enumeration-Optionen nutzen 'Caption', oberste Präsentations-
+    // Felder wie bei einem Slider dagegen 'SUFFIX'/'PREFIX' (live geprüft) - daher
+    // Groß-/Kleinschreibung ignorieren statt eine feste Schreibweise anzunehmen.
+    private function IsTranslatableFieldName($Key): bool
+    {
+        return in_array(is_string($Key) ? strtoupper($Key) : $Key, ['CAPTION', 'PREFIX', 'SUFFIX'], true);
+    }
+
+    // Gegenstück zu ExtractTranslatableFields: schreibt die in $Replacements
+    // (Pfad => neuer Text) angegebenen Caption/Prefix/Suffix-Werte in eine (ggf.
+    // mehrfach JSON-verschachtelte) Präsentationsstruktur - alle anderen Felder
+    // bleiben exakt wie im Original, da nur exakt diese Pfade angefasst werden.
+    private function ApplyTranslatableFields($Node, string $PathPrefix, array $Replacements)
+    {
+        if (is_string($Node)) {
+            $decoded = json_decode($Node, true);
+
+            return is_array($decoded) ? json_encode($this->ApplyTranslatableFields($decoded, $PathPrefix, $Replacements)) : $Node;
+        }
+
+        if (!is_array($Node)) {
+            return $Node;
+        }
+
+        foreach ($Node as $key => $value) {
+            $path = $PathPrefix === '' ? (string) $key : $PathPrefix . '.' . $key;
+            if ($this->IsTranslatableFieldName($key) && is_string($value) && array_key_exists($path, $Replacements)) {
+                $Node[$key] = $Replacements[$path];
+            } elseif (is_array($value) || is_string($value)) {
+                $Node[$key] = $this->ApplyTranslatableFields($value, $path, $Replacements);
+            }
+        }
+
+        return $Node;
     }
 
     // Merged bereits gespeicherte Zeilen mit frisch gescannten Objekt-IDs. ORIGINAL_IMPORT
@@ -1147,6 +1532,46 @@ class SimpleLocale extends IPSModuleStrict
 
         // verbleibende, bisher unbekannte Objekt-IDs neu anhängen
         foreach ($ScannedByObjectID as $newRow) {
+            $result[] = $newRow;
+        }
+
+        return $result;
+    }
+
+    // Wie MergeRows, aber Schlüssel ist ObjectID+Options-Wert (eine Variable kann
+    // mehrere Optionen haben) - und mit einem bewussten Unterschied: der Rohtext wird
+    // NICHT für immer eingefroren, sondern neu übernommen, sobald die
+    // Original-Import-Zelle im Formular geleert wurde (z.B. weil sich das zugrunde
+    // liegende, ggf. geteilte Profil geändert hat und der Admin das mitbekommen und
+    // "Baum neu einlesen" geklickt hat, siehe README). Die dadurch veralteten
+    // Übersetzungsspalten werden dabei ebenfalls geleert, damit sie im selben
+    // Rescan-Durchlauf automatisch neu übersetzt werden (FillMissingTranslations
+    // übersetzt ohnehin nur leere Zellen).
+    private function MergeEnumerationOptions(array $ExistingRows, array $ScannedByKey): array
+    {
+        $result = [];
+        foreach ($ExistingRows as $row) {
+            $key = isset($row['ObjectID'], $row['FieldPath']) ? $row['ObjectID'] . ':' . $row['FieldPath'] : null;
+            if ($key !== null && isset($ScannedByKey[$key])) {
+                $scanned = $ScannedByKey[$key];
+                $row['Path'] = $scanned['Path'];
+                $row['ValueObjectID'] = $scanned['ValueObjectID'];
+
+                if (($row[self::langOriginalImport] ?? '') === '') {
+                    $row[self::langOriginalImport] = $scanned[self::langOriginalImport];
+                    foreach (array_keys($row) as $field) {
+                        if (!in_array($field, ['ObjectID', 'ValueObjectID', 'FieldPath', 'Path', self::langOriginalImport], true)) {
+                            $row[$field] = '';
+                        }
+                    }
+                }
+
+                unset($ScannedByKey[$key]);
+            }
+            $result[] = $row;
+        }
+
+        foreach ($ScannedByKey as $newRow) {
             $result[] = $newRow;
         }
 
@@ -1754,14 +2179,14 @@ class SimpleLocale extends IPSModuleStrict
     // "Übernehmen" NICHT als Property gespeichert, außer "save" ist explizit true
     // (nur Rescan schreibt direkt per IPS_SetProperty und umgeht das). Ohne "save"
     // wären ObjectID/Path/Original-Import bei jedem Übernehmen verloren.
-    private function BuildListColumns(string $SourceLanguage, array $TargetLanguages, bool $IsObjectTexts): array
+    private function BuildListColumns(string $SourceLanguage, array $TargetLanguages, string $Kind): array
     {
         $columns = [
             ['caption' => 'Objekt-ID', 'name' => 'ObjectID', 'width' => '80px', 'save' => true],
             ['caption' => $this->Translate('Pfad'), 'name' => 'Path', 'width' => '200px', 'save' => true],
         ];
 
-        if ($IsObjectTexts) {
+        if ($Kind === 'texts') {
             $columns[] = ['caption' => 'Wert-Objekt-ID', 'name' => 'ValueObjectID', 'width' => '90px', 'save' => true];
 
             $columns[] = [
@@ -1785,6 +2210,21 @@ class SimpleLocale extends IPSModuleStrict
                 $columns,
                 $this->BuildLanguageColumnSet(self::fieldTextPrefix, $this->Translate('Text'), $SourceLanguage, $TargetLanguages)
             );
+        } elseif ($Kind === 'options') {
+            $columns[] = ['caption' => 'Wert-Objekt-ID', 'name' => 'ValueObjectID', 'width' => '90px', 'save' => true];
+            $columns[] = [
+                'caption' => $this->Translate('Feld'),
+                'name'    => 'FieldPath',
+                'width'   => '120px',
+                'save'    => true,
+            ];
+            $columns[] = [
+                'caption' => $this->Translate('Original-Import'),
+                'name'    => self::langOriginalImport,
+                'width'   => '200px',
+                'save'    => true,
+            ];
+            $columns = array_merge($columns, $this->BuildLanguageColumnSet('', '', $SourceLanguage, $TargetLanguages));
         } else {
             $columns[] = [
                 'caption' => $this->Translate('Original-Import'),
