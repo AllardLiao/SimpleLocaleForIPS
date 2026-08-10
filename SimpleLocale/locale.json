@@ -22,7 +22,8 @@
             "Baum jetzt neu einlesen": "Rescan tree now",
             "Root-Kategorie nicht gesetzt": "Root category not set",
             "Google Translate Fehler - bitte API-Key prüfen": "Google Translate error - please check the API key",
-            "Bitte zuerst Google Cloud Translate API-Key eintragen und übernehmen": "Please enter and save a Google Cloud Translate API key first"
+            "Bitte zuerst Google Cloud Translate API-Key eintragen und übernehmen": "Please enter and save a Google Cloud Translate API key first",
+            "Sprachliste konnte nicht von Google geladen werden - bitte API-Key prüfen": "Language list could not be loaded from Google - please check the API key"
         },
         "es": {
             "Sprache": "Idioma",
@@ -46,7 +47,8 @@
             "Baum jetzt neu einlesen": "Volver a escanear el árbol ahora",
             "Root-Kategorie nicht gesetzt": "Categoría raíz no establecida",
             "Google Translate Fehler - bitte API-Key prüfen": "Error de Google Translate: compruebe la clave de API",
-            "Bitte zuerst Google Cloud Translate API-Key eintragen und übernehmen": "Introduzca y guarde primero una clave de API de Google Cloud Translate"
+            "Bitte zuerst Google Cloud Translate API-Key eintragen und übernehmen": "Introduzca y guarde primero una clave de API de Google Cloud Translate",
+            "Sprachliste konnte nicht von Google geladen werden - bitte API-Key prüfen": "No se pudo cargar la lista de idiomas de Google: compruebe la clave de API"
         },
         "it": {
             "Sprache": "Lingua",
@@ -70,7 +72,8 @@
             "Baum jetzt neu einlesen": "Rileggi ora l'albero",
             "Root-Kategorie nicht gesetzt": "Categoria radice non impostata",
             "Google Translate Fehler - bitte API-Key prüfen": "Errore di Google Translate - controllare la chiave API",
-            "Bitte zuerst Google Cloud Translate API-Key eintragen und übernehmen": "Inserire e salvare prima una chiave API di Google Cloud Translate"
+            "Bitte zuerst Google Cloud Translate API-Key eintragen und übernehmen": "Inserire e salvare prima una chiave API di Google Cloud Translate",
+            "Sprachliste konnte nicht von Google geladen werden - bitte API-Key prüfen": "Impossibile caricare l'elenco delle lingue da Google - controllare la chiave API"
         },
         "fr": {
             "Sprache": "Langue",
@@ -94,7 +97,8 @@
             "Baum jetzt neu einlesen": "Réanalyser l'arborescence maintenant",
             "Root-Kategorie nicht gesetzt": "Catégorie racine non définie",
             "Google Translate Fehler - bitte API-Key prüfen": "Erreur Google Translate - veuillez vérifier la clé API",
-            "Bitte zuerst Google Cloud Translate API-Key eintragen und übernehmen": "Veuillez d'abord saisir et enregistrer une clé API Google Cloud Translate"
+            "Bitte zuerst Google Cloud Translate API-Key eintragen und übernehmen": "Veuillez d'abord saisir et enregistrer une clé API Google Cloud Translate",
+            "Sprachliste konnte nicht von Google geladen werden - bitte API-Key prüfen": "Impossible de charger la liste des langues depuis Google - veuillez vérifier la clé API"
         }
     }
 }

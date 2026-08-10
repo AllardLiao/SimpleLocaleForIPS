@@ -726,6 +726,17 @@ class SimpleLocale extends IPSModuleStrict
             ]];
         }
 
+        // Ein API-Key ist gesetzt, aber noch nie erfolgreich eine echte Sprachliste
+        // geladen worden (z.B. ungültiger Key) - dann NICHT still auf die 6 fest
+        // eingebauten Standardsprachen zurückfallen, das sähe aus wie ein Erfolg.
+        $cached = json_decode($this->ReadAttributeString(self::attributeAvailableLanguagesCache), true);
+        if (!is_array($cached) || $cached === []) {
+            return [[
+                'caption' => $this->Translate('Sprachliste konnte nicht von Google geladen werden - bitte API-Key prüfen'),
+                'value'   => '',
+            ]];
+        }
+
         $options = [];
         foreach ($this->BuildLanguageOptions() as $option) {
             if ($option['value'] !== $SourceLanguage) {
