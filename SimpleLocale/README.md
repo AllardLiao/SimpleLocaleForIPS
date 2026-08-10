@@ -362,10 +362,33 @@ Für Entwickler: Ob ein Build die Testversion-Einschränkungen überhaupt
 anwendet, steuert die Konstante `IS_TRIAL_BUILD` in `module.php` - für einen
 Vollversion-Build (z. B. an zahlende Kunden nach Kauf) dort auf `false`
 setzen, dann entfallen Sprach- und Zeitbeschränkung unabhängig vom
-Lizenzschlüssel. Die Konstante `LICENSE_SIGNING_SECRET` in derselben Datei
-ist aktuell ein Platzhalter und muss vor jedem echten Release durch ein
-eigenes, geheimes Signatur-Secret ersetzt werden - mit dem Platzhalter lässt
-sich kein echter, gültig signierter Lizenzschlüssel erzeugen.
+Lizenzschlüssel.
+
+**Signatur der Lizenzschlüssel (Ed25519, asymmetrisch):** Geprüft wird mit
+`sodium_crypto_sign_verify_detached()` gegen den öffentlichen Schlüssel in
+der Konstante `LICENSE_PUBLIC_KEY` (`module.php`). Bewusst *kein* HMAC
+(gemeinsames Geheimnis für Signieren und Prüfen) mehr: das Modul muss zum
+Prüfen bei jedem Nutzer lokal laufen, ein HMAC-Geheimnis stünde also
+zwangsläufig in jeder installierten Kopie von `module.php` - technisch
+versierte Nutzer könnten es dort auslesen und sich selbst beliebig viele
+gültige Lizenzen bauen. Mit Ed25519 lässt sich aus dem öffentlichen
+Prüfschlüssel dagegen keine gültige Signatur erzeugen.
+
+Vor jedem echten Release:
+1. Neues Schlüsselpaar erzeugen: `sodium_crypto_sign_keypair()`.
+2. Nur den **öffentlichen** Teil (`sodium_crypto_sign_publickey()`,
+   base64-kodiert) in `LICENSE_PUBLIC_KEY` eintragen - dieser darf im Repo
+   stehen.
+3. Den **privaten** Teil (`sodium_crypto_sign_secretkey()`) NIEMALS committen
+   - sicher außerhalb des Repos aufbewahren (z. B. Passwort-Manager), nur ein
+   eigenes, privates Verkaufs-/Signier-Tool braucht ihn zum Ausstellen echter
+   Lizenzschlüssel (`sodium_crypto_sign_detached($payloadJson, $privateKey)`,
+   dieselbe base64url-Payload-plus-Signatur-Struktur wie oben beschrieben).
+   Ein solches Tool ist bewusst nicht Teil dieses (öffentlichen) Repos.
+4. Der aktuell eingetragene `LICENSE_PUBLIC_KEY` ist ein Test-Schlüsselpaar
+   (siehe scratchpad-Smoke-Tests) - damit lassen sich keine echten,
+   vertrauenswürdigen Lizenzen ausstellen, nur der Mechanismus selbst ist
+   damit vollständig testbar.
 
 ### 9. PHP-Befehlsreferenz
 

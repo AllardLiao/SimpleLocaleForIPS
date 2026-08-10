@@ -86,12 +86,22 @@ class SimpleLocale extends IPSModuleStrict
         // ],
     ];
 
-    // Geheimnis zur Prüfung von Lizenzschlüsseln (HMAC-Signatur, siehe
-    // ValidateLicenseKey). PLATZHALTER - vor dem echten Release durch ein
-    // echtes, nur dem eigenen Verkaufssystem bekanntes Geheimnis ersetzen. Mit
-    // diesem Platzhalter lässt sich kein echter Lizenzschlüssel gültig signieren,
-    // der Mechanismus ist aber vollständig testbar (siehe smoke-Tests).
-    private const LICENSE_SIGNING_SECRET = 'CHANGE_ME_BEFORE_RELEASE';
+    // Öffentlicher Ed25519-Schlüssel zur Prüfung von Lizenzschlüsseln (asymmetrische
+    // Signatur, siehe ValidateLicenseKey) - base64-kodiert, 32 Rohbytes.
+    //
+    // WICHTIG, Unterschied zum früheren HMAC-Ansatz: dieser Schlüssel darf öffentlich
+    // sein (er steckt zwangsläufig in jeder installierten Kopie von module.php - auch
+    // ohne öffentliches Repo könnte ihn jeder Nutzer aus seiner eigenen Installation
+    // auslesen). Er kann NUR prüfen, nicht signieren - im Gegensatz zu einem HMAC-
+    // Geheimnis (dieselbe Zeichenkette signiert UND prüft) lässt sich mit ihm KEIN
+    // gültiger Lizenzschlüssel erzeugen. Der dazugehörige PRIVATE Schlüssel (zum
+    // tatsächlichen Ausstellen von Lizenzen) gehört NIEMALS in dieses - oder
+    // irgendein - Repo, sondern nur in ein eigenes, privates Verkaufs-/Signier-Tool.
+    //
+    // PLATZHALTER (Test-Schlüsselpaar, siehe scratchpad-Smoke-Tests) - vor dem echten
+    // Release durch ein frisch generiertes Schlüsselpaar ersetzen
+    // (sodium_crypto_sign_keypair()), nur den PUBLIC-Teil hier eintragen.
+    private const LICENSE_PUBLIC_KEY = '7bD7SEmpp7XCVSUwvY/5SYCMn7cnSUlQP+9kBKac3QA=';
 
     // "Permalink" zum Lizenzerwerb - aktuell nur ein Verweis auf das GitHub-Repo,
     // da es noch keinen eigenen Shop gibt. Eine einzige zentrale Konstante, damit
@@ -672,7 +682,7 @@ private const LANGUAGE_FLAGS = [
         curl_close($ch);
     }
 
-    // Lizenzschlüssel-Format: "<base64url(JSON-Payload)>.<base64url(HMAC-SHA256)>".
+    // Lizenzschlüssel-Format: "<base64url(JSON-Payload)>.<base64url(Ed25519-Signatur)>".
     // Payload deckt sowohl Einmalkauf als auch Abo mit demselben Feld ab:
     // {"type": "one_time"|"subscription", "expiresAt": 0|<Unix-Timestamp>, "languageLimit": 0|N}.
     // expiresAt=0 bedeutet "läuft nie ab" (Einmalkauf) - Abo-Schlüssel tragen den
@@ -682,8 +692,21 @@ private const LANGUAGE_FLAGS = [
     // N frei wählbaren Zielsprachen (z.B. eine Rabattaktion "eine Sprache für 50%
     // Rabatt"), siehe GetLicensedLanguageLimit. Fehlt das Feld (ältere Schlüssel), gilt
     // 0 = unbegrenzt. Rein offline prüfbar, kein Server-Roundtrip nötig.
+    //
+    // Asymmetrisch signiert (Ed25519 über sodium_crypto_sign, siehe LICENSE_PUBLIC_KEY)
+    // statt per HMAC: das Modul kann Schlüssel nur PRÜFEN, nicht selbst welche
+    // ausstellen - anders als bei einem gemeinsamen HMAC-Geheimnis kann also niemand,
+    // der sich module.php einer beliebigen Installation ansieht, sich selbst gültige
+    // Lizenzen bauen.
     private function ValidateLicenseKey(string $Key): ?array
     {
+        if (!function_exists('sodium_crypto_sign_verify_detached')) {
+            // Sollte auf jedem PHP >= 7.2 vorhanden sein (libsodium ist seit 7.2 Kern-
+            // Bestandteil) - defensiv trotzdem kein Fatal Error, sondern "keine gültige
+            // Lizenz erkennbar", falls doch mal ohne diese Extension kompiliert.
+            return null;
+        }
+
         $parts = explode('.', $Key);
         if (count($parts) !== 2) {
             return null;
@@ -692,12 +715,16 @@ private const LANGUAGE_FLAGS = [
         [$payloadPart, $signaturePart] = $parts;
         $payloadJson = base64_decode(strtr($payloadPart, '-_', '+/'), true);
         $signature = base64_decode(strtr($signaturePart, '-_', '+/'), true);
-        if ($payloadJson === false || $signature === false) {
+        $publicKey = base64_decode(self::LICENSE_PUBLIC_KEY, true);
+        if ($payloadJson === false || $signature === false || $publicKey === false) {
             return null;
         }
 
-        $expectedSignature = hash_hmac('sha256', $payloadJson, self::LICENSE_SIGNING_SECRET, true);
-        if (!hash_equals($expectedSignature, $signature)) {
+        if (strlen($signature) !== SODIUM_CRYPTO_SIGN_BYTES || strlen($publicKey) !== SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES) {
+            return null;
+        }
+
+        if (!sodium_crypto_sign_verify_detached($signature, $payloadJson, $publicKey)) {
             return null;
         }
 
