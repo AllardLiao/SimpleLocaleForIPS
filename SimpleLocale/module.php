@@ -238,12 +238,12 @@ class SimpleLocale extends IPSModuleStrict
         $targetLanguages = $this->GetSelectedTargetLanguages();
 
         $objectNames = $this->FillMissingTranslations($objectNames, [
-            ['raw' => self::langOriginalImport, 'prefix' => ''],
+            ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],
         ], $sourceLanguage, $targetLanguages);
 
         $objectTexts = $this->FillMissingTranslations($objectTexts, [
-            ['raw' => self::fieldOriginalImportName, 'prefix' => self::fieldNamePrefix],
-            ['raw' => self::langOriginalImportText, 'prefix' => self::fieldTextPrefix],
+            ['raw' => self::fieldOriginalImportName, 'prefix' => self::fieldNamePrefix, 'capitalizeFirst' => true],
+            ['raw' => self::langOriginalImportText, 'prefix' => self::fieldTextPrefix, 'capitalizeFirst' => false],
         ], $sourceLanguage, $targetLanguages);
 
         IPS_SetProperty($this->InstanceID, self::propertyObjectNames, json_encode(array_values($objectNames)));
@@ -357,19 +357,25 @@ class SimpleLocale extends IPSModuleStrict
     // Google - dadurch erkennt Google die tatsächliche Sprache selbst und poliert
     // nebenbei Tippfehler im rohen Originaltext. (2) Quellsprache -> jede ausgewählte
     // Zielsprache, jetzt mit bekannter, korrekter Quellsprache.
+    // $FieldGroups[]['capitalizeFirst']: Google großschreibt den ersten Buchstaben bei
+    // kurzen Einzelwörtern/Titeln (im Gegensatz zu vollständigen Sätzen) nicht
+    // zuverlässig - für Namen/Titel wird das Ergebnis daher nachträglich korrigiert.
+    // Nicht für freien Inhaltstext (kann HTML enthalten, erster Buchstabe ist dort
+    // nicht zwangsläufig ein Satzanfang).
     private function FillMissingTranslations(array $Rows, array $FieldGroups, string $SourceLanguage, array $TargetLanguages): array
     {
         foreach ($FieldGroups as $group) {
             $rawField = $group['raw'];
             $sourceField = $group['prefix'] . $SourceLanguage;
+            $capitalizeFirst = $group['capitalizeFirst'] ?? false;
 
-            $Rows = $this->FillLanguageColumn($Rows, $rawField, $sourceField, null, $SourceLanguage);
+            $Rows = $this->FillLanguageColumn($Rows, $rawField, $sourceField, null, $SourceLanguage, $capitalizeFirst);
 
             foreach ($TargetLanguages as $language) {
                 if ($language === $SourceLanguage) {
                     continue;
                 }
-                $Rows = $this->FillLanguageColumn($Rows, $sourceField, $group['prefix'] . $language, $SourceLanguage, $language);
+                $Rows = $this->FillLanguageColumn($Rows, $sourceField, $group['prefix'] . $language, $SourceLanguage, $language, $capitalizeFirst);
             }
         }
 
@@ -381,7 +387,7 @@ class SimpleLocale extends IPSModuleStrict
     // lässt Google die Quellsprache selbst erkennen.
     // $ToField ist der Property-Feldname zum Speichern (kann präfixiert sein, z.B.
     // "Text_de"), $TargetLanguageCode der reine Sprachcode, der an Google geht.
-    private function FillLanguageColumn(array $Rows, string $FromField, string $ToField, ?string $ForceSource, string $TargetLanguageCode): array
+    private function FillLanguageColumn(array $Rows, string $FromField, string $ToField, ?string $ForceSource, string $TargetLanguageCode, bool $CapitalizeFirst): array
     {
         $pending = [];
         foreach ($Rows as $index => $row) {
@@ -399,11 +405,20 @@ class SimpleLocale extends IPSModuleStrict
 
         $i = 0;
         foreach (array_keys($pending) as $index) {
-            $Rows[$index][$ToField] = $translated[$i] ?? '';
+            $value = $translated[$i] ?? '';
+            if ($CapitalizeFirst && $value !== '') {
+                $value = $this->CapitalizeFirstLetter($value);
+            }
+            $Rows[$index][$ToField] = $value;
             $i++;
         }
 
         return $Rows;
+    }
+
+    private function CapitalizeFirstLetter(string $Text): string
+    {
+        return mb_strtoupper(mb_substr($Text, 0, 1, 'UTF-8'), 'UTF-8') . mb_substr($Text, 1, null, 'UTF-8');
     }
 
     // $Source = null lässt Google die Quellsprache des Texts selbst erkennen.
