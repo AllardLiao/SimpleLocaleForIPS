@@ -8,7 +8,7 @@
     "childRequirements": [],
     "implemented": [],
     "prefix": "IPSSLT",
-    "url": "https://github.com/AllardLiao/SimpleLocaleForIPS/tree/stable/SimpleLocaleTranslate",
+    "url": "https://github.com/AllardLiao/SimpleLocaleForIPS/tree/development/SimpleLocaleTranslate",
     "translations": {
         "de": {
             "Simple Locale Translate": "Simple Locale Translate"
