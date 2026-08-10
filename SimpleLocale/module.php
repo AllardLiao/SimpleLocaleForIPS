@@ -264,24 +264,36 @@ class SimpleLocale extends IPSModuleStrict
         $this->RefreshAvailableLanguagesIfStale();
 
         $form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
+        $this->PopulateFormElements($form['elements']);
 
+        return json_encode($form);
+    }
+
+    // Läuft rekursiv durch alle Formularelemente, auch verschachtelt innerhalb der
+    // ExpansionPanel-"items" (Konfiguration/Übersetzung/Lizenz-Panel im Formular) -
+    // die dynamisch befüllten Felder stecken inzwischen alle in einem dieser Panels,
+    // nicht mehr direkt auf oberster Ebene von $form['elements'].
+    private function PopulateFormElements(array &$Elements): void
+    {
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
         $targetLanguages = $this->GetSelectedTargetLanguages();
-        $languageOptions = $this->BuildLanguageOptions();
-        $targetLanguageOptions = $this->BuildTargetLanguageOptions($sourceLanguage);
         $unnamedObjects = json_decode($this->ReadAttributeString(self::attributeUnnamedObjects), true);
         if (!is_array($unnamedObjects)) {
             $unnamedObjects = [];
         }
 
-        foreach ($form['elements'] as &$element) {
+        foreach ($Elements as &$element) {
+            if (isset($element['items']) && is_array($element['items'])) {
+                $this->PopulateFormElements($element['items']);
+            }
+
             switch ($element['name'] ?? '') {
                 case self::propertySourceLanguage:
-                    $element['options'] = $languageOptions;
+                    $element['options'] = $this->BuildLanguageOptions();
                     break;
 
                 case self::propertyTargetLanguages:
-                    $element['columns'][0]['edit']['options'] = $targetLanguageOptions;
+                    $element['columns'][0]['edit']['options'] = $this->BuildTargetLanguageOptions($sourceLanguage);
                     $element['values'] = $this->DecodeRows(self::propertyTargetLanguages);
                     $element['add'] = true;
 
@@ -326,11 +338,24 @@ class SimpleLocale extends IPSModuleStrict
                     $element['visible'] = self::IS_TRIAL_BUILD && !$this->HasFullLicense();
                     $element['caption'] = $this->BuildTrialInfoText();
                     break;
+
+                // Übersetzung-Panel klappt automatisch auf, sobald ein gültiger API-Key
+                // eine echte Sprachliste geladen hat - vorher gibt es dort ohnehin nichts
+                // sinnvoll zu tun (Zielsprachen-Auswahl ist deaktiviert, siehe oben).
+                case 'TranslationPanel':
+                    $element['expanded'] = $this->HasCachedLanguages();
+                    break;
+
+                // Lizenz-Panel nur im Testversion-Build relevant; klappt automatisch auf,
+                // wenn gerade etwas Aufmerksamkeit braucht (Testphase abgelaufen oder
+                // bereits ein Schlüssel eingetragen) statt es standardmäßig zu verstecken.
+                case 'LicensePanel':
+                    $element['visible'] = self::IS_TRIAL_BUILD;
+                    $element['expanded'] = $this->IsTrialLocked() || $this->ReadPropertyString(self::propertyLicenseKey) !== '';
+                    break;
             }
         }
         unset($element);
-
-        return json_encode($form);
     }
 
     // Symcon registriert öffentliche Methoden automatisch als globale Funktion

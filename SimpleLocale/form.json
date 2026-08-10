@@ -1,149 +1,260 @@
 {
     "elements": [
         {
-            "type": "Label",
-            "name": "TrialInfoLabel",
-            "caption": "Testversion",
-            "visible": false
-        },
-        {
-            "type": "PasswordTextBox",
-            "name": "LicenseKey",
-            "caption": "Lizenzschlüssel"
-        },
-        {
-            "type": "SelectCategory",
-            "name": "RootCategoryID",
-            "caption": "Root-Kategorie der Visualisierung"
-        },
-        {
-            "type": "Label",
-            "name": "UnnamedObjectsLabel",
-            "caption": "Folgende Objekte im Root-Baum haben keinen Namen. Bitte zuerst benennen, dann erneut \"Baum neu einlesen\" klicken - erst wenn alle Objekte einen Namen haben, werden Übersetzungen erzeugt.",
-            "visible": false
-        },
-        {
-            "type": "List",
-            "name": "UnnamedObjects",
-            "caption": "Unbenannte Objekte",
-            "add": false,
-            "delete": false,
-            "rowCount": 5,
-            "visible": false,
-            "columns": [
-                { "caption": "Objekt-ID", "name": "ObjectID", "width": "100px" },
-                { "caption": "Pfad", "name": "Path", "width": "300px" }
-            ],
-            "values": []
-        },
-        {
-            "type": "Select",
-            "name": "SourceLanguage",
-            "caption": "Basissprache",
-            "options": [
-                { "caption": "Deutsch", "value": "de" }
-            ]
-        },
-        {
-            "type": "PasswordTextBox",
-            "name": "GoogleTranslateAPIKey",
-            "caption": "Google Cloud Translate API-Key"
-        },
+            "type": "ExpansionPanel",
+            "name": "ConfigPanel",
+            "caption": "Konfiguration",
+            "expanded": true,
+            "items": [
                 {
-            "type": "NumberSpinner",
-            "name": "AutoRescanInterval",
-            "caption": "Automatischer Rescan (Minuten, 0 = aus)",
-            "minimum": 0
-        },
-        {
-            "type": "List",
-            "name": "TargetLanguages",
-            "caption": "Zielsprachen",
-            "add": true,
-            "delete": true,
-            "rowCount": 5,
-            "onAdd": "if ($TargetLanguages['code'] == '') { IPS_RequestAction($id, 'ShowApiKeyWarning', true); }",
-            "columns": [
+                    "type": "SelectCategory",
+                    "name": "RootCategoryID",
+                    "caption": "Root-Kategorie der Visualisierung"
+                },
                 {
-                    "caption": "Sprache",
-                    "name": "code",
-                    "width": "300px",
-                    "add": "",
-                    "edit": {
-                        "type": "Select",
-                        "options": [
-                            { "caption": "English", "value": "en" }
-                        ]
-                    }
+                    "type": "Select",
+                    "name": "SourceLanguage",
+                    "caption": "Basissprache",
+                    "options": [
+                        {
+                            "caption": "Deutsch",
+                            "value": "de"
+                        }
+                    ]
+                },
+                {
+                    "type": "Select",
+                    "name": "CurrentLanguage",
+                    "caption": "Aktuell aktive Sprache",
+                    "options": [
+                        {
+                            "caption": "Deutsch",
+                            "value": "de"
+                        }
+                    ]
+                },
+                {
+                    "type": "CheckBox",
+                    "name": "ShowGlobeIcon",
+                    "caption": "Weltkugel-Symbol in der Kachel anzeigen"
+                },
+                {
+                    "type": "CheckBox",
+                    "name": "ShowInfoIcon",
+                    "caption": "Info-Symbol in der Kachel anzeigen"
                 }
-            ],
-            "values": []
-        },
-        {
-            "type": "Select",
-            "name": "CurrentLanguage",
-            "caption": "Aktuell aktive Sprache",
-            "options": [
-                { "caption": "Deutsch", "value": "de" }
             ]
         },
         {
-            "type": "CheckBox",
-            "name": "ShowGlobeIcon",
-            "caption": "Weltkugel-Symbol in der Kachel anzeigen"
-        },
-        {
-            "type": "CheckBox",
-            "name": "ShowInfoIcon",
-            "caption": "Info-Symbol in der Kachel anzeigen"
-        },
-        {
-            "type": "List",
-            "name": "ObjectNames",
-            "caption": "Objektnamen",
-            "add": false,
-            "delete": true,
-            "rowCount": 10,
-            "columns": [
-                { "caption": "Objekt-ID", "name": "ObjectID", "width": "80px", "save": true },
-                { "caption": "Pfad", "name": "Path", "width": "200px", "save": true },
-                { "caption": "Original-Import", "name": "ORIGINAL_IMPORT", "width": "200px", "save": true }
+            "type": "ExpansionPanel",
+            "name": "TranslationPanel",
+            "caption": "Übersetzung",
+            "expanded": false,
+            "items": [
+                {
+                    "type": "PasswordTextBox",
+                    "name": "GoogleTranslateAPIKey",
+                    "caption": "Google Cloud Translate API-Key"
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "AutoRescanInterval",
+                    "caption": "Automatischer Rescan (Minuten, 0 = aus)",
+                    "minimum": 0
+                },
+                {
+                    "type": "List",
+                    "name": "TargetLanguages",
+                    "caption": "Zielsprachen",
+                    "add": true,
+                    "delete": true,
+                    "rowCount": 5,
+                    "onAdd": "if ($TargetLanguages['code'] == '') { IPS_RequestAction($id, 'ShowApiKeyWarning', true); }",
+                    "columns": [
+                        {
+                            "caption": "Sprache",
+                            "name": "code",
+                            "width": "300px",
+                            "add": "",
+                            "edit": {
+                                "type": "Select",
+                                "options": [
+                                    {
+                                        "caption": "English",
+                                        "value": "en"
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "values": []
+                },
+                {
+                    "type": "Label",
+                    "name": "UnnamedObjectsLabel",
+                    "caption": "Folgende Objekte im Root-Baum haben keinen Namen. Bitte zuerst benennen, dann erneut \"Baum neu einlesen\" klicken - erst wenn alle Objekte einen Namen haben, werden Übersetzungen erzeugt.",
+                    "visible": false
+                },
+                {
+                    "type": "List",
+                    "name": "UnnamedObjects",
+                    "caption": "Unbenannte Objekte",
+                    "add": false,
+                    "delete": false,
+                    "rowCount": 5,
+                    "visible": false,
+                    "columns": [
+                        {
+                            "caption": "Objekt-ID",
+                            "name": "ObjectID",
+                            "width": "100px"
+                        },
+                        {
+                            "caption": "Pfad",
+                            "name": "Path",
+                            "width": "300px"
+                        }
+                    ],
+                    "values": []
+                },
+                {
+                    "type": "Button",
+                    "caption": "Baum neu einlesen und fehlende Übersetzungen ergänzen",
+                    "onClick": "IPS_RequestAction($id, 'Rescan', true);"
+                },
+                {
+                    "type": "Label",
+                    "caption": "Durchsucht die Root-Kategorie erneut nach neuen/verschobenen Objekten und übersetzt per Google nur noch leere Zellen in Objektnamen und Eigene Texte. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben."
+                },
+                {
+                    "type": "List",
+                    "name": "ObjectNames",
+                    "caption": "Objektnamen",
+                    "add": false,
+                    "delete": true,
+                    "rowCount": 10,
+                    "columns": [
+                        {
+                            "caption": "Objekt-ID",
+                            "name": "ObjectID",
+                            "width": "80px",
+                            "save": true
+                        },
+                        {
+                            "caption": "Pfad",
+                            "name": "Path",
+                            "width": "200px",
+                            "save": true
+                        },
+                        {
+                            "caption": "Original-Import",
+                            "name": "ORIGINAL_IMPORT",
+                            "width": "200px",
+                            "save": true
+                        }
+                    ]
+                },
+                {
+                    "type": "List",
+                    "name": "ObjectTexts",
+                    "caption": "Eigene Texte",
+                    "add": false,
+                    "delete": true,
+                    "rowCount": 10,
+                    "columns": [
+                        {
+                            "caption": "Objekt-ID",
+                            "name": "ObjectID",
+                            "width": "80px",
+                            "save": true
+                        },
+                        {
+                            "caption": "Wert-Objekt-ID",
+                            "name": "ValueObjectID",
+                            "width": "90px",
+                            "save": true
+                        },
+                        {
+                            "caption": "Pfad",
+                            "name": "Path",
+                            "width": "200px",
+                            "save": true
+                        },
+                        {
+                            "caption": "Original-Import (Name)",
+                            "name": "ORIGINAL_IMPORT_Name",
+                            "width": "150px",
+                            "save": true
+                        },
+                        {
+                            "caption": "Original-Import (Text)",
+                            "name": "ORIGINAL_IMPORT_Text",
+                            "width": "200px",
+                            "save": true
+                        }
+                    ]
+                }
             ]
         },
         {
-            "type": "List",
-            "name": "ObjectTexts",
-            "caption": "Eigene Texte",
-            "add": false,
-            "delete": true,
-            "rowCount": 10,
-            "columns": [
-                { "caption": "Objekt-ID", "name": "ObjectID", "width": "80px", "save": true },
-                { "caption": "Wert-Objekt-ID", "name": "ValueObjectID", "width": "90px", "save": true },
-                { "caption": "Pfad", "name": "Path", "width": "200px", "save": true },
-                { "caption": "Original-Import (Name)", "name": "ORIGINAL_IMPORT_Name", "width": "150px", "save": true },
-                { "caption": "Original-Import (Text)", "name": "ORIGINAL_IMPORT_Text", "width": "200px", "save": true }
+            "type": "ExpansionPanel",
+            "name": "LicensePanel",
+            "caption": "Lizenz",
+            "expanded": false,
+            "items": [
+                {
+                    "type": "Label",
+                    "name": "TrialInfoLabel",
+                    "caption": "Testversion",
+                    "visible": false
+                },
+                {
+                    "type": "PasswordTextBox",
+                    "name": "LicenseKey",
+                    "caption": "Lizenzschlüssel"
+                },
+                {
+                    "type": "Button",
+                    "caption": "Lizenz aktivieren",
+                    "onClick": "IPS_RequestAction($id, 'ActivateLicense', true);"
+                }
             ]
         }
     ],
     "actions": [
         {
-            "type": "Button",
-            "caption": "Lizenz aktivieren",
-            "onClick": "IPS_RequestAction($id, 'ActivateLicense', true);"
+            "type": "ExpansionPanel",
+            "caption": "Produktinformationen",
+            "expanded": false,
+            "items": [
+                {
+                    "type": "RowLayout",
+                    "items": [
+                        {
+                            "type": "Image",
+                            "image": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTYuNzUiIGhlaWdodD0iMjgiIHJvbGU9ImltZyIgYXJpYS1sYWJlbD0iR0lUSFVCOiBAQWxsYXJkTGlhbyI+PHRpdGxlPkdJVEhVQjogQEFsbGFyZExpYW88L3RpdGxlPjxnIHNoYXBlLXJlbmRlcmluZz0iY3Jpc3BFZGdlcyI+PHJlY3Qgd2lkdGg9Ijg3LjUiIGhlaWdodD0iMjgiIGZpbGw9IiM1NTUiLz48cmVjdCB4PSI4Ny41IiB3aWR0aD0iMTA5LjI1IiBoZWlnaHQ9IjI4IiBmaWxsPSIjMTgxNzE3Ii8+PC9nPjxnIGZpbGw9IiNmZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJWZXJkYW5hLEdlbmV2YSxEZWphVnUgU2FucyxzYW5zLXNlcmlmIiB0ZXh0LXJlbmRlcmluZz0iZ2VvbWV0cmljUHJlY2lzaW9uIiBmb250LXNpemU9IjEwMCI+PGltYWdlIHg9IjkiIHk9IjciIHdpZHRoPSIxNCIgaGVpZ2h0PSIxNCIgaHJlZj0iZGF0YTppbWFnZS9zdmcreG1sO2Jhc2U2NCxQSE4yWnlCbWFXeHNQU0ozYUdsMFpYTnRiMnRsSWlCeWIyeGxQU0pwYldjaUlIWnBaWGRDYjNnOUlqQWdNQ0F5TkNBeU5DSWdlRzFzYm5NOUltaDBkSEE2THk5M2QzY3Vkek11YjNKbkx6SXdNREF2YzNabklqNDhkR2wwYkdVK1IybDBTSFZpUEM5MGFYUnNaVDQ4Y0dGMGFDQmtQU0pOTVRJZ0xqSTVOMk10Tmk0Mk15QXdMVEV5SURVdU16Y3pMVEV5SURFeUlEQWdOUzR6TURNZ015NDBNemdnT1M0NElEZ3VNakExSURFeExqTTROUzQyTGpFeE15NDRNaTB1TWpVNExqZ3lMUzQxTnpjZ01DMHVNamcxTFM0d01TMHhMakEwTFM0d01UVXRNaTR3TkMwekxqTXpPQzQzTWpRdE5DNHdOREl0TVM0Mk1TMDBMakEwTWkweExqWXhRelF1TkRJeUlERTRMakEzSURNdU5qTXpJREUzTGpjZ015NDJNek1nTVRjdU4yTXRNUzR3T0RjdExqYzBOQzR3T0RRdExqY3lPUzR3T0RRdExqY3lPU0F4TGpJd05TNHdPRFFnTVM0NE16Z2dNUzR5TXpZZ01TNDRNemdnTVM0eU16WWdNUzR3TnlBeExqZ3pOU0F5TGpnd09TQXhMak13TlNBekxqUTVOUzQ1T1RndU1UQTRMUzQzTnpZdU5ERTNMVEV1TXpBMUxqYzJMVEV1TmpBMUxUSXVOalkxTFM0ekxUVXVORFkyTFRFdU16TXlMVFV1TkRZMkxUVXVPVE1nTUMweExqTXhMalEyTlMweUxqTTRJREV1TWpNMUxUTXVNakl0TGpFek5TMHVNekF6TFM0MU5DMHhMalV5TXk0eE1EVXRNeTR4TnpZZ01DQXdJREV1TURBMUxTNHpNaklnTXk0eklERXVNak11T1RZdExqSTJOeUF4TGprNExTNHpPVGtnTXkwdU5EQTFJREV1TURJdU1EQTJJREl1TURRdU1UTTRJRE1nTGpRd05TQXlMakk0TFRFdU5UVXlJRE11TWpnMUxURXVNak1nTXk0eU9EVXRNUzR5TXk0Mk5EVWdNUzQyTlRNdU1qUWdNaTQ0TnpNdU1USWdNeTR4TnpZdU56WTFMamcwSURFdU1qTWdNUzQ1TVNBeExqSXpJRE11TWpJZ01DQTBMall4TFRJdU9EQTFJRFV1TmpJMUxUVXVORGMxSURVdU9USXVOREl1TXpZdU9ERWdNUzR3T1RZdU9ERWdNaTR5TWlBd0lERXVOakEyTFM0d01UVWdNaTQ0T1RZdExqQXhOU0F6TGpJNE5pQXdJQzR6TVRVdU1qRXVOamt1T0RJMUxqVTNRekl3TGpVMk5TQXlNaTR3T1RJZ01qUWdNVGN1TlRreUlESTBJREV5TGpJNU4yTXdMVFl1TmpJM0xUVXVNemN6TFRFeUxURXlMVEV5SWk4K1BDOXpkbWMrIi8+PHRleHQgdHJhbnNmb3JtPSJzY2FsZSguMSkiIHg9IjUyMi41IiB5PSIxNzUiIHRleHRMZW5ndGg9IjQ2NSIgZmlsbD0iI2ZmZiI+R0lUSFVCPC90ZXh0Pjx0ZXh0IHRyYW5zZm9ybT0ic2NhbGUoLjEpIiB4PSIxNDIxLjI1IiB5PSIxNzUiIHRleHRMZW5ndGg9Ijg1Mi41IiBmaWxsPSIjZmZmIiBmb250LXdlaWdodD0iYm9sZCI+QEFsbGFyZExpYW88L3RleHQ+PC9nPjwvc3ZnPg==",
+                            "onClick": "echo 'https://github.com/AllardLiao/SimpleLocaleForIPS';"
+                        }
+                    ]
+                },
+                {
+                    "type": "Label",
+                    "caption": "\nLizenz",
+                    "bold": true
+                },
+                {
+                    "type": "Label",
+                    "caption": "Simple Locale for IP-Symcon ist kommerzielle Software mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben)."
+                },
+                {
+                    "type": "Label",
+                    "caption": "Lizenz erwerben, Quellcode und Dokumentation: https://github.com/AllardLiao/SimpleLocaleForIPS"
+                }
+            ]
         },
         {
-            "type": "Button",
-            "caption": "Baum neu einlesen und fehlende Übersetzungen ergänzen",
-            "onClick": "IPS_RequestAction($id, 'Rescan', true);"
-        },
-        {
-            "type": "Label",
-            "caption": "Durchsucht die Root-Kategorie erneut nach neuen/verschobenen Objekten und übersetzt per Google nur noch leere Zellen in Objektnamen und Eigene Texte. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben."
-        },
-        {
-            "type": "PopupAlert",
             "name": "ApiKeyMissingPopup",
+            "type": "PopupAlert",
             "visible": false,
             "popup": {
                 "caption": "API-Key fehlt",
@@ -157,8 +268,8 @@
             }
         },
         {
-            "type": "PopupAlert",
             "name": "ApiKeyInvalidPopup",
+            "type": "PopupAlert",
             "visible": false,
             "popup": {
                 "caption": "Sprachliste nicht verfügbar",
@@ -172,8 +283,8 @@
             }
         },
         {
-            "type": "PopupAlert",
             "name": "LicenseValidPopup",
+            "type": "PopupAlert",
             "visible": false,
             "popup": {
                 "caption": "Lizenz aktiviert",
@@ -187,8 +298,8 @@
             }
         },
         {
-            "type": "PopupAlert",
             "name": "LicenseInvalidPopup",
+            "type": "PopupAlert",
             "visible": false,
             "popup": {
                 "caption": "Lizenz ungültig",

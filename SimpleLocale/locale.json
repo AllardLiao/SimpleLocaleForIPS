@@ -51,7 +51,14 @@
             "Bis dahin voller Funktionsumfang, aber nur mit den 5 testweise freigeschalteten Sprachen (Isländisch, Walisisch, Zulu, Maori, Latein).": "Full functionality until then, but only with the 5 languages unlocked for testing (Icelandic, Welsh, Zulu, Maori, Latin).",
             "Testversion abgelaufen am": "Trial version expired on",
             "Die Kachel zeigt Gästen ab jetzt wieder den unbearbeiteten Original-Text, ein weiterer Rescan ist blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.": "The tile now shows guests the unedited original text again; a further rescan is blocked until a valid license key has been activated.",
-            "Lizenz erwerben:": "Purchase a license:"
+            "Lizenz erwerben:": "Purchase a license:",
+            "Konfiguration": "Configuration",
+            "Übersetzung": "Translation",
+            "Lizenz": "License",
+            "\nLizenz": "\nLicense",
+            "Produktinformationen": "Product information",
+            "Simple Locale for IP-Symcon ist kommerzielle Software mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben).": "Simple Locale for IP-Symcon is commercial software with a free trial version (see the \"License\" section above).",
+            "Lizenz erwerben, Quellcode und Dokumentation: https://github.com/AllardLiao/SimpleLocaleForIPS": "Purchase a license, source code and documentation: https://github.com/AllardLiao/SimpleLocaleForIPS"
         },
         "es": {
             "Sprache": "Idioma",
@@ -104,7 +111,14 @@
             "Bis dahin voller Funktionsumfang, aber nur mit den 5 testweise freigeschalteten Sprachen (Isländisch, Walisisch, Zulu, Maori, Latein).": "Funcionalidad completa hasta entonces, pero solo con los 5 idiomas habilitados para pruebas (islandés, galés, zulú, maorí, latín).",
             "Testversion abgelaufen am": "Versión de prueba caducada el",
             "Die Kachel zeigt Gästen ab jetzt wieder den unbearbeiteten Original-Text, ein weiterer Rescan ist blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.": "El widget vuelve a mostrar a los huéspedes el texto original sin editar; un nuevo rescaneo está bloqueado hasta que se active una clave de licencia válida.",
-            "Lizenz erwerben:": "Adquirir una licencia:"
+            "Lizenz erwerben:": "Adquirir una licencia:",
+            "Konfiguration": "Configuración",
+            "Übersetzung": "Traducción",
+            "Lizenz": "Licencia",
+            "\nLizenz": "\nLicencia",
+            "Produktinformationen": "Información del producto",
+            "Simple Locale for IP-Symcon ist kommerzielle Software mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben).": "Simple Locale for IP-Symcon es software comercial con una versión de prueba gratuita (véase la sección \"Licencia\" más arriba).",
+            "Lizenz erwerben, Quellcode und Dokumentation: https://github.com/AllardLiao/SimpleLocaleForIPS": "Adquirir una licencia, código fuente y documentación: https://github.com/AllardLiao/SimpleLocaleForIPS"
         },
         "it": {
             "Sprache": "Lingua",
@@ -157,7 +171,14 @@
             "Bis dahin voller Funktionsumfang, aber nur mit den 5 testweise freigeschalteten Sprachen (Isländisch, Walisisch, Zulu, Maori, Latein).": "Piena funzionalità fino ad allora, ma solo con le 5 lingue sbloccate per il test (islandese, gallese, zulu, maori, latino).",
             "Testversion abgelaufen am": "Versione di prova scaduta il",
             "Die Kachel zeigt Gästen ab jetzt wieder den unbearbeiteten Original-Text, ein weiterer Rescan ist blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.": "Il riquadro torna a mostrare agli ospiti il testo originale non modificato; un'ulteriore nuova scansione è bloccata finché non viene attivata una chiave di licenza valida.",
-            "Lizenz erwerben:": "Acquista una licenza:"
+            "Lizenz erwerben:": "Acquista una licenza:",
+            "Konfiguration": "Configurazione",
+            "Übersetzung": "Traduzione",
+            "Lizenz": "Licenza",
+            "\nLizenz": "\nLicenza",
+            "Produktinformationen": "Informazioni sul prodotto",
+            "Simple Locale for IP-Symcon ist kommerzielle Software mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben).": "Simple Locale for IP-Symcon è software commerciale con una versione di prova gratuita (vedi la sezione \"Licenza\" sopra).",
+            "Lizenz erwerben, Quellcode und Dokumentation: https://github.com/AllardLiao/SimpleLocaleForIPS": "Acquista una licenza, codice sorgente e documentazione: https://github.com/AllardLiao/SimpleLocaleForIPS"
         },
         "fr": {
             "Sprache": "Langue",
@@ -210,7 +231,14 @@
             "Bis dahin voller Funktionsumfang, aber nur mit den 5 testweise freigeschalteten Sprachen (Isländisch, Walisisch, Zulu, Maori, Latein).": "Fonctionnalité complète jusque-là, mais uniquement avec les 5 langues débloquées pour les tests (islandais, gallois, zoulou, maori, latin).",
             "Testversion abgelaufen am": "Version d'essai expirée le",
             "Die Kachel zeigt Gästen ab jetzt wieder den unbearbeiteten Original-Text, ein weiterer Rescan ist blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.": "La tuile affiche à nouveau aux invités le texte original non modifié ; un nouveau balayage est bloqué tant qu'une clé de licence valide n'a pas été activée.",
-            "Lizenz erwerben:": "Acheter une licence :"
+            "Lizenz erwerben:": "Acheter une licence :",
+            "Konfiguration": "Configuration",
+            "Übersetzung": "Traduction",
+            "Lizenz": "Licence",
+            "\nLizenz": "\nLicence",
+            "Produktinformationen": "Informations sur le produit",
+            "Simple Locale for IP-Symcon ist kommerzielle Software mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben).": "Simple Locale for IP-Symcon est un logiciel commercial avec une version d'essai gratuite (voir la section \"Licence\" ci-dessus).",
+            "Lizenz erwerben, Quellcode und Dokumentation: https://github.com/AllardLiao/SimpleLocaleForIPS": "Acheter une licence, code source et documentation : https://github.com/AllardLiao/SimpleLocaleForIPS"
         }
     }
 }
