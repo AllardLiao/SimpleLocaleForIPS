@@ -24,6 +24,20 @@ trait SimpleLocaleConstants
     // zufällig dasselbe Profil/Template nutzen, bleiben unangetastet.
     private const propertyEnumerationOptions = 'EnumerationOptions';
 
+    // Feldnamen, die IPS_GetVariablePresentation()/IPS_GetTemplate() für
+    // menschenlesbaren Anzeigetext verwendet (siehe IsTranslatableFieldName) -
+    // Groß-/Kleinschreibung wird beim Vergleich ignoriert. Symcon ist hier leider
+    // uneinheitlich: dieselbe Bedeutung heißt je nach Präsentationsart/Kontext anders
+    // ('Caption' bei Enumeration-Optionen, 'Constant' bzw. 'ConstantValue' bei der
+    // intervallbasierten Numeric-Presentation - live gegen Kai's Controme-
+    // Heizungsmodus geprüft, 'Prefix'/'Suffix' bzw. 'PrefixValue'/'SuffixValue' je nach
+    // Ebene). An zentraler Stelle gepflegt, damit ein von IPS künftig neu erfundener
+    // Name (z.B. ein hypothetisches "ValueConstant") nur hier ergänzt werden muss.
+    private const TRANSLATABLE_PRESENTATION_FIELD_NAMES = [
+        'CAPTION', 'PREFIX', 'SUFFIX', 'CONSTANT',
+        'CONSTANTVALUE', 'PREFIXVALUE', 'SUFFIXVALUE',
+    ];
+
     // Aktuell aktive Gast-Sprache - bewusst eine Property (instanzgebunden wie ein
     // Attribut, aber zusätzlich im Konfigurationsformular sicht- und änderbar), nicht
     // ein Variablenprofil (das wäre in Symcon global über alle Instanzen hinweg geteilt).

@@ -1584,11 +1584,10 @@ private const LANGUAGE_FLAGS = [
     // Groß-/Kleinschreibung ignorieren statt eine feste Schreibweise anzunehmen.
     private function IsTranslatableFieldName($Key): bool
     {
-        // 'Constant' gehört zur intervallbasierten Numeric-Darstellung (Template
-        // Manager > Value Presentation > Numeric, z.B. Heizungsmodus/Controme) - live
-        // gegen Kai's Controme-Template geprüft: das Feld heißt dort wirklich
-        // "Constant" (nicht "Caption"), obwohl es exakt denselben Zweck erfüllt.
-        return in_array(is_string($Key) ? strtoupper($Key) : $Key, ['CAPTION', 'PREFIX', 'SUFFIX', 'CONSTANT'], true);
+        // Liste zentral in SimpleLocaleConstants.php gepflegt (siehe
+        // TRANSLATABLE_PRESENTATION_FIELD_NAMES dort) - erfindet IPS künftig noch
+        // eine weitere Schreibweise, muss nur dort ergänzt werden.
+        return in_array(is_string($Key) ? strtoupper($Key) : $Key, self::TRANSLATABLE_PRESENTATION_FIELD_NAMES, true);
     }
 
     // Gegenstück zu ExtractTranslatableFields: schreibt die in $Replacements

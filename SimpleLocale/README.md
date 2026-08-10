@@ -149,11 +149,14 @@ Beschreibung des Moduls.
     Praktisch meist unkritisch, da Gäste einer Ferienwohnung/eines Airbnb
     typischerweise zeitlich versetzt anreisen, nicht gleichzeitig
     unterschiedliche Sprachen benötigen.
-  - Übersetzt werden nur Felder, die Symcon selbst `Caption`, `Prefix`,
-    `Suffix` oder `Constant` nennt (unabhängig von Groß-/Kleinschreibung) -
-    das deckt klassische Profile, Enumeration-Presentations und
-    intervallbasierte Numeric-Presentations (z. B. eine Heizungsmodus-Kachel
-    mit Wertebereichen statt Einzelwerten) ab. Andere, noch unbekannte
+  - Übersetzt werden nur Felder, deren Name (unabhängig von Groß-/
+    Kleinschreibung) einem festen, in `SimpleLocaleConstants.php`
+    gepflegten Satz entspricht (`Caption`, `Prefix`, `Suffix`, `Constant`
+    sowie - für die pro Intervall abweichende Symcon-Schreibweise -
+    `ConstantValue`, `PrefixValue`, `SuffixValue`) - das deckt klassische
+    Profile, Enumeration-Presentations und intervallbasierte
+    Numeric-Presentations (z. B. eine Heizungsmodus-Kachel mit
+    Wertebereichen statt Einzelwerten) ab. Andere, noch unbekannte
     Präsentationsarten mit anders benannten Textfeldern werden bewusst
     **nicht** geraten übersetzt: die Struktur ist sonst zu variabel, um
     sicher zwischen Anzeigetext und technischen Feldern (Icon-Bezeichner,
