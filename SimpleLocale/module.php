@@ -29,10 +29,6 @@ class SimpleLocale extends IPSModuleStrict
         'Inhalte, die von anderen Modulen oder Skripten laufend automatisch aktualisiert werden (z. B. Messwerte oder Wetterdaten), erscheinen nach jeder Aktualisierung wieder in ihrer ursprünglichen Sprache.',
     ];
 
-    // Beschriftung des Schließen-Buttons im Info-Popup - im selben Aufruf wie die
-    // Hinweistexte übersetzt (siehe EnsureGuestLanguageNamesFresh).
-    private const INFO_CLOSE_TEXT = 'Schließen';
-
     // Rein dekorativ fürs Gast-Dropdown (GetVisualizationTile) - nicht erschöpfend,
     // unbekannte Sprachcodes bekommen einfach keine Flagge vorangestellt.
     private const LANGUAGE_FLAGS = [
@@ -796,7 +792,7 @@ class SimpleLocale extends IPSModuleStrict
         }
 
         $infoIconHtml = '<span class="ipssl-info-icon" aria-hidden="true"'
-            . ' onclick="this.parentElement.nextElementSibling.style.display=\'block\';">ⓘ</span>';
+            . ' onclick="alert(' . $this->BuildInfoAlertJs($guestCache) . ');">ⓘ</span>';
 
         return '<div class="ipssl-select-row">'
             . '<span class="ipssl-globe" aria-hidden="true">🌐</span>'
@@ -804,32 +800,24 @@ class SimpleLocale extends IPSModuleStrict
             . $optionsHtml
             . '</select>'
             . $infoIconHtml
-            . '</div>'
-            . $this->BuildInfoPopupHtml($guestCache);
+            . '</div>';
     }
 
-    // Schlanke Toast-Notiz am unteren Rand statt Vollbild-Backdrop mit zentrierter
-    // Box - letzteres sah in einer kleinen Kachel abgeschnitten/unpassend aus.
-    // Gleiches Muster wie die .message-box in ContromeCentralControl (position:fixed,
-    // unten), aber bleibt (anders als dortige kurze Erfolgsmeldungen) offen, bis aktiv
-    // geschlossen wird, da hier echter Erklärtext zum Lesen steht. Text live in die
-    // aktuell aktive Gast-Sprache übersetzt, damit auch dieser Hinweis nicht die
-    // Admin-Konsolensprache mit der Gast-Sprache mischt.
-    private function BuildInfoPopupHtml(array $GuestCache): string
+    // alert() ist ein Browser-Chrome-Dialog, kein DOM-Element - anders als jedes per
+    // CSS positionierte <div> (siehe .ipssl-select-row) ist er nicht an die Box des
+    // eigenen iframes gebunden und kann daher unabhängig von der Kachelgröße immer
+    // vollständig angezeigt werden. Achtung: manche eingebetteten WebViews (v.a.
+    // native Mobile-Apps) unterdrücken window.alert() aus eingebettetem Fremd-Content
+    // aus Sicherheitsgründen - das lässt sich ohne Live-Test auf dem Zielgerät nicht
+    // zuverlässig verifizieren. Text live in die aktuell aktive Gast-Sprache
+    // übersetzt, damit auch dieser Hinweis nicht die Admin-Konsolensprache mit der
+    // Gast-Sprache mischt.
+    private function BuildInfoAlertJs(array $GuestCache): string
     {
         $texts = $GuestCache['infoTexts'] ?? self::INFO_LIMITATION_TEXTS;
-        $closeLabel = htmlspecialchars($GuestCache['closeLabel'] ?? self::INFO_CLOSE_TEXT, ENT_QUOTES, 'UTF-8');
+        $alertText = implode("\n\n", array_map(fn (string $text): string => '• ' . $text, $texts));
 
-        $itemsHtml = '';
-        foreach ($texts as $text) {
-            $itemsHtml .= '<li>' . htmlspecialchars($text, ENT_QUOTES, 'UTF-8') . '</li>';
-        }
-
-        return '<div class="ipssl-info-toast">'
-            . '<span class="ipssl-info-toast-close" role="button" aria-label="' . $closeLabel . '"'
-            . ' onclick="this.parentElement.style.display=\'none\';">✕</span>'
-            . '<ul>' . $itemsHtml . '</ul>'
-            . '</div>';
+        return htmlspecialchars(json_encode($alertText, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES, 'UTF-8');
     }
 
     // "Name - code" mit vorangestellter Flagge (z.B. "🇬🇧 English - en"), Name live
@@ -892,11 +880,10 @@ class SimpleLocale extends IPSModuleStrict
 
         $names = $this->FetchLanguageNames($language) ?? ($cache['names'] ?? []);
 
-        // "Original (unbearbeitet)" + die Info-Hinweistexte + der Schließen-Button
-        // in einem gemeinsamen Aufruf übersetzen (statt je einem eigenen) - alles
-        // feste, kurze Texte, die ohnehin nur bei Sprachwechsel/Cache-Ablauf einmal
-        // aktualisiert werden.
-        $ownTexts = array_merge(['Original (unbearbeitet)'], self::INFO_LIMITATION_TEXTS, [self::INFO_CLOSE_TEXT]);
+        // "Original (unbearbeitet)" + die Info-Hinweistexte in einem gemeinsamen
+        // Aufruf übersetzen (statt je einem eigenen) - alles feste, kurze Texte,
+        // die ohnehin nur bei Sprachwechsel/Cache-Ablauf einmal aktualisiert werden.
+        $ownTexts = array_merge(['Original (unbearbeitet)'], self::INFO_LIMITATION_TEXTS);
         if ($language === 'de') {
             $translatedOwnTexts = $ownTexts;
         } else {
@@ -908,14 +895,12 @@ class SimpleLocale extends IPSModuleStrict
             $translatedOwnTexts[1] ?? self::INFO_LIMITATION_TEXTS[0],
             $translatedOwnTexts[2] ?? self::INFO_LIMITATION_TEXTS[1],
         ];
-        $closeLabel = $translatedOwnTexts[3] ?? self::INFO_CLOSE_TEXT;
 
         $cache = [
             'language'      => $language,
             'names'         => $names,
             'originalLabel' => $originalLabel,
             'infoTexts'     => $infoTexts,
-            'closeLabel'    => $closeLabel,
             'fetchedAt'     => time(),
         ];
 

@@ -63,61 +63,6 @@
             background: rgba(0, 0, 0, 0.06);
             color: rgba(0, 0, 0, 0.7);
         }
-
-        /* Kein vollflächiges Backdrop mehr (sah in einer kleinen Kachel abgeschnitten
-           und unpassend aus) - stattdessen eine schlanke Toast-Notiz am unteren Rand,
-           analog zur .message-box aus ContromeCentralControl. position:fixed wirkt
-           innerhalb eines iframes relativ zu dessen eigenem Viewport, eine kleine
-           Pille am Rand fällt dabei anders als ein Vollbild-Overlay nicht negativ auf,
-           selbst wenn der verfügbare Platz klein ist. Anders als Contromes Toast bleibt
-           diese hier offen, bis sie aktiv geschlossen wird (echter Erklärtext zum
-           Lesen, keine kurze Erfolgsmeldung zum Wegblenden). */
-        .ipssl-info-toast {
-            display: none;
-            position: fixed;
-            left: 8px;
-            right: 8px;
-            bottom: 8px;
-            box-sizing: border-box;
-            background: #222;
-            color: #fff;
-            border-radius: 10px;
-            padding: 10px 34px 10px 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            font-size: 12px;
-            line-height: 1.4;
-            z-index: 1000;
-        }
-
-        .ipssl-info-toast ul {
-            margin: 0;
-            padding-left: 16px;
-        }
-
-        .ipssl-info-toast li + li {
-            margin-top: 4px;
-        }
-
-        .ipssl-info-toast .ipssl-info-toast-close {
-            position: absolute;
-            top: 6px;
-            right: 8px;
-            width: 20px;
-            height: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 14px;
-            line-height: 1;
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        .ipssl-info-toast .ipssl-info-toast-close:hover {
-            background: rgba(255, 255, 255, 0.15);
-            color: #fff;
-        }
     </style>
 </head>
 <body>

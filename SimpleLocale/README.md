@@ -107,9 +107,12 @@ angezeigt werden) und löst beim Auswählen direkt den Sprachwechsel aus. Die
 aktuell aktive Sprache wird als Instanz-Property gespeichert (kein
 Symcon-Variablenprofil - das wäre global über alle Instanzen der Installation
 hinweg geteilt und würde sich bei mehreren Instanzen gegenseitig überschreiben).
-Ein Info-Symbol (ⓘ) neben dem Dropdown öffnet auf Klick ein Popup mit den in
-[Abschnitt 2](#2-bekannte-einschränkungen) beschriebenen Einschränkungen,
-ebenfalls live in der jeweils aktiven Gast-Sprache.
+Ein Info-Symbol (ⓘ) neben dem Dropdown öffnet auf Klick einen nativen
+Browser-Dialog (`alert()`) mit den in [Abschnitt 2](#2-bekannte-einschränkungen)
+beschriebenen Einschränkungen, ebenfalls live in der jeweils aktiven
+Gast-Sprache. Bewusst kein eigenes HTML-Popup: die Kachel läuft in einem
+eigenen iframe und eigene Overlays können dessen Grenzen nicht überschreiten -
+ein Browser-Dialog dagegen schon.
 
 Für eigene HTMLBox-Popups oder Hinweise außerhalb der live umbenannten
 Objekte liefert `IPSSL_TranslateText()` den Text in der aktuell aktiven
