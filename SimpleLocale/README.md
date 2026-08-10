@@ -12,6 +12,7 @@ Beschreibung des Moduls.
 7. [WebFront](#7-webfront)
 8. [Lizenz und Testversion](#8-lizenz-und-testversion)
 9. [PHP-Befehlsreferenz](#9-php-befehlsreferenz)
+10. [Integration für Modulentwickler](#10-integration-für-modulentwickler)
 
 ### 1. Funktionsumfang
 
@@ -310,3 +311,62 @@ einlesen" im Modul-Formular.
 
 Beispiel:
 `IPSSL_Rescan(12345);`
+
+`string IPSSL_TranslateExternalText(integer $InstanzID, string $Text, string $Quellsprache);`
+Übersetzt beliebigen Text live in die aktuell aktive Gast-Sprache dieser
+Instanz - für Modulentwickler, deren eigenes Modul eine eigene HTML-Kachel
+ausliefert (`GetVisualizationTile()`) statt Text in einer von Simple Locale
+beobachtbaren Variable zu halten, siehe
+[Abschnitt 10](#10-integration-für-modulentwickler). Leerer Text,
+Quellsprache = aktive Sprache, oder eine wegen abgelaufener Testphase
+gerade nicht kostenfreie Sprache liefern den Text unverändert zurück -
+nie ein Fehler.
+
+Beispiel:
+`IPSSL_TranslateExternalText(12345, 'Guten Tag', 'de');`
+
+`string IPSSL_GetCurrentLanguageCode(integer $InstanzID);`
+Liefert den aktuell aktiven Gast-Sprachcode dieser Instanz (z. B. `"en"`) -
+immer ein echter Sprachcode, nie die interne Pseudo-Sprache
+`"ORIGINAL_IMPORT"`. Nützlich, um eigene Inhalte nur bei einem tatsächlichen
+Sprachwechsel neu aufzubauen, statt bei jedem Rendern blind zu übersetzen.
+
+Beispiel:
+`IPSSL_GetCurrentLanguageCode(12345);`
+### 10. Integration für Modulentwickler
+
+Liefert dein eigenes Modul eine eigene HTML-Kachel aus
+(`GetVisualizationTile()`), lässt sich dessen Text-Inhalt live in die
+gerade aktive Gast-Sprache einer Simple-Locale-Instanz übersetzen - ganz
+ohne eigenen Google-Account, da `IPSSL_TranslateExternalText()` den
+Google-API-Key der jeweiligen Simple-Locale-Instanz mitverwendet.
+
+Da die meisten Nutzer (noch) keine Simple-Locale-Instanz installiert haben,
+sollte der Aufruf immer defensiv erfolgen - mit `function_exists()` und
+einer eigenen Suche nach einer passenden Instanz, statt die Instanz-ID fest
+zu verdrahten:
+
+```php
+private function TranslateViaSimpleLocale(string $Text, string $SourceLanguage): string
+{
+    if (!function_exists('IPSSL_TranslateExternalText')) {
+        // Simple Locale ist beim Nutzer nicht installiert - Text unverändert
+        // anzeigen, kein Fehler.
+        return $Text;
+    }
+
+    $instanceIDs = IPS_GetInstanceListByModuleID('{1A2E3892-FE35-9E4E-A3A8-B983B0C41F64}');
+    if ($instanceIDs === []) {
+        // Modul installiert, aber keine Instanz angelegt/konfiguriert.
+        return $Text;
+    }
+
+    // Läuft eine einzelne SimpleLocale-Instanz beim Nutzer (üblicher Fall), reicht die
+    // erste gefundene - bei mehreren Instanzen ggf. eine eigene Auswahl anbieten.
+    return IPSSL_TranslateExternalText($instanceIDs[0], $Text, $SourceLanguage);
+}
+```
+
+Am besten bei jedem Aufruf von `GetVisualizationTile()` aufgerufen - dort
+gibt es (anders als bei Variablen-Werten) kein Caching-/Veraltungsproblem,
+da die Kachel ohnehin bei jedem Aufruf neu gerendert wird.

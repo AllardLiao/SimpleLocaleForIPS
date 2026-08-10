@@ -422,6 +422,46 @@ class SimpleLocale extends IPSModuleStrict
         return '';
     }
 
+    // Für Modulentwickler, deren eigenes Modul eine eigene HTML-Kachel ausliefert
+    // (GetVisualizationTile) statt Text in einer von Simple Locale beobachtbaren
+    // Symcon-Variable zu halten: übersetzt beliebigen Text live in die gerade aktive
+    // Gast-Sprache DIESER Instanz, mit deren eigenem Google-API-Key - kein eigener
+    // Google-Account des Fremdmoduls nötig. Gedacht für den Aufruf bei jedem Rendern
+    // der eigenen Kachel (kein Caching-/Veraltungsproblem wie bei Variablen, da ohnehin
+    // bei jedem Aufruf neu gerendert wird). Empfohlenes Absicherungsmuster gegen
+    // Nutzer ohne Simple Locale: siehe README, Abschnitt "Integration für
+    // Modulentwickler".
+    //
+    // Leerer Text, Quellsprache == aktive Sprache, oder eine durch abgelaufene
+    // Testphase gerade nicht kostenfreie Sprache liefern den Text unverändert zurück -
+    // bewusst nie ein Fehler/Absturz für den aufrufenden Fremdcode.
+    public function TranslateExternalText(string $Text, string $SourceLanguage): string
+    {
+        $currentLanguage = $this->ResolveDisplayLanguageCode($this->ReadPropertyString(self::propertyCurrentLanguage));
+
+        if ($Text === '' || $SourceLanguage === $currentLanguage) {
+            return $Text;
+        }
+
+        if ($this->IsLanguageBlockedByTrial($currentLanguage)) {
+            return $Text;
+        }
+
+        $translated = $this->TranslateBatch([$Text], $SourceLanguage, $currentLanguage);
+
+        return ($translated[0] ?? '') !== '' ? $translated[0] : $Text;
+    }
+
+    // Ergänzend zu TranslateExternalText(): der aktuell aktive Gast-Sprachcode, falls
+    // ein Fremdmodul selbst entscheiden will, wann sich etwas ändert (z.B. um eigene
+    // Inhalte nur bei einem tatsächlichen Sprachwechsel neu aufzubauen), statt bei
+    // jedem Rendern blind zu übersetzen. Liefert immer einen echten Sprachcode, nie die
+    // interne Pseudo-Sprache "ORIGINAL_IMPORT" (wird auf die Basissprache aufgelöst).
+    public function GetCurrentLanguageCode(): string
+    {
+        return $this->ResolveDisplayLanguageCode($this->ReadPropertyString(self::propertyCurrentLanguage));
+    }
+
     public function Rescan(): void
     {
         $this->ScanRootTree();
@@ -1686,10 +1726,10 @@ class SimpleLocale extends IPSModuleStrict
         }
 
         $infoHeading = $translatedOwnTexts[0] ?? self::INFO_HEADING_TEXT;
-        $infoTexts = [
-            $translatedOwnTexts[1] ?? self::INFO_LIMITATION_TEXTS[0],
-            $translatedOwnTexts[2] ?? self::INFO_LIMITATION_TEXTS[1],
-        ];
+        $infoTexts = [];
+        foreach (self::INFO_LIMITATION_TEXTS as $i => $originalText) {
+            $infoTexts[] = $translatedOwnTexts[$i + 1] ?? $originalText;
+        }
 
         $cache = [
             'language'    => $language,
