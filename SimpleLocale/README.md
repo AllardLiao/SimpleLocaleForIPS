@@ -63,6 +63,17 @@ Beschreibung des Moduls.
 
   Diese beiden Punkte sind auch direkt in der Kachel über das Info-Symbol (ⓘ)
   neben dem Dropdown einsehbar, live in der jeweils aktiven Gast-Sprache.
+* **Die automatische Übersetzung kann Fehler machen.** Google Translate
+  liefert nicht immer eine passende Übersetzung - besonders bei kurzen,
+  einzelnen Wörtern ohne Kontext kann schon die Spracherkennung danebenliegen
+  (real beobachtet: "Haus" wurde als Hmong statt Deutsch erkannt und dadurch
+  komplett falsch übersetzt). **Alle Übersetzungen in "Objektnamen" und
+  "Eigene Texte" daher nach dem ersten Rescan einmal durchsehen** und falsch
+  übersetzte Zellen manuell korrigieren - eigene Korrekturen werden nie
+  automatisch überschrieben (siehe Abschnitt 5). Soll eine bereits gefüllte
+  Zelle stattdessen neu von Google übersetzt werden: Zelleninhalt löschen,
+  "Übernehmen" klicken, dann erneut Rescan ausführen - nur leere Zellen
+  werden dabei (neu) übersetzt.
 
 ### 3. Voraussetzungen
 
@@ -83,7 +94,7 @@ __Konfigurationsseite__:
 Name                            | Beschreibung
 -------------------------------- | ------------------
 Root-Kategorie                  | Kategorie im Objektbaum, deren Inhalt (Namen + Werte von String-Variablen) übersetzt wird. Sollte nur die Gäste-Sichtbereich-Kacheln enthalten, nicht die Admin-Oberfläche.
-Basissprache                    | Sprache, in der die Objektnamen/-werte ursprünglich gepflegt sind (Quellsprache für Google Translate).
+Basissprache                    | Sprache, in der die Objektnamen/-werte ursprünglich gepflegt sind (Quellsprache für Google Translate). Erscheint im Gast-Dropdown zusätzlich zu "Original (unbearbeitet)" als eigene Auswahl, siehe [Abschnitt 7](#7-visualisierung).
 Google Cloud Translate API-Key  | API-Key für die Cloud Translation API v2. **Muss zuerst eingetragen und über "Übernehmen" gespeichert werden**, bevor irgendetwas anderes funktioniert - insbesondere ist der "Hinzufügen"-Button bei den Zielsprachen bis dahin ausgegraut (nicht versteckt, sondern deaktiviert), da ohne gültigen Key keine echte Sprachliste von Google geladen werden kann.
 Zielsprachen                    | Sprachen, in die übersetzt werden soll. Auswahl-Optionen kommen von Google, sobald ein gültiger API-Key gespeichert ist. Wichtig: Nach dem Klick auf "Sprachliste aktualisieren" die Instanzkonfiguration einmal schließen und neu öffnen, bevor Häkchen gesetzt werden - sonst kann die Konsole falsche Sprachen speichern.
 Automatischer Rescan (Minuten)  | Intervall für automatisches Neu-Einlesen des Baums, 0 = nur manuell über den Button.
@@ -109,6 +120,19 @@ angezeigt werden) und löst beim Auswählen direkt den Sprachwechsel aus. Die
 aktuell aktive Sprache wird als Instanz-Property gespeichert (kein
 Symcon-Variablenprofil - das wäre global über alle Instanzen der Installation
 hinweg geteilt und würde sich bei mehreren Instanzen gegenseitig überschreiben).
+
+Das Dropdown bietet immer folgende Sprachen zur Auswahl: die Basissprache,
+alle konfigurierten Zielsprachen, sowie zusätzlich "Original (unbearbeitet)".
+Die Basissprache erscheint dabei bewusst zweimal in leicht unterschiedlicher
+Form: als eigener Dropdown-Eintrag zeigt sie die von Google einmal
+"durchgereichte" (dabei ggf. leicht bereinigte) Basissprachversion, während
+"Original (unbearbeitet)" den rohen, unangetasteten Text liefert, exakt so
+wie er im Objektbaum vorgefunden wurde (Tippfehler inklusive). Diese
+Dopplung ist Absicht: sie gibt Gästen sowohl eine "aufgeräumte" Standardsicht
+als auch eine garantiert unverfälschte Rückfalloption, ohne dass eine
+Google-Übersetzung (die ja auch mal danebenliegen kann, siehe
+[Abschnitt 2](#2-bekannte-einschränkungen)) dazwischenkommt.
+
 Ein Info-Symbol (ⓘ) neben dem Dropdown öffnet auf Klick einen nativen
 Browser-Dialog (`alert()`) mit den in [Abschnitt 2](#2-bekannte-einschränkungen)
 beschriebenen Einschränkungen, ebenfalls live in der jeweils aktiven
