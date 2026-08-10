@@ -620,18 +620,25 @@ class SimpleLocale extends IPSModuleStrict
     // da Inhalte oft länger sind und von der Google-Bereinigung profitieren).
     // "Objektnamen" verzichtet auf beides - Original-Import dient dort direkt als
     // Quellsprachen-Basis.
+    // Wichtig: Spalten ohne "edit"-Definition werden von Symcon beim normalen
+    // "Übernehmen" NICHT als Property gespeichert, außer "save" ist explizit true
+    // (nur Rescan schreibt direkt per IPS_SetProperty und umgeht das). Ohne "save"
+    // wären ObjectID/Path/Original-Import bei jedem Übernehmen verloren.
     private function BuildListColumns(string $SourceLanguage, array $TargetLanguages, bool $IsObjectTexts): array
     {
         $columns = [
-            ['caption' => 'Objekt-ID', 'name' => 'ObjectID', 'width' => '80px'],
-            ['caption' => $this->Translate('Pfad'), 'name' => 'Path', 'width' => '200px'],
+            ['caption' => 'Objekt-ID', 'name' => 'ObjectID', 'width' => '80px', 'save' => true],
+            ['caption' => $this->Translate('Pfad'), 'name' => 'Path', 'width' => '200px', 'save' => true],
         ];
 
         if ($IsObjectTexts) {
+            $columns[] = ['caption' => 'Wert-Objekt-ID', 'name' => 'ValueObjectID', 'width' => '90px', 'save' => true];
+
             $columns[] = [
                 'caption' => $this->Translate('Original-Import (Name)'),
                 'name'    => self::fieldOriginalImportName,
                 'width'   => '150px',
+                'save'    => true,
             ];
             $columns = array_merge(
                 $columns,
@@ -642,13 +649,19 @@ class SimpleLocale extends IPSModuleStrict
                 'caption' => $this->Translate('Original-Import (Text)'),
                 'name'    => self::langOriginalImportText,
                 'width'   => '200px',
+                'save'    => true,
             ];
             $columns = array_merge(
                 $columns,
                 $this->BuildLanguageColumnSet(self::fieldTextPrefix, $this->Translate('Text'), $SourceLanguage, $TargetLanguages)
             );
         } else {
-            $columns[] = ['caption' => $this->Translate('Original-Import'), 'name' => self::langOriginalImport, 'width' => '200px'];
+            $columns[] = [
+                'caption' => $this->Translate('Original-Import'),
+                'name'    => self::langOriginalImport,
+                'width'   => '200px',
+                'save'    => true,
+            ];
             $columns = array_merge($columns, $this->BuildLanguageColumnSet('', '', $SourceLanguage, $TargetLanguages));
         }
 
@@ -672,6 +685,7 @@ class SimpleLocale extends IPSModuleStrict
                 'width'   => '200px',
                 'add'     => '',
                 'edit'    => ['type' => 'ValidationTextBox'],
+                'save'    => true,
             ],
         ];
 
@@ -685,6 +699,7 @@ class SimpleLocale extends IPSModuleStrict
                 'width'   => '200px',
                 'add'     => '',
                 'edit'    => ['type' => 'ValidationTextBox'],
+                'save'    => true,
             ];
         }
 

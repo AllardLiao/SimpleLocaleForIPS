@@ -56,9 +56,9 @@
             "delete": true,
             "rowCount": 10,
             "columns": [
-                { "caption": "Objekt-ID", "name": "ObjectID", "width": "80px" },
-                { "caption": "Pfad", "name": "Path", "width": "200px" },
-                { "caption": "Original-Import", "name": "ORIGINAL_IMPORT", "width": "200px" }
+                { "caption": "Objekt-ID", "name": "ObjectID", "width": "80px", "save": true },
+                { "caption": "Pfad", "name": "Path", "width": "200px", "save": true },
+                { "caption": "Original-Import", "name": "ORIGINAL_IMPORT", "width": "200px", "save": true }
             ]
         },
         {
@@ -69,10 +69,11 @@
             "delete": true,
             "rowCount": 10,
             "columns": [
-                { "caption": "Objekt-ID", "name": "ObjectID", "width": "80px" },
-                { "caption": "Pfad", "name": "Path", "width": "200px" },
-                { "caption": "Original-Import (Name)", "name": "ORIGINAL_IMPORT_Name", "width": "150px" },
-                { "caption": "Original-Import (Text)", "name": "ORIGINAL_IMPORT_Text", "width": "200px" }
+                { "caption": "Objekt-ID", "name": "ObjectID", "width": "80px", "save": true },
+                { "caption": "Wert-Objekt-ID", "name": "ValueObjectID", "width": "90px", "save": true },
+                { "caption": "Pfad", "name": "Path", "width": "200px", "save": true },
+                { "caption": "Original-Import (Name)", "name": "ORIGINAL_IMPORT_Name", "width": "150px", "save": true },
+                { "caption": "Original-Import (Text)", "name": "ORIGINAL_IMPORT_Text", "width": "200px", "save": true }
             ]
         }
     ],
