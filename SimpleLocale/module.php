@@ -170,6 +170,7 @@ class SimpleLocale extends IPSModuleStrict
             if (($row['ObjectID'] ?? null) === $ObjectID) {
                 return $this->ResolveRowValue(
                     $row,
+                    $currentLanguage,
                     self::fieldTextPrefix . $currentLanguage,
                     self::fieldTextPrefix . $sourceLanguage,
                     self::langOriginalImportText
@@ -198,7 +199,7 @@ class SimpleLocale extends IPSModuleStrict
                 continue;
             }
 
-            IPS_SetName($objectID, $this->ResolveRowValue($row, $Language, $sourceLanguage, self::langOriginalImport));
+            IPS_SetName($objectID, $this->ResolveRowValue($row, $Language, $Language, $sourceLanguage, self::langOriginalImport));
         }
 
         foreach ($this->DecodeRows(self::propertyObjectTexts) as $row) {
@@ -206,6 +207,7 @@ class SimpleLocale extends IPSModuleStrict
             if ($objectID !== 0 && @IPS_ObjectExists($objectID)) {
                 IPS_SetName($objectID, $this->ResolveRowValue(
                     $row,
+                    $Language,
                     self::fieldNamePrefix . $Language,
                     self::fieldNamePrefix . $sourceLanguage,
                     self::fieldOriginalImportName
@@ -221,6 +223,7 @@ class SimpleLocale extends IPSModuleStrict
 
             SetValueString($valueObjectID, $this->ResolveRowValue(
                 $row,
+                $Language,
                 self::fieldTextPrefix . $Language,
                 self::fieldTextPrefix . $sourceLanguage,
                 self::langOriginalImportText
@@ -229,13 +232,21 @@ class SimpleLocale extends IPSModuleStrict
     }
 
     // Fallback-Kette: gewünschte Sprache -> Quellsprache (bereinigt) -> Rohtext ($RawField)
-    private function ResolveRowValue(array $Row, string $Language, string $SourceLanguage, string $RawField): string
+    // $SelectedLanguage ist der vom Gast tatsächlich gewählte Sprachcode
+    // (unpräfixiert, z.B. "en" oder die Pseudo-Sprache "ORIGINAL_IMPORT"),
+    // $LanguageField/$SourceField die (ggf. präfixierten) Property-Feldnamen dazu.
+    private function ResolveRowValue(array $Row, string $SelectedLanguage, string $LanguageField, string $SourceField, string $RawField): string
     {
-        if (($Row[$Language] ?? '') !== '') {
-            return $Row[$Language];
+        // "Original" setzt bewusst auf den unbearbeiteten Rohtext zurück (Tippfehler
+        // inklusive) - eine Art Werkseinstellung, unabhängig von allen Übersetzungen.
+        if ($SelectedLanguage === self::langOriginalImport) {
+            return $Row[$RawField] ?? '';
         }
-        if (($Row[$SourceLanguage] ?? '') !== '') {
-            return $Row[$SourceLanguage];
+        if (($Row[$LanguageField] ?? '') !== '') {
+            return $Row[$LanguageField];
+        }
+        if (($Row[$SourceField] ?? '') !== '') {
+            return $Row[$SourceField];
         }
 
         return $Row[$RawField] ?? '';
@@ -610,6 +621,16 @@ class SimpleLocale extends IPSModuleStrict
         foreach ($languages as $code) {
             IPS_SetVariableProfileAssociation($profileName, $code, $this->GetLanguageDisplayName($code), '', -1);
         }
+
+        // "Original" erlaubt dem Gast, jederzeit auf den unbearbeiteten Rohtext
+        // zurückzusetzen (Tippfehler inklusive) - eine Art Werkseinstellung.
+        IPS_SetVariableProfileAssociation(
+            $profileName,
+            self::langOriginalImport,
+            $this->GetLanguageDisplayName(self::langOriginalImport),
+            '',
+            -1
+        );
     }
 
     // Baut die Spalten für die "ObjectNames"/"ObjectTexts"-Listen dynamisch anhand
@@ -780,6 +801,10 @@ class SimpleLocale extends IPSModuleStrict
 
     private function GetLanguageDisplayName(string $Code): string
     {
+        if ($Code === self::langOriginalImport) {
+            return $this->Translate('Original (unbearbeitet)');
+        }
+
         foreach ($this->GetKnownLanguages() as $language) {
             if ($language['code'] === $Code) {
                 return $language['name'];
