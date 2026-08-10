@@ -22,6 +22,7 @@ trait SimpleLocaleConstants
 
     // Idents (Variablen / RequestAction)
     private const identLanguage = 'Language';
+    private const identLanguageDropdown = 'LanguageDropdown';
     private const identRescan = 'Rescan';
     private const identShowApiKeyWarning = 'ShowApiKeyWarning';
 

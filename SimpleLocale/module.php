@@ -44,6 +44,11 @@ class SimpleLocale extends IPSModuleStrict
         $this->RegisterVariableString(self::identLanguage, $this->Translate('Sprache'), self::profileLanguage);
         $this->EnableAction(self::identLanguage);
 
+        // Schlankes, echtes Dropdown statt der Symcon-Standarddarstellung (Buttons
+        // untereinander) für die Sprachauswahl-Variable - ruft dieselbe RequestAction
+        // wie die Profil-Variable auf, ist also nur eine alternative Oberfläche dafür.
+        $this->RegisterVariableString(self::identLanguageDropdown, $this->Translate('Sprachauswahl'), '~HTMLBox');
+
         $this->RegisterTimer($this->GetAutoRescanTimerIdent(), 0, 'IPSSL_Rescan($_IPS[\'TARGET\']);');
     }
 
@@ -76,6 +81,8 @@ class SimpleLocale extends IPSModuleStrict
 
         $interval = $this->ReadPropertyInteger(self::propertyAutoRescanInterval);
         $this->SetTimerInterval($this->GetAutoRescanTimerIdent(), $interval > 0 ? $interval * 60 * 1000 : 0);
+
+        $this->UpdateLanguageDropdown();
     }
 
     public function RequestAction(string $Ident, mixed $Value): void
@@ -190,6 +197,7 @@ class SimpleLocale extends IPSModuleStrict
     {
         $this->SetValue(self::identLanguage, $Language);
         $this->WriteAttributeString(self::attributeCurrentLanguage, $Language);
+        $this->UpdateLanguageDropdown();
 
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
 
@@ -603,6 +611,20 @@ class SimpleLocale extends IPSModuleStrict
         }
     }
 
+    // Basissprache + gewählte Zielsprachen + die "Original"-Werkseinstellung, in
+    // dieser Reihenfolge - gemeinsam genutzt vom Sprachprofil und vom Dropdown.
+    private function GetSelectableLanguageCodes(): array
+    {
+        $languages = array_merge(
+            [$this->ReadPropertyString(self::propertySourceLanguage)],
+            $this->GetSelectedTargetLanguages()
+        );
+        $languages = array_unique($languages);
+        $languages[] = self::langOriginalImport;
+
+        return $languages;
+    }
+
     private function UpdateLanguageProfile(): void
     {
         $profileName = self::profileLanguage;
@@ -612,25 +634,32 @@ class SimpleLocale extends IPSModuleStrict
             IPS_SetVariableProfileAssociation($profileName, $association['Value'], '', '', -1);
         }
 
-        $languages = array_merge(
-            [$this->ReadPropertyString(self::propertySourceLanguage)],
-            $this->GetSelectedTargetLanguages()
-        );
-        $languages = array_unique($languages);
-
-        foreach ($languages as $code) {
+        foreach ($this->GetSelectableLanguageCodes() as $code) {
             IPS_SetVariableProfileAssociation($profileName, $code, $this->GetLanguageDisplayName($code), '', -1);
         }
+    }
 
-        // "Original" erlaubt dem Gast, jederzeit auf den unbearbeiteten Rohtext
-        // zurückzusetzen (Tippfehler inklusive) - eine Art Werkseinstellung.
-        IPS_SetVariableProfileAssociation(
-            $profileName,
-            self::langOriginalImport,
-            $this->GetLanguageDisplayName(self::langOriginalImport),
-            '',
-            -1
-        );
+    // Schlankes natives <select> statt der Symcon-Standarddarstellung (Buttons
+    // untereinander) für Enumeration-Profile - ruft beim Ändern dieselbe
+    // RequestAction wie die Profil-Variable auf.
+    private function UpdateLanguageDropdown(): void
+    {
+        $currentLanguage = $this->ReadAttributeString(self::attributeCurrentLanguage);
+
+        $optionsHtml = '';
+        foreach ($this->GetSelectableLanguageCodes() as $code) {
+            $selected = $code === $currentLanguage ? ' selected' : '';
+            $value = htmlspecialchars($code, ENT_QUOTES, 'UTF-8');
+            $label = htmlspecialchars($this->GetLanguageDisplayName($code), ENT_QUOTES, 'UTF-8');
+            $optionsHtml .= "<option value=\"{$value}\"{$selected}>{$label}</option>";
+        }
+
+        $html = '<select style="width:100%;padding:8px;font-size:16px;border-radius:6px;"'
+            . ' onchange="requestAction(\'' . self::identLanguage . '\', this.value);">'
+            . $optionsHtml
+            . '</select>';
+
+        $this->SetValue(self::identLanguageDropdown, $html);
     }
 
     // Baut die Spalten für die "ObjectNames"/"ObjectTexts"-Listen dynamisch anhand

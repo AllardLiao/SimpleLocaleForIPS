@@ -27,6 +27,10 @@ Beschreibung des Moduls.
   identifiziert - ein gesetzter Ident ist nicht erforderlich.
 * Eine Sprachauswahl-Variable (`Language`) kann per WebFront/Kachel-Dropdown
   bedient werden und löst den Sprachwechsel aus.
+* Zusätzlich eine schlanke `Sprachauswahl`-Variable (HTMLBox) mit einem
+  echten `<select>`-Dropdown - kompakter als die Symcon-Standarddarstellung
+  von `Language` (Buttons untereinander), ideal als Kachel in der
+  Gäste-Visualisierung.
 
 ### 2. Voraussetzungen
 
@@ -59,9 +63,10 @@ Die Statusvariablen/Kategorien werden automatisch angelegt. Das Löschen einzeln
 
 #### Statusvariablen
 
-Name       | Typ     | Beschreibung
----------- | ------- | ------------
-`Language` | String  | Aktuell aktive Sprache (Ident-Aktion, z. B. per Dropdown in der Kachel-Visualisierung bedienbar)
+Name              | Typ     | Beschreibung
+----------------- | ------- | ------------
+`Language`        | String  | Aktuell aktive Sprache (Ident-Aktion, z. B. per Dropdown in der Kachel-Visualisierung bedienbar)
+`Sprachauswahl`   | String (HTMLBox) | Fertiges, schlankes `<select>`-Dropdown zur Sprachauswahl - direkt als Kachel in die Visualisierung ziehen, keine weitere Einrichtung nötig
 
 #### Profile
 
@@ -71,10 +76,20 @@ Name              | Typ
 
 ### 6. Visualisierung
 
-Die `Language`-Variable kann als Dropdown/Auswahl-Element direkt in der
-Kachel-Visualisierung platziert werden. Für eigene HTMLBox-Popups oder Hinweise
-außerhalb der live umbenannten Objekte liefert `IPSSL_TranslateText()` den
-Text in der aktuell aktiven Sprache.
+Am einfachsten: die Variable `Sprachauswahl` per Drag & Drop als Kachel in
+die Gäste-Visualisierung ziehen (oder per Link darauf verweisen) - sie zeigt
+sich selbst als kompaktes `<select>`-Dropdown und löst beim Auswählen direkt
+den Sprachwechsel aus. Alternativ kann die Variable `Language` platziert
+werden, dann rendert Symcon die Auswahl in der Standarddarstellung
+(Buttons untereinander) - bei mehreren Sprachen weniger kompakt. Beide
+Variablen steuern denselben Sprachwechsel; es empfiehlt sich, nur eine der
+beiden sichtbar in die Visualisierung einzubinden (die jeweils andere z. B.
+über die Objekt-Sichtbarkeit ausblenden), um keine zwei redundanten
+Sprachauswahl-Kacheln anzuzeigen.
+
+Für eigene HTMLBox-Popups oder Hinweise außerhalb der live umbenannten
+Objekte liefert `IPSSL_TranslateText()` den Text in der aktuell aktiven
+Sprache.
 
 ### 7. PHP-Befehlsreferenz
 
