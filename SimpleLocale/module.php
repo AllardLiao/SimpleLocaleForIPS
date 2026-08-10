@@ -757,6 +757,10 @@ class SimpleLocale extends IPSModuleStrict
     public function GetVisualizationTile(): string
     {
         $html = file_get_contents(__DIR__ . '/module.html');
+        // Instanz-eigene ID (nicht nur eine Klasse) - falls mehrere Instanzen jemals
+        // im selben DOM landen sollten (statt jeweils eigenem iframe), verhindert das
+        // eine ID-Kollision zwischen den Kacheln verschiedener Instanzen.
+        $html = str_replace('<!--WRAPPER_ID-->', 'ipssl-select-wrapper-' . $this->InstanceID, $html);
 
         return str_replace('<!--LANGUAGE_SELECT-->', $this->BuildLanguageSelectHtml(), $html);
     }

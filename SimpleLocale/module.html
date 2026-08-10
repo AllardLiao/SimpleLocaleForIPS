@@ -7,18 +7,18 @@
             margin: 0;
         }
 
-        #ipssl-select-wrapper {
+        .ipssl-select-wrapper {
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
-        #ipssl-select-wrapper .ipssl-globe {
+        .ipssl-select-wrapper .ipssl-globe {
             font-size: 20px;
             line-height: 1;
         }
 
-        #ipssl-select-wrapper select {
+        .ipssl-select-wrapper select {
             flex: 1;
             padding: 8px;
             font-size: 16px;
@@ -27,7 +27,7 @@
     </style>
 </head>
 <body>
-    <div id="ipssl-select-wrapper"><!--LANGUAGE_SELECT--></div>
+    <div id="<!--WRAPPER_ID-->" class="ipssl-select-wrapper"><!--LANGUAGE_SELECT--></div>
 
     <script>
         function handleMessage(data) {
@@ -39,7 +39,7 @@
             }
 
             if (message.action === "REFRESH" && message.payload && typeof message.payload.html === "string") {
-                document.getElementById("ipssl-select-wrapper").innerHTML = message.payload.html;
+                document.getElementById("<!--WRAPPER_ID-->").innerHTML = message.payload.html;
             }
         }
     </script>
