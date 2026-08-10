@@ -2,24 +2,37 @@
 
 declare(strict_types=1);
 
+// Gemeinsame Konstanten mit Simple Locale (siehe SimpleLocaleForIPS/libs) - deckt
+// GoogleTranslateAPIKey, SourceLanguage, den Sprachlisten-Cache, den
+// ShowApiKeyWarning-Ident und STATUS_TRANSLATE_ERROR ab, die in beiden Modulen exakt
+// dieselbe Bedeutung haben. Nur das, was es wirklich nur hier gibt (TargetLanguage im
+// Singular statt der Liste TargetLanguages, der Test-Button), bleibt lokal.
+require_once __DIR__ . '/../libs/SimpleLocaleConstants.php';
+
+use SimpleLocaleConstants\SimpleLocaleConstants;
+
 // Ganz schlankes Schwester-Modul zu Simple Locale (siehe SimpleLocaleForIPS): kein
-// Objektbaum-Scan, keine Gast-Kachel, keine Lizenzprüfung - nur API-Key + Zielsprache
-// und eine einzige Funktion. Zweck: Modulentwickler, die ihre eigenen dynamischen
-// Inhalte künftig live über Simple Locale übersetzen lassen wollen (statt sie beim
-// Sprachwechsel überschrieben zu bekommen), können ihre Integration hiermit gegen die
-// echte Google-Übersetzung testen, ohne selbst schon eine volle, lizenzierte
+// Objektbaum-Scan, keine Gast-Kachel, keine Lizenzprüfung - nur API-Key, Quell-/
+// Zielsprache und eine einzige Funktion. Zweck: Modulentwickler, die ihre eigenen
+// dynamischen Inhalte künftig live über Simple Locale übersetzen lassen wollen (statt
+// sie beim Sprachwechsel überschrieben zu bekommen), können ihre Integration hiermit
+// gegen die echte Google-Übersetzung testen, ohne selbst schon eine volle, lizenzierte
 // Simple-Locale-Instanz beim Kunden zu benötigen. Welche Zielsprache dabei konkret
 // eingestellt ist, spielt für den Test keine Rolle - Hauptsache sie unterscheidet sich
-// von der Quellsprache des jeweiligen Texts (Google lehnt eine Übersetzung von einer
-// Sprache in sich selbst ab).
+// von der konfigurierten Quellsprache (Google lehnt eine Übersetzung von einer Sprache
+// in sich selbst ab).
 class SimpleLocaleTranslate extends IPSModuleStrict
 {
-    private const propertyGoogleTranslateAPIKey = 'GoogleTranslateAPIKey';
+    use SimpleLocaleConstants;
+
+    // Einzige Zielsprache statt einer Liste wie propertyTargetLanguages im Hauptmodul -
+    // gibt es dort nicht, daher eigener Name (Singular).
     private const propertyTargetLanguage = 'TargetLanguage';
 
     private const identTestTranslate = 'TestTranslate';
 
-    private const STATUS_API_KEY_MISSING = 201;
+    // Wie im Hauptmodul: höchstens 1x/Tag automatisch neu von Google abrufen.
+    private const availableLanguagesMaxAgeSeconds = 86400;
 
     public function Create(): void
     {
@@ -27,7 +40,11 @@ class SimpleLocaleTranslate extends IPSModuleStrict
         parent::Create();
 
         $this->RegisterPropertyString(self::propertyGoogleTranslateAPIKey, '');
+        $this->RegisterPropertyString(self::propertySourceLanguage, 'de');
         $this->RegisterPropertyString(self::propertyTargetLanguage, 'en');
+
+        $this->RegisterAttributeString(self::attributeAvailableLanguagesCache, '[]');
+        $this->RegisterAttributeInteger(self::attributeAvailableLanguagesFetchedAt, 0);
     }
 
     public function ApplyChanges(): void
@@ -35,7 +52,36 @@ class SimpleLocaleTranslate extends IPSModuleStrict
         //Never delete this line!
         parent::ApplyChanges();
 
-        $this->SetStatus($this->ReadPropertyString(self::propertyGoogleTranslateAPIKey) === '' ? self::STATUS_API_KEY_MISSING : 102);
+        $this->SetStatus(102);
+    }
+
+    public function GetConfigurationForm(): string
+    {
+        // Wie im Hauptmodul: die Sprachliste braucht zuerst einen gültigen API-Key,
+        // bevor sie überhaupt abgerufen werden kann - ohne Key bleibt die
+        // Zielsprachen-Auswahl ausgegraut mit erklärendem Hinweis (siehe unten), statt
+        // eine leere/irreführende Liste zu zeigen.
+        $this->RefreshAvailableLanguagesIfStale();
+
+        $form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
+
+        foreach ($form['elements'] as &$element) {
+            if (($element['name'] ?? '') !== self::propertyTargetLanguage) {
+                continue;
+            }
+
+            if ($this->HasCachedLanguages()) {
+                $element['options'] = $this->BuildLanguageOptions();
+                $element['enabled'] = true;
+            } else {
+                $element['options'] = [['caption' => '', 'value' => '']];
+                $element['enabled'] = false;
+                $element['caption'] .= ' (' . $this->Translate('bitte zuerst gültigen API-Key speichern und Formular neu öffnen') . ')';
+            }
+        }
+        unset($element);
+
+        return json_encode($form);
     }
 
     public function RequestAction(string $Ident, mixed $Value): void
@@ -52,19 +98,23 @@ class SimpleLocaleTranslate extends IPSModuleStrict
 
     // Die eigentliche Funktion, um die es hier geht - dieselbe Aufrufform ist für den
     // entsprechenden Pro-Funktionsumfang der echten Simple-Locale-Instanz vorgesehen
-    // (Name analog zu deren bestehender IPSSL_TranslateText): beliebiger Text + dessen
-    // Quellsprache rein, live in die hier konfigurierte Zielsprache übersetzt zurück.
-    // "Translate" (ohne Suffix) ist bereits von IPSModuleStrict selbst belegt (Symcons
-    // eigene Konsolensprachen-Übersetzung, siehe $this->Translate() im Code), daher
-    // TranslateText mit abweichender Signatur statt einer inkompatiblen Überschreibung.
-    // Kein Cache, keine Objektbindung - reine Testfunktion für die eigene
-    // Modulentwicklung. Leerer Text oder Quellsprache == Zielsprache liefert den Text
-    // unverändert zurück (Google lehnt eine Übersetzung von einer Sprache in sich
-    // selbst ohnehin ab).
-    public function TranslateText(string $Text, string $SourceLanguage): string
+    // (Name analog zu deren bestehender IPSSL_TranslateText): beliebiger Text rein,
+    // live von der konfigurierten Quell- in die konfigurierte Zielsprache übersetzt
+    // zurück. Quell-/Zielsprache sind bewusst feste Properties statt Aufrufparameter
+    // (wie propertySourceLanguage/propertyTargetLanguages in der echten Instanz) -
+    // die Quellsprache ist die, in der der Modulentwickler seine eigenen Texte
+    // normalerweise schreibt, muss also nicht bei jedem Aufruf erneut mitgegeben
+    // werden. "Translate" (ohne Suffix) ist bereits von IPSModuleStrict selbst belegt
+    // (Symcons eigene Konsolensprachen-Übersetzung, siehe $this->Translate() im Code),
+    // daher TranslateText statt einer inkompatiblen Überschreibung. Kein Cache, keine
+    // Objektbindung - reine Testfunktion für die eigene Modulentwicklung. Leerer Text
+    // oder Quellsprache == Zielsprache liefert den Text unverändert zurück (Google
+    // lehnt eine Übersetzung von einer Sprache in sich selbst ohnehin ab).
+    public function TranslateText(string $Text): string
     {
+        $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
         $targetLanguage = $this->ReadPropertyString(self::propertyTargetLanguage);
-        if ($Text === '' || $SourceLanguage === $targetLanguage) {
+        if ($Text === '' || $sourceLanguage === $targetLanguage) {
             return $Text;
         }
 
@@ -75,7 +125,7 @@ class SimpleLocaleTranslate extends IPSModuleStrict
 
         $body = json_encode([
             'q'      => [$Text],
-            'source' => $SourceLanguage,
+            'source' => $sourceLanguage,
             'target' => $targetLanguage,
             'format' => 'text',
         ]);
@@ -90,26 +140,122 @@ class SimpleLocaleTranslate extends IPSModuleStrict
         return $decoded['data']['translations'][0]['translatedText'] ?? $Text;
     }
 
+    // Wie identShowApiKeyWarning im Hauptmodul: fehlender API-Key zeigt ein Popup statt
+    // einfach nur den unübersetzten Text im Ergebnis-Label anzuzeigen (sonst wirkt ein
+    // fehlender Key wie ein stiller Fehler).
     private function RunTestTranslate(): void
     {
-        $result = $this->TranslateText('Hallo Welt', 'de');
+        if ($this->ReadPropertyString(self::propertyGoogleTranslateAPIKey) === '') {
+            $this->UpdateFormField('ApiKeyMissingPopup', 'visible', true);
+
+            return;
+        }
+
+        $result = $this->TranslateText('Hallo Welt');
         $this->UpdateFormField('TestTranslateResult', 'caption', $result);
     }
 
-    // Eigene, überschreibbare Methode fürs HTTP-POST - so bleibt der Netzwerkaufruf in
-    // Tests mockbar (siehe smoke-Tests), ohne echte Google-API-Zugangsdaten zu
-    // benötigen.
-    private function CallGoogleTranslateAPI(string $Url, string $JsonBody): ?string
+    private function RefreshAvailableLanguagesIfStale(): void
+    {
+        if ($this->ReadPropertyString(self::propertyGoogleTranslateAPIKey) === '') {
+            return;
+        }
+
+        $fetchedAt = $this->ReadAttributeInteger(self::attributeAvailableLanguagesFetchedAt);
+        if ((time() - $fetchedAt) < self::availableLanguagesMaxAgeSeconds) {
+            return;
+        }
+
+        $this->FetchSupportedLanguages();
+    }
+
+    // Sprachnamen kommen in der konfigurierten Quellsprache zurück (Google übersetzt
+    // die Sprachnamen selbst mit) - für den Modulentwickler naheliegender als z.B. eine
+    // feste Konsolensprache, da er sich mit dieser Quellsprache ohnehin schon
+    // beschäftigt.
+    private function FetchSupportedLanguages(): void
+    {
+        $apiKey = $this->ReadPropertyString(self::propertyGoogleTranslateAPIKey);
+        if ($apiKey === '') {
+            return;
+        }
+
+        $url = 'https://translation.googleapis.com/language/translate/v2/languages'
+            . '?key=' . urlencode($apiKey)
+            . '&target=' . urlencode($this->ReadPropertyString(self::propertySourceLanguage));
+
+        $response = $this->CallGoogleTranslateAPI($url, null);
+        if ($response === null) {
+            return;
+        }
+
+        $decoded = json_decode($response, true);
+        $languages = $decoded['data']['languages'] ?? null;
+        if (!is_array($languages)) {
+            return;
+        }
+
+        $result = [];
+        foreach ($languages as $entry) {
+            $code = $entry['language'] ?? '';
+            if ($code !== '') {
+                $result[] = ['code' => $code, 'name' => $entry['name'] ?? $code];
+            }
+        }
+
+        $this->WriteAttributeString(self::attributeAvailableLanguagesCache, json_encode($result));
+        $this->WriteAttributeInteger(self::attributeAvailableLanguagesFetchedAt, time());
+    }
+
+    private function HasCachedLanguages(): bool
+    {
+        $cached = json_decode($this->ReadAttributeString(self::attributeAvailableLanguagesCache), true);
+
+        return is_array($cached) && $cached !== [];
+    }
+
+    private function BuildLanguageOptions(): array
+    {
+        $cached = json_decode($this->ReadAttributeString(self::attributeAvailableLanguagesCache), true);
+        if (!is_array($cached)) {
+            $cached = [];
+        }
+
+        $options = array_map(fn ($language) => ['caption' => $language['name'], 'value' => $language['code']], $cached);
+        usort($options, fn ($a, $b) => strnatcasecmp($a['caption'], $b['caption']));
+
+        return $options;
+    }
+
+    // Eigene, überschreibbare Methode fürs HTTP - so bleibt der Netzwerkaufruf in Tests
+    // mockbar (siehe smoke-Tests). $JsonBody === null -> GET (Sprachliste abrufen),
+    // sonst POST (übersetzen). Ein fehlgeschlagener Aufruf setzt STATUS_TRANSLATE_ERROR
+    // (gleicher Code wie im Hauptmodul) statt den fehlenden API-Key selbst schon als
+    // Fehlerstatus zu werten (siehe Klassenkommentar zu STATUS_TRANSLATE_ERROR oben).
+    private function CallGoogleTranslateAPI(string $Url, ?string $JsonBody): ?string
     {
         $ch = curl_init($Url);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $JsonBody);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+
+        if ($JsonBody !== null) {
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $JsonBody);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        }
+
         $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
         curl_close($ch);
 
-        return $response === false ? null : $response;
+        if ($response === false || $httpCode >= 400 || $error !== '') {
+            $this->SendDebug('GoogleTranslate', sprintf('HTTP %s, Fehler: %s, Antwort: %s', $httpCode, $error, (string) $response), 0);
+            $this->SetStatus(self::STATUS_TRANSLATE_ERROR);
+
+            return null;
+        }
+
+        return $response;
     }
 }

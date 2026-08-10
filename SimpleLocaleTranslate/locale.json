@@ -2,31 +2,47 @@
     "translations": {
         "en": {
             "Google Cloud Translate API-Key (ggf. derselbe wie in der echten Simple-Locale-Instanz)": "Google Cloud Translate API key (may be the same one as your real Simple Locale instance)",
-            "Zielsprache (Google-Sprachcode, z.B. \"en\", \"fr\", \"es\" - egal welche, Hauptsache verschieden von der Quellsprache des Testsatzes)": "Target language (Google language code, e.g. \"en\", \"fr\", \"es\" - any code works, it just has to differ from the test sentence's source language)",
+            "Quellsprache (Google-Sprachcode, z.B. \"de\" - die Sprache, in der der Modulentwickler seine eigenen Texte normalerweise schreibt)": "Source language (Google language code, e.g. \"de\" - the language you normally write your own text in)",
+            "Zielsprache - egal welche, Hauptsache verschieden von der Quellsprache": "Target language - any works, it just has to differ from the source language",
+            "bitte zuerst gültigen API-Key speichern und Formular neu öffnen": "please save a valid API key first and reopen this form",
             "Testübersetzung ausführen": "Run test translation",
-            "Übersetzt den Testsatz \"Hallo Welt\" (Deutsch) in die oben eingestellte Zielsprache und zeigt das Ergebnis hier an - so lässt sich der API-Key direkt hier im Formular prüfen, ohne eigenen Code zu schreiben. Die eigentliche Testfunktion für die eigene Modulentwicklung ist IPSSLT_TranslateText(), siehe README.": "Translates the test sentence \"Hallo Welt\" (German) into the target language configured above and shows the result here - lets you check the API key right in this form without writing any code. The actual test function for your own module development is IPSSLT_TranslateText(), see the README.",
-            "Google Cloud Translate API-Key fehlt": "Google Cloud Translate API key missing"
+            "Übersetzt den Testsatz \"Hallo Welt\" von der Quell- in die Zielsprache und zeigt das Ergebnis hier an - so lässt sich der API-Key direkt hier im Formular prüfen, ohne eigenen Code zu schreiben. Die eigentliche Testfunktion für die eigene Modulentwicklung ist IPSSLT_TranslateText(), siehe README.": "Translates the test sentence \"Hallo Welt\" from the source into the target language and shows the result here - lets you check the API key right in this form without writing any code. The actual test function for your own module development is IPSSLT_TranslateText(), see the README.",
+            "API-Key fehlt": "API key missing",
+            "Bitte zuerst einen Google Cloud Translate API-Key eintragen und über \"Übernehmen\" speichern.": "Please enter a Google Cloud Translate API key first and save it via \"Apply\".",
+            "Google Translate Fehler - bitte API-Key prüfen": "Google Translate error - please check the API key"
         },
         "es": {
             "Google Cloud Translate API-Key (ggf. derselbe wie in der echten Simple-Locale-Instanz)": "Clave de API de Google Cloud Translate (puede ser la misma que la de tu instancia real de Simple Locale)",
-            "Zielsprache (Google-Sprachcode, z.B. \"en\", \"fr\", \"es\" - egal welche, Hauptsache verschieden von der Quellsprache des Testsatzes)": "Idioma de destino (código de idioma de Google, p. ej. \"en\", \"fr\", \"es\" - cualquiera sirve, solo tiene que ser distinto del idioma de origen de la frase de prueba)",
+            "Quellsprache (Google-Sprachcode, z.B. \"de\" - die Sprache, in der der Modulentwickler seine eigenen Texte normalerweise schreibt)": "Idioma de origen (código de idioma de Google, p. ej. \"de\" - el idioma en el que normalmente escribes tus propios textos)",
+            "Zielsprache - egal welche, Hauptsache verschieden von der Quellsprache": "Idioma de destino - cualquiera sirve, solo tiene que ser distinto del idioma de origen",
+            "bitte zuerst gültigen API-Key speichern und Formular neu öffnen": "por favor, guarda primero una clave de API válida y vuelve a abrir este formulario",
             "Testübersetzung ausführen": "Ejecutar traducción de prueba",
-            "Übersetzt den Testsatz \"Hallo Welt\" (Deutsch) in die oben eingestellte Zielsprache und zeigt das Ergebnis hier an - so lässt sich der API-Key direkt hier im Formular prüfen, ohne eigenen Code zu schreiben. Die eigentliche Testfunktion für die eigene Modulentwicklung ist IPSSLT_TranslateText(), siehe README.": "Traduce la frase de prueba \"Hallo Welt\" (alemán) al idioma de destino configurado arriba y muestra el resultado aquí - así puedes comprobar la clave de API directamente en este formulario sin escribir código. La función de prueba real para tu propio desarrollo de módulos es IPSSLT_TranslateText(), véase el README.",
-            "Google Cloud Translate API-Key fehlt": "Falta la clave de API de Google Cloud Translate"
+            "Übersetzt den Testsatz \"Hallo Welt\" von der Quell- in die Zielsprache und zeigt das Ergebnis hier an - so lässt sich der API-Key direkt hier im Formular prüfen, ohne eigenen Code zu schreiben. Die eigentliche Testfunktion für die eigene Modulentwicklung ist IPSSLT_TranslateText(), siehe README.": "Traduce la frase de prueba \"Hallo Welt\" del idioma de origen al de destino y muestra el resultado aquí - así puedes comprobar la clave de API directamente en este formulario sin escribir código. La función de prueba real para tu propio desarrollo de módulos es IPSSLT_TranslateText(), véase el README.",
+            "API-Key fehlt": "Falta la clave de API",
+            "Bitte zuerst einen Google Cloud Translate API-Key eintragen und über \"Übernehmen\" speichern.": "Introduce primero una clave de API de Google Cloud Translate y guárdala mediante \"Aplicar\".",
+            "Google Translate Fehler - bitte API-Key prüfen": "Error de Google Translate - comprueba la clave de API"
         },
         "it": {
             "Google Cloud Translate API-Key (ggf. derselbe wie in der echten Simple-Locale-Instanz)": "Chiave API di Google Cloud Translate (può essere la stessa della tua istanza reale di Simple Locale)",
-            "Zielsprache (Google-Sprachcode, z.B. \"en\", \"fr\", \"es\" - egal welche, Hauptsache verschieden von der Quellsprache des Testsatzes)": "Lingua di destinazione (codice lingua Google, es. \"en\", \"fr\", \"es\" - va bene qualsiasi, basta che sia diversa dalla lingua di origine della frase di prova)",
+            "Quellsprache (Google-Sprachcode, z.B. \"de\" - die Sprache, in der der Modulentwickler seine eigenen Texte normalerweise schreibt)": "Lingua di origine (codice lingua Google, es. \"de\" - la lingua in cui scrivi normalmente i tuoi testi)",
+            "Zielsprache - egal welche, Hauptsache verschieden von der Quellsprache": "Lingua di destinazione - va bene qualsiasi, basta che sia diversa dalla lingua di origine",
+            "bitte zuerst gültigen API-Key speichern und Formular neu öffnen": "salva prima una chiave API valida e riapri questo modulo",
             "Testübersetzung ausführen": "Esegui traduzione di prova",
-            "Übersetzt den Testsatz \"Hallo Welt\" (Deutsch) in die oben eingestellte Zielsprache und zeigt das Ergebnis hier an - so lässt sich der API-Key direkt hier im Formular prüfen, ohne eigenen Code zu schreiben. Die eigentliche Testfunktion für die eigene Modulentwicklung ist IPSSLT_TranslateText(), siehe README.": "Traduce la frase di prova \"Hallo Welt\" (tedesco) nella lingua di destinazione configurata sopra e mostra il risultato qui - così puoi verificare la chiave API direttamente in questo modulo senza scrivere codice. La funzione di test vera e propria per il proprio sviluppo del modulo è IPSSLT_TranslateText(), vedi il README.",
-            "Google Cloud Translate API-Key fehlt": "Chiave API di Google Cloud Translate mancante"
+            "Übersetzt den Testsatz \"Hallo Welt\" von der Quell- in die Zielsprache und zeigt das Ergebnis hier an - so lässt sich der API-Key direkt hier im Formular prüfen, ohne eigenen Code zu schreiben. Die eigentliche Testfunktion für die eigene Modulentwicklung ist IPSSLT_TranslateText(), siehe README.": "Traduce la frase di prova \"Hallo Welt\" dalla lingua di origine a quella di destinazione e mostra il risultato qui - così puoi verificare la chiave API direttamente in questo modulo senza scrivere codice. La funzione di test vera e propria per il proprio sviluppo del modulo è IPSSLT_TranslateText(), vedi il README.",
+            "API-Key fehlt": "Chiave API mancante",
+            "Bitte zuerst einen Google Cloud Translate API-Key eintragen und über \"Übernehmen\" speichern.": "Inserisci prima una chiave API di Google Cloud Translate e salvala tramite \"Applica\".",
+            "Google Translate Fehler - bitte API-Key prüfen": "Errore di Google Translate - verifica la chiave API"
         },
         "fr": {
             "Google Cloud Translate API-Key (ggf. derselbe wie in der echten Simple-Locale-Instanz)": "Clé API Google Cloud Translate (éventuellement la même que celle de votre véritable instance Simple Locale)",
-            "Zielsprache (Google-Sprachcode, z.B. \"en\", \"fr\", \"es\" - egal welche, Hauptsache verschieden von der Quellsprache des Testsatzes)": "Langue cible (code de langue Google, p. ex. \"en\", \"fr\", \"es\" - peu importe laquelle, elle doit juste différer de la langue source de la phrase de test)",
+            "Quellsprache (Google-Sprachcode, z.B. \"de\" - die Sprache, in der der Modulentwickler seine eigenen Texte normalerweise schreibt)": "Langue source (code de langue Google, p. ex. \"de\" - la langue dans laquelle vous écrivez normalement vos propres textes)",
+            "Zielsprache - egal welche, Hauptsache verschieden von der Quellsprache": "Langue cible - peu importe laquelle, elle doit juste différer de la langue source",
+            "bitte zuerst gültigen API-Key speichern und Formular neu öffnen": "veuillez d'abord enregistrer une clé API valide et rouvrir ce formulaire",
             "Testübersetzung ausführen": "Exécuter la traduction de test",
-            "Übersetzt den Testsatz \"Hallo Welt\" (Deutsch) in die oben eingestellte Zielsprache und zeigt das Ergebnis hier an - so lässt sich der API-Key direkt hier im Formular prüfen, ohne eigenen Code zu schreiben. Die eigentliche Testfunktion für die eigene Modulentwicklung ist IPSSLT_TranslateText(), siehe README.": "Traduit la phrase de test \"Hallo Welt\" (allemand) dans la langue cible configurée ci-dessus et affiche le résultat ici - permet de vérifier la clé API directement dans ce formulaire sans écrire de code. La véritable fonction de test pour votre propre développement de module est IPSSLT_TranslateText(), voir le README.",
-            "Google Cloud Translate API-Key fehlt": "Clé API Google Cloud Translate manquante"
+            "Übersetzt den Testsatz \"Hallo Welt\" von der Quell- in die Zielsprache und zeigt das Ergebnis hier an - so lässt sich der API-Key direkt hier im Formular prüfen, ohne eigenen Code zu schreiben. Die eigentliche Testfunktion für die eigene Modulentwicklung ist IPSSLT_TranslateText(), siehe README.": "Traduit la phrase de test \"Hallo Welt\" de la langue source vers la langue cible et affiche le résultat ici - permet de vérifier la clé API directement dans ce formulaire sans écrire de code. La véritable fonction de test pour votre propre développement de module est IPSSLT_TranslateText(), voir le README.",
+            "API-Key fehlt": "Clé API manquante",
+            "Bitte zuerst einen Google Cloud Translate API-Key eintragen und über \"Übernehmen\" speichern.": "Veuillez d'abord saisir une clé API Google Cloud Translate et l'enregistrer via \"Appliquer\".",
+            "Google Translate Fehler - bitte API-Key prüfen": "Erreur Google Translate - veuillez vérifier la clé API"
         }
     }
 }

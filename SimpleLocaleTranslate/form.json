@@ -7,8 +7,19 @@
         },
         {
             "type": "ValidationTextBox",
+            "name": "SourceLanguage",
+            "caption": "Quellsprache (Google-Sprachcode, z.B. \"de\" - die Sprache, in der der Modulentwickler seine eigenen Texte normalerweise schreibt)"
+        },
+        {
+            "type": "Select",
             "name": "TargetLanguage",
-            "caption": "Zielsprache (Google-Sprachcode, z.B. \"en\", \"fr\", \"es\" - egal welche, Hauptsache verschieden von der Quellsprache des Testsatzes)"
+            "caption": "Zielsprache - egal welche, Hauptsache verschieden von der Quellsprache",
+            "options": [
+                {
+                    "caption": "English",
+                    "value": "en"
+                }
+            ]
         }
     ],
     "actions": [
@@ -29,14 +40,29 @@
         },
         {
             "type": "Label",
-            "caption": "Übersetzt den Testsatz \"Hallo Welt\" (Deutsch) in die oben eingestellte Zielsprache und zeigt das Ergebnis hier an - so lässt sich der API-Key direkt hier im Formular prüfen, ohne eigenen Code zu schreiben. Die eigentliche Testfunktion für die eigene Modulentwicklung ist IPSSLT_TranslateText(), siehe README."
+            "caption": "Übersetzt den Testsatz \"Hallo Welt\" von der Quell- in die Zielsprache und zeigt das Ergebnis hier an - so lässt sich der API-Key direkt hier im Formular prüfen, ohne eigenen Code zu schreiben. Die eigentliche Testfunktion für die eigene Modulentwicklung ist IPSSLT_TranslateText(), siehe README."
+        },
+        {
+            "name": "ApiKeyMissingPopup",
+            "type": "PopupAlert",
+            "visible": false,
+            "popup": {
+                "caption": "API-Key fehlt",
+                "closeCaption": "OK",
+                "items": [
+                    {
+                        "type": "Label",
+                        "caption": "Bitte zuerst einen Google Cloud Translate API-Key eintragen und über \"Übernehmen\" speichern."
+                    }
+                ]
+            }
         }
     ],
     "status": [
         {
-            "code": 201,
+            "code": 203,
             "icon": "error",
-            "caption": "Google Cloud Translate API-Key fehlt"
+            "caption": "Google Translate Fehler - bitte API-Key prüfen"
         }
     ]
 }
