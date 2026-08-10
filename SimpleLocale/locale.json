@@ -23,7 +23,11 @@
             "Root-Kategorie nicht gesetzt": "Root category not set",
             "Google Translate Fehler - bitte API-Key prüfen": "Google Translate error - please check the API key",
             "Bitte zuerst Google Cloud Translate API-Key eintragen und übernehmen": "Please enter and save a Google Cloud Translate API key first",
-            "Sprachliste konnte nicht von Google geladen werden - bitte API-Key prüfen": "Language list could not be loaded from Google - please check the API key"
+            "Sprachliste konnte nicht von Google geladen werden - bitte API-Key prüfen": "Language list could not be loaded from Google - please check the API key",
+            "API-Key fehlt": "API key missing",
+            "Bitte zuerst einen Google Cloud Translate API-Key eintragen und über \"Übernehmen\" speichern, bevor Zielsprachen hinzugefügt werden.": "Please enter a Google Cloud Translate API key first and save it via \"Apply\" before adding target languages.",
+            "Sprachliste nicht verfügbar": "Language list unavailable",
+            "Die Sprachliste konnte nicht von Google geladen werden. Bitte den Google Cloud Translate API-Key prüfen (z.B. Tippfehler, abgelaufen, fehlende Berechtigung).": "The language list could not be loaded from Google. Please check the Google Cloud Translate API key (e.g. typo, expired, missing permission)."
         },
         "es": {
             "Sprache": "Idioma",
@@ -48,7 +52,11 @@
             "Root-Kategorie nicht gesetzt": "Categoría raíz no establecida",
             "Google Translate Fehler - bitte API-Key prüfen": "Error de Google Translate: compruebe la clave de API",
             "Bitte zuerst Google Cloud Translate API-Key eintragen und übernehmen": "Introduzca y guarde primero una clave de API de Google Cloud Translate",
-            "Sprachliste konnte nicht von Google geladen werden - bitte API-Key prüfen": "No se pudo cargar la lista de idiomas de Google: compruebe la clave de API"
+            "Sprachliste konnte nicht von Google geladen werden - bitte API-Key prüfen": "No se pudo cargar la lista de idiomas de Google: compruebe la clave de API",
+            "API-Key fehlt": "Falta la clave de API",
+            "Bitte zuerst einen Google Cloud Translate API-Key eintragen und über \"Übernehmen\" speichern, bevor Zielsprachen hinzugefügt werden.": "Introduzca primero una clave de API de Google Cloud Translate y guárdela con \"Aplicar\" antes de añadir idiomas de destino.",
+            "Sprachliste nicht verfügbar": "Lista de idiomas no disponible",
+            "Die Sprachliste konnte nicht von Google geladen werden. Bitte den Google Cloud Translate API-Key prüfen (z.B. Tippfehler, abgelaufen, fehlende Berechtigung).": "No se pudo cargar la lista de idiomas de Google. Compruebe la clave de API de Google Cloud Translate (p. ej. error tipográfico, caducada, permiso faltante)."
         },
         "it": {
             "Sprache": "Lingua",
@@ -73,7 +81,11 @@
             "Root-Kategorie nicht gesetzt": "Categoria radice non impostata",
             "Google Translate Fehler - bitte API-Key prüfen": "Errore di Google Translate - controllare la chiave API",
             "Bitte zuerst Google Cloud Translate API-Key eintragen und übernehmen": "Inserire e salvare prima una chiave API di Google Cloud Translate",
-            "Sprachliste konnte nicht von Google geladen werden - bitte API-Key prüfen": "Impossibile caricare l'elenco delle lingue da Google - controllare la chiave API"
+            "Sprachliste konnte nicht von Google geladen werden - bitte API-Key prüfen": "Impossibile caricare l'elenco delle lingue da Google - controllare la chiave API",
+            "API-Key fehlt": "Chiave API mancante",
+            "Bitte zuerst einen Google Cloud Translate API-Key eintragen und über \"Übernehmen\" speichern, bevor Zielsprachen hinzugefügt werden.": "Inserire prima una chiave API di Google Cloud Translate e salvarla con \"Applica\" prima di aggiungere lingue di destinazione.",
+            "Sprachliste nicht verfügbar": "Elenco lingue non disponibile",
+            "Die Sprachliste konnte nicht von Google geladen werden. Bitte den Google Cloud Translate API-Key prüfen (z.B. Tippfehler, abgelaufen, fehlende Berechtigung).": "Impossibile caricare l'elenco delle lingue da Google. Controllare la chiave API di Google Cloud Translate (es. errore di battitura, scaduta, permesso mancante)."
         },
         "fr": {
             "Sprache": "Langue",
@@ -98,7 +110,11 @@
             "Root-Kategorie nicht gesetzt": "Catégorie racine non définie",
             "Google Translate Fehler - bitte API-Key prüfen": "Erreur Google Translate - veuillez vérifier la clé API",
             "Bitte zuerst Google Cloud Translate API-Key eintragen und übernehmen": "Veuillez d'abord saisir et enregistrer une clé API Google Cloud Translate",
-            "Sprachliste konnte nicht von Google geladen werden - bitte API-Key prüfen": "Impossible de charger la liste des langues depuis Google - veuillez vérifier la clé API"
+            "Sprachliste konnte nicht von Google geladen werden - bitte API-Key prüfen": "Impossible de charger la liste des langues depuis Google - veuillez vérifier la clé API",
+            "API-Key fehlt": "Clé API manquante",
+            "Bitte zuerst einen Google Cloud Translate API-Key eintragen und über \"Übernehmen\" speichern, bevor Zielsprachen hinzugefügt werden.": "Veuillez d'abord saisir une clé API Google Cloud Translate et l'enregistrer via \"Appliquer\" avant d'ajouter des langues cibles.",
+            "Sprachliste nicht verfügbar": "Liste des langues indisponible",
+            "Die Sprachliste konnte nicht von Google geladen werden. Bitte den Google Cloud Translate API-Key prüfen (z.B. Tippfehler, abgelaufen, fehlende Berechtigung).": "Impossible de charger la liste des langues depuis Google. Veuillez vérifier la clé API Google Cloud Translate (ex. faute de frappe, expirée, autorisation manquante)."
         }
     }
 }
