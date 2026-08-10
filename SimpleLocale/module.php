@@ -909,13 +909,16 @@ private const LANGUAGE_FLAGS = [
                 continue;
             }
 
-            IPS_SetName($objectID, $this->ResolveRowValue($row, $Language, $Language, $sourceLanguage, self::langOriginalImport));
+            // @ wie bei WriteTrackedValueString: gesperrte Objekte lehnen auch das
+            // Umbenennen ab (live gefunden), soll aber nicht die ganze
+            // Sprachumschaltung abbrechen.
+            @IPS_SetName($objectID, $this->ResolveRowValue($row, $Language, $Language, $sourceLanguage, self::langOriginalImport));
         }
 
         foreach ($this->DecodeRows(self::propertyObjectTexts) as $row) {
             $objectID = (int) ($row['ObjectID'] ?? 0);
             if ($objectID !== 0 && @IPS_ObjectExists($objectID)) {
-                IPS_SetName($objectID, $this->ResolveRowValue(
+                @IPS_SetName($objectID, $this->ResolveRowValue(
                     $row,
                     $Language,
                     self::fieldNamePrefix . $Language,
@@ -1003,7 +1006,7 @@ private const LANGUAGE_FLAGS = [
             // einem anderen Modul oder manuell vom Admin gesetzt) bleibt erhalten
             // statt überschrieben zu werden. War nie geforkt: nichts zu tun.
             if (array_key_exists($backupKey, $backups)) {
-                IPS_SetVariableCustomPresentation($ValueObjectID, $backups[$backupKey]);
+                @IPS_SetVariableCustomPresentation($ValueObjectID, $backups[$backupKey]);
                 unset($backups[$backupKey]);
                 $this->WriteAttributeString(self::attributeEnumerationPresentationBackup, json_encode($backups));
             }
@@ -1085,7 +1088,7 @@ private const LANGUAGE_FLAGS = [
         // gelesen wurden. Das Profil/Template selbst bleibt unverändert; andere
         // Variablen, die es referenzieren, lesen es beim nächsten Zugriff unverändert
         // weiter.
-        IPS_SetVariableCustomPresentation($ValueObjectID, $this->ApplyTranslatableFields($writeBase, '', $replacements));
+        @IPS_SetVariableCustomPresentation($ValueObjectID, $this->ApplyTranslatableFields($writeBase, '', $replacements));
     }
 
     // Schreibt einen Wert UND merkt ihn als "von der Instanz selbst geschrieben"
@@ -1100,13 +1103,16 @@ private const LANGUAGE_FLAGS = [
         // Folge führten zu einem Fatal-Error der ganzen Instanz) - überspringen statt
         // die komplette Sprachumschaltung daran scheitern zu lassen. Die Variable
         // bleibt dann einfach beim zuletzt gesetzten (ggf. fremdsprachigen) Wert
-        // stehen, bis sie manuell entsperrt wird.
+        // stehen, bis sie manuell entsperrt wird. VariableIsLocked allein reichte
+        // live nicht aus, um alle Fälle abzufangen (der Fehler trat trotz dieser
+        // Prüfung weiterhin auf) - der Schreibversuch selbst wird deshalb zusätzlich
+        // mit @ unterdrückt, unabhängig davon, welcher genaue Grund die Ablehnung hat.
         $variable = @IPS_GetVariable($ValueObjectID);
         if (!is_array($variable) || ($variable['VariableIsLocked'] ?? false)) {
             return;
         }
 
-        SetValueString($ValueObjectID, $Value);
+        @SetValueString($ValueObjectID, $Value);
 
         $lastWritten = json_decode($this->ReadAttributeString(self::attributeLastSelfWrittenValues), true);
         if (!is_array($lastWritten)) {
