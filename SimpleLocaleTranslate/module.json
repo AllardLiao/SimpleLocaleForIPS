@@ -1,0 +1,20 @@
+{
+    "id": "{E4E00EB1-8B33-5C4C-F72D-0D492509BC5C}",
+    "name": "Simple Locale Translate",
+    "type": 3,
+    "vendor": "Synergetix",
+    "aliases": [],
+    "parentRequirements": [],
+    "childRequirements": [],
+    "implemented": [],
+    "prefix": "IPSSLT",
+    "url": "https://github.com/AllardLiao/SimpleLocaleForIPS/tree/stable/SimpleLocaleTranslate",
+    "translations": {
+        "de": {
+            "Simple Locale Translate": "Simple Locale Translate"
+        },
+        "en": {
+            "Simple Locale Translate": "Simple Locale Translate"
+        }
+    }
+}

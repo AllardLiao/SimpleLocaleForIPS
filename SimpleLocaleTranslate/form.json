@@ -1,0 +1,42 @@
+{
+    "elements": [
+        {
+            "type": "PasswordTextBox",
+            "name": "GoogleTranslateAPIKey",
+            "caption": "Google Cloud Translate API-Key (ggf. derselbe wie in der echten Simple-Locale-Instanz)"
+        },
+        {
+            "type": "ValidationTextBox",
+            "name": "TargetLanguage",
+            "caption": "Zielsprache (Google-Sprachcode, z.B. \"en\", \"fr\", \"es\" - egal welche, Hauptsache verschieden von der Quellsprache des Testsatzes)"
+        }
+    ],
+    "actions": [
+        {
+            "type": "RowLayout",
+            "items": [
+                {
+                    "type": "Button",
+                    "caption": "Testübersetzung ausführen",
+                    "onClick": "IPS_RequestAction($id, 'TestTranslate', true);"
+                },
+                {
+                    "type": "Label",
+                    "name": "TestTranslateResult",
+                    "caption": " "
+                }
+            ]
+        },
+        {
+            "type": "Label",
+            "caption": "Übersetzt den Testsatz \"Hallo Welt\" (Deutsch) in die oben eingestellte Zielsprache und zeigt das Ergebnis hier an - so lässt sich der API-Key direkt hier im Formular prüfen, ohne eigenen Code zu schreiben. Die eigentliche Testfunktion für die eigene Modulentwicklung ist IPSSLT_TranslateText(), siehe README."
+        }
+    ],
+    "status": [
+        {
+            "code": 201,
+            "icon": "error",
+            "caption": "Google Cloud Translate API-Key fehlt"
+        }
+    ]
+}
