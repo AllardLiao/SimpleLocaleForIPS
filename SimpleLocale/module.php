@@ -25,9 +25,13 @@ class SimpleLocale extends IPSModuleStrict
     // Gast-Sprache übersetzt (siehe EnsureGuestLanguageNamesFresh), damit auch
     // dieser Text nicht die Konsolensprache des Admins mit der Gast-Sprache mischt.
     private const INFO_LIMITATION_TEXTS = [
-        'Die Übersetzung gilt für alle Besucher dieser Visualisierung gleichzeitig, nicht getrennt je Person - zwei Gäste können hier nicht zeitgleich unterschiedliche Sprachen sehen.',
-        'Dynamisch erzeugte Inhalte (z. B. von anderen Modulen oder Skripten) können von diesen in ihrer eigenen Sprache überschrieben werden, sobald sie sich im jeweiligen Aktualisierungsintervall des Moduls/Skripts erneut selbst schreiben.',
+        'Die gewählte Sprache gilt für alle Besucher dieser Seite gleichzeitig - nicht individuell für jede Person.',
+        'Inhalte, die von anderen Modulen oder Skripten laufend automatisch aktualisiert werden (z. B. Messwerte oder Wetterdaten), erscheinen nach jeder Aktualisierung wieder in ihrer ursprünglichen Sprache.',
     ];
+
+    // Beschriftung des Schließen-Buttons im Info-Popup - im selben Aufruf wie die
+    // Hinweistexte übersetzt (siehe EnsureGuestLanguageNamesFresh).
+    private const INFO_CLOSE_TEXT = 'Schließen';
 
     // Rein dekorativ fürs Gast-Dropdown (GetVisualizationTile) - nicht erschöpfend,
     // unbekannte Sprachcodes bekommen einfach keine Flagge vorangestellt.
@@ -166,15 +170,19 @@ class SimpleLocale extends IPSModuleStrict
                 case self::propertyTargetLanguages:
                     $element['columns'][0]['edit']['options'] = $targetLanguageOptions;
                     $element['values'] = $this->DecodeRows(self::propertyTargetLanguages);
+                    $element['add'] = true;
 
-                    // "Hinzufügen" nur erlauben, wenn wirklich eine geladene Sprachliste
-                    // zur Auswahl steht - verhindert strukturell, dass der eingebaute
-                    // Zeilen-Editor-Popup nur den Platzhalter zur Auswahl anbietet und
-                    // dessen "OK" eine Fake-Zeile in die Liste einträgt.
+                    // Ohne geladene Sprachliste die ganze Liste (inkl. "Hinzufügen"-Button)
+                    // sichtbar, aber ausgegraut lassen ("enabled": false) statt den Button
+                    // komplett verschwinden zu lassen - macht auf einen Blick klar, dass hier
+                    // etwas fehlt, statt es einfach wegzulassen. Verhindert außerdem
+                    // strukturell, dass der eingebaute Zeilen-Editor-Popup nur den
+                    // Platzhalter zur Auswahl anbietet und dessen "OK" eine Fake-Zeile
+                    // in die Liste einträgt.
                     if ($this->HasCachedLanguages()) {
-                        $element['add'] = true;
+                        $element['enabled'] = true;
                     } else {
-                        $element['add'] = false;
+                        $element['enabled'] = false;
                         $element['caption'] .= ' (' . $this->Translate('bitte zuerst gültigen API-Key speichern und Formular neu öffnen') . ')';
                     }
                     break;
@@ -788,8 +796,7 @@ class SimpleLocale extends IPSModuleStrict
         }
 
         $infoIconHtml = '<span class="ipssl-info-icon" aria-hidden="true"'
-            . ' onclick="var p=this.parentElement.nextElementSibling;'
-            . 'p.style.display=(p.style.display===\'block\'?\'none\':\'block\');">ⓘ</span>';
+            . ' onclick="this.parentElement.nextElementSibling.style.display=\'flex\';">ⓘ</span>';
 
         return '<div class="ipssl-select-row">'
             . '<span class="ipssl-globe" aria-hidden="true">🌐</span>'
@@ -801,20 +808,28 @@ class SimpleLocale extends IPSModuleStrict
             . $this->BuildInfoPopupHtml($guestCache);
     }
 
-    // Klappt im normalen Textfluss unterhalb der Auswahlzeile auf (kein Overlay -
-    // siehe Kommentar in module.html zum Titel/Vergrößern-Symbol-Problem). Text live
-    // in die aktuell aktive Gast-Sprache übersetzt, damit auch dieser Hinweis nicht
-    // die Admin-Konsolensprache mit der Gast-Sprache mischt.
+    // Echtes Popup (Backdrop + zentrierte Box), kein Inline-Aufklappbereich -
+    // position:fixed wirkt innerhalb des iframes relativ zu dessen eigenem Viewport
+    // (siehe Kommentar in module.html), ist also unabhängig vom nativen
+    // <select>-Overlay-Problem. Schließen per Klick auf Backdrop oder Button. Text
+    // live in die aktuell aktive Gast-Sprache übersetzt, damit auch dieser Hinweis
+    // nicht die Admin-Konsolensprache mit der Gast-Sprache mischt.
     private function BuildInfoPopupHtml(array $GuestCache): string
     {
         $texts = $GuestCache['infoTexts'] ?? self::INFO_LIMITATION_TEXTS;
+        $closeLabel = htmlspecialchars($GuestCache['closeLabel'] ?? self::INFO_CLOSE_TEXT, ENT_QUOTES, 'UTF-8');
 
         $itemsHtml = '';
         foreach ($texts as $text) {
             $itemsHtml .= '<li>' . htmlspecialchars($text, ENT_QUOTES, 'UTF-8') . '</li>';
         }
 
-        return '<div class="ipssl-info-popup" style="display:none;"><ul>' . $itemsHtml . '</ul></div>';
+        return '<div class="ipssl-info-backdrop" onclick="this.style.display=\'none\';">'
+            . '<div class="ipssl-info-modal" onclick="event.stopPropagation();">'
+            . '<ul>' . $itemsHtml . '</ul>'
+            . '<button onclick="this.closest(\'.ipssl-info-backdrop\').style.display=\'none\';">' . $closeLabel . '</button>'
+            . '</div>'
+            . '</div>';
     }
 
     // "Name - code" mit vorangestellter Flagge (z.B. "🇬🇧 English - en"), Name live
@@ -877,10 +892,11 @@ class SimpleLocale extends IPSModuleStrict
 
         $names = $this->FetchLanguageNames($language) ?? ($cache['names'] ?? []);
 
-        // "Original (unbearbeitet)" + die Info-Hinweistexte in einem gemeinsamen
-        // Aufruf übersetzen (statt je einem eigenen) - alles feste, kurze Texte,
-        // die ohnehin nur bei Sprachwechsel/Cache-Ablauf einmal aktualisiert werden.
-        $ownTexts = array_merge(['Original (unbearbeitet)'], self::INFO_LIMITATION_TEXTS);
+        // "Original (unbearbeitet)" + die Info-Hinweistexte + der Schließen-Button
+        // in einem gemeinsamen Aufruf übersetzen (statt je einem eigenen) - alles
+        // feste, kurze Texte, die ohnehin nur bei Sprachwechsel/Cache-Ablauf einmal
+        // aktualisiert werden.
+        $ownTexts = array_merge(['Original (unbearbeitet)'], self::INFO_LIMITATION_TEXTS, [self::INFO_CLOSE_TEXT]);
         if ($language === 'de') {
             $translatedOwnTexts = $ownTexts;
         } else {
@@ -892,12 +908,14 @@ class SimpleLocale extends IPSModuleStrict
             $translatedOwnTexts[1] ?? self::INFO_LIMITATION_TEXTS[0],
             $translatedOwnTexts[2] ?? self::INFO_LIMITATION_TEXTS[1],
         ];
+        $closeLabel = $translatedOwnTexts[3] ?? self::INFO_CLOSE_TEXT;
 
         $cache = [
             'language'      => $language,
             'names'         => $names,
             'originalLabel' => $originalLabel,
             'infoTexts'     => $infoTexts,
+            'closeLabel'    => $closeLabel,
             'fetchedAt'     => time(),
         ];
 

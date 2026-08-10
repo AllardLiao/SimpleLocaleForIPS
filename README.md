@@ -37,7 +37,7 @@ Folgende Module beinhaltet das Simple Locale for IP Symcon Repository:
 
 ## Konfiguration
 
-Siehe [Konfigurationsseite in der Moduldokumentation](SimpleLocale/README.md#4-einrichten-der-instanzen-in-symcon)
+Siehe [Konfigurationsseite in der Moduldokumentation](SimpleLocale/README.md#5-einrichten-der-instanzen-in-symcon)
 für die Übersicht aller Formularfelder. Kurzfassung: Root-Kategorie, Basis-/Zielsprachen
 und Google-Translate-API-Key setzen, "Übernehmen", dann "Baum neu einlesen und fehlende Übersetzungen ergänzen" klicken.
 

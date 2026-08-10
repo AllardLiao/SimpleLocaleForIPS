@@ -64,26 +64,58 @@
             color: rgba(0, 0, 0, 0.7);
         }
 
-        /* Bewusst kein absolut positioniertes Popup/Tooltip: klappt stattdessen im
-           normalen Textfluss unterhalb der Auswahlzeile auf - ein Overlay könnte
-           je nach Einbettung (siehe Titel/Vergrößern-Symbol-Problem) abgeschnitten
-           werden, das hier ist unabhängig von der Kachelgröße immer vollständig sichtbar. */
-        .ipssl-info-popup {
-            margin-top: 8px;
-            padding: 8px 10px;
-            font-size: 13px;
-            line-height: 1.4;
-            background: rgba(0, 0, 0, 0.04);
-            border-radius: 8px;
+        /* position:fixed wirkt innerhalb eines iframes relativ zu dessen eigenem
+           Viewport (nicht der Symcon-Seite dahinter) - anders als das native
+           <select>-Popup (Browser-/WebView-eigenes Overlay, siehe das frühere
+           Problem mit zu kleiner Kachel) ist das hier vollständig eigenes DOM/CSS
+           und kann daher nicht auf dieselbe Art unerwartet abgeschnitten werden. */
+        .ipssl-info-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            box-sizing: border-box;
+            z-index: 1000;
         }
 
-        .ipssl-info-popup ul {
+        .ipssl-info-modal {
+            background: white;
+            color: #222;
+            border-radius: 10px;
+            padding: 16px;
+            max-width: 100%;
+            max-height: 100%;
+            overflow: auto;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .ipssl-info-modal ul {
             margin: 0;
             padding-left: 18px;
         }
 
-        .ipssl-info-popup li + li {
+        .ipssl-info-modal li + li {
             margin-top: 4px;
+        }
+
+        .ipssl-info-modal button {
+            display: block;
+            margin: 12px 0 0 auto;
+            padding: 6px 14px;
+            font-size: 13px;
+            border: none;
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.08);
+            cursor: pointer;
+        }
+
+        .ipssl-info-modal button:hover {
+            background: rgba(0, 0, 0, 0.15);
         }
     </style>
 </head>

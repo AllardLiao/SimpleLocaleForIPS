@@ -4,12 +4,13 @@ Beschreibung des Moduls.
 ### Inhaltsverzeichnis
 
 1. [Funktionsumfang](#1-funktionsumfang)
-2. [Voraussetzungen](#2-voraussetzungen)
-3. [Software-Installation](#3-software-installation)
-4. [Einrichten der Instanzen in Symcon](#4-einrichten-der-instanzen-in-symcon)
-5. [Statusvariablen und Profile](#5-statusvariablen-und-profile)
-6. [WebFront](#6-webfront)
-7. [PHP-Befehlsreferenz](#7-php-befehlsreferenz)
+2. [Bekannte Einschränkungen](#2-bekannte-einschränkungen)
+3. [Voraussetzungen](#3-voraussetzungen)
+4. [Software-Installation](#4-software-installation)
+5. [Einrichten der Instanzen in Symcon](#5-einrichten-der-instanzen-in-symcon)
+6. [Statusvariablen und Profile](#6-statusvariablen-und-profile)
+7. [WebFront](#7-webfront)
+8. [PHP-Befehlsreferenz](#8-php-befehlsreferenz)
 
 ### 1. Funktionsumfang
 
@@ -35,28 +36,44 @@ Beschreibung des Moduls.
   Sprachcode, z. B. "🇬🇧 English - en") werden live in die gerade aktive Sprache
   übersetzt, damit dort nie mehrere Sprachen gemischt angezeigt werden. Ein
   Info-Symbol (ⓘ) neben dem Dropdown erklärt Gästen auf Klick (ebenfalls live
-  übersetzt) die zwei wichtigsten Einschränkungen: die Sprache gilt für alle
-  Besucher gleichzeitig (nicht je Person), und dynamisch erzeugte Inhalte
-  anderer Module/Skripte können in ihrer eigenen Sprache wieder auftauchen,
-  sobald diese sich selbst aktualisieren.
+  übersetzt) die wichtigsten Einschränkungen, siehe
+  [Abschnitt 2](#2-bekannte-einschränkungen).
 * Die aktuell aktive Sprache ist eine reine Instanz-Property (kein Symcon-
   Variablenprofil, das wäre global über alle Instanzen hinweg geteilt) - sie
-  ist direkt im Konfigurationsformular sicht- und änderbar. Achtung: Die
-  Sprache gilt je Instanz für alle Betrachter gleichzeitig - zwei Gäste können
-  sich nicht zeitgleich auf derselben Instanz unterschiedliche Sprachen
-  anzeigen lassen (für getrennte Sprachen: mehrere Instanzen mit jeweils
-  eigener Root-Kategorie/Kachel verwenden).
+  ist direkt im Konfigurationsformular sicht- und änderbar.
 
-### 2. Voraussetzungen
+### 2. Bekannte Einschränkungen
+
+* **Eine Sprache pro Instanz, nicht pro Besucher.** Die aktuell aktive Sprache
+  ist ein Zustand der Instanz, kein Zustand der einzelnen Browser-Sitzung.
+  Zwei Gäste, die gleichzeitig dieselbe Visualisierung öffnen, sehen daher
+  immer dieselbe Sprache - es gibt keine getrennte Sprache je Person. Werden
+  wirklich gleichzeitig unterschiedliche Sprachen für unterschiedliche
+  Zielgruppen benötigt, braucht es mehrere Instanzen mit jeweils eigener
+  Root-Kategorie/Kachel.
+* **Dynamisch aktualisierte Inhalte fallen zurück in ihre Originalsprache.**
+  Simple Locale übersetzt den Wert einer String-Variable, wenn die Sprache
+  gewechselt wird. Schreibt ein *anderes* Modul oder Skript diese Variable
+  danach selbst erneut (z. B. ein Wetter- oder Messwert-Skript bei seinem
+  nächsten Aktualisierungsintervall), steht dort wieder der von diesem Modul/
+  Skript gelieferte Text - typischerweise die Sprache, in der es selbst
+  schreibt, nicht zwangsläufig die zuletzt gewählte Gast-Sprache. Ein
+  erneuter Sprachwechsel (oder Rescan, falls sich auch der Inhalt strukturell
+  geändert hat) übersetzt den neuen Wert dann wieder passend.
+
+  Diese beiden Punkte sind auch direkt in der Kachel über das Info-Symbol (ⓘ)
+  neben dem Dropdown einsehbar, live in der jeweils aktiven Gast-Sprache.
+
+### 3. Voraussetzungen
 
 - Symcon ab Version 7.1
 
-### 3. Software-Installation
+### 4. Software-Installation
 
 * Über den Module Store das 'Simple Locale'-Modul installieren.
 * Alternativ über das Module Control folgende URL hinzufügen
 
-### 4. Einrichten der Instanzen in Symcon
+### 5. Einrichten der Instanzen in Symcon
 
  Unter 'Instanz hinzufügen' kann das 'Simple Locale'-Modul mithilfe des Schnellfilters gefunden werden.  
 	- Weitere Informationen zum Hinzufügen von Instanzen in der [Dokumentation der Instanzen](https://www.symcon.de/service/dokumentation/konzepte/instanzen/#Instanz_hinzufügen)
@@ -67,20 +84,20 @@ Name                            | Beschreibung
 -------------------------------- | ------------------
 Root-Kategorie                  | Kategorie im Objektbaum, deren Inhalt (Namen + Werte von String-Variablen) übersetzt wird. Sollte nur die Gäste-Sichtbereich-Kacheln enthalten, nicht die Admin-Oberfläche.
 Basissprache                    | Sprache, in der die Objektnamen/-werte ursprünglich gepflegt sind (Quellsprache für Google Translate).
-Zielsprachen                    | Sprachen, in die übersetzt werden soll. Auswahl-Optionen kommen von Google (Button "Sprachliste von Google aktualisieren"). Wichtig: Nach dem Klick auf "Sprachliste aktualisieren" die Instanzkonfiguration einmal schließen und neu öffnen, bevor Häkchen gesetzt werden - sonst kann die Konsole falsche Sprachen speichern.
-Google Cloud Translate API-Key  | API-Key für die Cloud Translation API v2. Muss vor dem ersten Rescan/Sprachlisten-Refresh gespeichert ("Übernehmen") werden.
+Google Cloud Translate API-Key  | API-Key für die Cloud Translation API v2. **Muss zuerst eingetragen und über "Übernehmen" gespeichert werden**, bevor irgendetwas anderes funktioniert - insbesondere ist der "Hinzufügen"-Button bei den Zielsprachen bis dahin ausgegraut (nicht versteckt, sondern deaktiviert), da ohne gültigen Key keine echte Sprachliste von Google geladen werden kann.
+Zielsprachen                    | Sprachen, in die übersetzt werden soll. Auswahl-Optionen kommen von Google, sobald ein gültiger API-Key gespeichert ist. Wichtig: Nach dem Klick auf "Sprachliste aktualisieren" die Instanzkonfiguration einmal schließen und neu öffnen, bevor Häkchen gesetzt werden - sonst kann die Konsole falsche Sprachen speichern.
 Automatischer Rescan (Minuten)  | Intervall für automatisches Neu-Einlesen des Baums, 0 = nur manuell über den Button.
-Aktuell aktive Sprache          | Welche Sprache gerade angezeigt wird - normalerweise über die Kachel vom Gast selbst gesteuert (siehe Abschnitt 6), lässt sich hier aber auch manuell zu Testzwecken umschalten.
+Aktuell aktive Sprache          | Welche Sprache gerade angezeigt wird - normalerweise über die Kachel vom Gast selbst gesteuert (siehe Abschnitt 7), lässt sich hier aber auch manuell zu Testzwecken umschalten.
 Objektnamen / Eigene Texte      | Listen der gefundenen Objekte mit Quelltext und je einer Spalte pro Zielsprache. Übersetzungen sind hier direkt editierbar; leere Zellen werden beim nächsten Rescan automatisch übersetzt.
 
-### 5. Statusvariablen und Profile
+### 6. Statusvariablen und Profile
 
 Die Statuskategorien werden automatisch angelegt. Das Löschen kann zu
 Fehlfunktionen führen. Simple Locale legt bewusst keine eigenen Symcon-
-Variablen oder -Profile für die Sprachsteuerung an (siehe Abschnitt 6) - der
+Variablen oder -Profile für die Sprachsteuerung an (siehe Abschnitt 7) - der
 gesamte Zustand steckt in Instanz-Properties.
 
-### 6. Visualisierung
+### 7. Visualisierung
 
 Die Simple-Locale-Instanz selbst per Drag & Drop in WebFront platzieren (bei
 der Kachel-Auswahl nicht eine Variable, sondern die Instanz selbst auswählen)
@@ -90,12 +107,15 @@ angezeigt werden) und löst beim Auswählen direkt den Sprachwechsel aus. Die
 aktuell aktive Sprache wird als Instanz-Property gespeichert (kein
 Symcon-Variablenprofil - das wäre global über alle Instanzen der Installation
 hinweg geteilt und würde sich bei mehreren Instanzen gegenseitig überschreiben).
+Ein Info-Symbol (ⓘ) neben dem Dropdown öffnet auf Klick ein Popup mit den in
+[Abschnitt 2](#2-bekannte-einschränkungen) beschriebenen Einschränkungen,
+ebenfalls live in der jeweils aktiven Gast-Sprache.
 
 Für eigene HTMLBox-Popups oder Hinweise außerhalb der live umbenannten
 Objekte liefert `IPSSL_TranslateText()` den Text in der aktuell aktiven
 Sprache.
 
-### 7. PHP-Befehlsreferenz
+### 8. PHP-Befehlsreferenz
 
 `string IPSSL_TranslateText(integer $InstanzID, integer $ObjektID);`
 Liefert den Inhalt der "Eigene Texte"-Zeile für die angegebene Objekt-ID
