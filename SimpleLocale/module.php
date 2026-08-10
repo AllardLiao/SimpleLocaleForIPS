@@ -58,7 +58,13 @@ class SimpleLocale extends IPSModuleStrict
         // (siehe GetConfigurationForm). "Language" bleibt unten nur noch als reiner
         // RequestAction-Ident (String) bestehen, ohne zugehöriges Variablenobjekt - die
         // Kachel spricht ihn direkt per requestAction() an (siehe HTML-SDK).
-        $this->RegisterPropertyString(self::propertyCurrentLanguage, '');
+        // Default bewusst "ORIGINAL_IMPORT", nicht "": Das Select-Formularfeld bietet
+        // nur die Werte aus GetSelectableLanguageCodes() an (Basissprache, gewählte
+        // Zielsprachen, "Original") - "" ist dort nie eine gültige Option. Bei der
+        // allerersten Formularanzeige (vor dem ersten Übernehmen) war der Wert sonst
+        // "", was zu keiner Option passte und einen Fehler auslöste. "ORIGINAL_IMPORT"
+        // ist der einzige Code, der unabhängig von jeder Konfiguration immer gültig ist.
+        $this->RegisterPropertyString(self::propertyCurrentLanguage, self::langOriginalImport);
 
         $this->RegisterAttributeString(self::attributeAvailableLanguagesCache, '[]');
         $this->RegisterAttributeInteger(self::attributeAvailableLanguagesFetchedAt, 0);
@@ -95,14 +101,6 @@ class SimpleLocale extends IPSModuleStrict
             $this->SetStatus(self::STATUS_ROOT_CATEGORY_MISSING);
         } else {
             $this->SetStatus(102);
-        }
-
-        // Beim allerersten Aufbau: aktive Sprache auf die Basissprache setzen. Bewusst
-        // nur IPS_SetProperty ohne erneutes IPS_ApplyChanges (das würde rekursiv diese
-        // selbe Methode erneut aufrufen) - der neue Wert ist damit sofort persistiert
-        // und über ReadPropertyString lesbar, auch innerhalb dieses Durchlaufs.
-        if ($this->ReadPropertyString(self::propertyCurrentLanguage) === '') {
-            IPS_SetProperty($this->InstanceID, self::propertyCurrentLanguage, $this->ReadPropertyString(self::propertySourceLanguage));
         }
 
         $interval = $this->ReadPropertyInteger(self::propertyAutoRescanInterval);
@@ -793,7 +791,7 @@ class SimpleLocale extends IPSModuleStrict
     private function GetGuestLanguageLabel(string $Code, array $GuestCache): string
     {
         if ($Code === self::langOriginalImport) {
-            return '📄 ' . ($GuestCache['originalLabel'] ?? $this->Translate('Original (unbearbeitet)'));
+            return '🔄 ' . ($GuestCache['originalLabel'] ?? $this->Translate('Original (unbearbeitet)'));
         }
 
         $flag = self::LANGUAGE_FLAGS[$Code] ?? '';

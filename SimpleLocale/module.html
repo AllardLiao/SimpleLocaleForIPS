@@ -5,24 +5,44 @@
     <style>
         body {
             margin: 0;
+            padding: 8px 4px;
+            box-sizing: border-box;
         }
 
         .ipssl-select-wrapper {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
 
         .ipssl-select-wrapper .ipssl-globe {
-            font-size: 20px;
-            line-height: 1;
+            flex: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.05);
+            font-size: 18px;
         }
 
         .ipssl-select-wrapper select {
             flex: 1;
-            padding: 8px;
-            font-size: 16px;
-            border-radius: 6px;
+            min-width: 0;
+            padding: 8px 10px;
+            font-size: 15px;
+            font-family: inherit;
+            color: inherit;
+            border: 1px solid rgba(0, 0, 0, 0.15);
+            border-radius: 8px;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        .ipssl-select-wrapper select:focus {
+            outline: none;
+            border-color: rgba(0, 0, 0, 0.35);
         }
     </style>
 </head>
