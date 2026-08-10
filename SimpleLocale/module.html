@@ -64,58 +64,59 @@
             color: rgba(0, 0, 0, 0.7);
         }
 
-        /* position:fixed wirkt innerhalb eines iframes relativ zu dessen eigenem
-           Viewport (nicht der Symcon-Seite dahinter) - anders als das native
-           <select>-Popup (Browser-/WebView-eigenes Overlay, siehe das frühere
-           Problem mit zu kleiner Kachel) ist das hier vollständig eigenes DOM/CSS
-           und kann daher nicht auf dieselbe Art unerwartet abgeschnitten werden. */
-        .ipssl-info-backdrop {
+        /* Kein vollflächiges Backdrop mehr (sah in einer kleinen Kachel abgeschnitten
+           und unpassend aus) - stattdessen eine schlanke Toast-Notiz am unteren Rand,
+           analog zur .message-box aus ContromeCentralControl. position:fixed wirkt
+           innerhalb eines iframes relativ zu dessen eigenem Viewport, eine kleine
+           Pille am Rand fällt dabei anders als ein Vollbild-Overlay nicht negativ auf,
+           selbst wenn der verfügbare Platz klein ist. Anders als Contromes Toast bleibt
+           diese hier offen, bis sie aktiv geschlossen wird (echter Erklärtext zum
+           Lesen, keine kurze Erfolgsmeldung zum Wegblenden). */
+        .ipssl-info-toast {
             display: none;
             position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.4);
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
+            left: 8px;
+            right: 8px;
+            bottom: 8px;
             box-sizing: border-box;
+            background: #222;
+            color: #fff;
+            border-radius: 10px;
+            padding: 10px 34px 10px 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            font-size: 12px;
+            line-height: 1.4;
             z-index: 1000;
         }
 
-        .ipssl-info-modal {
-            background: white;
-            color: #222;
-            border-radius: 10px;
-            padding: 16px;
-            max-width: 100%;
-            max-height: 100%;
-            overflow: auto;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-            font-size: 13px;
-            line-height: 1.4;
-        }
-
-        .ipssl-info-modal ul {
+        .ipssl-info-toast ul {
             margin: 0;
-            padding-left: 18px;
+            padding-left: 16px;
         }
 
-        .ipssl-info-modal li + li {
+        .ipssl-info-toast li + li {
             margin-top: 4px;
         }
 
-        .ipssl-info-modal button {
-            display: block;
-            margin: 12px 0 0 auto;
-            padding: 6px 14px;
-            font-size: 13px;
-            border: none;
-            border-radius: 6px;
-            background: rgba(0, 0, 0, 0.08);
+        .ipssl-info-toast .ipssl-info-toast-close {
+            position: absolute;
+            top: 6px;
+            right: 8px;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
             cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+            color: rgba(255, 255, 255, 0.7);
         }
 
-        .ipssl-info-modal button:hover {
-            background: rgba(0, 0, 0, 0.15);
+        .ipssl-info-toast .ipssl-info-toast-close:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
         }
     </style>
 </head>

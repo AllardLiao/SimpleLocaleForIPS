@@ -796,7 +796,7 @@ class SimpleLocale extends IPSModuleStrict
         }
 
         $infoIconHtml = '<span class="ipssl-info-icon" aria-hidden="true"'
-            . ' onclick="this.parentElement.nextElementSibling.style.display=\'flex\';">ⓘ</span>';
+            . ' onclick="this.parentElement.nextElementSibling.style.display=\'block\';">ⓘ</span>';
 
         return '<div class="ipssl-select-row">'
             . '<span class="ipssl-globe" aria-hidden="true">🌐</span>'
@@ -808,12 +808,13 @@ class SimpleLocale extends IPSModuleStrict
             . $this->BuildInfoPopupHtml($guestCache);
     }
 
-    // Echtes Popup (Backdrop + zentrierte Box), kein Inline-Aufklappbereich -
-    // position:fixed wirkt innerhalb des iframes relativ zu dessen eigenem Viewport
-    // (siehe Kommentar in module.html), ist also unabhängig vom nativen
-    // <select>-Overlay-Problem. Schließen per Klick auf Backdrop oder Button. Text
-    // live in die aktuell aktive Gast-Sprache übersetzt, damit auch dieser Hinweis
-    // nicht die Admin-Konsolensprache mit der Gast-Sprache mischt.
+    // Schlanke Toast-Notiz am unteren Rand statt Vollbild-Backdrop mit zentrierter
+    // Box - letzteres sah in einer kleinen Kachel abgeschnitten/unpassend aus.
+    // Gleiches Muster wie die .message-box in ContromeCentralControl (position:fixed,
+    // unten), aber bleibt (anders als dortige kurze Erfolgsmeldungen) offen, bis aktiv
+    // geschlossen wird, da hier echter Erklärtext zum Lesen steht. Text live in die
+    // aktuell aktive Gast-Sprache übersetzt, damit auch dieser Hinweis nicht die
+    // Admin-Konsolensprache mit der Gast-Sprache mischt.
     private function BuildInfoPopupHtml(array $GuestCache): string
     {
         $texts = $GuestCache['infoTexts'] ?? self::INFO_LIMITATION_TEXTS;
@@ -824,11 +825,10 @@ class SimpleLocale extends IPSModuleStrict
             $itemsHtml .= '<li>' . htmlspecialchars($text, ENT_QUOTES, 'UTF-8') . '</li>';
         }
 
-        return '<div class="ipssl-info-backdrop" onclick="this.style.display=\'none\';">'
-            . '<div class="ipssl-info-modal" onclick="event.stopPropagation();">'
+        return '<div class="ipssl-info-toast">'
+            . '<span class="ipssl-info-toast-close" role="button" aria-label="' . $closeLabel . '"'
+            . ' onclick="this.parentElement.style.display=\'none\';">✕</span>'
             . '<ul>' . $itemsHtml . '</ul>'
-            . '<button onclick="this.closest(\'.ipssl-info-backdrop\').style.display=\'none\';">' . $closeLabel . '</button>'
-            . '</div>'
             . '</div>';
     }
 
