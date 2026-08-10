@@ -74,6 +74,11 @@ class SimpleLocale extends IPSModuleStrict
         // ist der einzige Code, der unabhängig von jeder Konfiguration immer gültig ist.
         $this->RegisterPropertyString(self::propertyCurrentLanguage, self::langOriginalImport);
 
+        // Dem Admin überlassen, ob Globus- und Info-Symbol in der Kachel angezeigt
+        // werden sollen (z.B. falls er ein eigenes, schlankeres Design möchte).
+        $this->RegisterPropertyBoolean(self::propertyShowGlobeIcon, true);
+        $this->RegisterPropertyBoolean(self::propertyShowInfoIcon, true);
+
         $this->RegisterAttributeString(self::attributeAvailableLanguagesCache, '[]');
         $this->RegisterAttributeInteger(self::attributeAvailableLanguagesFetchedAt, 0);
         $this->RegisterAttributeString(self::attributeGuestLanguageNamesCache, '{}');
@@ -791,11 +796,17 @@ class SimpleLocale extends IPSModuleStrict
             $optionsHtml .= "<option value=\"{$value}\"{$selected}>{$label}</option>";
         }
 
-        $infoIconHtml = '<span class="ipssl-info-icon" aria-hidden="true"'
-            . ' onclick="alert(' . $this->BuildInfoAlertJs($guestCache) . ');">ⓘ</span>';
+        $globeIconHtml = $this->ReadPropertyBoolean(self::propertyShowGlobeIcon)
+            ? '<span class="ipssl-globe" aria-hidden="true">🌐</span>'
+            : '';
+
+        $infoIconHtml = $this->ReadPropertyBoolean(self::propertyShowInfoIcon)
+            ? '<span class="ipssl-info-icon" aria-hidden="true"'
+                . ' onclick="alert(' . $this->BuildInfoAlertJs($guestCache) . ');">ⓘ</span>'
+            : '';
 
         return '<div class="ipssl-select-row">'
-            . '<span class="ipssl-globe" aria-hidden="true">🌐</span>'
+            . $globeIconHtml
             . '<select onchange="requestAction(\'' . self::identLanguage . '\', this.value);">'
             . $optionsHtml
             . '</select>'

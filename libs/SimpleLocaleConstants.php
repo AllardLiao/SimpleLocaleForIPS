@@ -20,6 +20,11 @@ trait SimpleLocaleConstants
     // ein Variablenprofil (das wäre in Symcon global über alle Instanzen hinweg geteilt).
     private const propertyCurrentLanguage = 'CurrentLanguage';
 
+    // Sichtbarkeit von Globus- und Info-Symbol in der Kachel - dem Admin überlassen,
+    // falls er ein schlankeres/eigenes Design ohne diese Elemente möchte.
+    private const propertyShowGlobeIcon = 'ShowGlobeIcon';
+    private const propertyShowInfoIcon = 'ShowInfoIcon';
+
     // Attribute
     private const attributeAvailableLanguagesCache = 'AvailableLanguagesCache';
     private const attributeAvailableLanguagesFetchedAt = 'AvailableLanguagesFetchedAt';

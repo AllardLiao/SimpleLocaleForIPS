@@ -57,6 +57,16 @@
             ]
         },
         {
+            "type": "CheckBox",
+            "name": "ShowGlobeIcon",
+            "caption": "Weltkugel-Symbol in der Kachel anzeigen"
+        },
+        {
+            "type": "CheckBox",
+            "name": "ShowInfoIcon",
+            "caption": "Info-Symbol in der Kachel anzeigen"
+        },
+        {
             "type": "List",
             "name": "ObjectNames",
             "caption": "Objektnamen",
