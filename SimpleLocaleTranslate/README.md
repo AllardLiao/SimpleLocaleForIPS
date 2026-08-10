@@ -24,8 +24,8 @@ feste Quell-/Zielsprache und die reine Übersetzungsfunktion beschränkt ist:
 Name | Beschreibung
 --- | ---
 Google Cloud Translate API-Key | Ggf. derselbe wie in der echten Simple-Locale-Instanz. Muss zuerst eingetragen und über "Übernehmen" gespeichert werden, sonst bleibt die Zielsprachen-Auswahl ausgegraut (wie im Hauptmodul).
-Quellsprache | Die Sprache, in der der Modulentwickler seine eigenen Texte normalerweise schreibt (Google-Sprachcode, z. B. "de").
-Zielsprache | Dropdown mit allen von Google unterstützten Sprachen (wie im Hauptmodul, per API-Key abgerufen). Für den Test egal welche - Hauptsache verschieden von der Quellsprache.
+Quellsprache | Dropdown wie im Hauptmodul - die Sprache, in der der Modulentwickler seine eigenen Texte normalerweise schreibt. Immer wählbar, unabhängig vom API-Key (Fallback-Liste, solange keine echte Sprachliste geladen wurde).
+Zielsprache | Dropdown mit allen von Google unterstützten Sprachen (wie im Hauptmodul, per API-Key abgerufen) - ausgegraut, bis ein gültiger Key eine echte Liste geladen hat. Für den Test egal welche - Hauptsache verschieden von der Quellsprache.
 
 ```
 string IPSSLT_TranslateText(integer $InstanzID, string $Text);

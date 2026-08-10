@@ -34,6 +34,21 @@ class SimpleLocaleTranslate extends IPSModuleStrict
     // Wie im Hauptmodul: höchstens 1x/Tag automatisch neu von Google abrufen.
     private const availableLanguagesMaxAgeSeconds = 86400;
 
+    // Fallback, solange noch keine Sprachliste von Google geladen wurde (wie im
+    // Hauptmodul) - wichtig nicht nur fürs UI, sondern strukturell: Symcon lehnt
+    // "Übernehmen" mit "Current value ... is not available" ab, sobald der aktuelle
+    // Property-Wert eines Select-Felds nicht unter dessen "options" auftaucht. Ohne
+    // diesen Fallback wären die Standardwerte "de"/"en" beim allerersten Speichern
+    // (bevor je ein gültiger API-Key existierte) nicht in den Optionen enthalten.
+    private const DEFAULT_LANGUAGES = [
+        ['code' => 'de', 'name' => 'Deutsch'],
+        ['code' => 'en', 'name' => 'English'],
+        ['code' => 'fr', 'name' => 'Français'],
+        ['code' => 'es', 'name' => 'Español'],
+        ['code' => 'it', 'name' => 'Italiano'],
+        ['code' => 'nl', 'name' => 'Nederlands'],
+    ];
+
     public function Create(): void
     {
         //Never delete this line!
@@ -66,17 +81,24 @@ class SimpleLocaleTranslate extends IPSModuleStrict
         $form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
 
         foreach ($form['elements'] as &$element) {
-            if (($element['name'] ?? '') !== self::propertyTargetLanguage) {
-                continue;
-            }
+            switch ($element['name'] ?? '') {
+                // Wie propertySourceLanguage im Hauptmodul: immer aktiv, Optionen fallen
+                // auf DEFAULT_LANGUAGES zurück, solange keine echte Liste geladen wurde.
+                case self::propertySourceLanguage:
+                    $element['options'] = $this->BuildLanguageOptions($this->ReadPropertyString(self::propertySourceLanguage));
+                    break;
 
-            if ($this->HasCachedLanguages()) {
-                $element['options'] = $this->BuildLanguageOptions();
-                $element['enabled'] = true;
-            } else {
-                $element['options'] = [['caption' => '', 'value' => '']];
-                $element['enabled'] = false;
-                $element['caption'] .= ' (' . $this->Translate('bitte zuerst gültigen API-Key speichern und Formular neu öffnen') . ')';
+                // Wie die Zielsprachen-Liste im Hauptmodul: ausgegraut mit erklärendem
+                // Hinweis, solange kein gültiger API-Key eine echte Sprachliste geladen
+                // hat - Optionen kommen trotzdem aus BuildLanguageOptions() (inkl.
+                // Fallback), damit der aktuelle Wert immer unter den Optionen bleibt.
+                case self::propertyTargetLanguage:
+                    $element['options'] = $this->BuildLanguageOptions($this->ReadPropertyString(self::propertyTargetLanguage));
+                    $element['enabled'] = $this->HasCachedLanguages();
+                    if (!$element['enabled']) {
+                        $element['caption'] .= ' (' . $this->Translate('bitte zuerst gültigen API-Key speichern und Formular neu öffnen') . ')';
+                    }
+                    break;
             }
         }
         unset($element);
@@ -214,14 +236,22 @@ class SimpleLocaleTranslate extends IPSModuleStrict
         return is_array($cached) && $cached !== [];
     }
 
-    private function BuildLanguageOptions(): array
+    // $CurrentValue: der aktuell konfigurierte Property-Wert (Quell- oder Zielsprache) -
+    // wird bei Bedarf zusätzlich in die Optionsliste aufgenommen, damit "Übernehmen"
+    // nie an "Current value ... is not available" scheitert (siehe DEFAULT_LANGUAGES).
+    private function BuildLanguageOptions(string $CurrentValue = ''): array
     {
         $cached = json_decode($this->ReadAttributeString(self::attributeAvailableLanguagesCache), true);
-        if (!is_array($cached)) {
-            $cached = [];
+        if (!is_array($cached) || $cached === []) {
+            $cached = self::DEFAULT_LANGUAGES;
         }
 
         $options = array_map(fn ($language) => ['caption' => $language['name'], 'value' => $language['code']], $cached);
+
+        if ($CurrentValue !== '' && !in_array($CurrentValue, array_column($options, 'value'), true)) {
+            $options[] = ['caption' => $CurrentValue, 'value' => $CurrentValue];
+        }
+
         usort($options, fn ($a, $b) => strnatcasecmp($a['caption'], $b['caption']));
 
         return $options;

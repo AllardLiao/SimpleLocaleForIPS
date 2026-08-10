@@ -6,9 +6,15 @@
             "caption": "Google Cloud Translate API-Key (ggf. derselbe wie in der echten Simple-Locale-Instanz)"
         },
         {
-            "type": "ValidationTextBox",
+            "type": "Select",
             "name": "SourceLanguage",
-            "caption": "Quellsprache (Google-Sprachcode, z.B. \"de\" - die Sprache, in der der Modulentwickler seine eigenen Texte normalerweise schreibt)"
+            "caption": "Quellsprache - die Sprache, in der der Modulentwickler seine eigenen Texte normalerweise schreibt",
+            "options": [
+                {
+                    "caption": "Deutsch",
+                    "value": "de"
+                }
+            ]
         },
         {
             "type": "Select",
