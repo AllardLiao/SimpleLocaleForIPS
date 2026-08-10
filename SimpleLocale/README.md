@@ -29,6 +29,10 @@ Beschreibung des Moduls.
   erneut eingelesen; dabei werden nur neue Objekte/Sprachen ergänzt, nichts
   wird überschrieben oder gelöscht. Objekte werden über ihre Objekt-ID
   identifiziert - ein gesetzter Ident ist nicht erforderlich.
+* Ein Rescan prüft vor jeder Übersetzung, ob alle Objekte im Root-Baum einen
+  echten Namen haben, und bricht andernfalls komplett ab (siehe
+  [Abschnitt 2](#2-bekannte-einschränkungen)) - verhindert leere
+  Beschriftungen in der Gäste-Visualisierung.
 * Die Instanz selbst bietet eine eigene, schlanke Kachel für die Visualisierung
   (natives HTML-`<select>`-Dropdown statt Symcons Standard-Buttonliste) - dazu
   einfach die Instanz per Drag & Drop in WebFront platzieren, keine zusätzliche
@@ -63,21 +67,33 @@ Beschreibung des Moduls.
 
   Diese beiden Punkte sind auch direkt in der Kachel über das Info-Symbol (ⓘ)
   neben dem Dropdown einsehbar, live in der jeweils aktiven Gast-Sprache.
-* **Die automatische Übersetzung kann Fehler machen.** Google Translate
-  liefert nicht immer eine passende Übersetzung - besonders bei kurzen,
-  einzelnen Wörtern ohne Kontext kann schon die Spracherkennung danebenliegen
-  (real beobachtet: "Haus" wurde als Hmong statt Deutsch erkannt und dadurch
-  komplett falsch übersetzt). **Alle Übersetzungen in "Objektnamen" und
-  "Eigene Texte" daher nach dem ersten Rescan einmal durchsehen** und falsch
-  übersetzte Zellen manuell korrigieren - eigene Korrekturen werden nie
-  automatisch überschrieben (siehe Abschnitt 5). Soll eine bereits gefüllte
-  Zelle stattdessen neu von Google übersetzt werden: Zelleninhalt löschen,
-  "Übernehmen" klicken, dann erneut Rescan ausführen - nur leere Zellen
-  werden dabei (neu) übersetzt.
+* **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
+  Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
+  strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
+  kurzen Basissprachen-Bereinigung ohne feste Quellsprache "Haus" fälschlich
+  als Hmong und lieferte "Trinken" - deshalb wird die Quellsprache inzwischen
+  immer fest vorgegeben, siehe [Abschnitt 7](#7-visualisierung).) **Alle
+  Übersetzungen in "Objektnamen" und "Eigene Texte" daher nach dem ersten
+  Rescan einmal durchsehen** und falsch übersetzte Zellen manuell
+  korrigieren - eigene Korrekturen werden nie automatisch überschrieben
+  (siehe Abschnitt 5). Soll eine bereits gefüllte Zelle stattdessen neu von
+  Google übersetzt werden: Zelleninhalt löschen, "Übernehmen" klicken, dann
+  erneut Rescan ausführen - nur leere Zellen werden dabei (neu) übersetzt.
+* **Alle Objekte im Root-Baum brauchen einen echten Namen.** Ein Rescan
+  bricht komplett ab (keine Übersetzung, kein Speichern), sobald er ein
+  Objekt ohne Namen findet (leerer Name, oder von Symcon selbst vergebener
+  Platzhalter wie "Unnamed Object (ID: ...)"/"Unbenanntes Objekt (ID: ...)").
+  Die betroffenen Objekt-IDs samt Pfad erscheinen dann als Liste im
+  Konfigurationsformular - erst benennen, dann erneut "Baum neu einlesen"
+  klicken.
 
 ### 3. Voraussetzungen
 
 - Symcon ab Version 7.1
+- Alle Objekte innerhalb der konfigurierten Root-Kategorie müssen einen
+  echten Namen haben (kein leerer Name, kein von Symcon selbst vergebener
+  Platzhalter wie "Unnamed Object (ID: ...)") - siehe
+  [Abschnitt 2](#2-bekannte-einschränkungen) für die genaue Prüfung.
 
 ### 4. Software-Installation
 
@@ -94,7 +110,7 @@ __Konfigurationsseite__:
 Name                            | Beschreibung
 -------------------------------- | ------------------
 Root-Kategorie                  | Kategorie im Objektbaum, deren Inhalt (Namen + Werte von String-Variablen) übersetzt wird. Sollte nur die Gäste-Sichtbereich-Kacheln enthalten, nicht die Admin-Oberfläche.
-Basissprache                    | Sprache, in der die Objektnamen/-werte ursprünglich gepflegt sind (Quellsprache für Google Translate). Erscheint im Gast-Dropdown zusätzlich zu "Original (unbearbeitet)" als eigene Auswahl, siehe [Abschnitt 7](#7-visualisierung).
+Basissprache                    | Sprache, in der die Objektnamen/-werte ursprünglich gepflegt sind. Dient Google Translate als feste Quellsprache für alle Zielsprachen-Übersetzungen; die Basissprache selbst hat keine eigene Übersetzungsspalte, siehe [Abschnitt 7](#7-visualisierung).
 Google Cloud Translate API-Key  | API-Key für die Cloud Translation API v2. **Muss zuerst eingetragen und über "Übernehmen" gespeichert werden**, bevor irgendetwas anderes funktioniert - insbesondere ist der "Hinzufügen"-Button bei den Zielsprachen bis dahin ausgegraut (nicht versteckt, sondern deaktiviert), da ohne gültigen Key keine echte Sprachliste von Google geladen werden kann.
 Zielsprachen                    | Sprachen, in die übersetzt werden soll. Auswahl-Optionen kommen von Google, sobald ein gültiger API-Key gespeichert ist. Wichtig: Nach dem Klick auf "Sprachliste aktualisieren" die Instanzkonfiguration einmal schließen und neu öffnen, bevor Häkchen gesetzt werden - sonst kann die Konsole falsche Sprachen speichern.
 Automatischer Rescan (Minuten)  | Intervall für automatisches Neu-Einlesen des Baums, 0 = nur manuell über den Button.
@@ -121,17 +137,17 @@ aktuell aktive Sprache wird als Instanz-Property gespeichert (kein
 Symcon-Variablenprofil - das wäre global über alle Instanzen der Installation
 hinweg geteilt und würde sich bei mehreren Instanzen gegenseitig überschreiben).
 
-Das Dropdown bietet immer folgende Sprachen zur Auswahl: die Basissprache,
-alle konfigurierten Zielsprachen, sowie zusätzlich "Original (unbearbeitet)".
-Die Basissprache erscheint dabei bewusst zweimal in leicht unterschiedlicher
-Form: als eigener Dropdown-Eintrag zeigt sie die von Google einmal
-"durchgereichte" (dabei ggf. leicht bereinigte) Basissprachversion, während
-"Original (unbearbeitet)" den rohen, unangetasteten Text liefert, exakt so
-wie er im Objektbaum vorgefunden wurde (Tippfehler inklusive). Diese
-Dopplung ist Absicht: sie gibt Gästen sowohl eine "aufgeräumte" Standardsicht
-als auch eine garantiert unverfälschte Rückfalloption, ohne dass eine
-Google-Übersetzung (die ja auch mal danebenliegen kann, siehe
-[Abschnitt 2](#2-bekannte-einschränkungen)) dazwischenkommt.
+Das Dropdown bietet immer folgende Sprachen zur Auswahl: alle konfigurierten
+Zielsprachen, sowie zusätzlich "Original (unbearbeitet)". Die Basissprache
+erscheint dabei bewusst **nicht** als eigener, zusätzlicher Dropdown-Eintrag:
+Google Cloud Translate lehnt eine Übersetzung von einer Sprache in sich
+selbst grundsätzlich ab (HTTP 400 "Bad language pair"), es gibt für die
+Basissprache also gar keine eigene, separat übersetzte Spalte - ihr Inhalt
+wäre ohnehin identisch mit "Original (unbearbeitet)" (dem rohen,
+unangetasteten Text, exakt so wie er im Objektbaum vorgefunden wurde,
+Tippfehler inklusive). Wählt ein Gast "Original", oder ist die Basissprache
+selbst die aktuell aktive Sprache, wird immer direkt dieser Rohtext
+angezeigt.
 
 Ein Info-Symbol (ⓘ) neben dem Dropdown öffnet auf Klick einen nativen
 Browser-Dialog (`alert()`) mit den in [Abschnitt 2](#2-bekannte-einschränkungen)

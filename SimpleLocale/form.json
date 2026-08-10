@@ -6,6 +6,26 @@
             "caption": "Root-Kategorie der Visualisierung"
         },
         {
+            "type": "Label",
+            "name": "UnnamedObjectsLabel",
+            "caption": "Folgende Objekte im Root-Baum haben keinen Namen. Bitte zuerst benennen, dann erneut \"Baum neu einlesen\" klicken - erst wenn alle Objekte einen Namen haben, werden Übersetzungen erzeugt.",
+            "visible": false
+        },
+        {
+            "type": "List",
+            "name": "UnnamedObjects",
+            "caption": "Unbenannte Objekte",
+            "add": false,
+            "delete": false,
+            "rowCount": 5,
+            "visible": false,
+            "columns": [
+                { "caption": "Objekt-ID", "name": "ObjectID", "width": "100px" },
+                { "caption": "Pfad", "name": "Path", "width": "300px" }
+            ],
+            "values": []
+        },
+        {
             "type": "Select",
             "name": "SourceLanguage",
             "caption": "Basissprache",
@@ -141,6 +161,11 @@
             "code": 201,
             "icon": "error",
             "caption": "Root-Kategorie nicht gesetzt"
+        },
+        {
+            "code": 202,
+            "icon": "error",
+            "caption": "Unbenannte Objekte im Root-Baum gefunden - siehe Liste im Formular"
         },
         {
             "code": 203,

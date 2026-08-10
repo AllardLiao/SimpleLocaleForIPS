@@ -86,6 +86,7 @@ class SimpleLocale extends IPSModuleStrict
         $this->RegisterAttributeString(self::attributeAvailableLanguagesCache, '[]');
         $this->RegisterAttributeInteger(self::attributeAvailableLanguagesFetchedAt, 0);
         $this->RegisterAttributeString(self::attributeGuestLanguageNamesCache, '{}');
+        $this->RegisterAttributeString(self::attributeUnnamedObjects, '[]');
 
         $this->SetVisualizationType(1);
 
@@ -165,6 +166,10 @@ class SimpleLocale extends IPSModuleStrict
         $targetLanguages = $this->GetSelectedTargetLanguages();
         $languageOptions = $this->BuildLanguageOptions();
         $targetLanguageOptions = $this->BuildTargetLanguageOptions($sourceLanguage);
+        $unnamedObjects = json_decode($this->ReadAttributeString(self::attributeUnnamedObjects), true);
+        if (!is_array($unnamedObjects)) {
+            $unnamedObjects = [];
+        }
 
         foreach ($form['elements'] as &$element) {
             switch ($element['name'] ?? '') {
@@ -205,6 +210,14 @@ class SimpleLocale extends IPSModuleStrict
                 case self::propertyCurrentLanguage:
                     $element['options'] = $this->BuildCurrentLanguageOptions();
                     break;
+
+                case 'UnnamedObjectsLabel':
+                case 'UnnamedObjects':
+                    $element['visible'] = $unnamedObjects !== [];
+                    if (($element['name'] ?? '') === 'UnnamedObjects') {
+                        $element['values'] = $unnamedObjects;
+                    }
+                    break;
             }
         }
         unset($element);
@@ -226,7 +239,7 @@ class SimpleLocale extends IPSModuleStrict
                     $row,
                     $currentLanguage,
                     self::fieldTextPrefix . $currentLanguage,
-                    self::fieldTextPrefix . $sourceLanguage,
+                    $sourceLanguage,
                     self::langOriginalImportText
                 );
             }
@@ -267,7 +280,7 @@ class SimpleLocale extends IPSModuleStrict
                     $row,
                     $Language,
                     self::fieldNamePrefix . $Language,
-                    self::fieldNamePrefix . $sourceLanguage,
+                    $sourceLanguage,
                     self::fieldOriginalImportName
                 ));
             }
@@ -283,28 +296,30 @@ class SimpleLocale extends IPSModuleStrict
                 $row,
                 $Language,
                 self::fieldTextPrefix . $Language,
-                self::fieldTextPrefix . $sourceLanguage,
+                $sourceLanguage,
                 self::langOriginalImportText
             ));
         }
     }
 
-    // Fallback-Kette: gewünschte Sprache -> Quellsprache (bereinigt) -> Rohtext ($RawField)
-    // $SelectedLanguage ist der vom Gast tatsächlich gewählte Sprachcode
-    // (unpräfixiert, z.B. "en" oder die Pseudo-Sprache "ORIGINAL_IMPORT"),
-    // $LanguageField/$SourceField die (ggf. präfixierten) Property-Feldnamen dazu.
-    private function ResolveRowValue(array $Row, string $SelectedLanguage, string $LanguageField, string $SourceField, string $RawField): string
+    // Fallback-Kette: gewünschte Sprache -> Rohtext ($RawField). $SelectedLanguage ist
+    // der vom Gast tatsächlich gewählte Sprachcode (unpräfixiert, z.B. "en" oder die
+    // Pseudo-Sprache "ORIGINAL_IMPORT"), $LanguageField der (ggf. präfixierte)
+    // Property-Feldname dazu. $SourceLanguage dient hier nur dem Vergleich, nicht als
+    // Feldname: es gibt keine separate "bereinigte" Basissprachspalte (mehr) - Google
+    // lehnt eine Übersetzung von einer Sprache in sich selbst ohnehin ab (siehe
+    // FillMissingTranslations) - daher liefert die Basissprache direkt den Rohtext,
+    // genau wie "Original".
+    private function ResolveRowValue(array $Row, string $SelectedLanguage, string $LanguageField, string $SourceLanguage, string $RawField): string
     {
-        // "Original" setzt bewusst auf den unbearbeiteten Rohtext zurück (Tippfehler
-        // inklusive) - eine Art Werkseinstellung, unabhängig von allen Übersetzungen.
-        if ($SelectedLanguage === self::langOriginalImport) {
+        // "Original" und die Basissprache setzen beide auf den unbearbeiteten Rohtext
+        // zurück (Tippfehler inklusive) - eine Art Werkseinstellung, unabhängig von
+        // allen Übersetzungen.
+        if ($SelectedLanguage === self::langOriginalImport || $SelectedLanguage === $SourceLanguage) {
             return $Row[$RawField] ?? '';
         }
         if (($Row[$LanguageField] ?? '') !== '') {
             return $Row[$LanguageField];
-        }
-        if (($Row[$SourceField] ?? '') !== '') {
-            return $Row[$SourceField];
         }
 
         return $Row[$RawField] ?? '';
@@ -321,6 +336,26 @@ class SimpleLocale extends IPSModuleStrict
         $scannedNames = [];
         $scannedTexts = [];
         $this->WalkTree($rootID, $scannedNames, $scannedTexts, []);
+
+        // Vorab-Check, bevor überhaupt übersetzt wird: ein Objekt ohne echten Namen
+        // lässt sich nicht sinnvoll übersetzen und würde als Platzhalter-Text in der
+        // Gäste-Visualisierung landen. Bricht den kompletten Rescan ab (kein Merge,
+        // keine Übersetzung, kein Speichern), bis der Admin alle betroffenen Objekte
+        // benannt hat.
+        $unnamedObjects = [];
+        foreach ($scannedNames as $objectID => $row) {
+            if ($this->IsUnnamedObject($objectID, $row[self::langOriginalImport])) {
+                $unnamedObjects[] = ['ObjectID' => $objectID, 'Path' => $row['Path']];
+            }
+        }
+        $this->WriteAttributeString(self::attributeUnnamedObjects, json_encode($unnamedObjects));
+
+        if ($unnamedObjects !== []) {
+            $this->SetStatus(self::STATUS_UNNAMED_OBJECTS);
+            $this->ReloadForm();
+
+            return;
+        }
 
         $objectNames = $this->MergeRows($this->DecodeRows(self::propertyObjectNames), $scannedNames);
         $objectTexts = $this->MergeRows($this->DecodeRows(self::propertyObjectTexts), $scannedTexts);
@@ -345,6 +380,19 @@ class SimpleLocale extends IPSModuleStrict
         // sonst noch den alten (leeren) Stand im Speicher und würde ihn bei "Übernehmen"
         // über die gerade gespeicherten Scan-Ergebnisse zurückschreiben.
         $this->ReloadForm();
+    }
+
+    // Symcon lässt einen wirklich leeren Namen nicht zu - IPS_SetName('') (bzw. ein
+    // Objekt, dem nie explizit ein Name gegeben wurde) erhält stattdessen automatisch
+    // den Kernel-Platzhalter "Unnamed Object (ID: <id>)" (lokalisiert je nach
+    // Konsolensprache, z.B. "Unbenanntes Objekt (ID: <id>)" auf Deutsch). Ein reiner
+    // Leerstring-Vergleich würde also nie greifen. Das "(ID: <id>)"-Suffix mit der
+    // exakt passenden Objekt-ID ist dagegen unabhängig von der Konsolensprache
+    // erkennbar - dass ein Objekt zufällig genau so (mit seiner eigenen ID) manuell
+    // benannt wurde, ist praktisch ausgeschlossen.
+    private function IsUnnamedObject(int $ObjectID, string $Name): bool
+    {
+        return $Name === '' || preg_match('/\(ID:\s*' . $ObjectID . '\)\s*$/', $Name) === 1;
     }
 
     // $ParentPath enthält die Namen der Vorfahren ab der Root-Kategorie (ohne den
@@ -444,14 +492,14 @@ class SimpleLocale extends IPSModuleStrict
     // rohen Ausgangstext ('raw', z.B. ORIGINAL_IMPORT) und ein Präfix für die daraus
     // abgeleiteten Sprachspalten ('prefix', z.B. "Text_" -> "Text_de", "Text_en", ...;
     // leeres Präfix für Objektnamen, die nur eine Feldgruppe haben).
-    // Ablauf je Gruppe: (1) roh -> Quellsprache, jetzt MIT erzwungener Quellsprache.
-    // Früher ohne (damit Google die tatsächliche Sprache selbst erkennt und nebenbei
-    // Tippfehler im rohen Originaltext poliert) - das ist aber bei kurzen, einzelnen
-    // Wörtern (z.B. "Haus") real schiefgegangen: Google erkannte die Sprache
-    // fälschlich als Hmong ("hmn") und lieferte eine völlig unpassende "Übersetzung"
-    // ("Trinken") statt einer Tippfehlerkorrektur. Das Risiko einer kompletten
-    // Fehlerkennung wiegt schwerer als der Nutzen der Tippfehlerglättung.
-    // (2) Quellsprache -> jede ausgewählte Zielsprache, ebenfalls mit fester Quellsprache.
+    // Übersetzt direkt von roh in jede ausgewählte Zielsprache, mit fester Quellsprache.
+    // Es gibt bewusst KEINE separate "bereinigte" Basissprachspalte (mehr): Google
+    // lehnt eine Übersetzung von einer Sprache in sich selbst komplett ab (HTTP 400
+    // "Bad language pair"), und der frühere Versuch, das über eine offene
+    // Spracherkennung als Tippfehlerkorrektur zu nutzen, ging bei kurzen Wörtern (z.B.
+    // "Haus") real schief (von Google fälschlich als Hmong erkannt und dadurch völlig
+    // falsch "übersetzt"). Die Basissprache liefert stattdessen direkt den Rohtext
+    // (siehe ResolveRowValue) - identisch zu "Original".
     // $FieldGroups[]['capitalizeFirst']: Google großschreibt den ersten Buchstaben bei
     // kurzen Einzelwörtern/Titeln (im Gegensatz zu vollständigen Sätzen) nicht
     // zuverlässig - für Namen/Titel wird das Ergebnis daher nachträglich korrigiert.
@@ -461,16 +509,13 @@ class SimpleLocale extends IPSModuleStrict
     {
         foreach ($FieldGroups as $group) {
             $rawField = $group['raw'];
-            $sourceField = $group['prefix'] . $SourceLanguage;
             $capitalizeFirst = $group['capitalizeFirst'] ?? false;
-
-            $Rows = $this->FillLanguageColumn($Rows, $rawField, $sourceField, $SourceLanguage, $SourceLanguage, $capitalizeFirst);
 
             foreach ($TargetLanguages as $language) {
                 if ($language === $SourceLanguage) {
                     continue;
                 }
-                $Rows = $this->FillLanguageColumn($Rows, $sourceField, $group['prefix'] . $language, $SourceLanguage, $language, $capitalizeFirst);
+                $Rows = $this->FillLanguageColumn($Rows, $rawField, $group['prefix'] . $language, $SourceLanguage, $language, $capitalizeFirst);
             }
         }
 
@@ -538,6 +583,15 @@ class SimpleLocale extends IPSModuleStrict
     {
         if ($Texts === []) {
             return [];
+        }
+
+        // Google lehnt identische Quell-/Zielsprache komplett ab (HTTP 400 "Bad
+        // language pair: de|de") - der frühere Versuch, das als Rechtschreib-/
+        // Tippfehlerkorrektur zu nutzen, scheitert also schon an der API selbst, nicht
+        // erst an der (in einem früheren Fix bereits verworfenen) Fehlerkennungsgefahr.
+        // Es gibt in diesem Fall ohnehin nichts zu übersetzen - Text unverändert zurück.
+        if ($Source === $Target) {
+            return $Texts;
         }
 
         $apiKey = $this->ReadPropertyString(self::propertyGoogleTranslateAPIKey);
@@ -764,15 +818,14 @@ class SimpleLocale extends IPSModuleStrict
         return $response;
     }
 
-    // Basissprache + gewählte Zielsprachen + die "Original"-Werkseinstellung, in
-    // dieser Reihenfolge - gemeinsam genutzt von der Kachel und vom Konfigurationsformular.
+    // Gewählte Zielsprachen + die "Original"-Werkseinstellung, in dieser Reihenfolge -
+    // gemeinsam genutzt von der Kachel und vom Konfigurationsformular. Die Basissprache
+    // erscheint bewusst NICHT zusätzlich als eigener Eintrag: ihr Inhalt ist ohnehin
+    // identisch mit "Original" (siehe ResolveRowValue), ein separater Eintrag wäre
+    // nur eine verwirrende Dopplung im Dropdown.
     private function GetSelectableLanguageCodes(): array
     {
-        $languages = array_merge(
-            [$this->ReadPropertyString(self::propertySourceLanguage)],
-            $this->GetSelectedTargetLanguages()
-        );
-        $languages = array_unique($languages);
+        $languages = $this->GetSelectedTargetLanguages();
         $languages[] = self::langOriginalImport;
 
         return $languages;
@@ -956,13 +1009,11 @@ class SimpleLocale extends IPSModuleStrict
     }
 
     // Baut die Spalten für die "ObjectNames"/"ObjectTexts"-Listen dynamisch anhand
-    // der Quell-/Zielsprachen zusammen (Symcon-Formulare kennen keine Spalten mit
+    // der Ziel-Sprachen zusammen (Symcon-Formulare kennen keine Spalten mit
     // dynamischer Anzahl, daher wird das Formular bei jedem Öffnen neu erzeugt).
     // "Eigene Texte" bekommt zusätzlich eine Name-Kontextspalte (welche Kachel ist
-    // das?) und die editierbare Quellsprachen-Spalte (Basis für die Zielsprachen,
-    // da Inhalte oft länger sind und von der Google-Bereinigung profitieren).
-    // "Objektnamen" verzichtet auf beides - Original-Import dient dort direkt als
-    // Quellsprachen-Basis.
+    // das?). Es gibt bewusst KEINE eigene Basissprachen-Spalte (mehr) - deren Inhalt
+    // wäre ohnehin identisch mit "Original-Import" (siehe ResolveRowValue).
     // Wichtig: Spalten ohne "edit"-Definition werden von Symcon beim normalen
     // "Übernehmen" NICHT als Property gespeichert, außer "save" ist explizit true
     // (nur Rescan schreibt direkt per IPS_SetProperty und umgeht das). Ohne "save"
@@ -1011,26 +1062,18 @@ class SimpleLocale extends IPSModuleStrict
         return $columns;
     }
 
-    // Baut die editierbaren Sprachspalten für eine Feldgruppe: erst die (bereinigte,
-    // aus Original-Import übersetzte) Quellsprache, dann jede ausgewählte Zielsprache.
-    // $Label unterscheidet bei "Eigene Texte" zwischen Name- und Text-Spalten
-    // (leer für Objektnamen, die nur eine Feldgruppe haben).
+    // Baut die editierbaren Sprachspalten für eine Feldgruppe: eine Spalte je
+    // ausgewählter Zielsprache (direkt aus Original-Import übersetzt, siehe
+    // FillMissingTranslations - keine eigene Basissprachen-Spalte). $Label
+    // unterscheidet bei "Eigene Texte" zwischen Name- und Text-Spalten (leer für
+    // Objektnamen, die nur eine Feldgruppe haben).
     private function BuildLanguageColumnSet(string $Prefix, string $Label, string $SourceLanguage, array $TargetLanguages): array
     {
         $withLabel = function (string $Text) use ($Label): string {
             return $Label !== '' ? sprintf('%s %s', $Label, $Text) : $Text;
         };
 
-        $columns = [
-            [
-                'caption' => $withLabel(sprintf('%s (%s)', $this->GetLanguageDisplayName($SourceLanguage), $this->Translate('übersetzt'))),
-                'name'    => $Prefix . $SourceLanguage,
-                'width'   => '200px',
-                'add'     => '',
-                'edit'    => ['type' => 'ValidationTextBox'],
-                'save'    => true,
-            ],
-        ];
+        $columns = [];
 
         foreach ($TargetLanguages as $language) {
             if ($language === $SourceLanguage) {

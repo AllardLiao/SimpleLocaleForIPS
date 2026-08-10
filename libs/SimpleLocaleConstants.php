@@ -29,6 +29,12 @@ trait SimpleLocaleConstants
     private const attributeAvailableLanguagesCache = 'AvailableLanguagesCache';
     private const attributeAvailableLanguagesFetchedAt = 'AvailableLanguagesFetchedAt';
 
+    // Objekte ohne Namen, die beim letzten Rescan im Root-Baum gefunden wurden (JSON-
+    // Array aus ObjectID+Path) - ein Rescan bricht ab, sobald welche existieren, bevor
+    // irgendetwas übersetzt wird (leerer Name lässt sich sonst nicht sinnvoll übersetzen
+    // und würde als leere Beschriftung in der Gäste-Visualisierung landen).
+    private const attributeUnnamedObjects = 'UnnamedObjects';
+
     // Sprachnamen (+ das Label der "Original"-Pseudo-Sprache) live in die gerade
     // aktive Gast-Sprache übersetzt - fuer die Kachel-Visualisierung (GetVisualizationTile),
     // getrennt vom AvailableLanguagesCache oben, der an der Admin-Konsolensprache haengt.
@@ -65,6 +71,7 @@ trait SimpleLocaleConstants
 
     // Statuscodes
     private const STATUS_ROOT_CATEGORY_MISSING = 201;
+    private const STATUS_UNNAMED_OBJECTS = 202;
     private const STATUS_TRANSLATE_ERROR = 203;
 }
 

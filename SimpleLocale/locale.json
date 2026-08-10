@@ -34,7 +34,10 @@
             "Original (unbearbeitet)": "Original (unedited)",
             "Aktuell aktive Sprache": "Currently active language",
             "Weltkugel-Symbol in der Kachel anzeigen": "Show globe icon in the tile",
-            "Info-Symbol in der Kachel anzeigen": "Show info icon in the tile"
+            "Info-Symbol in der Kachel anzeigen": "Show info icon in the tile",
+            "Folgende Objekte im Root-Baum haben keinen Namen. Bitte zuerst benennen, dann erneut \"Baum neu einlesen\" klicken - erst wenn alle Objekte einen Namen haben, werden Übersetzungen erzeugt.": "The following objects in the root tree have no name. Please name them first, then click \"Rescan tree\" again - translations are only generated once every object has a name.",
+            "Unbenannte Objekte": "Unnamed objects",
+            "Unbenannte Objekte im Root-Baum gefunden - siehe Liste im Formular": "Unnamed objects found in the root tree - see list in the form"
         },
         "es": {
             "Sprache": "Idioma",
@@ -70,7 +73,10 @@
             "Original (unbearbeitet)": "Original (sin editar)",
             "Aktuell aktive Sprache": "Idioma actualmente activo",
             "Weltkugel-Symbol in der Kachel anzeigen": "Mostrar icono de globo en el mosaico",
-            "Info-Symbol in der Kachel anzeigen": "Mostrar icono de información en el mosaico"
+            "Info-Symbol in der Kachel anzeigen": "Mostrar icono de información en el mosaico",
+            "Folgende Objekte im Root-Baum haben keinen Namen. Bitte zuerst benennen, dann erneut \"Baum neu einlesen\" klicken - erst wenn alle Objekte einen Namen haben, werden Übersetzungen erzeugt.": "Los siguientes objetos en el árbol raíz no tienen nombre. Asígneles un nombre primero y vuelva a hacer clic en \"Releer árbol\": las traducciones solo se generan cuando todos los objetos tienen un nombre.",
+            "Unbenannte Objekte": "Objetos sin nombre",
+            "Unbenannte Objekte im Root-Baum gefunden - siehe Liste im Formular": "Se encontraron objetos sin nombre en el árbol raíz - vea la lista en el formulario"
         },
         "it": {
             "Sprache": "Lingua",
@@ -106,7 +112,10 @@
             "Original (unbearbeitet)": "Originale (non modificato)",
             "Aktuell aktive Sprache": "Lingua attualmente attiva",
             "Weltkugel-Symbol in der Kachel anzeigen": "Mostra l'icona del globo nel riquadro",
-            "Info-Symbol in der Kachel anzeigen": "Mostra l'icona informativa nel riquadro"
+            "Info-Symbol in der Kachel anzeigen": "Mostra l'icona informativa nel riquadro",
+            "Folgende Objekte im Root-Baum haben keinen Namen. Bitte zuerst benennen, dann erneut \"Baum neu einlesen\" klicken - erst wenn alle Objekte einen Namen haben, werden Übersetzungen erzeugt.": "I seguenti oggetti nell'albero radice non hanno un nome. Assegnare prima un nome, poi fare nuovamente clic su \"Rileggi albero\" - le traduzioni vengono generate solo quando tutti gli oggetti hanno un nome.",
+            "Unbenannte Objekte": "Oggetti senza nome",
+            "Unbenannte Objekte im Root-Baum gefunden - siehe Liste im Formular": "Trovati oggetti senza nome nell'albero radice - vedere l'elenco nel modulo"
         },
         "fr": {
             "Sprache": "Langue",
@@ -142,7 +151,10 @@
             "Original (unbearbeitet)": "Original (non modifié)",
             "Aktuell aktive Sprache": "Langue actuellement active",
             "Weltkugel-Symbol in der Kachel anzeigen": "Afficher l'icône du globe dans la tuile",
-            "Info-Symbol in der Kachel anzeigen": "Afficher l'icône d'information dans la tuile"
+            "Info-Symbol in der Kachel anzeigen": "Afficher l'icône d'information dans la tuile",
+            "Folgende Objekte im Root-Baum haben keinen Namen. Bitte zuerst benennen, dann erneut \"Baum neu einlesen\" klicken - erst wenn alle Objekte einen Namen haben, werden Übersetzungen erzeugt.": "Les objets suivants dans l'arborescence racine n'ont pas de nom. Veuillez d'abord les nommer, puis cliquer à nouveau sur \"Réanalyser l'arborescence\" - les traductions ne sont générées que lorsque tous les objets ont un nom.",
+            "Unbenannte Objekte": "Objets sans nom",
+            "Unbenannte Objekte im Root-Baum gefunden - siehe Liste im Formular": "Objets sans nom trouvés dans l'arborescence racine - voir la liste dans le formulaire"
         }
     }
 }
