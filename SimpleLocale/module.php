@@ -21,6 +21,14 @@ class SimpleLocale extends IPSModuleStrict
         ['code' => 'nl', 'name' => 'Nederlands'],
     ];
 
+    // Hinweistexte fürs Info-Symbol neben dem Dropdown - live in die aktive
+    // Gast-Sprache übersetzt (siehe EnsureGuestLanguageNamesFresh), damit auch
+    // dieser Text nicht die Konsolensprache des Admins mit der Gast-Sprache mischt.
+    private const INFO_LIMITATION_TEXTS = [
+        'Die Übersetzung gilt für alle Besucher dieser Visualisierung gleichzeitig, nicht getrennt je Person - zwei Gäste können hier nicht zeitgleich unterschiedliche Sprachen sehen.',
+        'Dynamisch erzeugte Inhalte (z. B. von anderen Modulen oder Skripten) können von diesen in ihrer eigenen Sprache überschrieben werden, sobald sie sich im jeweiligen Aktualisierungsintervall des Moduls/Skripts erneut selbst schreiben.',
+    ];
+
     // Rein dekorativ fürs Gast-Dropdown (GetVisualizationTile) - nicht erschöpfend,
     // unbekannte Sprachcodes bekommen einfach keine Flagge vorangestellt.
     private const LANGUAGE_FLAGS = [
@@ -779,10 +787,34 @@ class SimpleLocale extends IPSModuleStrict
             $optionsHtml .= "<option value=\"{$value}\"{$selected}>{$label}</option>";
         }
 
-        return '<span class="ipssl-globe" aria-hidden="true">🌐</span>'
+        $infoIconHtml = '<span class="ipssl-info-icon" aria-hidden="true"'
+            . ' onclick="var p=this.parentElement.nextElementSibling;'
+            . 'p.style.display=(p.style.display===\'block\'?\'none\':\'block\');">ⓘ</span>';
+
+        return '<div class="ipssl-select-row">'
+            . '<span class="ipssl-globe" aria-hidden="true">🌐</span>'
             . '<select onchange="requestAction(\'' . self::identLanguage . '\', this.value);">'
             . $optionsHtml
-            . '</select>';
+            . '</select>'
+            . $infoIconHtml
+            . '</div>'
+            . $this->BuildInfoPopupHtml($guestCache);
+    }
+
+    // Klappt im normalen Textfluss unterhalb der Auswahlzeile auf (kein Overlay -
+    // siehe Kommentar in module.html zum Titel/Vergrößern-Symbol-Problem). Text live
+    // in die aktuell aktive Gast-Sprache übersetzt, damit auch dieser Hinweis nicht
+    // die Admin-Konsolensprache mit der Gast-Sprache mischt.
+    private function BuildInfoPopupHtml(array $GuestCache): string
+    {
+        $texts = $GuestCache['infoTexts'] ?? self::INFO_LIMITATION_TEXTS;
+
+        $itemsHtml = '';
+        foreach ($texts as $text) {
+            $itemsHtml .= '<li>' . htmlspecialchars($text, ENT_QUOTES, 'UTF-8') . '</li>';
+        }
+
+        return '<div class="ipssl-info-popup" style="display:none;"><ul>' . $itemsHtml . '</ul></div>';
     }
 
     // "Name - code" mit vorangestellter Flagge (z.B. "🇬🇧 English - en"), Name live
@@ -845,17 +877,27 @@ class SimpleLocale extends IPSModuleStrict
 
         $names = $this->FetchLanguageNames($language) ?? ($cache['names'] ?? []);
 
+        // "Original (unbearbeitet)" + die Info-Hinweistexte in einem gemeinsamen
+        // Aufruf übersetzen (statt je einem eigenen) - alles feste, kurze Texte,
+        // die ohnehin nur bei Sprachwechsel/Cache-Ablauf einmal aktualisiert werden.
+        $ownTexts = array_merge(['Original (unbearbeitet)'], self::INFO_LIMITATION_TEXTS);
         if ($language === 'de') {
-            $originalLabel = 'Original (unbearbeitet)';
+            $translatedOwnTexts = $ownTexts;
         } else {
-            $originalLabel = $this->TranslateBatch(['Original (unbearbeitet)'], 'de', $language)[0]
-                ?? ($cache['originalLabel'] ?? 'Original');
+            $translatedOwnTexts = $this->TranslateBatch($ownTexts, 'de', $language);
         }
+
+        $originalLabel = $translatedOwnTexts[0] ?? ($cache['originalLabel'] ?? 'Original');
+        $infoTexts = [
+            $translatedOwnTexts[1] ?? self::INFO_LIMITATION_TEXTS[0],
+            $translatedOwnTexts[2] ?? self::INFO_LIMITATION_TEXTS[1],
+        ];
 
         $cache = [
             'language'      => $language,
             'names'         => $names,
             'originalLabel' => $originalLabel,
+            'infoTexts'     => $infoTexts,
             'fetchedAt'     => time(),
         ];
 

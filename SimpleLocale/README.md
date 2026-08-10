@@ -33,7 +33,12 @@ Beschreibung des Moduls.
   einfach die Instanz per Drag & Drop in WebFront platzieren, keine zusätzliche
   Variable nötig. Die Sprachnamen im Dropdown (inkl. kleiner Flagge und Google-
   Sprachcode, z. B. "🇬🇧 English - en") werden live in die gerade aktive Sprache
-  übersetzt, damit dort nie mehrere Sprachen gemischt angezeigt werden.
+  übersetzt, damit dort nie mehrere Sprachen gemischt angezeigt werden. Ein
+  Info-Symbol (ⓘ) neben dem Dropdown erklärt Gästen auf Klick (ebenfalls live
+  übersetzt) die zwei wichtigsten Einschränkungen: die Sprache gilt für alle
+  Besucher gleichzeitig (nicht je Person), und dynamisch erzeugte Inhalte
+  anderer Module/Skripte können in ihrer eigenen Sprache wieder auftauchen,
+  sobald diese sich selbst aktualisieren.
 * Die aktuell aktive Sprache ist eine reine Instanz-Property (kein Symcon-
   Variablenprofil, das wäre global über alle Instanzen hinweg geteilt) - sie
   ist direkt im Konfigurationsformular sicht- und änderbar. Achtung: Die

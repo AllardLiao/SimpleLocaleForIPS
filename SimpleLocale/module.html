@@ -9,13 +9,13 @@
            überschreiben nur bei echtem Bedarf, dann bewusst nur links/rechts (siehe
            offizielles Symcon-Beispielmodul "DuckCounters"), nie oben/unten. */
 
-        .ipssl-select-wrapper {
+        .ipssl-select-row {
             display: flex;
             align-items: center;
             gap: 10px;
         }
 
-        .ipssl-select-wrapper .ipssl-globe {
+        .ipssl-select-row .ipssl-globe {
             flex: none;
             display: flex;
             align-items: center;
@@ -27,7 +27,7 @@
             font-size: 18px;
         }
 
-        .ipssl-select-wrapper select {
+        .ipssl-select-row select {
             flex: 1;
             min-width: 0;
             padding: 8px 10px;
@@ -40,14 +40,55 @@
             cursor: pointer;
         }
 
-        .ipssl-select-wrapper select:focus {
+        .ipssl-select-row select:focus {
             outline: none;
             border-color: rgba(0, 0, 0, 0.35);
+        }
+
+        .ipssl-select-row .ipssl-info-icon {
+            flex: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            font-size: 17px;
+            color: rgba(0, 0, 0, 0.45);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .ipssl-select-row .ipssl-info-icon:hover {
+            background: rgba(0, 0, 0, 0.06);
+            color: rgba(0, 0, 0, 0.7);
+        }
+
+        /* Bewusst kein absolut positioniertes Popup/Tooltip: klappt stattdessen im
+           normalen Textfluss unterhalb der Auswahlzeile auf - ein Overlay könnte
+           je nach Einbettung (siehe Titel/Vergrößern-Symbol-Problem) abgeschnitten
+           werden, das hier ist unabhängig von der Kachelgröße immer vollständig sichtbar. */
+        .ipssl-info-popup {
+            margin-top: 8px;
+            padding: 8px 10px;
+            font-size: 13px;
+            line-height: 1.4;
+            background: rgba(0, 0, 0, 0.04);
+            border-radius: 8px;
+        }
+
+        .ipssl-info-popup ul {
+            margin: 0;
+            padding-left: 18px;
+        }
+
+        .ipssl-info-popup li + li {
+            margin-top: 4px;
         }
     </style>
 </head>
 <body>
-    <div id="<!--WRAPPER_ID-->" class="ipssl-select-wrapper"><!--LANGUAGE_SELECT--></div>
+    <div id="<!--WRAPPER_ID-->"><!--LANGUAGE_SELECT--></div>
 
     <script>
         function handleMessage(data) {
