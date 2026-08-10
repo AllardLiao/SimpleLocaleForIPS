@@ -34,12 +34,6 @@ Folgende Module beinhaltet das Simple Locale for IP Symcon Repository:
 
 - __Simple Locale__ ([Dokumentation](SimpleLocale))  
 	Kurze Beschreibung des Moduls.
-- __Simple Locale Translate__ ([Dokumentation](SimpleLocaleTranslate))  
-	Schlankes Schwester-Modul: bietet nur `IPSSLT_TranslateText()` (eine feste
-	Zielsprache, kein Objektbaum-Scan, keine Kachel) - Testhilfe für
-	Modulentwickler, die ihre eigene Integration der geplanten
-	Simple-Locale-Übersetzungsfunktion schon während der Entwicklung gegen die
-	echte Google-API prüfen wollen.
 
 ## Konfiguration
 
