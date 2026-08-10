@@ -29,6 +29,10 @@ class SimpleLocale extends IPSModuleStrict
         'Inhalte, die von anderen Modulen oder Skripten laufend automatisch aktualisiert werden (z. B. Messwerte oder Wetterdaten), erscheinen nach jeder Aktualisierung wieder in ihrer ursprünglichen Sprache.',
     ];
 
+    // Überschrift für den Info-Alert - alert() kennt keinen eigenen Titel-Parameter,
+    // daher als erste Zeile des Texts selbst (siehe BuildInfoAlertJs).
+    private const INFO_HEADING_TEXT = 'Hinweise';
+
     // Rein dekorativ fürs Gast-Dropdown (GetVisualizationTile) - nicht erschöpfend,
     // unbekannte Sprachcodes bekommen einfach keine Flagge vorangestellt.
     private const LANGUAGE_FLAGS = [
@@ -488,7 +492,21 @@ class SimpleLocale extends IPSModuleStrict
             return $Rows;
         }
 
-        $translated = $this->TranslateBatch(array_values($pending), $ForceSource, $TargetLanguageCode);
+        $debugContext = sprintf('%s->%s (target=%s)', $FromField, $ToField, $TargetLanguageCode);
+
+        // Debug: welche ObjectID/welcher Ausgangstext liegt an welcher Batch-Position -
+        // zum Abgleich mit den GoogleTranslate_Request/_Response-Logs bei Verdacht auf
+        // einen Zeilen-Verrutscher (Position hier entspricht der Position in q[], solange
+        // der Text keine <style>/<script>-Blöcke enthält, die separat behandelt werden).
+        $debugMapping = [];
+        $batchPosition = 0;
+        foreach ($pending as $rowIndex => $text) {
+            $debugMapping[] = sprintf('[%d] ObjectID=%s: "%s"', $batchPosition, $Rows[$rowIndex]['ObjectID'] ?? '?', $text);
+            $batchPosition++;
+        }
+        $this->SendDebug('GoogleTranslate_Mapping', $debugContext . "\n" . implode("\n", $debugMapping), 0);
+
+        $translated = $this->TranslateBatch(array_values($pending), $ForceSource, $TargetLanguageCode, $debugContext);
 
         $i = 0;
         foreach (array_keys($pending) as $index) {
@@ -514,7 +532,7 @@ class SimpleLocale extends IPSModuleStrict
     // daher in mehrere Aufrufe aufgeteilt.
     private const translateMaxTextsPerRequest = 128;
 
-    private function TranslateBatch(array $Texts, ?string $Source, string $Target): array
+    private function TranslateBatch(array $Texts, ?string $Source, string $Target, string $DebugContext = ''): array
     {
         if ($Texts === []) {
             return [];
@@ -544,7 +562,7 @@ class SimpleLocale extends IPSModuleStrict
 
         $translatedFlat = [];
         foreach (array_chunk($translatable, self::translateMaxTextsPerRequest) as $chunk) {
-            $translatedFlat = array_merge($translatedFlat, $this->TranslateChunk($chunk, $Source, $Target, $apiKey));
+            $translatedFlat = array_merge($translatedFlat, $this->TranslateChunk($chunk, $Source, $Target, $apiKey, $DebugContext));
         }
 
         $result = [];
@@ -560,7 +578,7 @@ class SimpleLocale extends IPSModuleStrict
         return $result;
     }
 
-    private function TranslateChunk(array $Texts, ?string $Source, string $Target, string $ApiKey): array
+    private function TranslateChunk(array $Texts, ?string $Source, string $Target, string $ApiKey, string $DebugContext = ''): array
     {
         if ($Texts === []) {
             return [];
@@ -579,10 +597,19 @@ class SimpleLocale extends IPSModuleStrict
         }
         $payload = json_encode($body);
 
+        // Vollständiger Request-Payload, positionsgleich mit dem GoogleTranslate_Mapping-
+        // Log aus FillLanguageColumn (solange keine <style>/<script>-Blöcke vorkommen) -
+        // damit sich pro Zeile nachvollziehen lässt, was Google wirklich gesendet und
+        // zurückgegeben wurde, bei Verdacht auf einen Zeilen-Verrutscher oder eine
+        // Fehlübersetzung durch Google selbst.
+        $this->SendDebug('GoogleTranslate_Request', $DebugContext . ' | ' . $payload, 0);
+
         $response = $this->CallGoogleTranslateAPI(
             'https://translation.googleapis.com/language/translate/v2?key=' . urlencode($ApiKey),
             $payload
         );
+
+        $this->SendDebug('GoogleTranslate_Response', $DebugContext . ' | ' . ($response ?? '(keine Antwort)'), 0);
 
         if ($response === null) {
             return array_fill(0, count($Texts), '');
@@ -825,8 +852,14 @@ class SimpleLocale extends IPSModuleStrict
     // Gast-Sprache mischt.
     private function BuildInfoAlertJs(array $GuestCache): string
     {
+        $heading = $GuestCache['infoHeading'] ?? self::INFO_HEADING_TEXT;
         $texts = $GuestCache['infoTexts'] ?? self::INFO_LIMITATION_TEXTS;
-        $alertText = implode("\n\n", array_map(fn (string $text): string => '<p>' . $text . '</p>', $texts));
+
+        // alert() zeigt reinen Text, kein HTML - Absätze also nur per Leerzeile
+        // trennen, keine Tags/Aufzählungszeichen (beides würde wörtlich erscheinen
+        // bzw. wirkte unpassend). Die Überschrift ist einfach die erste Zeile,
+        // da alert() keinen eigenen Titel-Parameter kennt.
+        $alertText = $heading . "\n\n" . implode("\n\n", $texts);
 
         return htmlspecialchars(json_encode($alertText, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES, 'UTF-8');
     }
@@ -891,10 +924,10 @@ class SimpleLocale extends IPSModuleStrict
 
         $names = $this->FetchLanguageNames($language) ?? ($cache['names'] ?? []);
 
-        // "Original (unbearbeitet)" + die Info-Hinweistexte in einem gemeinsamen
-        // Aufruf übersetzen (statt je einem eigenen) - alles feste, kurze Texte,
-        // die ohnehin nur bei Sprachwechsel/Cache-Ablauf einmal aktualisiert werden.
-        $ownTexts = array_merge(['Original (unbearbeitet)'], self::INFO_LIMITATION_TEXTS);
+        // "Original (unbearbeitet)" + Info-Überschrift + Info-Hinweistexte in einem
+        // gemeinsamen Aufruf übersetzen (statt je einem eigenen) - alles feste, kurze
+        // Texte, die ohnehin nur bei Sprachwechsel/Cache-Ablauf einmal aktualisiert werden.
+        $ownTexts = array_merge(['Original (unbearbeitet)', self::INFO_HEADING_TEXT], self::INFO_LIMITATION_TEXTS);
         if ($language === 'de') {
             $translatedOwnTexts = $ownTexts;
         } else {
@@ -902,15 +935,17 @@ class SimpleLocale extends IPSModuleStrict
         }
 
         $originalLabel = $translatedOwnTexts[0] ?? ($cache['originalLabel'] ?? 'Original');
+        $infoHeading = $translatedOwnTexts[1] ?? self::INFO_HEADING_TEXT;
         $infoTexts = [
-            $translatedOwnTexts[1] ?? self::INFO_LIMITATION_TEXTS[0],
-            $translatedOwnTexts[2] ?? self::INFO_LIMITATION_TEXTS[1],
+            $translatedOwnTexts[2] ?? self::INFO_LIMITATION_TEXTS[0],
+            $translatedOwnTexts[3] ?? self::INFO_LIMITATION_TEXTS[1],
         ];
 
         $cache = [
             'language'      => $language,
             'names'         => $names,
             'originalLabel' => $originalLabel,
+            'infoHeading'   => $infoHeading,
             'infoTexts'     => $infoTexts,
             'fetchedAt'     => time(),
         ];
