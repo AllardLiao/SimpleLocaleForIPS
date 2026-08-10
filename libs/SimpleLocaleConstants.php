@@ -51,6 +51,20 @@ trait SimpleLocaleConstants
     // unterschiedlichen Licensee-Adressen).
     private const attributeActivationLog = 'ActivationLog';
 
+    // ValueObjectIDs (JSON-Array), für die aktuell VM_UPDATE-Nachrichten registriert
+    // sind (siehe SyncValueUpdateRegistrations) - nötig, um bei jedem ApplyChanges
+    // sauber ab-/neu zu registrieren, wenn sich "Eigene Texte" ändert (neue/gelöschte
+    // Zeilen), ohne verwaiste Registrierungen auf inzwischen nicht mehr getrackten
+    // Variablen zurückzulassen.
+    private const attributeRegisteredValueObjectIDs = 'RegisteredValueObjectIDs';
+
+    // Letzter von der Instanz SELBST geschriebener Wert je ValueObjectID (JSON-Map
+    // ValueObjectID => Wert) - verhindert, dass der eigene SetValueString-Aufruf
+    // (Sprachwechsel oder automatische Neuübersetzung, siehe HandleTrackedVariableUpdate)
+    // die zugehörige VM_UPDATE-Nachricht erneut auslöst und sich selbst in eine
+    // Endlosschleife übersetzt.
+    private const attributeLastSelfWrittenValues = 'LastSelfWrittenValues';
+
     // Objekte ohne Namen, die beim letzten Rescan im Root-Baum gefunden wurden (JSON-
     // Array aus ObjectID+Path) - ein Rescan bricht ab, sobald welche existieren, bevor
     // irgendetwas übersetzt wird (leerer Name lässt sich sonst nicht sinnvoll übersetzen

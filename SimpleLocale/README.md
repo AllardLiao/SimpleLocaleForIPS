@@ -46,6 +46,15 @@ Beschreibung des Moduls.
 * Die aktuell aktive Sprache ist eine reine Instanz-Property (kein Symcon-
   Variablenprofil, das wäre global über alle Instanzen hinweg geteilt) - sie
   ist direkt im Konfigurationsformular sicht- und änderbar.
+* Reagiert live auf Wertänderungen, die *andere* Module/Skripte an den in
+  "Eigene Texte" verfolgten String-Variablen vornehmen (z. B. ein Wetter-
+  oder Messwert-Modul, das seinen Text bei jeder Aktualisierung selbst neu
+  schreibt): der neue Wert wird automatisch als frischer Rohtext übernommen
+  und sofort in die aktuell aktive Gast-Sprache nachübersetzt - ganz ohne
+  Zutun des anderen Modulentwicklers. Technisch über Symcons
+  VariableManager-Update-Nachrichten (`VM_UPDATE`), siehe
+  [Abschnitt 2](#2-bekannte-einschränkungen) für die eine Voraussetzung
+  dabei.
 
 ### 2. Bekannte Einschränkungen
 
@@ -56,17 +65,22 @@ Beschreibung des Moduls.
   wirklich gleichzeitig unterschiedliche Sprachen für unterschiedliche
   Zielgruppen benötigt, braucht es mehrere Instanzen mit jeweils eigener
   Root-Kategorie/Kachel.
-* **Dynamisch aktualisierte Inhalte fallen zurück in ihre Originalsprache.**
-  Simple Locale übersetzt den Wert einer String-Variable, wenn die Sprache
-  gewechselt wird. Schreibt ein *anderes* Modul oder Skript diese Variable
-  danach selbst erneut (z. B. ein Wetter- oder Messwert-Skript bei seinem
-  nächsten Aktualisierungsintervall), steht dort wieder der von diesem Modul/
-  Skript gelieferte Text - typischerweise die Sprache, in der es selbst
-  schreibt, nicht zwangsläufig die zuletzt gewählte Gast-Sprache. Ein
-  erneuter Sprachwechsel (oder Rescan, falls sich auch der Inhalt strukturell
-  geändert hat) übersetzt den neuen Wert dann wieder passend.
+* **Dynamisch aktualisierte Inhalte werden automatisch nachübersetzt -
+  vorausgesetzt, sie werden in der konfigurierten Basissprache geschrieben.**
+  Schreibt ein *anderes* Modul oder Skript den Wert einer verfolgten
+  String-Variable neu (z. B. ein Wetter-Skript bei seinem nächsten
+  Aktualisierungsintervall), übersetzt Simple Locale live nach (siehe
+  [Abschnitt 1](#1-funktionsumfang)) - dabei wird angenommen, dass der neue
+  Wert in der Basissprache verfasst ist, genau wie beim ursprünglichen Scan.
+  Schreibt das fremde Modul tatsächlich in einer anderen Sprache, fällt die
+  automatische Übersetzung entsprechend falsch aus (wie bei jeder
+  automatischen Übersetzung, siehe unten) - Basissprache in der
+  Modul-Konfiguration also passend zur tatsächlich verwendeten Sprache des
+  überwachten Moduls wählen. Beobachtet werden ausschließlich die Variablen
+  unter "Eigene Texte" - Objektnamen ändern sich durch Fremdzugriffe
+  praktisch nie und werden daher nicht überwacht.
 
-  Diese beiden Punkte sind auch direkt in der Kachel über das Info-Symbol (ⓘ)
+  Dieser Punkt ist auch direkt in der Kachel über das Info-Symbol (ⓘ)
   neben dem Dropdown einsehbar, live in der jeweils aktiven Gast-Sprache.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,

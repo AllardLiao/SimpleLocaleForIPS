@@ -26,7 +26,6 @@ class SimpleLocale extends IPSModuleStrict
     // dieser Text nicht die Konsolensprache des Admins mit der Gast-Sprache mischt.
     private const INFO_LIMITATION_TEXTS = [
         'Die gewählte Sprache gilt für alle Besucher dieser Seite gleichzeitig - nicht individuell für jede Person.',
-        'Inhalte, die von anderen Modulen oder Skripten laufend automatisch aktualisiert werden (z. B. Messwerte oder Wetterdaten), erscheinen nach jeder Aktualisierung wieder in ihrer ursprünglichen Sprache.',
     ];
 
     // Überschrift für den Info-Alert - alert() kennt keinen eigenen Titel-Parameter,
@@ -173,6 +172,8 @@ class SimpleLocale extends IPSModuleStrict
         $this->RegisterAttributeString(self::attributeLicenseInfo, '{}');
         $this->RegisterAttributeInteger(self::attributeTrialStartedAt, 0);
         $this->RegisterAttributeString(self::attributeActivationLog, '[]');
+        $this->RegisterAttributeString(self::attributeRegisteredValueObjectIDs, '[]');
+        $this->RegisterAttributeString(self::attributeLastSelfWrittenValues, '{}');
 
         $this->SetVisualizationType(1);
 
@@ -224,6 +225,24 @@ class SimpleLocale extends IPSModuleStrict
 
         $interval = $this->ReadPropertyInteger(self::propertyAutoRescanInterval);
         $this->SetTimerInterval($this->GetAutoRescanTimerIdent(), $interval > 0 ? $interval * 60 * 1000 : 0);
+
+        $this->SyncValueUpdateRegistrations();
+    }
+
+    // Reagiert live auf Wertänderungen von *anderen* Modulen/Skripten an den in
+    // "Eigene Texte" verfolgten Variablen (z.B. ein Wettermodul, das seinen eigenen
+    // Messwert-Text schreibt) - übersetzt automatisch neu in die aktuell aktive
+    // Gast-Sprache, statt dass der fremde Schreibvorgang die Übersetzung überschreibt
+    // und stehen bleibt (siehe Bekannte Einschränkungen in der README). Kein Zutun des
+    // fremden Modulentwicklers nötig.
+    public function MessageSink(int $TimeStamp, int $SenderID, int $Message, array $Data): void
+    {
+        //Never delete this line!
+        parent::MessageSink($TimeStamp, $SenderID, $Message, $Data);
+
+        if ($Message === VM_UPDATE) {
+            $this->HandleTrackedVariableUpdate($SenderID);
+        }
     }
 
     public function RequestAction(string $Ident, mixed $Value): void
@@ -764,13 +783,136 @@ class SimpleLocale extends IPSModuleStrict
                 continue;
             }
 
-            SetValueString($valueObjectID, $this->ResolveRowValue(
+            $this->WriteTrackedValueString($valueObjectID, $this->ResolveRowValue(
                 $row,
                 $Language,
                 self::fieldTextPrefix . $Language,
                 $sourceLanguage,
                 self::langOriginalImportText
             ));
+        }
+    }
+
+    // Schreibt einen Wert UND merkt ihn als "von der Instanz selbst geschrieben"
+    // (siehe attributeLastSelfWrittenValues) - verhindert, dass
+    // HandleTrackedVariableUpdate() diesen eigenen Schreibvorgang (Sprachwechsel oder
+    // automatische Neuübersetzung) für eine externe Änderung hält und sich selbst
+    // erneut triggert.
+    private function WriteTrackedValueString(int $ValueObjectID, string $Value): void
+    {
+        SetValueString($ValueObjectID, $Value);
+
+        $lastWritten = json_decode($this->ReadAttributeString(self::attributeLastSelfWrittenValues), true);
+        if (!is_array($lastWritten)) {
+            $lastWritten = [];
+        }
+        $lastWritten[(string) $ValueObjectID] = $Value;
+        $this->WriteAttributeString(self::attributeLastSelfWrittenValues, json_encode($lastWritten));
+    }
+
+    // Hält die VM_UPDATE-Registrierungen synchron zu den aktuell in "Eigene Texte"
+    // verfolgten Variablen - wird bei jedem ApplyChanges aufgerufen (auch indirekt
+    // durch Rescan/Sprachwechsel/Lizenzaktivierung, die alle intern IPS_ApplyChanges
+    // auslösen), damit neu hinzugekommene Zeilen sofort mitüberwacht werden und
+    // gelöschte Zeilen keine verwaisten Registrierungen hinterlassen.
+    private function SyncValueUpdateRegistrations(): void
+    {
+        $previouslyRegistered = json_decode($this->ReadAttributeString(self::attributeRegisteredValueObjectIDs), true);
+        if (!is_array($previouslyRegistered)) {
+            $previouslyRegistered = [];
+        }
+        foreach ($previouslyRegistered as $id) {
+            if (@IPS_ObjectExists((int) $id)) {
+                $this->UnregisterMessage((int) $id, VM_UPDATE);
+            }
+        }
+
+        $currentIDs = [];
+        foreach ($this->DecodeRows(self::propertyObjectTexts) as $row) {
+            $valueObjectID = (int) ($row['ValueObjectID'] ?? $row['ObjectID'] ?? 0);
+            if ($valueObjectID !== 0 && @IPS_ObjectExists($valueObjectID)) {
+                $this->RegisterMessage($valueObjectID, VM_UPDATE);
+                $currentIDs[] = $valueObjectID;
+            }
+        }
+
+        $this->WriteAttributeString(self::attributeRegisteredValueObjectIDs, json_encode($currentIDs));
+    }
+
+    // Reagiert auf eine VM_UPDATE-Nachricht einer verfolgten "Eigene Texte"-Variable.
+    // Fragt bewusst GetValueString() frisch ab, statt das $Data-Array von MessageSink
+    // zu interpretieren - dessen Inhalt ist laut offizieller Symcon-Dokumentation
+    // "je nach Nachrichtentyp" und "noch undokumentiert" (siehe auch das offizielle
+    // Watchdog-Modul, das aus demselben Grund genauso vorgeht). Der neue Wert wird als
+    // frischer Rohtext in der Basissprache übernommen (Annahme: Fremdmodule schreiben
+    // wie der ursprüngliche Scan in der konfigurierten Basissprache) und sofort live in
+    // die aktuell aktive Gast-Sprache nachübersetzt - kein Zutun des fremden
+    // Modulentwicklers nötig.
+    private function HandleTrackedVariableUpdate(int $ValueObjectID): void
+    {
+        if (!@IPS_ObjectExists($ValueObjectID)) {
+            return;
+        }
+
+        $newValue = GetValueString($ValueObjectID);
+
+        $lastSelfWritten = json_decode($this->ReadAttributeString(self::attributeLastSelfWrittenValues), true);
+        if (!is_array($lastSelfWritten)) {
+            $lastSelfWritten = [];
+        }
+        if (($lastSelfWritten[(string) $ValueObjectID] ?? null) === $newValue) {
+            // Eigener Schreibvorgang von weiter unten in dieser Methode oder aus
+            // ApplyLanguage() - sonst würde sich die Instanz selbst in eine
+            // Endlosschleife übersetzen.
+            return;
+        }
+
+        $rows = $this->DecodeRows(self::propertyObjectTexts);
+        $rowIndex = null;
+        foreach ($rows as $i => $row) {
+            $valueObjectID = (int) ($row['ValueObjectID'] ?? $row['ObjectID'] ?? 0);
+            if ($valueObjectID === $ValueObjectID) {
+                $rowIndex = $i;
+                break;
+            }
+        }
+        if ($rowIndex === null) {
+            // Nicht (mehr) getrackt - z.B. Nachricht kam noch kurz nach dem Löschen
+            // der Zeile rein, bevor SyncValueUpdateRegistrations() das nachziehen konnte.
+            return;
+        }
+
+        // Neuer externer Wert wird als frischer Rohtext übernommen - bestehende
+        // Übersetzungen sind jetzt veraltet und werden verworfen, genau wie beim
+        // manuellen Leeren einer Zelle vor einem Rescan (regenerieren sich lazy, sobald
+        // die jeweilige Sprache das nächste Mal aktiv wird).
+        $rows[$rowIndex][self::langOriginalImportText] = $newValue;
+        foreach (array_keys($rows[$rowIndex]) as $key) {
+            if (str_starts_with($key, self::fieldTextPrefix)) {
+                $rows[$rowIndex][$key] = '';
+            }
+        }
+
+        $currentLanguage = $this->ReadPropertyString(self::propertyCurrentLanguage);
+        $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
+        $displayText = $newValue;
+
+        if ($currentLanguage !== self::langOriginalImport && $currentLanguage !== $sourceLanguage) {
+            $translated = $this->TranslateBatch([$newValue], $sourceLanguage, $currentLanguage);
+            // TranslateBatch liefert bei einem fehlgeschlagenen Google-Aufruf einen
+            // Leerstring zurück (nicht null) - ein reines "??" würde diesen Fehlerfall
+            // nicht abfangen und eine leere Beschriftung in der Kachel hinterlassen.
+            if (($translated[0] ?? '') !== '') {
+                $displayText = $translated[0];
+                $rows[$rowIndex][self::fieldTextPrefix . $currentLanguage] = $displayText;
+            }
+        }
+
+        IPS_SetProperty($this->InstanceID, self::propertyObjectTexts, json_encode($rows));
+        IPS_ApplyChanges($this->InstanceID);
+
+        if ($displayText !== $newValue) {
+            $this->WriteTrackedValueString($ValueObjectID, $displayText);
         }
     }
 
