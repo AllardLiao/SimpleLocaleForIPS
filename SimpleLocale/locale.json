@@ -50,7 +50,8 @@
             "Tag(e) verbleibend": "day(s) remaining",
             "Bis dahin voller Funktionsumfang, aber nur mit den 5 testweise freigeschalteten Sprachen (Isländisch, Walisisch, Zulu, Maori, Latein).": "Full functionality until then, but only with the 5 languages unlocked for testing (Icelandic, Welsh, Zulu, Maori, Latin).",
             "Testversion abgelaufen am": "Trial version expired on",
-            "Bestehende Übersetzungen/die Kachel funktionieren weiter, ein weiterer Rescan ist aber blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.": "Existing translations/the tile keep working, but a further rescan is blocked until a valid license key has been activated."
+            "Die Kachel zeigt Gästen ab jetzt wieder den unbearbeiteten Original-Text, ein weiterer Rescan ist blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.": "The tile now shows guests the unedited original text again; a further rescan is blocked until a valid license key has been activated.",
+            "Lizenz erwerben:": "Purchase a license:"
         },
         "es": {
             "Sprache": "Idioma",
@@ -102,7 +103,8 @@
             "Tag(e) verbleibend": "día(s) restante(s)",
             "Bis dahin voller Funktionsumfang, aber nur mit den 5 testweise freigeschalteten Sprachen (Isländisch, Walisisch, Zulu, Maori, Latein).": "Funcionalidad completa hasta entonces, pero solo con los 5 idiomas habilitados para pruebas (islandés, galés, zulú, maorí, latín).",
             "Testversion abgelaufen am": "Versión de prueba caducada el",
-            "Bestehende Übersetzungen/die Kachel funktionieren weiter, ein weiterer Rescan ist aber blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.": "Las traducciones existentes/el widget siguen funcionando, pero un nuevo rescaneo está bloqueado hasta que se active una clave de licencia válida."
+            "Die Kachel zeigt Gästen ab jetzt wieder den unbearbeiteten Original-Text, ein weiterer Rescan ist blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.": "El widget vuelve a mostrar a los huéspedes el texto original sin editar; un nuevo rescaneo está bloqueado hasta que se active una clave de licencia válida.",
+            "Lizenz erwerben:": "Adquirir una licencia:"
         },
         "it": {
             "Sprache": "Lingua",
@@ -154,7 +156,8 @@
             "Tag(e) verbleibend": "giorno/i rimanente/i",
             "Bis dahin voller Funktionsumfang, aber nur mit den 5 testweise freigeschalteten Sprachen (Isländisch, Walisisch, Zulu, Maori, Latein).": "Piena funzionalità fino ad allora, ma solo con le 5 lingue sbloccate per il test (islandese, gallese, zulu, maori, latino).",
             "Testversion abgelaufen am": "Versione di prova scaduta il",
-            "Bestehende Übersetzungen/die Kachel funktionieren weiter, ein weiterer Rescan ist aber blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.": "Le traduzioni esistenti/il riquadro continuano a funzionare, ma un'ulteriore nuova scansione è bloccata finché non viene attivata una chiave di licenza valida."
+            "Die Kachel zeigt Gästen ab jetzt wieder den unbearbeiteten Original-Text, ein weiterer Rescan ist blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.": "Il riquadro torna a mostrare agli ospiti il testo originale non modificato; un'ulteriore nuova scansione è bloccata finché non viene attivata una chiave di licenza valida.",
+            "Lizenz erwerben:": "Acquista una licenza:"
         },
         "fr": {
             "Sprache": "Langue",
@@ -206,7 +209,8 @@
             "Tag(e) verbleibend": "jour(s) restant(s)",
             "Bis dahin voller Funktionsumfang, aber nur mit den 5 testweise freigeschalteten Sprachen (Isländisch, Walisisch, Zulu, Maori, Latein).": "Fonctionnalité complète jusque-là, mais uniquement avec les 5 langues débloquées pour les tests (islandais, gallois, zoulou, maori, latin).",
             "Testversion abgelaufen am": "Version d'essai expirée le",
-            "Bestehende Übersetzungen/die Kachel funktionieren weiter, ein weiterer Rescan ist aber blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.": "Les traductions existantes/la tuile continuent de fonctionner, mais un nouveau balayage est bloqué tant qu'une clé de licence valide n'a pas été activée."
+            "Die Kachel zeigt Gästen ab jetzt wieder den unbearbeiteten Original-Text, ein weiterer Rescan ist blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.": "La tuile affiche à nouveau aux invités le texte original non modifié ; un nouveau balayage est bloqué tant qu'une clé de licence valide n'a pas été activée.",
+            "Lizenz erwerben:": "Acheter une licence :"
         }
     }
 }

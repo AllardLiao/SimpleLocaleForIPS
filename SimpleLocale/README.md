@@ -182,8 +182,12 @@ Vollversion:
   ersten gespeicherten Einrichtung der Instanz und läuft 30 Tage; die
   verbleibende Zeit bzw. das Ablaufdatum steht direkt im
   Konfigurationsformular ("Testversion - läuft ab am ..."). Nach Ablauf
-  funktionieren bereits vorhandene Übersetzungen und die Kachel unverändert
-  weiter - nur ein weiterer Rescan ist blockiert, bis ein gültiger
+  schwenkt die Kachel automatisch auf die unbearbeiteten Original-Importe
+  zurück (statt eine irgendwann eingefrorene, ggf. unvollständige Übersetzung
+  dauerhaft stehen zu lassen), ein weiterer Rescan ist blockiert. Versucht ein
+  Gast trotzdem, über das Dropdown die Sprache zu wechseln, bleibt es beim
+  Original-Text und ein Hinweis-Popup (live in die gewünschte Sprache
+  übersetzt) verweist auf den Lizenzerwerb - bis ein gültiger
   Lizenzschlüssel aktiviert wurde.
 * **Vollversion:** keine Sprach- oder Zeitbeschränkung. Freigeschaltet über
   einen Lizenzschlüssel im Konfigurationsformular (Feld "Lizenzschlüssel" +

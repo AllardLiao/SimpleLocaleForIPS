@@ -55,6 +55,17 @@ class SimpleLocale extends IPSModuleStrict
     // der Mechanismus ist aber vollständig testbar (siehe smoke-Tests).
     private const LICENSE_SIGNING_SECRET = 'CHANGE_ME_BEFORE_RELEASE';
 
+    // "Permalink" zum Lizenzerwerb - aktuell nur ein Verweis auf das GitHub-Repo,
+    // da es noch keinen eigenen Shop gibt. Eine einzige zentrale Konstante, damit
+    // später nur hier eine echte Verkaufs-URL eingetragen werden muss.
+    private const LICENSE_PURCHASE_URL = 'https://github.com/AllardLiao/SimpleLocaleForIPS';
+
+    // Rohtext (nicht über $this->Translate()!) für den Gast-Hinweis nach Ablauf der
+    // Testphase - wie INFO_LIMITATION_TEXTS live per Google in die vom Gast gerade
+    // gewünschte Sprache übersetzt, siehe PushTrialExpiredAlert. $this->Translate()
+    // würde stattdessen die Admin-Konsolensprache treffen, nicht die Gast-Sprache.
+    private const TRIAL_EXPIRED_ALERT_TEXT = 'Die Testversion ist abgelaufen. Bitte eine Lizenz erwerben:';
+
     // Rein dekorativ fürs Gast-Dropdown (GetVisualizationTile) - nicht erschöpfend,
     // unbekannte Sprachcodes bekommen einfach keine Flagge vorangestellt.
     private const LANGUAGE_FLAGS = [
@@ -150,8 +161,9 @@ class SimpleLocale extends IPSModuleStrict
         $rootID = $this->ReadPropertyInteger(self::propertyRootCategoryID);
         if ($rootID === 0 || !@IPS_ObjectExists($rootID)) {
             $this->SetStatus(self::STATUS_ROOT_CATEGORY_MISSING);
-        } elseif (self::IS_TRIAL_BUILD && !$this->HasFullLicense() && $this->IsTrialExpired()) {
+        } elseif ($this->IsTrialLocked()) {
             $this->SetStatus(self::STATUS_TRIAL_EXPIRED);
+            $this->ResetToOriginalLanguageIfNeeded();
         } else {
             $this->SetStatus(102);
         }
@@ -164,7 +176,17 @@ class SimpleLocale extends IPSModuleStrict
     {
         switch ($Ident) {
             case self::identLanguage:
-                $this->ApplyLanguage((string) $Value);
+                if ($this->IsTrialLocked()) {
+                    // Statt der gewünschten Sprache zurück auf die Original-Importe
+                    // (verhindert dauerhaft eingefrorene/unvollständige Übersetzungen)
+                    // und ein Hinweis-Popup mit Link zum Lizenzerwerb, live übersetzt
+                    // in die eigentlich gewünschte Sprache.
+                    $this->ResetToOriginalLanguageIfNeeded();
+                    $this->PushVisualizationUpdate();
+                    $this->PushTrialExpiredAlert((string) $Value);
+                } else {
+                    $this->ApplyLanguage((string) $Value);
+                }
                 break;
 
             case self::identRescan:
@@ -388,6 +410,27 @@ class SimpleLocale extends IPSModuleStrict
         return $expiresAt !== 0 && $expiresAt < time();
     }
 
+    // Zentrale Bedingung für "Testphase abgelaufen und kein gültiger Lizenzschlüssel" -
+    // wird an mehreren Stellen gebraucht (ApplyChanges, ScanRootTree, Sprachwechsel),
+    // daher als eigener Helfer statt dreifach ausgeschrieben.
+    private function IsTrialLocked(): bool
+    {
+        return self::IS_TRIAL_BUILD && !$this->HasFullLicense() && $this->IsTrialExpired();
+    }
+
+    // Schwenkt bei abgelaufener Testphase auf die unbearbeiteten Original-Importe
+    // zurück, statt eine ggf. längst veraltete/unvollständige Übersetzung dauerhaft
+    // eingefroren stehen zu lassen (führt sonst zu Beschwerden). Wird bei jeder
+    // Gelegenheit aufgerufen, bei der ohnehin schon Code der Instanz läuft
+    // (ApplyChanges, automatischer Rescan-Timer, Sprachwechsel-Versuch) - kein
+    // eigener Timer nötig.
+    private function ResetToOriginalLanguageIfNeeded(): void
+    {
+        if ($this->ReadPropertyString(self::propertyCurrentLanguage) !== self::langOriginalImport) {
+            $this->ApplyLanguage(self::langOriginalImport);
+        }
+    }
+
     // 0 = Testphase wurde noch nicht gestartet (erstes ApplyChanges steht noch aus,
     // siehe ApplyChanges).
     private function GetTrialExpiresAt(): int
@@ -416,7 +459,8 @@ class SimpleLocale extends IPSModuleStrict
         }
 
         return $this->Translate('Testversion abgelaufen am') . " $dateText. "
-            . $this->Translate('Bestehende Übersetzungen/die Kachel funktionieren weiter, ein weiterer Rescan ist aber blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.');
+            . $this->Translate('Die Kachel zeigt Gästen ab jetzt wieder den unbearbeiteten Original-Text, ein weiterer Rescan ist blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.')
+            . ' ' . $this->Translate('Lizenz erwerben:') . ' ' . self::LICENSE_PURCHASE_URL;
     }
 
     private function ApplyLanguage(string $Language): void
@@ -499,11 +543,14 @@ class SimpleLocale extends IPSModuleStrict
             return;
         }
 
-        // Testphase abgelaufen und kein gültiger Lizenzschlüssel: bereits vorhandene
-        // Übersetzungen/Namen bleiben unangetastet und die Kachel funktioniert weiter -
-        // nur ein weiterer Rescan (also neue/geänderte Objekte übersetzen) ist blockiert.
-        if (self::IS_TRIAL_BUILD && !$this->HasFullLicense() && $this->IsTrialExpired()) {
+        // Testphase abgelaufen und kein gültiger Lizenzschlüssel: kein weiterer Rescan
+        // (also keine neuen/geänderten Objekte mehr übersetzen), und die Kachel schwenkt
+        // auf die unbearbeiteten Original-Importe zurück statt eingefroren in der zuletzt
+        // aktiven Sprache stehen zu bleiben (siehe ResetToOriginalLanguageIfNeeded).
+        if ($this->IsTrialLocked()) {
             $this->SetStatus(self::STATUS_TRIAL_EXPIRED);
+            $this->ResetToOriginalLanguageIfNeeded();
+
             return;
         }
 
@@ -1028,6 +1075,28 @@ class SimpleLocale extends IPSModuleStrict
     private function PushVisualizationUpdate(): void
     {
         $payload = json_encode(['action' => 'REFRESH', 'payload' => ['html' => $this->BuildLanguageSelectHtml()]]);
+        $this->UpdateVisualizationValue($payload);
+    }
+
+    // Hinweis-Popup nach einem Sprachwechsel-Versuch bei abgelaufener Testphase -
+    // eigene "ALERT"-Nachricht statt der sonstigen "REFRESH" (siehe module.html),
+    // damit ein echter Browser-Dialog erscheint statt nur die Kachel neu zu zeichnen.
+    // TRIAL_EXPIRED_ALERT_TEXT ist bewusst in die tatsächlich gewünschte Sprache
+    // übersetzt (nicht die gerade aktive, die ja gerade auf Original zurückgesetzt
+    // wurde) - der Gast klickte ja genau diese Sprache an.
+    private function PushTrialExpiredAlert(string $RequestedLanguage): void
+    {
+        $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
+        $text = self::TRIAL_EXPIRED_ALERT_TEXT;
+
+        if ($RequestedLanguage !== $sourceLanguage && $RequestedLanguage !== self::langOriginalImport) {
+            $translated = $this->TranslateBatch([$text], $sourceLanguage, $RequestedLanguage);
+            if (($translated[0] ?? '') !== '') {
+                $text = $translated[0];
+            }
+        }
+
+        $payload = json_encode(['action' => 'ALERT', 'payload' => ['text' => $text . "\n" . self::LICENSE_PURCHASE_URL]]);
         $this->UpdateVisualizationValue($payload);
     }
 

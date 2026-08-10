@@ -79,6 +79,8 @@
 
             if (message.action === "REFRESH" && message.payload && typeof message.payload.html === "string") {
                 document.getElementById("<!--WRAPPER_ID-->").innerHTML = message.payload.html;
+            } else if (message.action === "ALERT" && message.payload && typeof message.payload.text === "string") {
+                alert(message.payload.text);
             }
         }
     </script>
