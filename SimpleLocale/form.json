@@ -26,7 +26,7 @@
         },
         {
             "type": "PopupAlert",
-            "name": "ApiKeyWarningPopup",
+            "name": "ApiKeyMissingPopup",
             "visible": false,
             "popup": {
                 "caption": "API-Key fehlt",
@@ -35,6 +35,21 @@
                     {
                         "type": "Label",
                         "caption": "Bitte zuerst einen Google Cloud Translate API-Key eintragen und über \"Übernehmen\" speichern, bevor Zielsprachen hinzugefügt werden."
+                    }
+                ]
+            }
+        },
+        {
+            "type": "PopupAlert",
+            "name": "ApiKeyInvalidPopup",
+            "visible": false,
+            "popup": {
+                "caption": "Sprachliste nicht verfügbar",
+                "closeCaption": "OK",
+                "items": [
+                    {
+                        "type": "Label",
+                        "caption": "Die Sprachliste konnte nicht von Google geladen werden. Bitte den Google Cloud Translate API-Key prüfen (z.B. Tippfehler, abgelaufen, fehlende Berechtigung)."
                     }
                 ]
             }
