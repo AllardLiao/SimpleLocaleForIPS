@@ -940,16 +940,35 @@ private const LANGUAGE_FLAGS = [
             ));
         }
 
-        $optionsByVariable = [];
+        // Zeilen sind je (SourceKey, FieldPath) - mehrere Variablen, die dasselbe
+        // Profil/Template nutzen, teilen sich also dieselbe(n) Zeile(n) (siehe
+        // MergeEnumerationOptions). Zum Schreiben werden sie nach ValueObjectID
+        // aufgefächert: jede betroffene Variable bekommt individuell ihren eigenen
+        // Fork (siehe ApplyEnumerationOptionsToVariable), auch wenn die Übersetzung
+        // dahinter nur einmal berechnet wurde.
+        $rowsBySourceKey = [];
         foreach ($this->DecodeRows(self::propertyEnumerationOptions) as $row) {
-            $valueObjectID = (int) ($row['ValueObjectID'] ?? 0);
-            if ($valueObjectID === 0) {
+            $sourceKey = (string) ($row['SourceKey'] ?? '');
+            if ($sourceKey === '') {
                 continue;
             }
-            $optionsByVariable[$valueObjectID][(string) ($row['FieldPath'] ?? '')] = $row;
+            $rowsBySourceKey[$sourceKey][(string) ($row['FieldPath'] ?? '')] = $row;
         }
-        foreach ($optionsByVariable as $valueObjectID => $rowsByValue) {
-            $this->ApplyEnumerationOptionsToVariable($valueObjectID, $rowsByValue, $Language, $sourceLanguage);
+
+        foreach ($rowsBySourceKey as $rowsByFieldPath) {
+            $targetValueObjectIDs = [];
+            foreach ($rowsByFieldPath as $row) {
+                foreach (explode(',', (string) ($row['ValueObjectIDs'] ?? '')) as $idString) {
+                    $valueObjectID = (int) trim($idString);
+                    if ($valueObjectID !== 0) {
+                        $targetValueObjectIDs[$valueObjectID] = true;
+                    }
+                }
+            }
+
+            foreach (array_keys($targetValueObjectIDs) as $valueObjectID) {
+                $this->ApplyEnumerationOptionsToVariable($valueObjectID, $rowsByFieldPath, $Language, $sourceLanguage);
+            }
         }
     }
 
@@ -959,10 +978,10 @@ private const LANGUAGE_FLAGS = [
     // Presentation-Pool-Quelle wird dabei nie angefasst; andere Variablen, die
     // zufällig dasselbe Profil nutzen, bleiben unberührt. Wertemenge, Icon und Farbe
     // kommen live von dort (kein Informationsverlust bei Optionen, die es noch nicht
-    // in $RowsByValue gibt, z.B. weil seit dem letzten Rescan neu hinzugekommen) - nur
+    // in $RowsByFieldPath gibt, z.B. weil seit dem letzten Rescan neu hinzugekommen) - nur
     // die Beschriftung wird ersetzt, und auch nur, wenn eine Übersetzungszeile
     // existiert.
-    private function ApplyEnumerationOptionsToVariable(int $ValueObjectID, array $RowsByValue, string $Language, string $SourceLanguage): void
+    private function ApplyEnumerationOptionsToVariable(int $ValueObjectID, array $RowsByFieldPath, string $Language, string $SourceLanguage): void
     {
         if (!@IPS_ObjectExists($ValueObjectID)) {
             return;
@@ -1000,7 +1019,7 @@ private const LANGUAGE_FLAGS = [
         }
 
         // Legacy-Profile referenzieren nur einen Namen, keine inline Captions - für den
-        // Schreibvorgang müssen wir daher (wie beim Lesen, siehe ReadTranslatableCaptions)
+        // Schreibvorgang müssen wir daher (wie beim Lesen, siehe ReadTranslatablePresentation)
         // erst eine vollwertige Enumeration-Struktur aus den Profil-Assoziationen bauen,
         // auf die dann derselbe generische Mechanismus angewendet werden kann.
         if (($presentation['PRESENTATION'] ?? '') === VARIABLE_PRESENTATION_LEGACY) {
@@ -1033,7 +1052,7 @@ private const LANGUAGE_FLAGS = [
         // aufzulösende Übersetzung bestimmen (Pfad => Text) - nur tatsächlich befüllte
         // Übersetzungen ersetzen etwas, alles andere bleibt so, wie es live ist.
         $replacements = [];
-        foreach ($RowsByValue as $fieldPath => $row) {
+        foreach ($RowsByFieldPath as $fieldPath => $row) {
             $resolved = $this->ResolveRowValue($row, $Language, $Language, $SourceLanguage, self::langOriginalImport);
             if ($resolved !== '') {
                 $replacements[$fieldPath] = $resolved;
@@ -1237,7 +1256,8 @@ private const LANGUAGE_FLAGS = [
         $scannedNames = [];
         $scannedTexts = [];
         $scannedOptions = [];
-        $this->WalkTree($rootID, $scannedNames, $scannedTexts, $scannedOptions, []);
+        $visitedIDs = [$rootID => true];
+        $this->WalkTree($rootID, $scannedNames, $scannedTexts, $scannedOptions, $visitedIDs, []);
 
         // Vorab-Check, bevor überhaupt übersetzt wird: ein Objekt ohne echten Namen
         // lässt sich nicht sinnvoll übersetzen und würde als Platzhalter-Text in der
@@ -1311,7 +1331,7 @@ private const LANGUAGE_FLAGS = [
     // $ParentPath enthält die Namen der Vorfahren ab der Root-Kategorie (ohne den
     // Namen des Objekts selbst), damit gleichnamige Texte an unterschiedlichen
     // Stellen im Baum unterscheidbar bleiben.
-    private function WalkTree(int $ID, array &$ScannedNames, array &$ScannedTexts, array &$ScannedOptions, array $ParentPath): void
+    private function WalkTree(int $ID, array &$ScannedNames, array &$ScannedTexts, array &$ScannedOptions, array &$VisitedIDs, array $ParentPath): void
     {
         foreach (IPS_GetChildrenIDs($ID) as $childID) {
             $object = IPS_GetObject($childID);
@@ -1346,22 +1366,55 @@ private const LANGUAGE_FLAGS = [
             }
 
             // Beschriftungen (Caption/Prefix/Suffix, egal in welcher Präsentationsart
-            // und egal wie tief verschachtelt - siehe ReadTranslatableCaptions) einer
-            // Variable jedes Typs - auch verlinkt, wie bei "Eigene Texte" oben.
+            // und egal wie tief verschachtelt - siehe ReadTranslatablePresentation)
+            // einer Variable jedes Typs - auch verlinkt, wie bei "Eigene Texte" oben.
+            // Kommen die Beschriftungen von einem geteilten Profil/Template (siehe
+            // GetPresentationSourceKey), werden sie nur EINMAL erfasst/übersetzt,
+            // auch wenn mehrere Variablen im Baum dasselbe Profil/Template nutzen -
+            // Profile/Templates sind genau dafür da, wiederverwendet zu werden.
             $captionVariableID = $this->ResolveLinkedVariableID($childID, $object);
             if ($captionVariableID !== null) {
-                foreach ($this->ReadTranslatableCaptions($captionVariableID) ?? [] as $fieldPath => $text) {
-                    $ScannedOptions["$childID:$fieldPath"] = [
-                        'ObjectID'                => $childID,
-                        'ValueObjectID'           => $captionVariableID,
-                        'FieldPath'               => $fieldPath,
-                        'Path'                    => $path,
-                        self::langOriginalImport  => $text,
-                    ];
+                $presentation = $this->ReadTranslatablePresentation($captionVariableID);
+                if ($presentation !== null) {
+                    $sourceKey = $presentation['sourceKey'];
+                    foreach ($presentation['fields'] as $fieldPath => $text) {
+                        $key = "$sourceKey:$fieldPath";
+                        if (!isset($ScannedOptions[$key])) {
+                            $ScannedOptions[$key] = [
+                                'SourceKey'               => $sourceKey,
+                                'ValueObjectIDs'          => (string) $captionVariableID,
+                                'FieldPath'               => $fieldPath,
+                                'Path'                    => $path,
+                                self::langOriginalImport  => $text,
+                            ];
+                        } elseif (!in_array((string) $captionVariableID, explode(',', $ScannedOptions[$key]['ValueObjectIDs']), true)) {
+                            $ScannedOptions[$key]['ValueObjectIDs'] .= ',' . $captionVariableID;
+                        }
+                    }
                 }
             }
 
-            $this->WalkTree($childID, $ScannedNames, $ScannedTexts, $ScannedOptions, array_merge($ParentPath, [$name]));
+            // Verlinkte Kategorien (übliche Praxis, um denselben Inhalt - z.B. eine
+            // "Wetter"-Kategorie - per Verknüpfung in mehrere Visus einzubinden, ohne
+            // ihn zu duplizieren) werden gefolgt: die Variablen/Objekte DARIN sind
+            // sonst für den Scan unsichtbar, weil ein Link-Objekt selbst keine
+            // Kinder hat. $VisitedIDs verhindert Endlosschleifen bei (theoretisch
+            // möglichen) zirkulären Verknüpfungen - Pfad-Anzeige nutzt weiterhin den
+            // Namen des Links selbst, nicht den der Zielkategorie.
+            $recurseID = $childID;
+            if ($object['ObjectType'] === OBJECTTYPE_LINK) {
+                $linkTargetID = IPS_GetLink($childID)['TargetID'] ?? 0;
+                if ($linkTargetID > 0 && @IPS_ObjectExists($linkTargetID) && !IPS_VariableExists($linkTargetID)) {
+                    $recurseID = $linkTargetID;
+                }
+            }
+
+            if (isset($VisitedIDs[$recurseID])) {
+                continue;
+            }
+            $VisitedIDs[$recurseID] = true;
+
+            $this->WalkTree($recurseID, $ScannedNames, $ScannedTexts, $ScannedOptions, $VisitedIDs, array_merge($ParentPath, [$name]));
         }
     }
 
@@ -1414,7 +1467,7 @@ private const LANGUAGE_FLAGS = [
     // eine unbekannte Beschriftung übersehen als versehentlich einen technischen
     // Bezeichner (z.B. einen Icon-Namen) kaputtübersetzen. Liefert null, wenn nichts
     // Übersetzbares gefunden wurde.
-    private function ReadTranslatableCaptions(int $VariableID): ?array
+    private function ReadTranslatablePresentation(int $VariableID): ?array
     {
         if (!function_exists('IPS_GetVariablePresentation')) {
             // Symcon < 8.0 kennt Presentations noch nicht - Feature bleibt komplett
@@ -1426,6 +1479,8 @@ private const LANGUAGE_FLAGS = [
         if (!is_array($presentation) || $presentation === []) {
             return null;
         }
+
+        $sourceKey = $this->GetPresentationSourceKey($VariableID, $presentation);
 
         // Legacy-Profile referenzieren nur einen Namen - der eigentliche Text liegt
         // nicht inline in der Presentation, sondern muss separat aus dem (ggf.
@@ -1442,7 +1497,40 @@ private const LANGUAGE_FLAGS = [
 
         $fields = $this->ExtractTranslatableFields($presentation);
 
-        return $fields === [] ? null : $fields;
+        return $fields === [] ? null : ['sourceKey' => $sourceKey, 'fields' => $fields];
+    }
+
+    // Profile (Legacy) und Templates (moderne Presentations, seit Symcon 8.0) sind
+    // beide benannte/per-GUID-adressierte, GETEILTE Objekte - werden mehrere
+    // Variablen über dasselbe Profil/Template beschriftet (genau dafür sind sie da),
+    // soll auch nur EINMAL übersetzt werden, nicht redundant je Variable. Dieser
+    // Schlüssel identifiziert die eigentliche, geteilte Textquelle: 'profile:<Name>'
+    // bzw. 'template:<GUID>'. Nur wenn eine Variable ihre Präsentation wirklich
+    // eigenständig inline trägt (keine Referenz auf irgendetwas Geteiltes), bleibt
+    // es bei einem rein variablenspezifischen Schlüssel.
+    //
+    // IPS_GetVariablePresentation() liefert bei Template-Referenzen bereits das
+    // vollständig aufgelöste Ergebnis OHNE eigenen TEMPLATE-Schlüssel (live geprüft) -
+    // die Referenz selbst ist daher nur über das rohe VariableCustomPresentation/
+    // VariablePresentation-Feld sichtbar.
+    private function GetPresentationSourceKey(int $VariableID, array $ResolvedPresentation): string
+    {
+        if (($ResolvedPresentation['PRESENTATION'] ?? '') === VARIABLE_PRESENTATION_LEGACY) {
+            $profileName = $ResolvedPresentation['PROFILE'] ?? '';
+            if ($profileName !== '') {
+                return 'profile:' . $profileName;
+            }
+        }
+
+        $variable = @IPS_GetVariable($VariableID);
+        $templateGUID = $variable['VariableCustomPresentation']['TEMPLATE']
+            ?? $variable['VariablePresentation']['TEMPLATE']
+            ?? '';
+        if ($templateGUID !== '') {
+            return 'template:' . $templateGUID;
+        }
+
+        return 'variable:' . $VariableID;
     }
 
     // Sucht rekursiv (auch durch JSON-kodierte String-Felder wie OPTIONS hindurch)
@@ -1479,7 +1567,11 @@ private const LANGUAGE_FLAGS = [
     // Groß-/Kleinschreibung ignorieren statt eine feste Schreibweise anzunehmen.
     private function IsTranslatableFieldName($Key): bool
     {
-        return in_array(is_string($Key) ? strtoupper($Key) : $Key, ['CAPTION', 'PREFIX', 'SUFFIX'], true);
+        // 'Constant' gehört zur intervallbasierten Numeric-Darstellung (Template
+        // Manager > Value Presentation > Numeric, z.B. Heizungsmodus/Controme) - live
+        // gegen Kai's Controme-Template geprüft: das Feld heißt dort wirklich
+        // "Constant" (nicht "Caption"), obwohl es exakt denselben Zweck erfüllt.
+        return in_array(is_string($Key) ? strtoupper($Key) : $Key, ['CAPTION', 'PREFIX', 'SUFFIX', 'CONSTANT'], true);
     }
 
     // Gegenstück zu ExtractTranslatableFields: schreibt die in $Replacements
@@ -1538,29 +1630,35 @@ private const LANGUAGE_FLAGS = [
         return $result;
     }
 
-    // Wie MergeRows, aber Schlüssel ist ObjectID+Options-Wert (eine Variable kann
-    // mehrere Optionen haben) - und mit einem bewussten Unterschied: der Rohtext wird
-    // NICHT für immer eingefroren, sondern neu übernommen, sobald die
-    // Original-Import-Zelle im Formular geleert wurde (z.B. weil sich das zugrunde
-    // liegende, ggf. geteilte Profil geändert hat und der Admin das mitbekommen und
-    // "Baum neu einlesen" geklickt hat, siehe README). Die dadurch veralteten
-    // Übersetzungsspalten werden dabei ebenfalls geleert, damit sie im selben
-    // Rescan-Durchlauf automatisch neu übersetzt werden (FillMissingTranslations
-    // übersetzt ohnehin nur leere Zellen).
+    // Wie MergeRows, aber Schlüssel ist SourceKey+FieldPath statt ObjectID: mehrere
+    // Variablen, die dasselbe (geteilte) Profil/Template nutzen, teilen sich eine
+    // einzige Zeile (siehe GetPresentationSourceKey) - so wird nur einmal übersetzt,
+    // nicht redundant je Variable, und eine manuelle Korrektur wirkt automatisch auf
+    // alle Variablen, die diese Quelle nutzen. ValueObjectIDs wird bei jedem Rescan
+    // komplett aus dem aktuellen Scan übernommen (nicht gemergt) - Variablen, die das
+    // Profil/Template inzwischen nicht mehr nutzen, fallen so automatisch wieder raus.
+    //
+    // Mit einem bewussten Unterschied zu MergeRows: der Rohtext wird NICHT für immer
+    // eingefroren, sondern neu übernommen, sobald die Original-Import-Zelle im
+    // Formular geleert wurde (z.B. weil sich das zugrunde liegende Profil/Template
+    // geändert hat und der Admin das mitbekommen und "Baum neu einlesen" geklickt
+    // hat, siehe README). Die dadurch veralteten Übersetzungsspalten werden dabei
+    // ebenfalls geleert, damit sie im selben Rescan-Durchlauf automatisch neu
+    // übersetzt werden (FillMissingTranslations übersetzt ohnehin nur leere Zellen).
     private function MergeEnumerationOptions(array $ExistingRows, array $ScannedByKey): array
     {
         $result = [];
         foreach ($ExistingRows as $row) {
-            $key = isset($row['ObjectID'], $row['FieldPath']) ? $row['ObjectID'] . ':' . $row['FieldPath'] : null;
+            $key = isset($row['SourceKey'], $row['FieldPath']) ? $row['SourceKey'] . ':' . $row['FieldPath'] : null;
             if ($key !== null && isset($ScannedByKey[$key])) {
                 $scanned = $ScannedByKey[$key];
                 $row['Path'] = $scanned['Path'];
-                $row['ValueObjectID'] = $scanned['ValueObjectID'];
+                $row['ValueObjectIDs'] = $scanned['ValueObjectIDs'];
 
                 if (($row[self::langOriginalImport] ?? '') === '') {
                     $row[self::langOriginalImport] = $scanned[self::langOriginalImport];
                     foreach (array_keys($row) as $field) {
-                        if (!in_array($field, ['ObjectID', 'ValueObjectID', 'FieldPath', 'Path', self::langOriginalImport], true)) {
+                        if (!in_array($field, ['SourceKey', 'ValueObjectIDs', 'FieldPath', 'Path', self::langOriginalImport], true)) {
                             $row[$field] = '';
                         }
                     }
@@ -2181,10 +2279,20 @@ private const LANGUAGE_FLAGS = [
     // wären ObjectID/Path/Original-Import bei jedem Übernehmen verloren.
     private function BuildListColumns(string $SourceLanguage, array $TargetLanguages, string $Kind): array
     {
-        $columns = [
-            ['caption' => 'Objekt-ID', 'name' => 'ObjectID', 'width' => '80px', 'save' => true],
-            ['caption' => $this->Translate('Pfad'), 'name' => 'Path', 'width' => '200px', 'save' => true],
-        ];
+        $columns = $Kind === 'options'
+            ? [
+                [
+                    'caption' => $this->Translate('Profil/Template'),
+                    'name'    => 'SourceKey',
+                    'width'   => '160px',
+                    'save'    => true,
+                ],
+                ['caption' => $this->Translate('Pfad'), 'name' => 'Path', 'width' => '200px', 'save' => true],
+            ]
+            : [
+                ['caption' => 'Objekt-ID', 'name' => 'ObjectID', 'width' => '80px', 'save' => true],
+                ['caption' => $this->Translate('Pfad'), 'name' => 'Path', 'width' => '200px', 'save' => true],
+            ];
 
         if ($Kind === 'texts') {
             $columns[] = ['caption' => 'Wert-Objekt-ID', 'name' => 'ValueObjectID', 'width' => '90px', 'save' => true];
@@ -2211,7 +2319,12 @@ private const LANGUAGE_FLAGS = [
                 $this->BuildLanguageColumnSet(self::fieldTextPrefix, $this->Translate('Text'), $SourceLanguage, $TargetLanguages)
             );
         } elseif ($Kind === 'options') {
-            $columns[] = ['caption' => 'Wert-Objekt-ID', 'name' => 'ValueObjectID', 'width' => '90px', 'save' => true];
+            $columns[] = [
+                'caption' => $this->Translate('Variablen-IDs'),
+                'name'    => 'ValueObjectIDs',
+                'width'   => '120px',
+                'save'    => true,
+            ];
             $columns[] = [
                 'caption' => $this->Translate('Feld'),
                 'name'    => 'FieldPath',

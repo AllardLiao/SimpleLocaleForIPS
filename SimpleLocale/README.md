@@ -113,19 +113,33 @@ Beschreibung des Moduls.
 * **Beschriftungen (Abschnitt 1): der "Fork"-Mechanismus und seine Grenzen.**
   Eine Variable im Root-Baum kann ihre Wert-Beschriftungen von einem
   klassischen Profil oder einer modernen Template-Presentation beziehen -
-  beides sind in Symcon **geteilte, benannte Objekte**, die auch von anderen,
-  nicht getrackten Variablen (in anderen Kategorien, anderen Visus, sogar
-  anderen Instanzen) verwendet werden können. Simple Locale schreibt beim
-  Sprachwechsel **niemals** in dieses geteilte Profil/Template selbst -
-  stattdessen wird für **genau die eine getrackte Variable** eine eigene,
-  in sich geschlossene Kopie der Beschriftungen hinterlegt
-  (`IPS_SetVariableCustomPresentation`, ohne Profil-/Template-Referenz -
-  ein "Fork"). Andere Variablen, die zufällig dasselbe Profil/Template
-  nutzen, lesen es unverändert weiter und bleiben komplett unberührt. Beim
-  Zurückwechseln auf die Basissprache wird der Fork wieder vollständig
-  aufgehoben (der exakte Zustand vor dem ersten Fork wird dafür gesichert),
-  die Variable liest ihre Beschriftungen dann wieder live vom
-  ursprünglichen, nie veränderten Profil/Template.
+  beides sind in Symcon **geteilte, benannte/per-GUID-adressierte Objekte**,
+  die auch von anderen, nicht getrackten Variablen (in anderen Kategorien,
+  anderen Visus, sogar anderen Instanzen) verwendet werden können. Simple
+  Locale schreibt beim Sprachwechsel **niemals** in dieses geteilte
+  Profil/Template selbst - stattdessen wird für **jede einzelne getrackte
+  Variable** eine eigene, in sich geschlossene Kopie der Beschriftungen
+  hinterlegt (`IPS_SetVariableCustomPresentation`, ohne Profil-/Template-
+  Referenz - ein "Fork"). Andere Variablen, die zufällig dasselbe
+  Profil/Template nutzen, aber **nicht** im Root-Baum liegen, lesen es
+  unverändert weiter und bleiben komplett unberührt.
+
+  Nutzen dagegen **mehrere Variablen innerhalb des Root-Baums** dasselbe
+  Profil/Template (genau dafür sind Profile/Templates da), wird der Text
+  nur **einmal** gescannt und übersetzt - eine manuelle Korrektur in der
+  Liste "Beschriftungen" wirkt dann automatisch auf alle Variablen, die
+  dieses Profil/Template nutzen (jede bekommt beim Sprachwechsel trotzdem
+  ihren eigenen, unabhängigen Fork geschrieben - nur die Übersetzung dahinter
+  ist geteilt). Beim Zurückwechseln auf die Basissprache wird der Fork **pro
+  Variable** wieder vollständig aufgehoben (der exakte Zustand vor dem ersten
+  Fork wird dafür je Variable gesichert), sie liest ihre Beschriftungen dann
+  wieder live vom ursprünglichen, nie veränderten Profil/Template.
+
+  Verknüpfungen (Links) im Root-Baum, die nicht direkt auf eine Variable,
+  sondern auf eine **Kategorie** zeigen (übliche Praxis, um z. B. eine
+  "Wetter"-Kategorie per Link identisch in mehrere Visus einzubinden, ohne
+  sie zu duplizieren), werden gefolgt - die Objekte darin werden mit
+  erfasst, nicht nur der Link selbst.
 
   Zwei Dinge löst der Fork bewusst **nicht**:
   - Steht dieselbe physische Variable (nicht nur dasselbe Profil) über eine
@@ -135,16 +149,17 @@ Beschreibung des Moduls.
     Praktisch meist unkritisch, da Gäste einer Ferienwohnung/eines Airbnb
     typischerweise zeitlich versetzt anreisen, nicht gleichzeitig
     unterschiedliche Sprachen benötigen.
-  - Übersetzt werden nur Felder, die Symcon selbst `Caption`, `Prefix` oder
-    `Suffix` nennt (unabhängig von Groß-/Kleinschreibung) - das deckt
-    klassische Profile und Enumeration-Presentations vollständig ab.
-    Intervallbasierte numerische Darstellungen (z. B. eine Heizungsmodus-
-    Kachel mit Wertebereichen statt Einzelwerten) werden dagegen bewusst
-    **nicht** unterstützt: die Struktur ist zu variabel, um sicher zwischen
-    Anzeigetext und technischen Feldern (Icon-Bezeichner, Farbwerte,
-    Schwellwerte) zu unterscheiden - lieber eine unbekannte Beschriftung
-    übersehen als versehentlich einen Icon-Bezeichner kaputtübersetzen und
-    damit ein Icon zum Verschwinden bringen.
+  - Übersetzt werden nur Felder, die Symcon selbst `Caption`, `Prefix`,
+    `Suffix` oder `Constant` nennt (unabhängig von Groß-/Kleinschreibung) -
+    das deckt klassische Profile, Enumeration-Presentations und
+    intervallbasierte Numeric-Presentations (z. B. eine Heizungsmodus-Kachel
+    mit Wertebereichen statt Einzelwerten) ab. Andere, noch unbekannte
+    Präsentationsarten mit anders benannten Textfeldern werden bewusst
+    **nicht** geraten übersetzt: die Struktur ist sonst zu variabel, um
+    sicher zwischen Anzeigetext und technischen Feldern (Icon-Bezeichner,
+    Farbwerte, Schwellwerte) zu unterscheiden - lieber eine unbekannte
+    Beschriftung übersehen als versehentlich einen Icon-Bezeichner
+    kaputtübersetzen und damit ein Icon zum Verschwinden bringen.
 
 ### 3. Voraussetzungen
 

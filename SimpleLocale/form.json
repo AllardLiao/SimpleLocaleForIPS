@@ -194,27 +194,27 @@
                     "rowCount": 10,
                     "columns": [
                         {
-                            "caption": "Objekt-ID",
-                            "name": "ObjectID",
-                            "width": "80px",
-                            "save": true
-                        },
-                        {
-                            "caption": "Wert-Objekt-ID",
-                            "name": "ValueObjectID",
-                            "width": "90px",
-                            "save": true
-                        },
-                        {
-                            "caption": "Feld",
-                            "name": "FieldPath",
-                            "width": "120px",
+                            "caption": "Profil/Template",
+                            "name": "SourceKey",
+                            "width": "160px",
                             "save": true
                         },
                         {
                             "caption": "Pfad",
                             "name": "Path",
                             "width": "200px",
+                            "save": true
+                        },
+                        {
+                            "caption": "Variablen-IDs",
+                            "name": "ValueObjectIDs",
+                            "width": "120px",
+                            "save": true
+                        },
+                        {
+                            "caption": "Feld",
+                            "name": "FieldPath",
+                            "width": "120px",
                             "save": true
                         },
                         {
