@@ -150,6 +150,13 @@ Rohtext. Der Basissprache-Eintrag im Dropdown liefert deshalb technisch
 "Original", zeigt aber ganz normal die Basissprache selbst an (z. B.
 "🇩🇪 Deutsch - de") statt einer eigenen "Original"-Beschriftung.
 
+Die Einträge sind alphabetisch nach dem angezeigten Namen sortiert (nicht
+nach Sprachcode), und zwar nach den Sortierregeln der jeweils aktiven
+Gast-Sprache (z. B. korrekte Einordnung von Umlauten/Akzenten) - dafür wird,
+falls auf dem Symcon-Server installiert, PHPs `intl`-Erweiterung (Klasse
+`Collator`) genutzt; ist sie nicht verfügbar, greift eine einfache
+alphabetische Sortierung ohne sprachspezifische Sonderregeln.
+
 Ein Info-Symbol (ⓘ) neben dem Dropdown öffnet auf Klick einen nativen
 Browser-Dialog (`alert()`) mit den in [Abschnitt 2](#2-bekannte-einschränkungen)
 beschriebenen Einschränkungen, ebenfalls live in der jeweils aktiven

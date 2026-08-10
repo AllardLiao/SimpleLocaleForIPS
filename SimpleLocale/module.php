@@ -868,8 +868,15 @@ class SimpleLocale extends IPSModuleStrict
         $currentLanguage = $this->ReadPropertyString(self::propertyCurrentLanguage);
         $guestCache = $this->EnsureGuestLanguageNamesFresh();
 
+        $codes = $this->GetSelectableLanguageCodes();
+        $names = [];
+        foreach ($codes as $code) {
+            $names[$code] = $this->GetGuestLanguageName($code, $guestCache);
+        }
+        $this->SortCodesByLocalizedName($codes, $names, $this->ResolveDisplayLanguageCode($currentLanguage));
+
         $optionsHtml = '';
-        foreach ($this->GetSelectableLanguageCodes() as $code) {
+        foreach ($codes as $code) {
             $selected = $code === $currentLanguage ? ' selected' : '';
             $value = htmlspecialchars($code, ENT_QUOTES, 'UTF-8');
             $label = htmlspecialchars($this->GetGuestLanguageLabel($code, $guestCache), ENT_QUOTES, 'UTF-8');
@@ -892,6 +899,28 @@ class SimpleLocale extends IPSModuleStrict
             . '</select>'
             . $infoIconHtml
             . '</div>';
+    }
+
+    // Sortiert $Codes anhand von $Names (ObjectID-Code => angezeigter Name) alphabetisch
+    // "in der jeweiligen Sprache", also nach den sprachspezifischen Sortierregeln von
+    // $Locale (z.B. Umlaute/Akzente an der richtigen Stelle), nicht nach rohen
+    // Byte-/Codepoint-Werten. Nutzt Collator (PHP-intl-Erweiterung), falls installiert -
+    // sonst einen einfachen, sprachneutralen Fallback (immer noch alphabetisch, nur
+    // ohne locale-spezifische Sonderregeln).
+    private function SortCodesByLocalizedName(array &$Codes, array $Names, string $Locale): void
+    {
+        if (class_exists('Collator')) {
+            $collator = new Collator($Locale);
+            usort($Codes, function (string $a, string $b) use ($Names, $collator): int {
+                return $collator->compare($Names[$a], $Names[$b]);
+            });
+
+            return;
+        }
+
+        usort($Codes, function (string $a, string $b) use ($Names): int {
+            return strnatcasecmp($Names[$a], $Names[$b]);
+        });
     }
 
     // alert() ist ein Browser-Chrome-Dialog, kein DOM-Element - anders als jedes per
@@ -917,23 +946,35 @@ class SimpleLocale extends IPSModuleStrict
         return htmlspecialchars(json_encode($alertText, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES, 'UTF-8');
     }
 
-    // "Name - code" mit vorangestellter Flagge (z.B. "🇬🇧 English - en"), Name live
-    // in die aktuell aktive Gast-Sprache übersetzt. "Original" liefert seit dem
-    // Wegfall der separaten Basissprachspalte exakt denselben Rohtext wie die
-    // Basissprache selbst (siehe ResolveRowValue) - im Dropdown wird daher
-    // konsequent die Basissprache selbst angezeigt (Flagge/Name/Code), keine eigene
-    // "Original"-Beschriftung mehr, die fälschlich einen Unterschied suggerieren würde.
+    // "Original" liefert seit dem Wegfall der separaten Basissprachspalte exakt
+    // denselben Rohtext wie die Basissprache selbst (siehe ResolveRowValue) - für
+    // Anzeigezwecke (Name/Flagge/Sortierung) daher immer die Basissprache selbst
+    // auflösen, keine eigene "Original"-Beschriftung mehr, die fälschlich einen
+    // Unterschied suggerieren würde.
+    private function ResolveDisplayLanguageCode(string $Code): string
+    {
+        return $Code === self::langOriginalImport ? $this->ReadPropertyString(self::propertySourceLanguage) : $Code;
+    }
+
+    // Nur der Name, live in die aktuell aktive Gast-Sprache übersetzt - eigene Methode
+    // (statt Teil von GetGuestLanguageLabel), da BuildLanguageSelectHtml() danach
+    // sortiert, ohne die vorangestellte Flagge/den Code mit einzubeziehen.
+    private function GetGuestLanguageName(string $Code, array $GuestCache): string
+    {
+        $resolvedCode = $this->ResolveDisplayLanguageCode($Code);
+
+        return $GuestCache['names'][$resolvedCode] ?? $this->GetLanguageDisplayName($resolvedCode);
+    }
+
+    // "Name - code" mit vorangestellter Flagge (z.B. "🇬🇧 English - en").
     private function GetGuestLanguageLabel(string $Code, array $GuestCache): string
     {
-        if ($Code === self::langOriginalImport) {
-            $Code = $this->ReadPropertyString(self::propertySourceLanguage);
-        }
-
-        $flag = self::LANGUAGE_FLAGS[$Code] ?? '';
-        $name = $GuestCache['names'][$Code] ?? $this->GetLanguageDisplayName($Code);
+        $resolvedCode = $this->ResolveDisplayLanguageCode($Code);
+        $flag = self::LANGUAGE_FLAGS[$resolvedCode] ?? '';
+        $name = $this->GetGuestLanguageName($Code, $GuestCache);
         $prefix = $flag === '' ? '' : $flag . ' ';
 
-        return $prefix . $name . ' - ' . $Code;
+        return $prefix . $name . ' - ' . $resolvedCode;
     }
 
     private const guestLanguageNamesMaxAgeSeconds = 86400;
