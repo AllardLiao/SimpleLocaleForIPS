@@ -80,8 +80,12 @@
     "actions": [
         {
             "type": "Button",
-            "caption": "Baum jetzt neu einlesen",
+            "caption": "Baum neu einlesen und fehlende Übersetzungen ergänzen",
             "onClick": "IPS_RequestAction($id, 'Rescan', true);"
+        },
+        {
+            "type": "Label",
+            "caption": "Durchsucht die Root-Kategorie erneut nach neuen/verschobenen Objekten und übersetzt per Google nur noch leere Zellen in Objektnamen und Eigene Texte. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben."
         },
         {
             "type": "PopupAlert",

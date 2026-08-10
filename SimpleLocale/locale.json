@@ -19,7 +19,6 @@
             "Objektnamen": "Object names",
             "Eigene Texte": "Custom texts",
             "Sprachliste von Google aktualisieren": "Refresh language list from Google",
-            "Baum jetzt neu einlesen": "Rescan tree now",
             "Root-Kategorie nicht gesetzt": "Root category not set",
             "Google Translate Fehler - bitte API-Key prüfen": "Google Translate error - please check the API key",
             "Bitte zuerst Google Cloud Translate API-Key eintragen und übernehmen": "Please enter and save a Google Cloud Translate API key first",
@@ -28,7 +27,10 @@
             "Bitte zuerst einen Google Cloud Translate API-Key eintragen und über \"Übernehmen\" speichern, bevor Zielsprachen hinzugefügt werden.": "Please enter a Google Cloud Translate API key first and save it via \"Apply\" before adding target languages.",
             "Sprachliste nicht verfügbar": "Language list unavailable",
             "Die Sprachliste konnte nicht von Google geladen werden. Bitte den Google Cloud Translate API-Key prüfen (z.B. Tippfehler, abgelaufen, fehlende Berechtigung).": "The language list could not be loaded from Google. Please check the Google Cloud Translate API key (e.g. typo, expired, missing permission).",
-            "bitte zuerst gültigen API-Key speichern und Formular neu öffnen": "please save a valid API key first and reopen the form"
+            "bitte zuerst gültigen API-Key speichern und Formular neu öffnen": "please save a valid API key first and reopen the form",
+            "Baum neu einlesen und fehlende Übersetzungen ergänzen": "Rescan tree and complete missing translations",
+            "Durchsucht die Root-Kategorie erneut nach neuen/verschobenen Objekten und übersetzt per Google nur noch leere Zellen in Objektnamen und Eigene Texte. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben.": "Rescans the root category for new/moved objects and uses Google to translate only empty cells in Objektnamen and Eigene Texte. Existing translations (including manually corrected ones) are never overwritten.",
+            "Wert-Objekt-ID": "Value object ID"
         },
         "es": {
             "Sprache": "Idioma",
@@ -49,7 +51,6 @@
             "Objektnamen": "Nombres de objetos",
             "Eigene Texte": "Textos personalizados",
             "Sprachliste von Google aktualisieren": "Actualizar lista de idiomas de Google",
-            "Baum jetzt neu einlesen": "Volver a escanear el árbol ahora",
             "Root-Kategorie nicht gesetzt": "Categoría raíz no establecida",
             "Google Translate Fehler - bitte API-Key prüfen": "Error de Google Translate: compruebe la clave de API",
             "Bitte zuerst Google Cloud Translate API-Key eintragen und übernehmen": "Introduzca y guarde primero una clave de API de Google Cloud Translate",
@@ -58,7 +59,10 @@
             "Bitte zuerst einen Google Cloud Translate API-Key eintragen und über \"Übernehmen\" speichern, bevor Zielsprachen hinzugefügt werden.": "Introduzca primero una clave de API de Google Cloud Translate y guárdela con \"Aplicar\" antes de añadir idiomas de destino.",
             "Sprachliste nicht verfügbar": "Lista de idiomas no disponible",
             "Die Sprachliste konnte nicht von Google geladen werden. Bitte den Google Cloud Translate API-Key prüfen (z.B. Tippfehler, abgelaufen, fehlende Berechtigung).": "No se pudo cargar la lista de idiomas de Google. Compruebe la clave de API de Google Cloud Translate (p. ej. error tipográfico, caducada, permiso faltante).",
-            "bitte zuerst gültigen API-Key speichern und Formular neu öffnen": "guarde primero una clave de API válida y vuelva a abrir el formulario"
+            "bitte zuerst gültigen API-Key speichern und Formular neu öffnen": "guarde primero una clave de API válida y vuelva a abrir el formulario",
+            "Baum neu einlesen und fehlende Übersetzungen ergänzen": "Volver a escanear el árbol y completar traducciones faltantes",
+            "Durchsucht die Root-Kategorie erneut nach neuen/verschobenen Objekten und übersetzt per Google nur noch leere Zellen in Objektnamen und Eigene Texte. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben.": "Vuelve a explorar la categoría raíz en busca de objetos nuevos/movidos y usa Google para traducir solo las celdas vacías en Nombres de objetos y Textos personalizados. Las traducciones existentes (incluidas las corregidas manualmente) nunca se sobrescriben.",
+            "Wert-Objekt-ID": "ID del objeto de valor"
         },
         "it": {
             "Sprache": "Lingua",
@@ -79,7 +83,6 @@
             "Objektnamen": "Nomi degli oggetti",
             "Eigene Texte": "Testi personalizzati",
             "Sprachliste von Google aktualisieren": "Aggiorna elenco lingue da Google",
-            "Baum jetzt neu einlesen": "Rileggi ora l'albero",
             "Root-Kategorie nicht gesetzt": "Categoria radice non impostata",
             "Google Translate Fehler - bitte API-Key prüfen": "Errore di Google Translate - controllare la chiave API",
             "Bitte zuerst Google Cloud Translate API-Key eintragen und übernehmen": "Inserire e salvare prima una chiave API di Google Cloud Translate",
@@ -88,7 +91,10 @@
             "Bitte zuerst einen Google Cloud Translate API-Key eintragen und über \"Übernehmen\" speichern, bevor Zielsprachen hinzugefügt werden.": "Inserire prima una chiave API di Google Cloud Translate e salvarla con \"Applica\" prima di aggiungere lingue di destinazione.",
             "Sprachliste nicht verfügbar": "Elenco lingue non disponibile",
             "Die Sprachliste konnte nicht von Google geladen werden. Bitte den Google Cloud Translate API-Key prüfen (z.B. Tippfehler, abgelaufen, fehlende Berechtigung).": "Impossibile caricare l'elenco delle lingue da Google. Controllare la chiave API di Google Cloud Translate (es. errore di battitura, scaduta, permesso mancante).",
-            "bitte zuerst gültigen API-Key speichern und Formular neu öffnen": "salvare prima una chiave API valida e riaprire il modulo"
+            "bitte zuerst gültigen API-Key speichern und Formular neu öffnen": "salvare prima una chiave API valida e riaprire il modulo",
+            "Baum neu einlesen und fehlende Übersetzungen ergänzen": "Rileggi l'albero e completa le traduzioni mancanti",
+            "Durchsucht die Root-Kategorie erneut nach neuen/verschobenen Objekten und übersetzt per Google nur noch leere Zellen in Objektnamen und Eigene Texte. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben.": "Ricerca nuovamente nella categoria radice oggetti nuovi/spostati e usa Google per tradurre solo le celle vuote in Nomi degli oggetti e Testi personalizzati. Le traduzioni esistenti (anche quelle corrette manualmente) non vengono mai sovrascritte.",
+            "Wert-Objekt-ID": "ID oggetto valore"
         },
         "fr": {
             "Sprache": "Langue",
@@ -109,7 +115,6 @@
             "Objektnamen": "Noms des objets",
             "Eigene Texte": "Textes personnalisés",
             "Sprachliste von Google aktualisieren": "Actualiser la liste des langues depuis Google",
-            "Baum jetzt neu einlesen": "Réanalyser l'arborescence maintenant",
             "Root-Kategorie nicht gesetzt": "Catégorie racine non définie",
             "Google Translate Fehler - bitte API-Key prüfen": "Erreur Google Translate - veuillez vérifier la clé API",
             "Bitte zuerst Google Cloud Translate API-Key eintragen und übernehmen": "Veuillez d'abord saisir et enregistrer une clé API Google Cloud Translate",
@@ -118,7 +123,10 @@
             "Bitte zuerst einen Google Cloud Translate API-Key eintragen und über \"Übernehmen\" speichern, bevor Zielsprachen hinzugefügt werden.": "Veuillez d'abord saisir une clé API Google Cloud Translate et l'enregistrer via \"Appliquer\" avant d'ajouter des langues cibles.",
             "Sprachliste nicht verfügbar": "Liste des langues indisponible",
             "Die Sprachliste konnte nicht von Google geladen werden. Bitte den Google Cloud Translate API-Key prüfen (z.B. Tippfehler, abgelaufen, fehlende Berechtigung).": "Impossible de charger la liste des langues depuis Google. Veuillez vérifier la clé API Google Cloud Translate (ex. faute de frappe, expirée, autorisation manquante).",
-            "bitte zuerst gültigen API-Key speichern und Formular neu öffnen": "veuillez d'abord enregistrer une clé API valide et rouvrir le formulaire"
+            "bitte zuerst gültigen API-Key speichern und Formular neu öffnen": "veuillez d'abord enregistrer une clé API valide et rouvrir le formulaire",
+            "Baum neu einlesen und fehlende Übersetzungen ergänzen": "Réanalyser l'arborescence et compléter les traductions manquantes",
+            "Durchsucht die Root-Kategorie erneut nach neuen/verschobenen Objekten und übersetzt per Google nur noch leere Zellen in Objektnamen und Eigene Texte. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben.": "Réanalyse la catégorie racine à la recherche d'objets nouveaux/déplacés et utilise Google pour traduire uniquement les cellules vides dans Noms des objets et Textes personnalisés. Les traductions existantes (y compris celles corrigées manuellement) ne sont jamais écrasées.",
+            "Wert-Objekt-ID": "ID objet valeur"
         }
     }
 }
