@@ -23,6 +23,7 @@ trait SimpleLocaleConstants
     // Idents (Variablen / RequestAction)
     private const identLanguage = 'Language';
     private const identRescan = 'Rescan';
+    private const identShowApiKeyWarning = 'ShowApiKeyWarning';
 
     // Variablenprofil (kein führendes "~" - das ist Symcons System-Profilen vorbehalten)
     private const profileLanguage = 'IPSSL.Language';

@@ -89,6 +89,15 @@ class SimpleLocale extends IPSModuleStrict
                 $this->Rescan();
                 break;
 
+            case self::identShowApiKeyWarning:
+                // Prüft die tatsächliche Ursache serverseitig nach, statt sich allein
+                // auf den (nur indirekten) Hinweis "hinzugefügte Zeile hat leeren Code"
+                // aus form.json zu verlassen.
+                if ($this->ReadPropertyString(self::propertyGoogleTranslateAPIKey) === '') {
+                    $this->UpdateFormField('ApiKeyWarningPopup', 'visible', true);
+                }
+                break;
+
             default:
                 throw new Exception('Invalid Ident: ' . $Ident);
         }

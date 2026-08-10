@@ -25,12 +25,28 @@
             "minimum": 0
         },
         {
+            "type": "PopupAlert",
+            "name": "ApiKeyWarningPopup",
+            "visible": false,
+            "popup": {
+                "caption": "API-Key fehlt",
+                "closeCaption": "OK",
+                "items": [
+                    {
+                        "type": "Label",
+                        "caption": "Bitte zuerst einen Google Cloud Translate API-Key eintragen und über \"Übernehmen\" speichern, bevor Zielsprachen hinzugefügt werden."
+                    }
+                ]
+            }
+        },
+        {
             "type": "List",
             "name": "TargetLanguages",
             "caption": "Zielsprachen",
             "add": true,
             "delete": true,
             "rowCount": 5,
+            "onAdd": "if ($TargetLanguages['code'] == '') { IPS_RequestAction($id, 'ShowApiKeyWarning', true); }",
             "columns": [
                 {
                     "caption": "Sprache",
