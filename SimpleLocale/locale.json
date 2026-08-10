@@ -31,7 +31,8 @@
             "Baum neu einlesen und fehlende Übersetzungen ergänzen": "Rescan tree and complete missing translations",
             "Durchsucht die Root-Kategorie erneut nach neuen/verschobenen Objekten und übersetzt per Google nur noch leere Zellen in Objektnamen und Eigene Texte. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben.": "Rescans the root category for new/moved objects and uses Google to translate only empty cells in 'Object Names' and 'Custom Texts'. Existing translations (including manually corrected ones) are never overwritten.",
             "Wert-Objekt-ID": "Value object ID",
-            "Original (unbearbeitet)": "Original (unedited)"
+            "Original (unbearbeitet)": "Original (unedited)",
+            "Aktuell aktive Sprache": "Currently active language"
         },
         "es": {
             "Sprache": "Idioma",
@@ -64,7 +65,8 @@
             "Baum neu einlesen und fehlende Übersetzungen ergänzen": "Volver a escanear el árbol y completar traducciones faltantes",
             "Durchsucht die Root-Kategorie erneut nach neuen/verschobenen Objekten und übersetzt per Google nur noch leere Zellen in Objektnamen und Eigene Texte. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben.": "Vuelve a explorar la categoría raíz en busca de objetos nuevos/movidos y usa Google para traducir solo las celdas vacías en Nombres de objetos y Textos personalizados. Las traducciones existentes (incluidas las corregidas manualmente) nunca se sobrescriben.",
             "Wert-Objekt-ID": "ID del objeto de valor",
-            "Original (unbearbeitet)": "Original (sin editar)"
+            "Original (unbearbeitet)": "Original (sin editar)",
+            "Aktuell aktive Sprache": "Idioma actualmente activo"
         },
         "it": {
             "Sprache": "Lingua",
@@ -97,7 +99,8 @@
             "Baum neu einlesen und fehlende Übersetzungen ergänzen": "Rileggi l'albero e completa le traduzioni mancanti",
             "Durchsucht die Root-Kategorie erneut nach neuen/verschobenen Objekten und übersetzt per Google nur noch leere Zellen in Objektnamen und Eigene Texte. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben.": "Ricerca nuovamente nella categoria radice oggetti nuovi/spostati e usa Google per tradurre solo le celle vuote in Nomi degli oggetti e Testi personalizzati. Le traduzioni esistenti (anche quelle corrette manualmente) non vengono mai sovrascritte.",
             "Wert-Objekt-ID": "ID oggetto valore",
-            "Original (unbearbeitet)": "Originale (non modificato)"
+            "Original (unbearbeitet)": "Originale (non modificato)",
+            "Aktuell aktive Sprache": "Lingua attualmente attiva"
         },
         "fr": {
             "Sprache": "Langue",
@@ -130,7 +133,8 @@
             "Baum neu einlesen und fehlende Übersetzungen ergänzen": "Réanalyser l'arborescence et compléter les traductions manquantes",
             "Durchsucht die Root-Kategorie erneut nach neuen/verschobenen Objekten und übersetzt per Google nur noch leere Zellen in Objektnamen und Eigene Texte. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben.": "Réanalyse la catégorie racine à la recherche d'objets nouveaux/déplacés et utilise Google pour traduire uniquement les cellules vides dans Noms des objets et Textes personnalisés. Les traductions existantes (y compris celles corrigées manuellement) ne sont jamais écrasées.",
             "Wert-Objekt-ID": "ID objet valeur",
-            "Original (unbearbeitet)": "Original (non modifié)"
+            "Original (unbearbeitet)": "Original (non modifié)",
+            "Aktuell aktive Sprache": "Langue actuellement active"
         }
     }
 }

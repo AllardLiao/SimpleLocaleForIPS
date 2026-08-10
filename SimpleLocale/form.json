@@ -49,6 +49,14 @@
             "values": []
         },
         {
+            "type": "Select",
+            "name": "CurrentLanguage",
+            "caption": "Aktuell aktive Sprache",
+            "options": [
+                { "caption": "Deutsch", "value": "de" }
+            ]
+        },
+        {
             "type": "List",
             "name": "ObjectNames",
             "caption": "Objektnamen",

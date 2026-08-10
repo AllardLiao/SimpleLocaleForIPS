@@ -50,27 +50,30 @@ class SimpleLocale extends IPSModuleStrict
         $this->RegisterPropertyString(self::propertyObjectNames, '[]');
         $this->RegisterPropertyString(self::propertyObjectTexts, '[]');
 
-        $this->RegisterAttributeString(self::attributeCurrentLanguage, '');
+        // Bewusst eine Property statt Variable/Profil für die aktive Sprache: Profile
+        // sind in Symcon immer global, nicht instanzgebunden - bei mehreren Instanzen
+        // mit unterschiedlichen Zielsprachen würde jede Instanz beim Übernehmen die
+        // Assoziationen der jeweils anderen überschreiben. Als Property ist sie sowohl
+        // instanzgebunden als auch direkt im Konfigurationsformular sicht-/änderbar
+        // (siehe GetConfigurationForm). "Language" bleibt unten nur noch als reiner
+        // RequestAction-Ident (String) bestehen, ohne zugehöriges Variablenobjekt - die
+        // Kachel spricht ihn direkt per requestAction() an (siehe HTML-SDK).
+        $this->RegisterPropertyString(self::propertyCurrentLanguage, '');
+
         $this->RegisterAttributeString(self::attributeAvailableLanguagesCache, '[]');
         $this->RegisterAttributeInteger(self::attributeAvailableLanguagesFetchedAt, 0);
         $this->RegisterAttributeString(self::attributeGuestLanguageNamesCache, '{}');
 
-        // Profil muss existieren, bevor die Variable damit registriert werden kann
-        $this->EnsureLanguageProfileExists();
-
-        $this->RegisterVariableString(self::identLanguage, $this->Translate('Sprache'), self::profileLanguage);
-        $this->EnableAction(self::identLanguage);
-
-        // Echte Modul-Kachel statt HTMLBox-Variable (GetVisualizationTile) - schlanker
-        // und dem von Symcon vorgesehenen Weg entsprechend: die Instanz selbst wird
-        // als Kachel in die Visualisierung gezogen, keine zusätzliche Variable nötig.
         $this->SetVisualizationType(1);
 
-        // Einmalige Bereinigung: die frühere HTMLBox-Dropdown-Variable existiert bei
-        // bereits eingerichteten Installationen noch, wird aber nicht mehr benötigt.
-        $staleDropdownID = @IPS_GetObjectIDByIdent(self::identLanguageDropdown, $this->InstanceID);
-        if ($staleDropdownID !== false) {
-            IPS_DeleteVariable($staleDropdownID);
+        // Einmalige Bereinigung: die frühere HTMLBox-Dropdown-Variable sowie die
+        // frühere "Sprache"-Variable (inkl. globalem Profil) existieren bei bereits
+        // eingerichteten Installationen noch, werden aber nicht mehr benötigt.
+        foreach ([self::identLanguageDropdown, self::identLanguage] as $staleIdent) {
+            $staleID = @IPS_GetObjectIDByIdent($staleIdent, $this->InstanceID);
+            if ($staleID !== false) {
+                IPS_DeleteVariable($staleID);
+            }
         }
 
         $this->RegisterTimer($this->GetAutoRescanTimerIdent(), 0, 'IPSSL_Rescan($_IPS[\'TARGET\']);');
@@ -94,13 +97,12 @@ class SimpleLocale extends IPSModuleStrict
             $this->SetStatus(102);
         }
 
-        $this->UpdateLanguageProfile();
-
-        // Beim allerersten Aufbau: aktive Sprache auf die Basissprache setzen
-        if ($this->ReadAttributeString(self::attributeCurrentLanguage) === '') {
-            $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
-            $this->WriteAttributeString(self::attributeCurrentLanguage, $sourceLanguage);
-            $this->SetValue(self::identLanguage, $sourceLanguage);
+        // Beim allerersten Aufbau: aktive Sprache auf die Basissprache setzen. Bewusst
+        // nur IPS_SetProperty ohne erneutes IPS_ApplyChanges (das würde rekursiv diese
+        // selbe Methode erneut aufrufen) - der neue Wert ist damit sofort persistiert
+        // und über ReadPropertyString lesbar, auch innerhalb dieses Durchlaufs.
+        if ($this->ReadPropertyString(self::propertyCurrentLanguage) === '') {
+            IPS_SetProperty($this->InstanceID, self::propertyCurrentLanguage, $this->ReadPropertyString(self::propertySourceLanguage));
         }
 
         $interval = $this->ReadPropertyInteger(self::propertyAutoRescanInterval);
@@ -180,6 +182,10 @@ class SimpleLocale extends IPSModuleStrict
                     $element['columns'] = $this->BuildListColumns($sourceLanguage, $targetLanguages, true);
                     $element['values'] = $this->DecodeRows(self::propertyObjectTexts);
                     break;
+
+                case self::propertyCurrentLanguage:
+                    $element['options'] = $this->BuildCurrentLanguageOptions();
+                    break;
             }
         }
         unset($element);
@@ -192,7 +198,7 @@ class SimpleLocale extends IPSModuleStrict
     // hier die public-Methode, ein eigenes "function IPSSL_..." ist nicht nötig.
     public function TranslateText(int $ObjectID): string
     {
-        $currentLanguage = $this->ReadAttributeString(self::attributeCurrentLanguage);
+        $currentLanguage = $this->ReadPropertyString(self::propertyCurrentLanguage);
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
 
         foreach ($this->DecodeRows(self::propertyObjectTexts) as $row) {
@@ -217,8 +223,11 @@ class SimpleLocale extends IPSModuleStrict
 
     private function ApplyLanguage(string $Language): void
     {
-        $this->SetValue(self::identLanguage, $Language);
-        $this->WriteAttributeString(self::attributeCurrentLanguage, $Language);
+        // Wie Rescan(): direktes IPS_SetProperty + IPS_ApplyChanges, damit die neue
+        // Sprache sofort persistiert ist und im Konfigurationsformular korrekt
+        // angezeigt wird, sobald es (neu) geöffnet wird.
+        IPS_SetProperty($this->InstanceID, self::propertyCurrentLanguage, $Language);
+        IPS_ApplyChanges($this->InstanceID);
         $this->PushVisualizationUpdate();
 
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
@@ -713,15 +722,8 @@ class SimpleLocale extends IPSModuleStrict
         return $response;
     }
 
-    private function EnsureLanguageProfileExists(): void
-    {
-        if (!IPS_VariableProfileExists(self::profileLanguage)) {
-            IPS_CreateVariableProfile(self::profileLanguage, VARIABLETYPE_STRING);
-        }
-    }
-
     // Basissprache + gewählte Zielsprachen + die "Original"-Werkseinstellung, in
-    // dieser Reihenfolge - gemeinsam genutzt vom Sprachprofil und vom Dropdown.
+    // dieser Reihenfolge - gemeinsam genutzt von der Kachel und vom Konfigurationsformular.
     private function GetSelectableLanguageCodes(): array
     {
         $languages = array_merge(
@@ -732,20 +734,6 @@ class SimpleLocale extends IPSModuleStrict
         $languages[] = self::langOriginalImport;
 
         return $languages;
-    }
-
-    private function UpdateLanguageProfile(): void
-    {
-        $profileName = self::profileLanguage;
-        $this->EnsureLanguageProfileExists();
-
-        foreach (IPS_GetVariableProfile($profileName)['Associations'] as $association) {
-            IPS_SetVariableProfileAssociation($profileName, $association['Value'], '', '', -1);
-        }
-
-        foreach ($this->GetSelectableLanguageCodes() as $code) {
-            IPS_SetVariableProfileAssociation($profileName, $code, $this->GetLanguageDisplayName($code), '', -1);
-        }
     }
 
     // Symcon ruft diese Methode auf, sobald die Instanz selbst als Kachel in die
@@ -782,7 +770,7 @@ class SimpleLocale extends IPSModuleStrict
     // live in die aktuell aktive Gast-Sprache übersetzt (siehe EnsureGuestLanguageNamesFresh).
     private function BuildLanguageSelectHtml(): string
     {
-        $currentLanguage = $this->ReadAttributeString(self::attributeCurrentLanguage);
+        $currentLanguage = $this->ReadPropertyString(self::propertyCurrentLanguage);
         $guestCache = $this->EnsureGuestLanguageNamesFresh();
 
         $optionsHtml = '';
@@ -824,7 +812,7 @@ class SimpleLocale extends IPSModuleStrict
     // fällt dann auf die admin-sprachige Anzeige zurück, nichts bricht dadurch ab.
     private function EnsureGuestLanguageNamesFresh(): array
     {
-        $language = $this->ReadAttributeString(self::attributeCurrentLanguage);
+        $language = $this->ReadPropertyString(self::propertyCurrentLanguage);
 
         // "Original" ist kein echter Google-Sprachcode - für die Beschriftung der
         // *anderen* Dropdown-Einträge wird in diesem Fall die Basissprache verwendet
@@ -1042,6 +1030,20 @@ class SimpleLocale extends IPSModuleStrict
         });
 
         return $options;
+    }
+
+    // Dropdown-Optionen für "Aktuell aktive Sprache" im Konfigurationsformular:
+    // Basissprache + gewählte Zielsprachen + "Original", mit Namen in der
+    // Admin-Konsolensprache (dies ist das Admin-Formular, nicht die Gast-Kachel -
+    // dort werden die Namen stattdessen live in die Gast-Sprache übersetzt).
+    private function BuildCurrentLanguageOptions(): array
+    {
+        return array_map(function (string $code): array {
+            return [
+                'caption' => $this->GetLanguageDisplayName($code),
+                'value'   => $code,
+            ];
+        }, $this->GetSelectableLanguageCodes());
     }
 
     private function GetLanguageDisplayName(string $Code): string

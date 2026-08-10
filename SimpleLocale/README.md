@@ -34,9 +34,13 @@ Beschreibung des Moduls.
   Variable nötig. Die Sprachnamen im Dropdown (inkl. kleiner Flagge und Google-
   Sprachcode, z. B. "🇬🇧 English - en") werden live in die gerade aktive Sprache
   übersetzt, damit dort nie mehrere Sprachen gemischt angezeigt werden.
-* Alternativ steht die reine Statusvariable `Language` zur Verfügung, falls
-  eine eigene Visualisierung/ein eigenes Skript den Sprachwechsel selbst
-  auslösen möchte (z. B. über die Symcon-Standarddarstellung).
+* Die aktuell aktive Sprache ist eine reine Instanz-Property (kein Symcon-
+  Variablenprofil, das wäre global über alle Instanzen hinweg geteilt) - sie
+  ist direkt im Konfigurationsformular sicht- und änderbar. Achtung: Die
+  Sprache gilt je Instanz für alle Betrachter gleichzeitig - zwei Gäste können
+  sich nicht zeitgleich auf derselben Instanz unterschiedliche Sprachen
+  anzeigen lassen (für getrennte Sprachen: mehrere Instanzen mit jeweils
+  eigener Root-Kategorie/Kachel verwenden).
 
 ### 2. Voraussetzungen
 
@@ -61,23 +65,15 @@ Basissprache                    | Sprache, in der die Objektnamen/-werte ursprü
 Zielsprachen                    | Sprachen, in die übersetzt werden soll. Auswahl-Optionen kommen von Google (Button "Sprachliste von Google aktualisieren"). Wichtig: Nach dem Klick auf "Sprachliste aktualisieren" die Instanzkonfiguration einmal schließen und neu öffnen, bevor Häkchen gesetzt werden - sonst kann die Konsole falsche Sprachen speichern.
 Google Cloud Translate API-Key  | API-Key für die Cloud Translation API v2. Muss vor dem ersten Rescan/Sprachlisten-Refresh gespeichert ("Übernehmen") werden.
 Automatischer Rescan (Minuten)  | Intervall für automatisches Neu-Einlesen des Baums, 0 = nur manuell über den Button.
+Aktuell aktive Sprache          | Welche Sprache gerade angezeigt wird - normalerweise über die Kachel vom Gast selbst gesteuert (siehe Abschnitt 6), lässt sich hier aber auch manuell zu Testzwecken umschalten.
 Objektnamen / Eigene Texte      | Listen der gefundenen Objekte mit Quelltext und je einer Spalte pro Zielsprache. Übersetzungen sind hier direkt editierbar; leere Zellen werden beim nächsten Rescan automatisch übersetzt.
 
 ### 5. Statusvariablen und Profile
 
-Die Statusvariablen/Kategorien werden automatisch angelegt. Das Löschen einzelner kann zu Fehlfunktionen führen.
-
-#### Statusvariablen
-
-Name       | Typ     | Beschreibung
----------- | ------- | ------------
-`Language` | String  | Aktuell aktive Sprache (Ident-Aktion, wird von der Modul-Kachel sowie von eigenen Skripten/Visualisierungen angesteuert)
-
-#### Profile
-
-Name              | Typ
------------------ | -------
-`~IPSSL.Language` | String (Assoziationen: ein Wert je Basis-/Zielsprache)
+Die Statuskategorien werden automatisch angelegt. Das Löschen kann zu
+Fehlfunktionen führen. Simple Locale legt bewusst keine eigenen Symcon-
+Variablen oder -Profile für die Sprachsteuerung an (siehe Abschnitt 6) - der
+gesamte Zustand steckt in Instanz-Properties.
 
 ### 6. Visualisierung
 
@@ -85,11 +81,10 @@ Die Simple-Locale-Instanz selbst per Drag & Drop in WebFront platzieren (bei
 der Kachel-Auswahl nicht eine Variable, sondern die Instanz selbst auswählen)
 - sie liefert eine eigene, kompakte Kachel mit `<select>`-Dropdown
 (Weltkugel-Symbol statt Text-Label "Sprache", damit keine Sprachen gemischt
-angezeigt werden) und löst beim Auswählen direkt den Sprachwechsel aus.
-Alternativ kann die Variable `Language` platziert werden, dann rendert
-Symcon die Auswahl in der Standarddarstellung (Buttons untereinander) - bei
-mehreren Sprachen weniger kompakt, und die Sprachnamen erscheinen dabei immer
-in der Konsolensprache des Admins statt live übersetzt.
+angezeigt werden) und löst beim Auswählen direkt den Sprachwechsel aus. Die
+aktuell aktive Sprache wird als Instanz-Property gespeichert (kein
+Symcon-Variablenprofil - das wäre global über alle Instanzen der Installation
+hinweg geteilt und würde sich bei mehreren Instanzen gegenseitig überschreiben).
 
 Für eigene HTMLBox-Popups oder Hinweise außerhalb der live umbenannten
 Objekte liefert `IPSSL_TranslateText()` den Text in der aktuell aktiven

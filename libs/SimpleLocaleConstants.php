@@ -15,8 +15,12 @@ trait SimpleLocaleConstants
     private const propertyObjectNames = 'ObjectNames';
     private const propertyObjectTexts = 'ObjectTexts';
 
+    // Aktuell aktive Gast-Sprache - bewusst eine Property (instanzgebunden wie ein
+    // Attribut, aber zusätzlich im Konfigurationsformular sicht- und änderbar), nicht
+    // ein Variablenprofil (das wäre in Symcon global über alle Instanzen hinweg geteilt).
+    private const propertyCurrentLanguage = 'CurrentLanguage';
+
     // Attribute
-    private const attributeCurrentLanguage = 'CurrentLanguage';
     private const attributeAvailableLanguagesCache = 'AvailableLanguagesCache';
     private const attributeAvailableLanguagesFetchedAt = 'AvailableLanguagesFetchedAt';
 
@@ -25,7 +29,8 @@ trait SimpleLocaleConstants
     // getrennt vom AvailableLanguagesCache oben, der an der Admin-Konsolensprache haengt.
     private const attributeGuestLanguageNamesCache = 'GuestLanguageNamesCache';
 
-    // Idents (Variablen / RequestAction)
+    // Idents (RequestAction) - kein zugehöriges Variablen-/Profilobjekt mehr, siehe
+    // propertyCurrentLanguage oben. "Language" bleibt nur noch als reiner Aktions-Ident.
     private const identLanguage = 'Language';
     // Nur noch fuer die einmalige Bereinigung alter Installationen (siehe Create()) -
     // die Sprachauswahl ist jetzt eine echte Modul-Kachel (GetVisualizationTile),
@@ -33,9 +38,6 @@ trait SimpleLocaleConstants
     private const identLanguageDropdown = 'LanguageDropdown';
     private const identRescan = 'Rescan';
     private const identShowApiKeyWarning = 'ShowApiKeyWarning';
-
-    // Variablenprofil (kein führendes "~" - das ist Symcons System-Profilen vorbehalten)
-    private const profileLanguage = 'IPSSL.Language';
 
     // Reservierter Pseudo-Sprachcode für den unangetasteten Rohtext beim ersten Scan
     // (Tippfehler inklusive). Nicht vom Gast über die Sprachauswahl erreichbar.
