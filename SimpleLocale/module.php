@@ -33,6 +33,28 @@ class SimpleLocale extends IPSModuleStrict
     // daher als erste Zeile des Texts selbst (siehe BuildInfoAlertJs).
     private const INFO_HEADING_TEXT = 'Hinweise';
 
+    // ===== Lizenz / Testversion =====
+    // Für den Vollversion-Build vor dem echten Release auf false setzen (siehe
+    // README) - dann entfallen alle Einschränkungen unten unabhängig vom
+    // Lizenzschlüssel. Für die Testversion: volle Funktionalität, aber nur die
+    // unten gelisteten (bewusst wenig praxisrelevanten) Sprachen wählbar, und nach
+    // TRIAL_DURATION_DAYS ab der ersten Einrichtung blockiert ein Rescan.
+    private const IS_TRIAL_BUILD = true;
+    private const TRIAL_DURATION_DAYS = 30;
+
+    // Isländisch, Walisisch, Zulu, Maori, Latein - alle von Google Cloud Translate
+    // unterstützt, aber für die allermeisten Gäste-Visualisierungen (Ferienwohnung,
+    // Showroom) kaum praxisrelevant. Voll funktionsfähig zum Testen des kompletten
+    // Mechanismus, aber ohne die Sprachen, die man in der Praxis tatsächlich braucht.
+    private const TRIAL_LANGUAGE_CODES = ['is', 'cy', 'zu', 'mi', 'la'];
+
+    // Geheimnis zur Prüfung von Lizenzschlüsseln (HMAC-Signatur, siehe
+    // ValidateLicenseKey). PLATZHALTER - vor dem echten Release durch ein
+    // echtes, nur dem eigenen Verkaufssystem bekanntes Geheimnis ersetzen. Mit
+    // diesem Platzhalter lässt sich kein echter Lizenzschlüssel gültig signieren,
+    // der Mechanismus ist aber vollständig testbar (siehe smoke-Tests).
+    private const LICENSE_SIGNING_SECRET = 'CHANGE_ME_BEFORE_RELEASE';
+
     // Rein dekorativ fürs Gast-Dropdown (GetVisualizationTile) - nicht erschöpfend,
     // unbekannte Sprachcodes bekommen einfach keine Flagge vorangestellt.
     private const LANGUAGE_FLAGS = [
@@ -83,10 +105,14 @@ class SimpleLocale extends IPSModuleStrict
         $this->RegisterPropertyBoolean(self::propertyShowGlobeIcon, true);
         $this->RegisterPropertyBoolean(self::propertyShowInfoIcon, true);
 
+        $this->RegisterPropertyString(self::propertyLicenseKey, '');
+
         $this->RegisterAttributeString(self::attributeAvailableLanguagesCache, '[]');
         $this->RegisterAttributeInteger(self::attributeAvailableLanguagesFetchedAt, 0);
         $this->RegisterAttributeString(self::attributeGuestLanguageNamesCache, '{}');
         $this->RegisterAttributeString(self::attributeUnnamedObjects, '[]');
+        $this->RegisterAttributeString(self::attributeLicenseInfo, '{}');
+        $this->RegisterAttributeInteger(self::attributeTrialStartedAt, 0);
 
         $this->SetVisualizationType(1);
 
@@ -114,9 +140,18 @@ class SimpleLocale extends IPSModuleStrict
         //Never delete this line!
         parent::ApplyChanges();
 
+        // Testphase startet mit der allerersten Einrichtung der Instanz, nicht erst
+        // beim ersten Rescan - sonst könnte man den Ablauf durch einfaches Nichtstun
+        // beliebig hinauszögern.
+        if (self::IS_TRIAL_BUILD && $this->ReadAttributeInteger(self::attributeTrialStartedAt) === 0) {
+            $this->WriteAttributeInteger(self::attributeTrialStartedAt, time());
+        }
+
         $rootID = $this->ReadPropertyInteger(self::propertyRootCategoryID);
         if ($rootID === 0 || !@IPS_ObjectExists($rootID)) {
             $this->SetStatus(self::STATUS_ROOT_CATEGORY_MISSING);
+        } elseif (self::IS_TRIAL_BUILD && !$this->HasFullLicense() && $this->IsTrialExpired()) {
+            $this->SetStatus(self::STATUS_TRIAL_EXPIRED);
         } else {
             $this->SetStatus(102);
         }
@@ -134,6 +169,10 @@ class SimpleLocale extends IPSModuleStrict
 
             case self::identRescan:
                 $this->Rescan();
+                break;
+
+            case self::identActivateLicense:
+                $this->ActivateLicense();
                 break;
 
             case self::identShowApiKeyWarning:
@@ -218,6 +257,11 @@ class SimpleLocale extends IPSModuleStrict
                         $element['values'] = $unnamedObjects;
                     }
                     break;
+
+                case 'TrialInfoLabel':
+                    $element['visible'] = self::IS_TRIAL_BUILD && !$this->HasFullLicense();
+                    $element['caption'] = $this->BuildTrialInfoText();
+                    break;
             }
         }
         unset($element);
@@ -251,6 +295,128 @@ class SimpleLocale extends IPSModuleStrict
     public function Rescan(): void
     {
         $this->ScanRootTree();
+    }
+
+    // Prüft/übernimmt den in propertyLicenseKey eingetragenen Schlüssel per
+    // RequestAction (Button "Lizenz aktivieren"). Zeigt nur ein Popup an, die
+    // eigentliche Property wurde schon beim "Übernehmen" des Formulars gespeichert -
+    // hier wird nur der bereits gespeicherte Schlüssel geprüft und das Ergebnis
+    // (für die schnelle Anzeige im Formular) in attributeLicenseInfo gecacht.
+    private function ActivateLicense(): void
+    {
+        $info = $this->GetLicenseInfo();
+        $this->WriteAttributeString(self::attributeLicenseInfo, json_encode($info));
+
+        if ($info['valid']) {
+            $this->UpdateFormField('LicenseValidPopup', 'visible', true);
+        } else {
+            $this->UpdateFormField('LicenseInvalidPopup', 'visible', true);
+        }
+
+        $this->ReloadForm();
+    }
+
+    // Lizenzschlüssel-Format: "<base64url(JSON-Payload)>.<base64url(HMAC-SHA256)>".
+    // Payload deckt sowohl Einmalkauf als auch Abo mit demselben Feld ab:
+    // {"type": "one_time"|"subscription", "expiresAt": 0|<Unix-Timestamp>}.
+    // expiresAt=0 bedeutet "läuft nie ab" (Einmalkauf) - Abo-Schlüssel tragen den
+    // Zeitpunkt, bis zu dem bezahlt wurde (vom Verkaufssystem bei jeder Verlängerung
+    // neu ausgestellt). Rein offline prüfbar, kein Server-Roundtrip nötig.
+    private function ValidateLicenseKey(string $Key): ?array
+    {
+        $parts = explode('.', $Key);
+        if (count($parts) !== 2) {
+            return null;
+        }
+
+        [$payloadPart, $signaturePart] = $parts;
+        $payloadJson = base64_decode(strtr($payloadPart, '-_', '+/'), true);
+        $signature = base64_decode(strtr($signaturePart, '-_', '+/'), true);
+        if ($payloadJson === false || $signature === false) {
+            return null;
+        }
+
+        $expectedSignature = hash_hmac('sha256', $payloadJson, self::LICENSE_SIGNING_SECRET, true);
+        if (!hash_equals($expectedSignature, $signature)) {
+            return null;
+        }
+
+        $payload = json_decode($payloadJson, true);
+        if (!is_array($payload) || !isset($payload['type'], $payload['expiresAt'])) {
+            return null;
+        }
+
+        return $payload;
+    }
+
+    // Validiert den aktuell gespeicherten Lizenzschlüssel neu gegen die Uhrzeit (statt
+    // den Cache blind zu übernehmen) - ein Abo kann zwischen zwei Aufrufen ablaufen,
+    // ohne dass sich der gespeicherte Schlüssel selbst ändert.
+    private function GetLicenseInfo(): array
+    {
+        $key = $this->ReadPropertyString(self::propertyLicenseKey);
+        if ($key === '') {
+            return ['valid' => false];
+        }
+
+        $payload = $this->ValidateLicenseKey($key);
+        if ($payload === null) {
+            return ['valid' => false];
+        }
+
+        $expiresAt = (int) $payload['expiresAt'];
+        if ($expiresAt !== 0 && $expiresAt < time()) {
+            return ['valid' => false, 'expired' => true, 'type' => $payload['type'], 'expiresAt' => $expiresAt];
+        }
+
+        return ['valid' => true, 'type' => $payload['type'], 'expiresAt' => $expiresAt];
+    }
+
+    private function HasFullLicense(): bool
+    {
+        if (!self::IS_TRIAL_BUILD) {
+            return true;
+        }
+
+        return $this->GetLicenseInfo()['valid'];
+    }
+
+    private function IsTrialExpired(): bool
+    {
+        $expiresAt = $this->GetTrialExpiresAt();
+
+        return $expiresAt !== 0 && $expiresAt < time();
+    }
+
+    // 0 = Testphase wurde noch nicht gestartet (erstes ApplyChanges steht noch aus,
+    // siehe ApplyChanges).
+    private function GetTrialExpiresAt(): int
+    {
+        $startedAt = $this->ReadAttributeInteger(self::attributeTrialStartedAt);
+        if ($startedAt === 0) {
+            return 0;
+        }
+
+        return $startedAt + self::TRIAL_DURATION_DAYS * 24 * 60 * 60;
+    }
+
+    private function BuildTrialInfoText(): string
+    {
+        $expiresAt = $this->GetTrialExpiresAt();
+        if ($expiresAt === 0) {
+            return $this->Translate('Testversion - läuft ab, sobald diese Instanz zum ersten Mal übernommen wurde.');
+        }
+
+        $daysLeft = (int) ceil(($expiresAt - time()) / (24 * 60 * 60));
+        $dateText = date('d.m.Y', $expiresAt);
+
+        if ($daysLeft > 0) {
+            return $this->Translate('Testversion - läuft ab am') . " $dateText ($daysLeft " . $this->Translate('Tag(e) verbleibend') . '). '
+                . $this->Translate('Bis dahin voller Funktionsumfang, aber nur mit den 5 testweise freigeschalteten Sprachen (Isländisch, Walisisch, Zulu, Maori, Latein).');
+        }
+
+        return $this->Translate('Testversion abgelaufen am') . " $dateText. "
+            . $this->Translate('Bestehende Übersetzungen/die Kachel funktionieren weiter, ein weiterer Rescan ist aber blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.');
     }
 
     private function ApplyLanguage(string $Language): void
@@ -330,6 +496,14 @@ class SimpleLocale extends IPSModuleStrict
         $rootID = $this->ReadPropertyInteger(self::propertyRootCategoryID);
         if ($rootID === 0 || !@IPS_ObjectExists($rootID)) {
             $this->SetStatus(self::STATUS_ROOT_CATEGORY_MISSING);
+            return;
+        }
+
+        // Testphase abgelaufen und kein gültiger Lizenzschlüssel: bereits vorhandene
+        // Übersetzungen/Namen bleiben unangetastet und die Kachel funktioniert weiter -
+        // nur ein weiterer Rescan (also neue/geänderte Objekte übersetzen) ist blockiert.
+        if (self::IS_TRIAL_BUILD && !$this->HasFullLicense() && $this->IsTrialExpired()) {
+            $this->SetStatus(self::STATUS_TRIAL_EXPIRED);
             return;
         }
 
@@ -1199,11 +1373,20 @@ class SimpleLocale extends IPSModuleStrict
             ]];
         }
 
+        // Testversion: nur die bewusst wenig praxisrelevanten TRIAL_LANGUAGE_CODES
+        // anbieten, damit der komplette Mechanismus testbar bleibt, ohne die
+        // Vollversion vorwegzunehmen.
+        $restrictToTrialLanguages = self::IS_TRIAL_BUILD && !$this->HasFullLicense();
+
         $options = [];
         foreach ($this->BuildLanguageOptions() as $option) {
-            if ($option['value'] !== $SourceLanguage) {
-                $options[] = $option;
+            if ($option['value'] === $SourceLanguage) {
+                continue;
             }
+            if ($restrictToTrialLanguages && !in_array($option['value'], self::TRIAL_LANGUAGE_CODES, true)) {
+                continue;
+            }
+            $options[] = $option;
         }
 
         usort($options, function ($a, $b) {

@@ -10,7 +10,8 @@ Beschreibung des Moduls.
 5. [Einrichten der Instanzen in Symcon](#5-einrichten-der-instanzen-in-symcon)
 6. [Statusvariablen und Profile](#6-statusvariablen-und-profile)
 7. [WebFront](#7-webfront)
-8. [PHP-Befehlsreferenz](#8-php-befehlsreferenz)
+8. [Lizenz und Testversion](#8-lizenz-und-testversion)
+9. [PHP-Befehlsreferenz](#9-php-befehlsreferenz)
 
 ### 1. Funktionsumfang
 
@@ -109,6 +110,7 @@ __Konfigurationsseite__:
 
 Name                            | Beschreibung
 -------------------------------- | ------------------
+Lizenzschlüssel                 | Nur in der Testversion sichtbar/relevant, siehe [Abschnitt 8](#8-lizenz-und-testversion). Nach Eingabe über den Button "Lizenz aktivieren" prüfen lassen.
 Root-Kategorie                  | Kategorie im Objektbaum, deren Inhalt (Namen + Werte von String-Variablen) übersetzt wird. Sollte nur die Gäste-Sichtbereich-Kacheln enthalten, nicht die Admin-Oberfläche.
 Basissprache                    | Sprache, in der die Objektnamen/-werte ursprünglich gepflegt sind. Dient Google Translate als feste Quellsprache für alle Zielsprachen-Übersetzungen; die Basissprache selbst hat keine eigene Übersetzungsspalte, siehe [Abschnitt 7](#7-visualisierung).
 Google Cloud Translate API-Key  | API-Key für die Cloud Translation API v2. **Muss zuerst eingetragen und über "Übernehmen" gespeichert werden**, bevor irgendetwas anderes funktioniert - insbesondere ist der "Hinzufügen"-Button bei den Zielsprachen bis dahin ausgegraut (nicht versteckt, sondern deaktiviert), da ohne gültigen Key keine echte Sprachliste von Google geladen werden kann.
@@ -168,7 +170,39 @@ Für eigene HTMLBox-Popups oder Hinweise außerhalb der live umbenannten
 Objekte liefert `IPSSL_TranslateText()` den Text in der aktuell aktiven
 Sprache.
 
-### 8. PHP-Befehlsreferenz
+### 8. Lizenz und Testversion
+
+Simple Locale gibt es als Testversion (aktuell installierte Variante) und als
+Vollversion:
+
+* **Testversion:** voller Funktionsumfang, aber auf 5 bewusst wenig
+  praxisrelevante Sprachen begrenzt (Isländisch, Walisisch, Zulu, Maori,
+  Latein) - genug, um den kompletten Mechanismus zu testen, ohne die in der
+  Praxis benötigten Sprachen vorwegzunehmen. Die Testphase beginnt mit der
+  ersten gespeicherten Einrichtung der Instanz und läuft 30 Tage; die
+  verbleibende Zeit bzw. das Ablaufdatum steht direkt im
+  Konfigurationsformular ("Testversion - läuft ab am ..."). Nach Ablauf
+  funktionieren bereits vorhandene Übersetzungen und die Kachel unverändert
+  weiter - nur ein weiterer Rescan ist blockiert, bis ein gültiger
+  Lizenzschlüssel aktiviert wurde.
+* **Vollversion:** keine Sprach- oder Zeitbeschränkung. Freigeschaltet über
+  einen Lizenzschlüssel im Konfigurationsformular (Feld "Lizenzschlüssel" +
+  Button "Lizenz aktivieren"). Ein Lizenzschlüssel deckt sowohl einen
+  Einmalkauf (läuft nie ab) als auch ein Abo (läuft zu einem festen Zeitpunkt
+  ab, sofern nicht verlängert) ab - welche Variante angeboten wird, steht zum
+  Zeitpunkt dieses Dokuments noch nicht fest. Der Schlüssel wird komplett
+  offline geprüft (signiert, keine Internetverbindung zur Prüfung nötig).
+
+Für Entwickler: Ob ein Build die Testversion-Einschränkungen überhaupt
+anwendet, steuert die Konstante `IS_TRIAL_BUILD` in `module.php` - für einen
+Vollversion-Build (z. B. an zahlende Kunden nach Kauf) dort auf `false`
+setzen, dann entfallen Sprach- und Zeitbeschränkung unabhängig vom
+Lizenzschlüssel. Die Konstante `LICENSE_SIGNING_SECRET` in derselben Datei
+ist aktuell ein Platzhalter und muss vor jedem echten Release durch ein
+eigenes, geheimes Signatur-Secret ersetzt werden - mit dem Platzhalter lässt
+sich kein echter, gültig signierter Lizenzschlüssel erzeugen.
+
+### 9. PHP-Befehlsreferenz
 
 `string IPSSL_TranslateText(integer $InstanzID, integer $ObjektID);`
 Liefert den Inhalt der "Eigene Texte"-Zeile für die angegebene Objekt-ID

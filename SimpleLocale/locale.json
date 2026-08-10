@@ -36,7 +36,21 @@
             "Info-Symbol in der Kachel anzeigen": "Show info icon in the tile",
             "Folgende Objekte im Root-Baum haben keinen Namen. Bitte zuerst benennen, dann erneut \"Baum neu einlesen\" klicken - erst wenn alle Objekte einen Namen haben, werden Übersetzungen erzeugt.": "The following objects in the root tree have no name. Please name them first, then click \"Rescan tree\" again - translations are only generated once every object has a name.",
             "Unbenannte Objekte": "Unnamed objects",
-            "Unbenannte Objekte im Root-Baum gefunden - siehe Liste im Formular": "Unnamed objects found in the root tree - see list in the form"
+            "Unbenannte Objekte im Root-Baum gefunden - siehe Liste im Formular": "Unnamed objects found in the root tree - see list in the form",
+            "Testversion": "Trial version",
+            "Lizenzschlüssel": "License key",
+            "Lizenz aktivieren": "Activate license",
+            "Lizenz aktiviert": "License activated",
+            "Der Lizenzschlüssel ist gültig und wurde übernommen.": "The license key is valid and has been applied.",
+            "Lizenz ungültig": "License invalid",
+            "Der eingegebene Lizenzschlüssel ist ungültig, manipuliert oder abgelaufen. Bitte prüfen und erneut versuchen.": "The entered license key is invalid, tampered with, or expired. Please check and try again.",
+            "Testversion abgelaufen - bitte Lizenzschlüssel eintragen und aktivieren": "Trial version expired - please enter and activate a license key",
+            "Testversion - läuft ab, sobald diese Instanz zum ersten Mal übernommen wurde.": "Trial version - expires as soon as this instance has been applied for the first time.",
+            "Testversion - läuft ab am": "Trial version - expires on",
+            "Tag(e) verbleibend": "day(s) remaining",
+            "Bis dahin voller Funktionsumfang, aber nur mit den 5 testweise freigeschalteten Sprachen (Isländisch, Walisisch, Zulu, Maori, Latein).": "Full functionality until then, but only with the 5 languages unlocked for testing (Icelandic, Welsh, Zulu, Maori, Latin).",
+            "Testversion abgelaufen am": "Trial version expired on",
+            "Bestehende Übersetzungen/die Kachel funktionieren weiter, ein weiterer Rescan ist aber blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.": "Existing translations/the tile keep working, but a further rescan is blocked until a valid license key has been activated."
         },
         "es": {
             "Sprache": "Idioma",
@@ -74,7 +88,21 @@
             "Info-Symbol in der Kachel anzeigen": "Mostrar icono de información en el mosaico",
             "Folgende Objekte im Root-Baum haben keinen Namen. Bitte zuerst benennen, dann erneut \"Baum neu einlesen\" klicken - erst wenn alle Objekte einen Namen haben, werden Übersetzungen erzeugt.": "Los siguientes objetos en el árbol raíz no tienen nombre. Asígneles un nombre primero y vuelva a hacer clic en \"Releer árbol\": las traducciones solo se generan cuando todos los objetos tienen un nombre.",
             "Unbenannte Objekte": "Objetos sin nombre",
-            "Unbenannte Objekte im Root-Baum gefunden - siehe Liste im Formular": "Se encontraron objetos sin nombre en el árbol raíz - vea la lista en el formulario"
+            "Unbenannte Objekte im Root-Baum gefunden - siehe Liste im Formular": "Se encontraron objetos sin nombre en el árbol raíz - vea la lista en el formulario",
+            "Testversion": "Versión de prueba",
+            "Lizenzschlüssel": "Clave de licencia",
+            "Lizenz aktivieren": "Activar licencia",
+            "Lizenz aktiviert": "Licencia activada",
+            "Der Lizenzschlüssel ist gültig und wurde übernommen.": "La clave de licencia es válida y se ha aplicado.",
+            "Lizenz ungültig": "Licencia no válida",
+            "Der eingegebene Lizenzschlüssel ist ungültig, manipuliert oder abgelaufen. Bitte prüfen und erneut versuchen.": "La clave de licencia introducida no es válida, ha sido manipulada o ha caducado. Compruébela y vuelva a intentarlo.",
+            "Testversion abgelaufen - bitte Lizenzschlüssel eintragen und aktivieren": "Versión de prueba caducada - introduzca y active una clave de licencia",
+            "Testversion - läuft ab, sobald diese Instanz zum ersten Mal übernommen wurde.": "Versión de prueba - caduca en cuanto esta instancia se guarde por primera vez.",
+            "Testversion - läuft ab am": "Versión de prueba - caduca el",
+            "Tag(e) verbleibend": "día(s) restante(s)",
+            "Bis dahin voller Funktionsumfang, aber nur mit den 5 testweise freigeschalteten Sprachen (Isländisch, Walisisch, Zulu, Maori, Latein).": "Funcionalidad completa hasta entonces, pero solo con los 5 idiomas habilitados para pruebas (islandés, galés, zulú, maorí, latín).",
+            "Testversion abgelaufen am": "Versión de prueba caducada el",
+            "Bestehende Übersetzungen/die Kachel funktionieren weiter, ein weiterer Rescan ist aber blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.": "Las traducciones existentes/el widget siguen funcionando, pero un nuevo rescaneo está bloqueado hasta que se active una clave de licencia válida."
         },
         "it": {
             "Sprache": "Lingua",
@@ -112,7 +140,21 @@
             "Info-Symbol in der Kachel anzeigen": "Mostra l'icona informativa nel riquadro",
             "Folgende Objekte im Root-Baum haben keinen Namen. Bitte zuerst benennen, dann erneut \"Baum neu einlesen\" klicken - erst wenn alle Objekte einen Namen haben, werden Übersetzungen erzeugt.": "I seguenti oggetti nell'albero radice non hanno un nome. Assegnare prima un nome, poi fare nuovamente clic su \"Rileggi albero\" - le traduzioni vengono generate solo quando tutti gli oggetti hanno un nome.",
             "Unbenannte Objekte": "Oggetti senza nome",
-            "Unbenannte Objekte im Root-Baum gefunden - siehe Liste im Formular": "Trovati oggetti senza nome nell'albero radice - vedere l'elenco nel modulo"
+            "Unbenannte Objekte im Root-Baum gefunden - siehe Liste im Formular": "Trovati oggetti senza nome nell'albero radice - vedere l'elenco nel modulo",
+            "Testversion": "Versione di prova",
+            "Lizenzschlüssel": "Chiave di licenza",
+            "Lizenz aktivieren": "Attiva licenza",
+            "Lizenz aktiviert": "Licenza attivata",
+            "Der Lizenzschlüssel ist gültig und wurde übernommen.": "La chiave di licenza è valida ed è stata applicata.",
+            "Lizenz ungültig": "Licenza non valida",
+            "Der eingegebene Lizenzschlüssel ist ungültig, manipuliert oder abgelaufen. Bitte prüfen und erneut versuchen.": "La chiave di licenza inserita non è valida, è stata alterata o è scaduta. Verificare e riprovare.",
+            "Testversion abgelaufen - bitte Lizenzschlüssel eintragen und aktivieren": "Versione di prova scaduta - inserire e attivare una chiave di licenza",
+            "Testversion - läuft ab, sobald diese Instanz zum ersten Mal übernommen wurde.": "Versione di prova - scade non appena questa istanza viene salvata per la prima volta.",
+            "Testversion - läuft ab am": "Versione di prova - scade il",
+            "Tag(e) verbleibend": "giorno/i rimanente/i",
+            "Bis dahin voller Funktionsumfang, aber nur mit den 5 testweise freigeschalteten Sprachen (Isländisch, Walisisch, Zulu, Maori, Latein).": "Piena funzionalità fino ad allora, ma solo con le 5 lingue sbloccate per il test (islandese, gallese, zulu, maori, latino).",
+            "Testversion abgelaufen am": "Versione di prova scaduta il",
+            "Bestehende Übersetzungen/die Kachel funktionieren weiter, ein weiterer Rescan ist aber blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.": "Le traduzioni esistenti/il riquadro continuano a funzionare, ma un'ulteriore nuova scansione è bloccata finché non viene attivata una chiave di licenza valida."
         },
         "fr": {
             "Sprache": "Langue",
@@ -150,7 +192,21 @@
             "Info-Symbol in der Kachel anzeigen": "Afficher l'icône d'information dans la tuile",
             "Folgende Objekte im Root-Baum haben keinen Namen. Bitte zuerst benennen, dann erneut \"Baum neu einlesen\" klicken - erst wenn alle Objekte einen Namen haben, werden Übersetzungen erzeugt.": "Les objets suivants dans l'arborescence racine n'ont pas de nom. Veuillez d'abord les nommer, puis cliquer à nouveau sur \"Réanalyser l'arborescence\" - les traductions ne sont générées que lorsque tous les objets ont un nom.",
             "Unbenannte Objekte": "Objets sans nom",
-            "Unbenannte Objekte im Root-Baum gefunden - siehe Liste im Formular": "Objets sans nom trouvés dans l'arborescence racine - voir la liste dans le formulaire"
+            "Unbenannte Objekte im Root-Baum gefunden - siehe Liste im Formular": "Objets sans nom trouvés dans l'arborescence racine - voir la liste dans le formulaire",
+            "Testversion": "Version d'essai",
+            "Lizenzschlüssel": "Clé de licence",
+            "Lizenz aktivieren": "Activer la licence",
+            "Lizenz aktiviert": "Licence activée",
+            "Der Lizenzschlüssel ist gültig und wurde übernommen.": "La clé de licence est valide et a été appliquée.",
+            "Lizenz ungültig": "Licence invalide",
+            "Der eingegebene Lizenzschlüssel ist ungültig, manipuliert oder abgelaufen. Bitte prüfen und erneut versuchen.": "La clé de licence saisie est invalide, altérée ou expirée. Veuillez vérifier et réessayer.",
+            "Testversion abgelaufen - bitte Lizenzschlüssel eintragen und aktivieren": "Version d'essai expirée - veuillez saisir et activer une clé de licence",
+            "Testversion - läuft ab, sobald diese Instanz zum ersten Mal übernommen wurde.": "Version d'essai - expire dès que cette instance a été appliquée pour la première fois.",
+            "Testversion - läuft ab am": "Version d'essai - expire le",
+            "Tag(e) verbleibend": "jour(s) restant(s)",
+            "Bis dahin voller Funktionsumfang, aber nur mit den 5 testweise freigeschalteten Sprachen (Isländisch, Walisisch, Zulu, Maori, Latein).": "Fonctionnalité complète jusque-là, mais uniquement avec les 5 langues débloquées pour les tests (islandais, gallois, zoulou, maori, latin).",
+            "Testversion abgelaufen am": "Version d'essai expirée le",
+            "Bestehende Übersetzungen/die Kachel funktionieren weiter, ein weiterer Rescan ist aber blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.": "Les traductions existantes/la tuile continuent de fonctionner, mais un nouveau balayage est bloqué tant qu'une clé de licence valide n'a pas été activée."
         }
     }
 }

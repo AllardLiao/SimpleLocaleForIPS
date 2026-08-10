@@ -1,6 +1,17 @@
 {
     "elements": [
         {
+            "type": "Label",
+            "name": "TrialInfoLabel",
+            "caption": "Testversion",
+            "visible": false
+        },
+        {
+            "type": "PasswordTextBox",
+            "name": "LicenseKey",
+            "caption": "Lizenzschlüssel"
+        },
+        {
             "type": "SelectCategory",
             "name": "RootCategoryID",
             "caption": "Root-Kategorie der Visualisierung"
@@ -118,6 +129,11 @@
     "actions": [
         {
             "type": "Button",
+            "caption": "Lizenz aktivieren",
+            "onClick": "IPS_RequestAction($id, 'ActivateLicense', true);"
+        },
+        {
+            "type": "Button",
             "caption": "Baum neu einlesen und fehlende Übersetzungen ergänzen",
             "onClick": "IPS_RequestAction($id, 'Rescan', true);"
         },
@@ -154,6 +170,36 @@
                     }
                 ]
             }
+        },
+        {
+            "type": "PopupAlert",
+            "name": "LicenseValidPopup",
+            "visible": false,
+            "popup": {
+                "caption": "Lizenz aktiviert",
+                "closeCaption": "OK",
+                "items": [
+                    {
+                        "type": "Label",
+                        "caption": "Der Lizenzschlüssel ist gültig und wurde übernommen."
+                    }
+                ]
+            }
+        },
+        {
+            "type": "PopupAlert",
+            "name": "LicenseInvalidPopup",
+            "visible": false,
+            "popup": {
+                "caption": "Lizenz ungültig",
+                "closeCaption": "OK",
+                "items": [
+                    {
+                        "type": "Label",
+                        "caption": "Der eingegebene Lizenzschlüssel ist ungültig, manipuliert oder abgelaufen. Bitte prüfen und erneut versuchen."
+                    }
+                ]
+            }
         }
     ],
     "status": [
@@ -171,6 +217,11 @@
             "code": 203,
             "icon": "error",
             "caption": "Google Translate Fehler - bitte API-Key prüfen"
+        },
+        {
+            "code": 204,
+            "icon": "error",
+            "caption": "Testversion abgelaufen - bitte Lizenzschlüssel eintragen und aktivieren"
         }
     ]
 }

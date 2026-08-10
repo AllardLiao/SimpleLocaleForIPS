@@ -25,9 +25,24 @@ trait SimpleLocaleConstants
     private const propertyShowGlobeIcon = 'ShowGlobeIcon';
     private const propertyShowInfoIcon = 'ShowInfoIcon';
 
+    // Lizenzschlüssel (deckt sowohl Einmalkauf als auch Abo ab, siehe
+    // ValidateLicenseKey) - eingetragen, aber erst nach Klick auf "Lizenz
+    // aktivieren" tatsächlich geprüft/übernommen.
+    private const propertyLicenseKey = 'LicenseKey';
+
     // Attribute
     private const attributeAvailableLanguagesCache = 'AvailableLanguagesCache';
     private const attributeAvailableLanguagesFetchedAt = 'AvailableLanguagesFetchedAt';
+
+    // Zuletzt erfolgreich geprüfte Lizenzinformationen (JSON, siehe
+    // ValidateLicenseKey) - Cache, damit nicht bei jedem Aufruf neu geprüft werden
+    // muss; wird bei jeder Statusabfrage trotzdem gegen den aktuellen Schlüssel neu
+    // validiert (siehe GetLicenseInfo), nicht blind übernommen.
+    private const attributeLicenseInfo = 'LicenseInfo';
+
+    // Zeitpunkt (Unix-Timestamp) des ersten ApplyChanges dieser Instanz in einem
+    // Testversion-Build - Start der Testphase. 0 = noch nicht gestartet.
+    private const attributeTrialStartedAt = 'TrialStartedAt';
 
     // Objekte ohne Namen, die beim letzten Rescan im Root-Baum gefunden wurden (JSON-
     // Array aus ObjectID+Path) - ein Rescan bricht ab, sobald welche existieren, bevor
@@ -49,6 +64,7 @@ trait SimpleLocaleConstants
     private const identLanguageDropdown = 'LanguageDropdown';
     private const identRescan = 'Rescan';
     private const identShowApiKeyWarning = 'ShowApiKeyWarning';
+    private const identActivateLicense = 'ActivateLicense';
 
     // Reservierter Pseudo-Sprachcode für den unangetasteten Rohtext beim ersten Scan
     // (Tippfehler inklusive). Nicht vom Gast über die Sprachauswahl erreichbar.
@@ -73,6 +89,7 @@ trait SimpleLocaleConstants
     private const STATUS_ROOT_CATEGORY_MISSING = 201;
     private const STATUS_UNNAMED_OBJECTS = 202;
     private const STATUS_TRANSLATE_ERROR = 203;
+    private const STATUS_TRIAL_EXPIRED = 204;
 }
 
 class GUIDs
