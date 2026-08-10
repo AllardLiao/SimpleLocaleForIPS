@@ -826,7 +826,7 @@ class SimpleLocale extends IPSModuleStrict
     private function BuildInfoAlertJs(array $GuestCache): string
     {
         $texts = $GuestCache['infoTexts'] ?? self::INFO_LIMITATION_TEXTS;
-        $alertText = implode("\n\n", array_map(fn (string $text): string => '• ' . $text, $texts));
+        $alertText = implode("\n\n", array_map(fn (string $text): string => '<p>' . $text . '</p>', $texts));
 
         return htmlspecialchars(json_encode($alertText, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES, 'UTF-8');
     }
