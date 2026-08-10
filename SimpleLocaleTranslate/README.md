@@ -37,9 +37,16 @@ der Entwicklung gegen die echte Google-API testen, ganz ohne selbst schon
 eine volle, lizenzierte Simple-Locale-Instanz beim Kunden zu benötigen.
 
 Im Konfigurationsformular lässt sich die Funktion über den Button
-"Testübersetzung ausführen" auch direkt in der Symcon-Konsole ausprobieren
-(übersetzt den Testsatz "Hallo Welt"); ohne gespeicherten API-Key erscheint
-dabei ein Hinweis-Popup statt eines stillen Fehlers.
+"Testübersetzung ausführen" auch direkt in der Symcon-Konsole ausprobieren -
+übersetzt den festen deutschen Testsatz "Willkommen in der Welt einfacher
+Visualisierungsübersetzung!" in die eingestellte Zielsprache. Der Testsatz
+ist immer auf Deutsch verdrahtet (unabhängig von der konfigurierten
+Quellsprache), da er sich nicht selbst anpassen lässt - eine andere
+Quellsprache anzunehmen wäre sonst schlicht falsch. Ohne gespeicherten
+API-Key erscheint ein Hinweis-Popup statt eines stillen Fehlers; schlägt der
+Google-Aufruf fehl (z. B. ungültiger Key), erscheint ebenfalls ein Popup statt
+einfach nur den unübersetzten Text anzuzeigen, und der Button graut sich aus,
+bis der Key korrigiert und erneut über "Übernehmen" gespeichert wurde.
 
 ### Status
 

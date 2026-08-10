@@ -31,6 +31,13 @@ class SimpleLocaleTranslate extends IPSModuleStrict
 
     private const identTestTranslate = 'TestTranslate';
 
+    // Fest verdrahteter Testsatz für den Button "Testübersetzung ausführen" - immer auf
+    // Deutsch, unabhängig von der konfigurierten Quellsprache: der Nutzer kann diesen
+    // Text nicht selbst anpassen, daher wäre es falsch, ihn als in der (ggf. anderen)
+    // konfigurierten Quellsprache verfasst an Google zu melden.
+    private const TEST_SENTENCE = 'Willkommen in der Welt einfacher Visualisierungsübersetzung!';
+    private const TEST_SENTENCE_LANGUAGE = 'de';
+
     // Wie im Hauptmodul: höchstens 1x/Tag automatisch neu von Google abrufen.
     private const availableLanguagesMaxAgeSeconds = 86400;
 
@@ -103,6 +110,30 @@ class SimpleLocaleTranslate extends IPSModuleStrict
         }
         unset($element);
 
+        // Testübersetzung ausgegraut, solange der letzte Google-Aufruf fehlgeschlagen
+        // ist (STATUS_TRANSLATE_ERROR) - verhindert, dass der Button nach einem
+        // ungültigen API-Key beliebig oft anklickbar bleibt und dabei jedes Mal
+        // stillschweigend den unübersetzten Text zurückliefert (siehe RunTestTranslate).
+        // Wird erst durch "Übernehmen" wieder freigegeben (setzt Status zurück auf 102),
+        // genau wie im Hauptmodul. Der Button steckt in einem RowLayout, daher eine Ebene
+        // tiefer als die restlichen "actions"-Einträge.
+        foreach ($form['actions'] as &$action) {
+            if (($action['type'] ?? '') !== 'RowLayout') {
+                continue;
+            }
+            foreach ($action['items'] as &$item) {
+                if (($item['name'] ?? '') !== 'TestTranslateButton') {
+                    continue;
+                }
+                $item['enabled'] = $this->GetStatus() !== self::STATUS_TRANSLATE_ERROR;
+                if (!$item['enabled']) {
+                    $item['caption'] .= ' (' . $this->Translate('letzter Test fehlgeschlagen - bitte API-Key prüfen und über "Übernehmen" speichern') . ')';
+                }
+            }
+            unset($item);
+        }
+        unset($action);
+
         return json_encode($form);
     }
 
@@ -134,9 +165,16 @@ class SimpleLocaleTranslate extends IPSModuleStrict
     // lehnt eine Übersetzung von einer Sprache in sich selbst ohnehin ab).
     public function TranslateText(string $Text): string
     {
-        $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
-        $targetLanguage = $this->ReadPropertyString(self::propertyTargetLanguage);
-        if ($Text === '' || $sourceLanguage === $targetLanguage) {
+        return $this->TranslateFromTo($Text, $this->ReadPropertyString(self::propertySourceLanguage), $this->ReadPropertyString(self::propertyTargetLanguage));
+    }
+
+    // Gemeinsamer Kern für TranslateText() (konfigurierte Quellsprache) und den
+    // Test-Button (immer TEST_SENTENCE_LANGUAGE, siehe RunTestTranslate) - Quellsprache
+    // hier bewusst als Parameter statt fest über propertySourceLanguage, da der
+    // Testsatz unabhängig von der konfigurierten Quellsprache immer Deutsch ist.
+    private function TranslateFromTo(string $Text, string $SourceLanguage, string $TargetLanguage): string
+    {
+        if ($Text === '' || $SourceLanguage === $TargetLanguage) {
             return $Text;
         }
 
@@ -147,8 +185,8 @@ class SimpleLocaleTranslate extends IPSModuleStrict
 
         $body = json_encode([
             'q'      => [$Text],
-            'source' => $sourceLanguage,
-            'target' => $targetLanguage,
+            'source' => $SourceLanguage,
+            'target' => $TargetLanguage,
             'format' => 'text',
         ]);
 
@@ -173,7 +211,21 @@ class SimpleLocaleTranslate extends IPSModuleStrict
             return;
         }
 
-        $result = $this->TranslateText('Hallo Welt');
+        $result = $this->TranslateFromTo(self::TEST_SENTENCE, self::TEST_SENTENCE_LANGUAGE, $this->ReadPropertyString(self::propertyTargetLanguage));
+
+        // Ein fehlgeschlagener Google-Aufruf liefert aus TranslateFromTo() bewusst nur
+        // den unveränderten Text zurück (kein Absturz) - ohne diesen Check würde das
+        // Ergebnis-Label wie eine erfolgreiche (Nicht-)Übersetzung aussehen, obwohl der
+        // Key falsch war (siehe CallGoogleTranslateAPI, setzt STATUS_TRANSLATE_ERROR).
+        // ReloadForm() graut sofort auch den Button aus (siehe GetConfigurationForm),
+        // statt erst beim nächsten manuellen Neuladen des Formulars.
+        if ($this->GetStatus() === self::STATUS_TRANSLATE_ERROR) {
+            $this->UpdateFormField('TranslateFailedPopup', 'visible', true);
+            $this->ReloadForm();
+
+            return;
+        }
+
         $this->UpdateFormField('TestTranslateResult', 'caption', $result);
     }
 

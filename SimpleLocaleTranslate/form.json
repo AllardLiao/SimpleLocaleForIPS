@@ -34,6 +34,7 @@
             "items": [
                 {
                     "type": "Button",
+                    "name": "TestTranslateButton",
                     "caption": "Testübersetzung ausführen",
                     "onClick": "IPS_RequestAction($id, 'TestTranslate', true);"
                 },
@@ -46,7 +47,7 @@
         },
         {
             "type": "Label",
-            "caption": "Übersetzt den Testsatz \"Hallo Welt\" von der Quell- in die Zielsprache und zeigt das Ergebnis hier an - so lässt sich der API-Key direkt hier im Formular prüfen, ohne eigenen Code zu schreiben. Die eigentliche Testfunktion für die eigene Modulentwicklung ist IPSSLT_TranslateText(), siehe README."
+            "caption": "Übersetzt den festen, deutschen Testsatz \"Willkommen in der Welt einfacher Visualisierungsübersetzung!\" in die oben eingestellte Zielsprache und zeigt das Ergebnis hier an - so lässt sich der API-Key direkt hier im Formular prüfen, ohne eigenen Code zu schreiben. Die eigentliche Testfunktion für die eigene Modulentwicklung ist IPSSLT_TranslateText(), siehe README."
         },
         {
             "name": "ApiKeyMissingPopup",
@@ -59,6 +60,21 @@
                     {
                         "type": "Label",
                         "caption": "Bitte zuerst einen Google Cloud Translate API-Key eintragen und über \"Übernehmen\" speichern."
+                    }
+                ]
+            }
+        },
+        {
+            "name": "TranslateFailedPopup",
+            "type": "PopupAlert",
+            "visible": false,
+            "popup": {
+                "caption": "Testübersetzung fehlgeschlagen",
+                "closeCaption": "OK",
+                "items": [
+                    {
+                        "type": "Label",
+                        "caption": "Die Testübersetzung ist fehlgeschlagen (z.B. ungültiger oder abgelaufener API-Key). Bitte den API-Key prüfen und erneut über \"Übernehmen\" speichern."
                     }
                 ]
             }
