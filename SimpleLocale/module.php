@@ -444,10 +444,14 @@ class SimpleLocale extends IPSModuleStrict
     // rohen Ausgangstext ('raw', z.B. ORIGINAL_IMPORT) und ein Präfix für die daraus
     // abgeleiteten Sprachspalten ('prefix', z.B. "Text_" -> "Text_de", "Text_en", ...;
     // leeres Präfix für Objektnamen, die nur eine Feldgruppe haben).
-    // Ablauf je Gruppe: (1) roh -> Quellsprache, ohne erzwungene Quellsprache bei
-    // Google - dadurch erkennt Google die tatsächliche Sprache selbst und poliert
-    // nebenbei Tippfehler im rohen Originaltext. (2) Quellsprache -> jede ausgewählte
-    // Zielsprache, jetzt mit bekannter, korrekter Quellsprache.
+    // Ablauf je Gruppe: (1) roh -> Quellsprache, jetzt MIT erzwungener Quellsprache.
+    // Früher ohne (damit Google die tatsächliche Sprache selbst erkennt und nebenbei
+    // Tippfehler im rohen Originaltext poliert) - das ist aber bei kurzen, einzelnen
+    // Wörtern (z.B. "Haus") real schiefgegangen: Google erkannte die Sprache
+    // fälschlich als Hmong ("hmn") und lieferte eine völlig unpassende "Übersetzung"
+    // ("Trinken") statt einer Tippfehlerkorrektur. Das Risiko einer kompletten
+    // Fehlerkennung wiegt schwerer als der Nutzen der Tippfehlerglättung.
+    // (2) Quellsprache -> jede ausgewählte Zielsprache, ebenfalls mit fester Quellsprache.
     // $FieldGroups[]['capitalizeFirst']: Google großschreibt den ersten Buchstaben bei
     // kurzen Einzelwörtern/Titeln (im Gegensatz zu vollständigen Sätzen) nicht
     // zuverlässig - für Namen/Titel wird das Ergebnis daher nachträglich korrigiert.
@@ -460,7 +464,7 @@ class SimpleLocale extends IPSModuleStrict
             $sourceField = $group['prefix'] . $SourceLanguage;
             $capitalizeFirst = $group['capitalizeFirst'] ?? false;
 
-            $Rows = $this->FillLanguageColumn($Rows, $rawField, $sourceField, null, $SourceLanguage, $capitalizeFirst);
+            $Rows = $this->FillLanguageColumn($Rows, $rawField, $sourceField, $SourceLanguage, $SourceLanguage, $capitalizeFirst);
 
             foreach ($TargetLanguages as $language) {
                 if ($language === $SourceLanguage) {
@@ -474,11 +478,10 @@ class SimpleLocale extends IPSModuleStrict
     }
 
     // Übersetzt für alle Zeilen, bei denen $ToField noch leer ist, den Text aus
-    // $FromField nach $ToField (gebatcht in einem API-Aufruf). $ForceSource = null
-    // lässt Google die Quellsprache selbst erkennen.
+    // $FromField nach $ToField (gebatcht in einem API-Aufruf).
     // $ToField ist der Property-Feldname zum Speichern (kann präfixiert sein, z.B.
     // "Text_de"), $TargetLanguageCode der reine Sprachcode, der an Google geht.
-    private function FillLanguageColumn(array $Rows, string $FromField, string $ToField, ?string $ForceSource, string $TargetLanguageCode, bool $CapitalizeFirst): array
+    private function FillLanguageColumn(array $Rows, string $FromField, string $ToField, string $ForceSource, string $TargetLanguageCode, bool $CapitalizeFirst): array
     {
         $pending = [];
         foreach ($Rows as $index => $row) {
@@ -526,13 +529,12 @@ class SimpleLocale extends IPSModuleStrict
         return mb_strtoupper(mb_substr($Text, 0, 1, 'UTF-8'), 'UTF-8') . mb_substr($Text, 1, null, 'UTF-8');
     }
 
-    // $Source = null lässt Google die Quellsprache des Texts selbst erkennen.
     // Google Cloud Translate lehnt Anfragen mit mehr als 128 Texten in einem
     // Aufruf komplett ab ("Too many text segments") - größere Batches werden
     // daher in mehrere Aufrufe aufgeteilt.
     private const translateMaxTextsPerRequest = 128;
 
-    private function TranslateBatch(array $Texts, ?string $Source, string $Target, string $DebugContext = ''): array
+    private function TranslateBatch(array $Texts, string $Source, string $Target, string $DebugContext = ''): array
     {
         if ($Texts === []) {
             return [];
@@ -578,7 +580,7 @@ class SimpleLocale extends IPSModuleStrict
         return $result;
     }
 
-    private function TranslateChunk(array $Texts, ?string $Source, string $Target, string $ApiKey, string $DebugContext = ''): array
+    private function TranslateChunk(array $Texts, string $Source, string $Target, string $ApiKey, string $DebugContext = ''): array
     {
         if ($Texts === []) {
             return [];
@@ -586,15 +588,13 @@ class SimpleLocale extends IPSModuleStrict
 
         $body = [
             'q'      => $Texts,
+            'source' => $Source,
             'target' => $Target,
             // "html" statt "text": Google übersetzt dann nur den Text zwischen Tags,
             // nicht die Tags/Attribute selbst - wichtig für "Eigene Texte", die
             // vollständige HTML-Widgets (Symcon-HTMLBox-Inhalte) sein können.
             'format' => 'html',
         ];
-        if ($Source !== null) {
-            $body['source'] = $Source;
-        }
         $payload = json_encode($body);
 
         // Vollständiger Request-Payload, positionsgleich mit dem GoogleTranslate_Mapping-
