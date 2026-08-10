@@ -1314,7 +1314,11 @@ private const LANGUAGE_FLAGS = [
 
         $objectTexts = $this->FillMissingTranslations($objectTexts, [
             ['raw' => self::fieldOriginalImportName, 'prefix' => self::fieldNamePrefix, 'capitalizeFirst' => true],
-            ['raw' => self::langOriginalImportText, 'prefix' => self::fieldTextPrefix, 'capitalizeFirst' => false],
+            // isHtml=true: der eigentliche Variablenwert kann ein vollständiges
+            // HTMLBox-Widget sein (siehe Abschnitt 1 README) - dort werden HTML-
+            // Entities korrekt vom Browser interpretiert, im Gegensatz zu reinen
+            // Textfeldern wie Namen/Beschriftungen.
+            ['raw' => self::langOriginalImportText, 'prefix' => self::fieldTextPrefix, 'capitalizeFirst' => false, 'isHtml' => true],
         ], $sourceLanguage, $targetLanguages);
 
         $objectOptions = $this->FillMissingTranslations($objectOptions, [
@@ -1714,12 +1718,13 @@ private const LANGUAGE_FLAGS = [
         foreach ($FieldGroups as $group) {
             $rawField = $group['raw'];
             $capitalizeFirst = $group['capitalizeFirst'] ?? false;
+            $isHtml = $group['isHtml'] ?? false;
 
             foreach ($TargetLanguages as $language) {
                 if ($language === $SourceLanguage) {
                     continue;
                 }
-                $Rows = $this->FillLanguageColumn($Rows, $rawField, $group['prefix'] . $language, $SourceLanguage, $language, $capitalizeFirst);
+                $Rows = $this->FillLanguageColumn($Rows, $rawField, $group['prefix'] . $language, $SourceLanguage, $language, $capitalizeFirst, $isHtml);
             }
         }
 
@@ -1730,7 +1735,14 @@ private const LANGUAGE_FLAGS = [
     // $FromField nach $ToField (gebatcht in einem API-Aufruf).
     // $ToField ist der Property-Feldname zum Speichern (kann präfixiert sein, z.B.
     // "Text_de"), $TargetLanguageCode der reine Sprachcode, der an Google geht.
-    private function FillLanguageColumn(array $Rows, string $FromField, string $ToField, string $ForceSource, string $TargetLanguageCode, bool $CapitalizeFirst): array
+    // $IsHtml: TranslateChunk fragt Google IMMER mit format=html an (schützt Tags in
+    // HTMLBox-Inhalten, siehe dort) - Google liefert dabei Sonderzeichen wie Apostroph
+    // als HTML-Entity zurück (z.B. "o&#39;r" statt "o'r"), was in einem HTML-Renderer
+    // korrekt dargestellt wird, aber als reiner Text (Objektname, Enum-Beschriftung)
+    // wörtlich sichtbar bliebe (live gefunden: Kachelüberschrift zeigte "&#39;" statt
+    // Apostroph). Nur bei echten "Eigene Texte"-Inhalten (können vollständige
+    // HTMLBox-Widgets sein) macht das Belassen als HTML weiterhin Sinn.
+    private function FillLanguageColumn(array $Rows, string $FromField, string $ToField, string $ForceSource, string $TargetLanguageCode, bool $CapitalizeFirst, bool $IsHtml = false): array
     {
         $pending = [];
         foreach ($Rows as $index => $row) {
@@ -1763,6 +1775,9 @@ private const LANGUAGE_FLAGS = [
         $i = 0;
         foreach (array_keys($pending) as $index) {
             $value = $translated[$i] ?? '';
+            if (!$IsHtml && $value !== '') {
+                $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5);
+            }
             if ($CapitalizeFirst && $value !== '') {
                 $value = $this->CapitalizeFirstLetter($value);
             }
