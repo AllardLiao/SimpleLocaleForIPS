@@ -42,15 +42,7 @@
                     "type": "CheckBox",
                     "name": "ShowInfoIcon",
                     "caption": "Info-Symbol in der Kachel anzeigen"
-                }
-            ]
-        },
-        {
-            "type": "ExpansionPanel",
-            "name": "TranslationPanel",
-            "caption": "Übersetzung",
-            "expanded": false,
-            "items": [
+                },
                 {
                     "type": "PasswordTextBox",
                     "name": "GoogleTranslateAPIKey",
@@ -61,7 +53,15 @@
                     "name": "AutoRescanInterval",
                     "caption": "Automatischer Rescan (Minuten, 0 = aus)",
                     "minimum": 0
-                },
+                }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "name": "TranslationPanel",
+            "caption": "Übersetzung",
+            "expanded": false,
+            "items": [
                 {
                     "type": "List",
                     "name": "TargetLanguages",
@@ -116,15 +116,6 @@
                         }
                     ],
                     "values": []
-                },
-                {
-                    "type": "Button",
-                    "caption": "Baum neu einlesen und fehlende Übersetzungen ergänzen",
-                    "onClick": "IPS_RequestAction($id, 'Rescan', true);"
-                },
-                {
-                    "type": "Label",
-                    "caption": "Durchsucht die Root-Kategorie erneut nach neuen/verschobenen Objekten und übersetzt per Google nur noch leere Zellen in Objektnamen und Eigene Texte. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben."
                 },
                 {
                     "type": "List",
@@ -212,16 +203,25 @@
                     "type": "PasswordTextBox",
                     "name": "LicenseKey",
                     "caption": "Lizenzschlüssel"
-                },
-                {
-                    "type": "Button",
-                    "caption": "Lizenz aktivieren",
-                    "onClick": "IPS_RequestAction($id, 'ActivateLicense', true);"
                 }
             ]
         }
     ],
     "actions": [
+        {
+            "type": "Button",
+            "caption": "Lizenz aktivieren",
+            "onClick": "IPS_RequestAction($id, 'ActivateLicense', true);"
+        },
+        {
+            "type": "Button",
+            "caption": "Baum neu einlesen und fehlende Übersetzungen ergänzen",
+            "onClick": "IPS_RequestAction($id, 'Rescan', true);"
+        },
+        {
+            "type": "Label",
+            "caption": "Durchsucht die Root-Kategorie erneut nach neuen/verschobenen Objekten und übersetzt per Google nur noch leere Zellen in Objektnamen und Eigene Texte. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben."
+        },
         {
             "type": "ExpansionPanel",
             "caption": "Produktinformationen",

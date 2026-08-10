@@ -129,24 +129,26 @@ Basissprache                    | Sprache, in der die Objektnamen/-werte ursprü
 Aktuell aktive Sprache          | Welche Sprache gerade angezeigt wird - normalerweise über die Kachel vom Gast selbst gesteuert (siehe Abschnitt 7), lässt sich hier aber auch manuell zu Testzwecken umschalten.
 Weltkugel-Symbol in der Kachel anzeigen | Blendet das 🌐-Symbol links neben dem Dropdown aus, falls nicht gewünscht (z. B. bei eigenem Kachel-Design). Standardmäßig an.
 Info-Symbol in der Kachel anzeigen | Blendet das ⓘ-Symbol (Erklärung der Einschränkungen, siehe Abschnitt 2) aus. Standardmäßig an.
+Google Cloud Translate API-Key  | API-Key für die Cloud Translation API v2. **Muss zuerst eingetragen und über "Übernehmen" gespeichert werden**, bevor irgendetwas anderes funktioniert - insbesondere ist der "Hinzufügen"-Button bei den Zielsprachen bis dahin ausgegraut (nicht versteckt, sondern deaktiviert), da ohne gültigen Key keine echte Sprachliste von Google geladen werden kann.
+Automatischer Rescan (Minuten)  | Intervall für automatisches Neu-Einlesen des Baums, 0 = nur manuell über den Button "Baum neu einlesen" (siehe unten).
 
 **Übersetzung:**
 
 Name                            | Beschreibung
 -------------------------------- | ------------------
-Google Cloud Translate API-Key  | API-Key für die Cloud Translation API v2. **Muss zuerst eingetragen und über "Übernehmen" gespeichert werden**, bevor irgendetwas anderes funktioniert - insbesondere ist der "Hinzufügen"-Button bei den Zielsprachen bis dahin ausgegraut (nicht versteckt, sondern deaktiviert), da ohne gültigen Key keine echte Sprachliste von Google geladen werden kann.
-Automatischer Rescan (Minuten)  | Intervall für automatisches Neu-Einlesen des Baums, 0 = nur manuell über den Button.
-Zielsprachen                    | Sprachen, in die übersetzt werden soll. Auswahl-Optionen kommen von Google, sobald ein gültiger API-Key gespeichert ist. Wichtig: Nach dem Klick auf "Sprachliste aktualisieren" die Instanzkonfiguration einmal schließen und neu öffnen, bevor Häkchen gesetzt werden - sonst kann die Konsole falsche Sprachen speichern.
+Zielsprachen                    | Sprachen, in die übersetzt werden soll. Auswahl-Optionen kommen von Google, sobald ein gültiger API-Key gespeichert ist. Ausgegraut, sobald entweder noch kein API-Key gespeichert ist oder das Sprachlimit einer "Spezialversion"-Lizenz erreicht ist (siehe Abschnitt 8). Wichtig: Nach dem Klick auf "Sprachliste aktualisieren" die Instanzkonfiguration einmal schließen und neu öffnen, bevor Häkchen gesetzt werden - sonst kann die Konsole falsche Sprachen speichern.
 Objektnamen / Eigene Texte      | Listen der gefundenen Objekte mit Quelltext und je einer Spalte pro Zielsprache. Übersetzungen sind hier direkt editierbar; leere Zellen werden beim nächsten Rescan automatisch übersetzt.
 
 **Lizenz:**
 
 Name                            | Beschreibung
 -------------------------------- | ------------------
-Lizenzschlüssel                 | Nur in der Testversion sichtbar/relevant, siehe [Abschnitt 8](#8-lizenz-und-testversion). Nach Eingabe über den Button "Lizenz aktivieren" prüfen lassen.
+Lizenzschlüssel                 | Nur in der Testversion sichtbar/relevant, siehe [Abschnitt 8](#8-lizenz-und-testversion). Nach Eingabe über den Button "Lizenz aktivieren" (siehe unten) prüfen lassen.
 
-Ganz unten im Formular liefert der Bereich "Produktinformationen" (ebenfalls
-aufklappbar) einen Link zum GitHub-Repository sowie kurze Lizenzhinweise.
+Unterhalb der drei Bereiche liegen die Aktions-Buttons "Lizenz aktivieren" und
+"Baum neu einlesen und fehlende Übersetzungen ergänzen" sowie, ganz unten,
+der aufklappbare Bereich "Produktinformationen" mit einem Link zum
+GitHub-Repository und kurzen Lizenzhinweisen.
 
 ### 6. Statusvariablen und Profile
 
@@ -236,6 +238,37 @@ diese Sprache einfach den unübersetzten Original-Text (kein Absturz, keine
 leere Anzeige). Konfiguriert wird das nicht im Formular, sondern bewusst fest
 im Modul-Code (`PROMOTIONAL_LANGUAGE_CAMPAIGNS` in `module.php`), damit jede
 Installation die Aktion automatisch mit dem nächsten Update mitbekommt.
+
+**"Spezialversionen" mit begrenzter Sprachanzahl:** Der Lizenzschlüssel trägt
+neben Typ und Ablaufdatum auch ein `languageLimit`-Feld (0 = unbegrenzt, N =
+maximal N frei wählbare Zielsprachen). Damit lassen sich günstigere Varianten
+verkaufen, z. B. eine Rabattaktion "kaufe Simple Locale mit einer Sprache
+deiner Wahl für 50 % Rabatt - nur diese Woche, zum Tag der Deutschen
+Einheit!". Anders als bei den Testversion-Sprachen ist die Sprache dabei frei
+wählbar (nicht auf eine feste Liste beschränkt) - nur die Anzahl ist
+gedeckelt. Ist das Limit erreicht, wird die Zielsprachen-Liste im Formular
+ausgegraut (wie bei fehlendem API-Key); zusätzlich kappt jedes "Übernehmen"
+serverseitig auf die ersten N bereits konfigurierten Sprachen, falls z. B.
+nach Ablauf einer befristeten Lizenz gegen eine mit kleinerem Limit
+ausgetauscht wird. Wie beim Zeitraum von Marketing-Aktionen ist auch der
+eigentliche Rabatt-Verkaufsprozess (Preis, Zeitfenster, Bezahlung) nicht Teil
+des Moduls - das Modul prüft nur den fertig ausgestellten Schlüssel.
+
+**Erkennung von Lizenzmissbrauch:** Bei jeder Aktivierung (Button "Lizenz
+aktivieren" oder einfach nur "Übernehmen" mit einem neuen gültigen Schlüssel)
+wird lokal protokolliert, welcher `IPS_GetLicensee()` (die beim Kauf von
+Symcon selbst hinterlegte E-Mail-Adresse, eindeutig pro Symcon-Installation)
+mit welchem Lizenzschlüssel aktiviert wurde. Taucht derselbe Schlüssel mit
+mehreren unterschiedlichen Licensee-Adressen auf, ist das ein Hinweis auf
+Weiterverkauf/Weitergabe (z. B. ein Schlüssel, der als "gebraucht" mehrfach
+bei Ebay verkauft wird). Die Konstante `LICENSE_ACTIVATION_REPORT_URL` in
+`module.php` ist aktuell ein leerer Platzhalter - ohne echte URL bleibt es
+bei der rein lokalen Protokollierung (Debug-Log der Instanz); erst mit einer
+echten Meldeserver-URL wird jede Aktivierung zusätzlich dorthin gemeldet
+(Lizenzschlüssel-Hash statt Klartext-Schlüssel, plus Licensee und Zeitpunkt).
+**Wichtig:** `IPS_GetLicensee()` liefert eine echte, personenbezogene
+E-Mail-Adresse - diese Erhebung/Übermittlung gehört vor dem Eintragen einer
+echten Meldeserver-URL in die eigenen Lizenzbedingungen/Datenschutzhinweise.
 
 Für Entwickler: Ob ein Build die Testversion-Einschränkungen überhaupt
 anwendet, steuert die Konstante `IS_TRIAL_BUILD` in `module.php` - für einen

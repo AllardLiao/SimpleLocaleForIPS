@@ -44,6 +44,13 @@ trait SimpleLocaleConstants
     // Testversion-Build - Start der Testphase. 0 = noch nicht gestartet.
     private const attributeTrialStartedAt = 'TrialStartedAt';
 
+    // Lokales Protokoll erfolgreicher Lizenzaktivierungen (JSON-Array, siehe
+    // TrackLicenseActivationIfNew) - Hash des Schlüssels + IPS_GetLicensee() + Zeitpunkt,
+    // auf die letzten 20 Einträge begrenzt. Hilft beim Erkennen von Weiterverkauf/
+    // Weitergabe eines Lizenzschlüssels (derselbe Schlüssel-Hash mit mehreren
+    // unterschiedlichen Licensee-Adressen).
+    private const attributeActivationLog = 'ActivationLog';
+
     // Objekte ohne Namen, die beim letzten Rescan im Root-Baum gefunden wurden (JSON-
     // Array aus ObjectID+Path) - ein Rescan bricht ab, sobald welche existieren, bevor
     // irgendetwas übersetzt wird (leerer Name lässt sich sonst nicht sinnvoll übersetzen

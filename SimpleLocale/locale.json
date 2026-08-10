@@ -58,7 +58,8 @@
             "\nLizenz": "\nLicense",
             "Produktinformationen": "Product information",
             "Simple Locale for IP-Symcon ist kommerzielle Software mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben).": "Simple Locale for IP-Symcon is commercial software with a free trial version (see the \"License\" section above).",
-            "Lizenz erwerben, Quellcode und Dokumentation: https://github.com/AllardLiao/SimpleLocaleForIPS": "Purchase a license, source code and documentation: https://github.com/AllardLiao/SimpleLocaleForIPS"
+            "Lizenz erwerben, Quellcode und Dokumentation: https://github.com/AllardLiao/SimpleLocaleForIPS": "Purchase a license, source code and documentation: https://github.com/AllardLiao/SimpleLocaleForIPS",
+            "Sprachlimit dieser Lizenz erreicht, max.": "Language limit of this license reached, max."
         },
         "es": {
             "Sprache": "Idioma",
@@ -118,7 +119,8 @@
             "\nLizenz": "\nLicencia",
             "Produktinformationen": "Información del producto",
             "Simple Locale for IP-Symcon ist kommerzielle Software mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben).": "Simple Locale for IP-Symcon es software comercial con una versión de prueba gratuita (véase la sección \"Licencia\" más arriba).",
-            "Lizenz erwerben, Quellcode und Dokumentation: https://github.com/AllardLiao/SimpleLocaleForIPS": "Adquirir una licencia, código fuente y documentación: https://github.com/AllardLiao/SimpleLocaleForIPS"
+            "Lizenz erwerben, Quellcode und Dokumentation: https://github.com/AllardLiao/SimpleLocaleForIPS": "Adquirir una licencia, código fuente y documentación: https://github.com/AllardLiao/SimpleLocaleForIPS",
+            "Sprachlimit dieser Lizenz erreicht, max.": "Límite de idiomas de esta licencia alcanzado, máx."
         },
         "it": {
             "Sprache": "Lingua",
@@ -178,7 +180,8 @@
             "\nLizenz": "\nLicenza",
             "Produktinformationen": "Informazioni sul prodotto",
             "Simple Locale for IP-Symcon ist kommerzielle Software mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben).": "Simple Locale for IP-Symcon è software commerciale con una versione di prova gratuita (vedi la sezione \"Licenza\" sopra).",
-            "Lizenz erwerben, Quellcode und Dokumentation: https://github.com/AllardLiao/SimpleLocaleForIPS": "Acquista una licenza, codice sorgente e documentazione: https://github.com/AllardLiao/SimpleLocaleForIPS"
+            "Lizenz erwerben, Quellcode und Dokumentation: https://github.com/AllardLiao/SimpleLocaleForIPS": "Acquista una licenza, codice sorgente e documentazione: https://github.com/AllardLiao/SimpleLocaleForIPS",
+            "Sprachlimit dieser Lizenz erreicht, max.": "Limite di lingue di questa licenza raggiunto, massimo"
         },
         "fr": {
             "Sprache": "Langue",
@@ -238,7 +241,8 @@
             "\nLizenz": "\nLicence",
             "Produktinformationen": "Informations sur le produit",
             "Simple Locale for IP-Symcon ist kommerzielle Software mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben).": "Simple Locale for IP-Symcon est un logiciel commercial avec une version d'essai gratuite (voir la section \"Licence\" ci-dessus).",
-            "Lizenz erwerben, Quellcode und Dokumentation: https://github.com/AllardLiao/SimpleLocaleForIPS": "Acheter une licence, code source et documentation : https://github.com/AllardLiao/SimpleLocaleForIPS"
+            "Lizenz erwerben, Quellcode und Dokumentation: https://github.com/AllardLiao/SimpleLocaleForIPS": "Acheter une licence, code source et documentation : https://github.com/AllardLiao/SimpleLocaleForIPS",
+            "Sprachlimit dieser Lizenz erreicht, max.": "Limite de langues de cette licence atteinte, max."
         }
     }
 }

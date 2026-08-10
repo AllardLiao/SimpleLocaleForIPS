@@ -105,6 +105,15 @@ class SimpleLocale extends IPSModuleStrict
     // würde stattdessen die Admin-Konsolensprache treffen, nicht die Gast-Sprache.
     private const TRIAL_EXPIRED_ALERT_TEXT = 'Die Testversion ist abgelaufen. Bitte eine Lizenz erwerben:';
 
+    // Meldeserver fürs Erkennen von Lizenzmissbrauch (z.B. ein Schlüssel wird als
+    // "gebraucht" mehrfach weiterverkauft) - siehe TrackLicenseActivationIfNew.
+    // PLATZHALTER (leer): solange hier keine echte URL eingetragen ist, wird nichts
+    // verschickt, Aktivierungen landen nur lokal in attributeActivationLog/SendDebug.
+    // WICHTIG: IPS_GetLicensee() liefert eine echte, personenbezogene E-Mail-Adresse -
+    // die Erhebung/Übermittlung gehört vor dem Eintragen einer echten URL in die
+    // eigenen Lizenzbedingungen/Datenschutzhinweise.
+    private const LICENSE_ACTIVATION_REPORT_URL = '';
+
     // Rein dekorativ fürs Gast-Dropdown (GetVisualizationTile) - nicht erschöpfend,
     // unbekannte Sprachcodes bekommen einfach keine Flagge vorangestellt.
     private const LANGUAGE_FLAGS = [
@@ -163,6 +172,7 @@ class SimpleLocale extends IPSModuleStrict
         $this->RegisterAttributeString(self::attributeUnnamedObjects, '[]');
         $this->RegisterAttributeString(self::attributeLicenseInfo, '{}');
         $this->RegisterAttributeInteger(self::attributeTrialStartedAt, 0);
+        $this->RegisterAttributeString(self::attributeActivationLog, '[]');
 
         $this->SetVisualizationType(1);
 
@@ -195,6 +205,11 @@ class SimpleLocale extends IPSModuleStrict
         // beliebig hinauszögern.
         if (self::IS_TRIAL_BUILD && $this->ReadAttributeInteger(self::attributeTrialStartedAt) === 0) {
             $this->WriteAttributeInteger(self::attributeTrialStartedAt, time());
+        }
+
+        if (self::IS_TRIAL_BUILD) {
+            $this->TrackLicenseActivationIfNew();
+            $this->EnforceLicensedLanguageLimit();
         }
 
         $rootID = $this->ReadPropertyInteger(self::propertyRootCategoryID);
@@ -297,18 +312,25 @@ class SimpleLocale extends IPSModuleStrict
                     $element['values'] = $this->DecodeRows(self::propertyTargetLanguages);
                     $element['add'] = true;
 
-                    // Ohne geladene Sprachliste die ganze Liste (inkl. "Hinzufügen"-Button)
-                    // sichtbar, aber ausgegraut lassen ("enabled": false) statt den Button
-                    // komplett verschwinden zu lassen - macht auf einen Blick klar, dass hier
-                    // etwas fehlt, statt es einfach wegzulassen. Verhindert außerdem
-                    // strukturell, dass der eingebaute Zeilen-Editor-Popup nur den
-                    // Platzhalter zur Auswahl anbietet und dessen "OK" eine Fake-Zeile
-                    // in die Liste einträgt.
-                    if ($this->HasCachedLanguages()) {
-                        $element['enabled'] = true;
-                    } else {
+                    // Ohne geladene Sprachliste (oder bei erreichtem Sprachlimit einer
+                    // "Spezialversion"-Lizenz, siehe GetLicensedLanguageLimit) die ganze
+                    // Liste (inkl. "Hinzufügen"-Button) sichtbar, aber ausgegraut lassen
+                    // ("enabled": false) statt den Button komplett verschwinden zu lassen -
+                    // macht auf einen Blick klar, dass hier etwas fehlt/ausgeschöpft ist,
+                    // statt es einfach wegzulassen. Verhindert außerdem strukturell, dass
+                    // der eingebaute Zeilen-Editor-Popup nur den Platzhalter zur Auswahl
+                    // anbietet und dessen "OK" eine Fake-Zeile in die Liste einträgt.
+                    $languageLimit = $this->GetLicensedLanguageLimit();
+                    $limitReached = $languageLimit > 0 && count($targetLanguages) >= $languageLimit;
+
+                    if (!$this->HasCachedLanguages()) {
                         $element['enabled'] = false;
                         $element['caption'] .= ' (' . $this->Translate('bitte zuerst gültigen API-Key speichern und Formular neu öffnen') . ')';
+                    } elseif ($limitReached) {
+                        $element['enabled'] = false;
+                        $element['caption'] .= ' (' . $this->Translate('Sprachlimit dieser Lizenz erreicht, max.') . " $languageLimit)";
+                    } else {
+                        $element['enabled'] = true;
                     }
                     break;
 
@@ -397,6 +419,7 @@ class SimpleLocale extends IPSModuleStrict
         $this->WriteAttributeString(self::attributeLicenseInfo, json_encode($info));
 
         if ($info['valid']) {
+            $this->TrackLicenseActivationIfNew();
             $this->UpdateFormField('LicenseValidPopup', 'visible', true);
         } else {
             $this->UpdateFormField('LicenseInvalidPopup', 'visible', true);
@@ -405,12 +428,93 @@ class SimpleLocale extends IPSModuleStrict
         $this->ReloadForm();
     }
 
+    // Protokolliert eine Aktivierung auch dann, wenn der Lizenzschlüssel nur eingetragen
+    // und über "Übernehmen" gespeichert wurde, ohne extra auf "Lizenz aktivieren" zu
+    // klicken (die Lizenz wirkt bereits ab dem Speichern, siehe GetLicenseInfo/
+    // HasFullLicense) - sonst ließe sich die Protokollierung fürs Erkennen von
+    // Weiterverkauf/Weitergabe einfach umgehen. Loggt nur beim ERSTEN Erkennen einer
+    // neuen Schlüssel+Licensee-Kombination (Vergleich gegen attributeActivationLog),
+    // nicht bei jedem Aufruf erneut.
+    private function TrackLicenseActivationIfNew(): void
+    {
+        $info = $this->GetLicenseInfo();
+        if (!($info['valid'] ?? false)) {
+            return;
+        }
+
+        $keyHash = hash('sha256', $this->ReadPropertyString(self::propertyLicenseKey));
+        $licensee = $this->GetLicenseeIdentifier();
+
+        $log = json_decode($this->ReadAttributeString(self::attributeActivationLog), true);
+        if (!is_array($log)) {
+            $log = [];
+        }
+
+        foreach ($log as $entry) {
+            if (($entry['licenseKeyHash'] ?? '') === $keyHash && ($entry['licensee'] ?? '') === $licensee) {
+                return;
+            }
+        }
+
+        $this->RecordLicenseActivation($keyHash, $licensee, $log);
+    }
+
+    // Eigener Wrapper um IPS_GetLicensee() (wie CallGoogleTranslateAPI/
+    // CallActivationReportAPI) - so bleibt die Identität in Tests mockbar, ohne den
+    // globalen Symcon-Stub-Rückgabewert (fest 'max@mustermann.de') ändern zu müssen.
+    private function GetLicenseeIdentifier(): string
+    {
+        return IPS_GetLicensee();
+    }
+
+    // Erzeugt den eigentlichen Log-Eintrag (lokal, auf die letzten 20 begrenzt) und
+    // meldet ihn zusätzlich an LICENSE_ACTIVATION_REPORT_URL, sofern dort eine echte
+    // URL eingetragen ist. Taucht derselbe licenseKeyHash irgendwann mit mehreren
+    // unterschiedlichen licensee-Werten auf, ist das ein Hinweis auf Weiterverkauf/
+    // Weitergabe des Schlüssels (z.B. als "gebraucht" im Ebay).
+    private function RecordLicenseActivation(string $KeyHash, string $Licensee, array $Log): void
+    {
+        $entry = [
+            'licenseKeyHash' => $KeyHash,
+            'licensee'       => $Licensee,
+            'activatedAt'    => time(),
+        ];
+
+        $log = array_slice([...$Log, $entry], -20);
+        $this->WriteAttributeString(self::attributeActivationLog, json_encode($log));
+        $this->SendDebug('LicenseActivation', json_encode($entry), 0);
+
+        if (self::LICENSE_ACTIVATION_REPORT_URL !== '') {
+            $this->CallActivationReportAPI(self::LICENSE_ACTIVATION_REPORT_URL, json_encode($entry));
+        }
+    }
+
+    // Eigene, überschreibbare Methode fürs HTTP-POST (wie CallGoogleTranslateAPI) - so
+    // bleibt der Netzwerkaufruf in Tests mockbar. Ein nicht erreichbarer Meldeserver
+    // darf die Aktivierung selbst nicht verhindern, daher wird der Rückgabewert/Fehler
+    // bewusst ignoriert.
+    private function CallActivationReportAPI(string $Url, string $JsonBody): void
+    {
+        $ch = curl_init($Url);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $JsonBody);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+        @curl_exec($ch);
+        curl_close($ch);
+    }
+
     // Lizenzschlüssel-Format: "<base64url(JSON-Payload)>.<base64url(HMAC-SHA256)>".
     // Payload deckt sowohl Einmalkauf als auch Abo mit demselben Feld ab:
-    // {"type": "one_time"|"subscription", "expiresAt": 0|<Unix-Timestamp>}.
+    // {"type": "one_time"|"subscription", "expiresAt": 0|<Unix-Timestamp>, "languageLimit": 0|N}.
     // expiresAt=0 bedeutet "läuft nie ab" (Einmalkauf) - Abo-Schlüssel tragen den
     // Zeitpunkt, bis zu dem bezahlt wurde (vom Verkaufssystem bei jeder Verlängerung
-    // neu ausgestellt). Rein offline prüfbar, kein Server-Roundtrip nötig.
+    // neu ausgestellt). languageLimit=0 bedeutet "unbegrenzt viele Zielsprachen"
+    // (normale Vollversion) - N>0 kennzeichnet eine günstigere "Spezialversion" mit nur
+    // N frei wählbaren Zielsprachen (z.B. eine Rabattaktion "eine Sprache für 50%
+    // Rabatt"), siehe GetLicensedLanguageLimit. Fehlt das Feld (ältere Schlüssel), gilt
+    // 0 = unbegrenzt. Rein offline prüfbar, kein Server-Roundtrip nötig.
     private function ValidateLicenseKey(string $Key): ?array
     {
         $parts = explode('.', $Key);
@@ -434,6 +538,7 @@ class SimpleLocale extends IPSModuleStrict
         if (!is_array($payload) || !isset($payload['type'], $payload['expiresAt'])) {
             return null;
         }
+        $payload['languageLimit'] = (int) ($payload['languageLimit'] ?? 0);
 
         return $payload;
     }
@@ -455,10 +560,10 @@ class SimpleLocale extends IPSModuleStrict
 
         $expiresAt = (int) $payload['expiresAt'];
         if ($expiresAt !== 0 && $expiresAt < time()) {
-            return ['valid' => false, 'expired' => true, 'type' => $payload['type'], 'expiresAt' => $expiresAt];
+            return ['valid' => false, 'expired' => true, 'type' => $payload['type'], 'expiresAt' => $expiresAt, 'languageLimit' => $payload['languageLimit']];
         }
 
-        return ['valid' => true, 'type' => $payload['type'], 'expiresAt' => $expiresAt];
+        return ['valid' => true, 'type' => $payload['type'], 'expiresAt' => $expiresAt, 'languageLimit' => $payload['languageLimit']];
     }
 
     private function HasFullLicense(): bool
@@ -468,6 +573,47 @@ class SimpleLocale extends IPSModuleStrict
         }
 
         return $this->GetLicenseInfo()['valid'];
+    }
+
+    // 0 = unbegrenzt (Vollversion-Build, keine/eine unbegrenzte Lizenz, oder gar keine
+    // gültige Lizenz - Sprachauswahl regelt sich in dem Fall über GetFreeLanguageCodes).
+    // N>0 = "Spezialversion"-Lizenz mit nur N frei wählbaren Zielsprachen, siehe
+    // ValidateLicenseKey.
+    private function GetLicensedLanguageLimit(): int
+    {
+        if (!self::IS_TRIAL_BUILD) {
+            return 0;
+        }
+
+        $info = $this->GetLicenseInfo();
+        if (!($info['valid'] ?? false)) {
+            return 0;
+        }
+
+        return (int) ($info['languageLimit'] ?? 0);
+    }
+
+    // Defensive Absicherung gegen ein Downgrade (z.B. eine zeitlich befristete
+    // "Spezialversion"-Lizenz läuft ab und der Schlüssel wird gegen eine mit
+    // kleinerem languageLimit ausgetauscht) oder eine von Hand editierte
+    // Konfiguration: kappt bei jedem ApplyChanges auf die ersten N bereits
+    // konfigurierten Zielsprachen, statt mehr zuzulassen als lizenziert. Die
+    // Admin-Oberfläche verhindert das Hinzufügen weiterer Sprachen zusätzlich schon
+    // vorher (siehe PopulateFormElements), das hier ist nur das serverseitige Netz.
+    private function EnforceLicensedLanguageLimit(): void
+    {
+        $limit = $this->GetLicensedLanguageLimit();
+        if ($limit <= 0) {
+            return;
+        }
+
+        $rows = json_decode($this->ReadPropertyString(self::propertyTargetLanguages), true);
+        if (!is_array($rows) || count($rows) <= $limit) {
+            return;
+        }
+
+        IPS_SetProperty($this->InstanceID, self::propertyTargetLanguages, json_encode(array_slice($rows, 0, $limit)));
+        IPS_ApplyChanges($this->InstanceID);
     }
 
     private function IsTrialExpired(): bool
