@@ -137,17 +137,18 @@ aktuell aktive Sprache wird als Instanz-Property gespeichert (kein
 Symcon-Variablenprofil - das wäre global über alle Instanzen der Installation
 hinweg geteilt und würde sich bei mehreren Instanzen gegenseitig überschreiben).
 
-Das Dropdown bietet immer folgende Sprachen zur Auswahl: alle konfigurierten
-Zielsprachen, sowie zusätzlich "Original (unbearbeitet)". Die Basissprache
-erscheint dabei bewusst **nicht** als eigener, zusätzlicher Dropdown-Eintrag:
-Google Cloud Translate lehnt eine Übersetzung von einer Sprache in sich
-selbst grundsätzlich ab (HTTP 400 "Bad language pair"), es gibt für die
-Basissprache also gar keine eigene, separat übersetzte Spalte - ihr Inhalt
-wäre ohnehin identisch mit "Original (unbearbeitet)" (dem rohen,
-unangetasteten Text, exakt so wie er im Objektbaum vorgefunden wurde,
-Tippfehler inklusive). Wählt ein Gast "Original", oder ist die Basissprache
-selbst die aktuell aktive Sprache, wird immer direkt dieser Rohtext
-angezeigt.
+Das Dropdown bietet immer folgende Sprachen zur Auswahl: die Basissprache und
+alle konfigurierten Zielsprachen (Flagge, live übersetzter Name, Google-Code,
+z. B. "🇬🇧 English - en"). Intern gibt es zusätzlich die Pseudo-Sprache
+"Original" (liefert den rohen, unangetasteten Text, exakt so wie er im
+Objektbaum vorgefunden wurde, Tippfehler inklusive) - im Dropdown erscheint
+dafür aber **kein separater Eintrag** "Original (unbearbeitet)": Google Cloud
+Translate lehnt eine Übersetzung von einer Sprache in sich selbst ohnehin ab
+(HTTP 400 "Bad language pair"), es gibt für die Basissprache also gar keine
+eigene, separat übersetzte Spalte - ihr Inhalt ist identisch mit dem
+Rohtext. Der Basissprache-Eintrag im Dropdown liefert deshalb technisch
+"Original", zeigt aber ganz normal die Basissprache selbst an (z. B.
+"🇩🇪 Deutsch - de") statt einer eigenen "Original"-Beschriftung.
 
 Ein Info-Symbol (ⓘ) neben dem Dropdown öffnet auf Klick einen nativen
 Browser-Dialog (`alert()`) mit den in [Abschnitt 2](#2-bekannte-einschränkungen)

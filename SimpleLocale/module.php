@@ -918,12 +918,15 @@ class SimpleLocale extends IPSModuleStrict
     }
 
     // "Name - code" mit vorangestellter Flagge (z.B. "🇬🇧 English - en"), Name live
-    // in die aktuell aktive Gast-Sprache übersetzt. "Original" ist kein echter
-    // Google-Sprachcode und bekommt daher weder Flagge noch Code-Suffix.
+    // in die aktuell aktive Gast-Sprache übersetzt. "Original" liefert seit dem
+    // Wegfall der separaten Basissprachspalte exakt denselben Rohtext wie die
+    // Basissprache selbst (siehe ResolveRowValue) - im Dropdown wird daher
+    // konsequent die Basissprache selbst angezeigt (Flagge/Name/Code), keine eigene
+    // "Original"-Beschriftung mehr, die fälschlich einen Unterschied suggerieren würde.
     private function GetGuestLanguageLabel(string $Code, array $GuestCache): string
     {
         if ($Code === self::langOriginalImport) {
-            return '🔄 ' . ($GuestCache['originalLabel'] ?? $this->Translate('Original (unbearbeitet)'));
+            $Code = $this->ReadPropertyString(self::propertySourceLanguage);
         }
 
         $flag = self::LANGUAGE_FLAGS[$Code] ?? '';
@@ -960,7 +963,14 @@ class SimpleLocale extends IPSModuleStrict
             return $cache;
         }
 
-        $neededCodes = array_diff($this->GetSelectableLanguageCodes(), [self::langOriginalImport]);
+        // Die Basissprache selbst braucht ebenfalls einen live übersetzten Namen: das
+        // Dropdown zeigt sie für "Original" an (siehe GetGuestLanguageLabel), ist aber
+        // seit dem Wegfall der separaten Basissprachspalte kein eigener Eintrag in
+        // GetSelectableLanguageCodes() mehr.
+        $neededCodes = array_diff(
+            array_merge($this->GetSelectableLanguageCodes(), [$this->ReadPropertyString(self::propertySourceLanguage)]),
+            [self::langOriginalImport]
+        );
         $missingCodes = array_diff($neededCodes, array_keys($cache['names'] ?? []));
         $isFresh = ($cache['language'] ?? '') === $language
             && $missingCodes === []
@@ -977,30 +987,28 @@ class SimpleLocale extends IPSModuleStrict
 
         $names = $this->FetchLanguageNames($language) ?? ($cache['names'] ?? []);
 
-        // "Original (unbearbeitet)" + Info-Überschrift + Info-Hinweistexte in einem
-        // gemeinsamen Aufruf übersetzen (statt je einem eigenen) - alles feste, kurze
-        // Texte, die ohnehin nur bei Sprachwechsel/Cache-Ablauf einmal aktualisiert werden.
-        $ownTexts = array_merge(['Original (unbearbeitet)', self::INFO_HEADING_TEXT], self::INFO_LIMITATION_TEXTS);
+        // Info-Überschrift + Info-Hinweistexte in einem gemeinsamen Aufruf übersetzen
+        // (statt je einem eigenen) - alles feste, kurze Texte, die ohnehin nur bei
+        // Sprachwechsel/Cache-Ablauf einmal aktualisiert werden.
+        $ownTexts = array_merge([self::INFO_HEADING_TEXT], self::INFO_LIMITATION_TEXTS);
         if ($language === 'de') {
             $translatedOwnTexts = $ownTexts;
         } else {
             $translatedOwnTexts = $this->TranslateBatch($ownTexts, 'de', $language);
         }
 
-        $originalLabel = $translatedOwnTexts[0] ?? ($cache['originalLabel'] ?? 'Original');
-        $infoHeading = $translatedOwnTexts[1] ?? self::INFO_HEADING_TEXT;
+        $infoHeading = $translatedOwnTexts[0] ?? self::INFO_HEADING_TEXT;
         $infoTexts = [
-            $translatedOwnTexts[2] ?? self::INFO_LIMITATION_TEXTS[0],
-            $translatedOwnTexts[3] ?? self::INFO_LIMITATION_TEXTS[1],
+            $translatedOwnTexts[1] ?? self::INFO_LIMITATION_TEXTS[0],
+            $translatedOwnTexts[2] ?? self::INFO_LIMITATION_TEXTS[1],
         ];
 
         $cache = [
-            'language'      => $language,
-            'names'         => $names,
-            'originalLabel' => $originalLabel,
-            'infoHeading'   => $infoHeading,
-            'infoTexts'     => $infoTexts,
-            'fetchedAt'     => time(),
+            'language'    => $language,
+            'names'       => $names,
+            'infoHeading' => $infoHeading,
+            'infoTexts'   => $infoTexts,
+            'fetchedAt'   => time(),
         ];
 
         $this->WriteAttributeString(self::attributeGuestLanguageNamesCache, json_encode($cache));
@@ -1178,10 +1186,13 @@ class SimpleLocale extends IPSModuleStrict
         }, $this->GetSelectableLanguageCodes());
     }
 
+    // "Original" ist im Admin-Formular (z.B. "Aktuell aktive Sprache") ebenfalls kein
+    // eigener Eintrag mehr - zeigt stattdessen den Namen der Basissprache, deren
+    // Rohtext "Original" tatsächlich liefert (siehe ResolveRowValue).
     private function GetLanguageDisplayName(string $Code): string
     {
         if ($Code === self::langOriginalImport) {
-            return $this->Translate('Original (unbearbeitet)');
+            $Code = $this->ReadPropertyString(self::propertySourceLanguage);
         }
 
         foreach ($this->GetKnownLanguages() as $language) {
