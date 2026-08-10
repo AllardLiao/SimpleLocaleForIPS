@@ -20,8 +20,16 @@ trait SimpleLocaleConstants
     private const attributeAvailableLanguagesCache = 'AvailableLanguagesCache';
     private const attributeAvailableLanguagesFetchedAt = 'AvailableLanguagesFetchedAt';
 
+    // Sprachnamen (+ das Label der "Original"-Pseudo-Sprache) live in die gerade
+    // aktive Gast-Sprache übersetzt - fuer die Kachel-Visualisierung (GetVisualizationTile),
+    // getrennt vom AvailableLanguagesCache oben, der an der Admin-Konsolensprache haengt.
+    private const attributeGuestLanguageNamesCache = 'GuestLanguageNamesCache';
+
     // Idents (Variablen / RequestAction)
     private const identLanguage = 'Language';
+    // Nur noch fuer die einmalige Bereinigung alter Installationen (siehe Create()) -
+    // die Sprachauswahl ist jetzt eine echte Modul-Kachel (GetVisualizationTile),
+    // keine HTMLBox-Variable mehr.
     private const identLanguageDropdown = 'LanguageDropdown';
     private const identRescan = 'Rescan';
     private const identShowApiKeyWarning = 'ShowApiKeyWarning';

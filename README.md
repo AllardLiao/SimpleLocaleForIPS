@@ -19,9 +19,10 @@ persistent im Modul-Formular gecacht werden:
 
 Übersetzungen sind im Modul-Formular direkt einsehbar und korrigierbar (Google übersetzt
 nicht immer perfekt); ein Rescan (manuell oder per Timer) übersetzt nur neue oder noch
-leere Einträge nach, bestehende Werte bleiben unangetastet. Eine fertige
-Dropdown-Kachel (`Sprachauswahl`) in der Zielvisualisierung erlaubt Gästen die
-Sprachauswahl; alle Umbenennungen/Wertänderungen bleiben auf die konfigurierte
+leere Einträge nach, bestehende Werte bleiben unangetastet. Die Modul-Instanz
+selbst liefert eine eigene, schlanke Dropdown-Kachel für die Zielvisualisierung
+(Sprachnamen live in die aktive Sprache übersetzt, keine zusätzliche Variable
+nötig); alle Umbenennungen/Wertänderungen bleiben auf die konfigurierte
 Root-Kategorie beschränkt.
 
 ## Installation

@@ -16,7 +16,10 @@ Beschreibung des Moduls.
 * Übersetzt live die Namen aller Objekte (Kategorien, Variablen, Kacheln, Links)
   innerhalb einer frei wählbaren Root-Kategorie, per `IPS_SetName`.
 * Übersetzt zusätzlich den Wert aller String-Variablen innerhalb dieser
-  Root-Kategorie (z. B. Hinweis-/Popup-Texte), per `SetValueString`.
+  Root-Kategorie (z. B. Hinweis-/Popup-Texte, auch komplette HTMLBox-Widgets),
+  per `SetValueString`. `<style>`- und `<script>`-Blöcke innerhalb solcher
+  Werte werden dabei nie an Google geschickt und bleiben beim Übersetzen
+  unverändert (verhindert kaputtes CSS/JS durch mitübersetzte Eigenschaften).
 * Automatische Übersetzung über die Google Cloud Translate API, inkl.
   persistentem Cache – Google wird nur für neue oder noch unübersetzte Einträge
   aufgerufen, nie für bereits vorhandene (auch manuell korrigierte) Werte.
@@ -25,12 +28,15 @@ Beschreibung des Moduls.
   erneut eingelesen; dabei werden nur neue Objekte/Sprachen ergänzt, nichts
   wird überschrieben oder gelöscht. Objekte werden über ihre Objekt-ID
   identifiziert - ein gesetzter Ident ist nicht erforderlich.
-* Eine Sprachauswahl-Variable (`Language`) kann per WebFront/Kachel-Dropdown
-  bedient werden und löst den Sprachwechsel aus.
-* Zusätzlich eine schlanke `Sprachauswahl`-Variable (HTMLBox) mit einem
-  echten `<select>`-Dropdown - kompakter als die Symcon-Standarddarstellung
-  von `Language` (Buttons untereinander), ideal als Kachel in der
-  Gäste-Visualisierung.
+* Die Instanz selbst bietet eine eigene, schlanke Kachel für die Visualisierung
+  (natives HTML-`<select>`-Dropdown statt Symcons Standard-Buttonliste) - dazu
+  einfach die Instanz per Drag & Drop in WebFront platzieren, keine zusätzliche
+  Variable nötig. Die Sprachnamen im Dropdown (inkl. kleiner Flagge und Google-
+  Sprachcode, z. B. "🇬🇧 English - en") werden live in die gerade aktive Sprache
+  übersetzt, damit dort nie mehrere Sprachen gemischt angezeigt werden.
+* Alternativ steht die reine Statusvariable `Language` zur Verfügung, falls
+  eine eigene Visualisierung/ein eigenes Skript den Sprachwechsel selbst
+  auslösen möchte (z. B. über die Symcon-Standarddarstellung).
 
 ### 2. Voraussetzungen
 
@@ -63,10 +69,9 @@ Die Statusvariablen/Kategorien werden automatisch angelegt. Das Löschen einzeln
 
 #### Statusvariablen
 
-Name              | Typ     | Beschreibung
------------------ | ------- | ------------
-`Language`        | String  | Aktuell aktive Sprache (Ident-Aktion, z. B. per Dropdown in der Kachel-Visualisierung bedienbar)
-`Sprachauswahl`   | String (HTMLBox) | Fertiges, schlankes `<select>`-Dropdown zur Sprachauswahl - direkt als Kachel in die Visualisierung ziehen, keine weitere Einrichtung nötig
+Name       | Typ     | Beschreibung
+---------- | ------- | ------------
+`Language` | String  | Aktuell aktive Sprache (Ident-Aktion, wird von der Modul-Kachel sowie von eigenen Skripten/Visualisierungen angesteuert)
 
 #### Profile
 
@@ -76,16 +81,15 @@ Name              | Typ
 
 ### 6. Visualisierung
 
-Am einfachsten: die Variable `Sprachauswahl` per Drag & Drop als Kachel in
-die Gäste-Visualisierung ziehen (oder per Link darauf verweisen) - sie zeigt
-sich selbst als kompaktes `<select>`-Dropdown und löst beim Auswählen direkt
-den Sprachwechsel aus. Alternativ kann die Variable `Language` platziert
-werden, dann rendert Symcon die Auswahl in der Standarddarstellung
-(Buttons untereinander) - bei mehreren Sprachen weniger kompakt. Beide
-Variablen steuern denselben Sprachwechsel; es empfiehlt sich, nur eine der
-beiden sichtbar in die Visualisierung einzubinden (die jeweils andere z. B.
-über die Objekt-Sichtbarkeit ausblenden), um keine zwei redundanten
-Sprachauswahl-Kacheln anzuzeigen.
+Die Simple-Locale-Instanz selbst per Drag & Drop in WebFront platzieren (bei
+der Kachel-Auswahl nicht eine Variable, sondern die Instanz selbst auswählen)
+- sie liefert eine eigene, kompakte Kachel mit `<select>`-Dropdown
+(Weltkugel-Symbol statt Text-Label "Sprache", damit keine Sprachen gemischt
+angezeigt werden) und löst beim Auswählen direkt den Sprachwechsel aus.
+Alternativ kann die Variable `Language` platziert werden, dann rendert
+Symcon die Auswahl in der Standarddarstellung (Buttons untereinander) - bei
+mehreren Sprachen weniger kompakt, und die Sprachnamen erscheinen dabei immer
+in der Konsolensprache des Admins statt live übersetzt.
 
 Für eigene HTMLBox-Popups oder Hinweise außerhalb der live umbenannten
 Objekte liefert `IPSSL_TranslateText()` den Text in der aktuell aktiven

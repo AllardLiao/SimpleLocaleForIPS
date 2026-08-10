@@ -21,6 +21,22 @@ class SimpleLocale extends IPSModuleStrict
         ['code' => 'nl', 'name' => 'Nederlands'],
     ];
 
+    // Rein dekorativ fürs Gast-Dropdown (GetVisualizationTile) - nicht erschöpfend,
+    // unbekannte Sprachcodes bekommen einfach keine Flagge vorangestellt.
+    private const LANGUAGE_FLAGS = [
+        'de' => '🇩🇪', 'en' => '🇬🇧', 'fr' => '🇫🇷', 'es' => '🇪🇸', 'it' => '🇮🇹',
+        'nl' => '🇳🇱', 'pt' => '🇵🇹', 'pl' => '🇵🇱', 'ru' => '🇷🇺', 'tr' => '🇹🇷',
+        'ar' => '🇸🇦', 'zh' => '🇨🇳', 'zh-CN' => '🇨🇳', 'zh-TW' => '🇹🇼', 'ja' => '🇯🇵',
+        'ko' => '🇰🇷', 'da' => '🇩🇰', 'sv' => '🇸🇪', 'no' => '🇳🇴', 'nb' => '🇳🇴',
+        'fi' => '🇫🇮', 'cs' => '🇨🇿', 'sk' => '🇸🇰', 'hu' => '🇭🇺', 'ro' => '🇷🇴',
+        'bg' => '🇧🇬', 'el' => '🇬🇷', 'uk' => '🇺🇦', 'he' => '🇮🇱', 'hi' => '🇮🇳',
+        'th' => '🇹🇭', 'vi' => '🇻🇳', 'id' => '🇮🇩', 'ms' => '🇲🇾', 'hr' => '🇭🇷',
+        'sl' => '🇸🇮', 'et' => '🇪🇪', 'lv' => '🇱🇻', 'lt' => '🇱🇹', 'sr' => '🇷🇸',
+        'fa' => '🇮🇷', 'ur' => '🇵🇰', 'bn' => '🇧🇩', 'sw' => '🇰🇪', 'af' => '🇿🇦',
+        'is' => '🇮🇸', 'ga' => '🇮🇪', 'mt' => '🇲🇹', 'ca' => '🇪🇸', 'eu' => '🇪🇸',
+        'gl' => '🇪🇸',
+    ];
+
     public function Create(): void
     {
         //Never delete this line!
@@ -37,6 +53,7 @@ class SimpleLocale extends IPSModuleStrict
         $this->RegisterAttributeString(self::attributeCurrentLanguage, '');
         $this->RegisterAttributeString(self::attributeAvailableLanguagesCache, '[]');
         $this->RegisterAttributeInteger(self::attributeAvailableLanguagesFetchedAt, 0);
+        $this->RegisterAttributeString(self::attributeGuestLanguageNamesCache, '{}');
 
         // Profil muss existieren, bevor die Variable damit registriert werden kann
         $this->EnsureLanguageProfileExists();
@@ -44,10 +61,17 @@ class SimpleLocale extends IPSModuleStrict
         $this->RegisterVariableString(self::identLanguage, $this->Translate('Sprache'), self::profileLanguage);
         $this->EnableAction(self::identLanguage);
 
-        // Schlankes, echtes Dropdown statt der Symcon-Standarddarstellung (Buttons
-        // untereinander) für die Sprachauswahl-Variable - ruft dieselbe RequestAction
-        // wie die Profil-Variable auf, ist also nur eine alternative Oberfläche dafür.
-        $this->RegisterVariableString(self::identLanguageDropdown, $this->Translate('Sprachauswahl'), '~HTMLBox');
+        // Echte Modul-Kachel statt HTMLBox-Variable (GetVisualizationTile) - schlanker
+        // und dem von Symcon vorgesehenen Weg entsprechend: die Instanz selbst wird
+        // als Kachel in die Visualisierung gezogen, keine zusätzliche Variable nötig.
+        $this->SetVisualizationType(1);
+
+        // Einmalige Bereinigung: die frühere HTMLBox-Dropdown-Variable existiert bei
+        // bereits eingerichteten Installationen noch, wird aber nicht mehr benötigt.
+        $staleDropdownID = @IPS_GetObjectIDByIdent(self::identLanguageDropdown, $this->InstanceID);
+        if ($staleDropdownID !== false) {
+            IPS_DeleteVariable($staleDropdownID);
+        }
 
         $this->RegisterTimer($this->GetAutoRescanTimerIdent(), 0, 'IPSSL_Rescan($_IPS[\'TARGET\']);');
     }
@@ -81,8 +105,6 @@ class SimpleLocale extends IPSModuleStrict
 
         $interval = $this->ReadPropertyInteger(self::propertyAutoRescanInterval);
         $this->SetTimerInterval($this->GetAutoRescanTimerIdent(), $interval > 0 ? $interval * 60 * 1000 : 0);
-
-        $this->UpdateLanguageDropdown();
     }
 
     public function RequestAction(string $Ident, mixed $Value): void
@@ -197,7 +219,7 @@ class SimpleLocale extends IPSModuleStrict
     {
         $this->SetValue(self::identLanguage, $Language);
         $this->WriteAttributeString(self::attributeCurrentLanguage, $Language);
-        $this->UpdateLanguageDropdown();
+        $this->PushVisualizationUpdate();
 
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
 
@@ -479,20 +501,54 @@ class SimpleLocale extends IPSModuleStrict
             return array_fill(0, count($Texts), '');
         }
 
-        $results = [];
-        foreach (array_chunk($Texts, self::translateMaxTextsPerRequest) as $chunk) {
-            $results = array_merge($results, $this->TranslateChunk($chunk, $Source, $Target, $apiKey));
+        // Jeder Text wird in abwechselnd übersetzbare/geschützte Segmente zerlegt -
+        // nur die übersetzbaren Segmente werden überhaupt an Google geschickt (siehe
+        // SplitProtectedSegments). Die Chunk-Grenze von 128 muss daher auf der
+        // flachen Segmentliste liegen, nicht auf den ursprünglichen Zeilen-Texten,
+        // sonst könnte ein einzelner Text mit mehreren Segmenten die Google-Grenze
+        // pro Aufruf ("Too many text segments") trotzdem reißen.
+        $segmentsPerText = array_map([$this, 'SplitProtectedSegments'], $Texts);
+
+        $translatable = [];
+        foreach ($segmentsPerText as $segments) {
+            foreach ($segments as $segment) {
+                if (!$segment['protected']) {
+                    $translatable[] = $segment['text'];
+                }
+            }
         }
 
-        return $results;
+        $translatedFlat = [];
+        foreach (array_chunk($translatable, self::translateMaxTextsPerRequest) as $chunk) {
+            $translatedFlat = array_merge($translatedFlat, $this->TranslateChunk($chunk, $Source, $Target, $apiKey));
+        }
+
+        $result = [];
+        $cursor = 0;
+        foreach ($segmentsPerText as $segments) {
+            $rebuilt = '';
+            foreach ($segments as $segment) {
+                $rebuilt .= $segment['protected'] ? $segment['text'] : ($translatedFlat[$cursor++] ?? '');
+            }
+            $result[] = $rebuilt;
+        }
+
+        return $result;
     }
 
     private function TranslateChunk(array $Texts, ?string $Source, string $Target, string $ApiKey): array
     {
+        if ($Texts === []) {
+            return [];
+        }
+
         $body = [
             'q'      => $Texts,
             'target' => $Target,
-            'format' => 'text',
+            // "html" statt "text": Google übersetzt dann nur den Text zwischen Tags,
+            // nicht die Tags/Attribute selbst - wichtig für "Eigene Texte", die
+            // vollständige HTML-Widgets (Symcon-HTMLBox-Inhalte) sein können.
+            'format' => 'html',
         ];
         if ($Source !== null) {
             $body['source'] = $Source;
@@ -521,6 +577,36 @@ class SimpleLocale extends IPSModuleStrict
         }, $translations);
     }
 
+    // Zerlegt einen Text in abwechselnd übersetzbare und geschützte (<style>/<script>-
+    // Block-)Segmente, in ursprünglicher Reihenfolge. Style-/Script-Inhalte gehen nie
+    // an Google - dort würden CSS-Eigenschaften/JS-Code wie normaler Fließtext
+    // "übersetzt" und das eingebettete HTML/CSS zerstören (z.B. bei HTMLBox-Widgets
+    // als "Eigener Text", siehe Bugreport mit übersetztem "text-align"/"background-
+    // color" in einem <style>-Block). Bewusst kein Platzhalter-Text anstelle des
+    // Blocks, der die Übersetzung unbeschadet überstehen müsste - Segmente, die gar
+    // nicht erst an Google gehen, können dabei auch nicht verändert werden.
+    private function SplitProtectedSegments(string $Text): array
+    {
+        $segments = [];
+        $offset = 0;
+
+        if (preg_match_all('/<(style|script)\b[^>]*>.*?<\/\1>/is', $Text, $matches, PREG_OFFSET_CAPTURE)) {
+            foreach ($matches[0] as [$blockText, $blockOffset]) {
+                if ($blockOffset > $offset) {
+                    $segments[] = ['protected' => false, 'text' => substr($Text, $offset, $blockOffset - $offset)];
+                }
+                $segments[] = ['protected' => true, 'text' => $blockText];
+                $offset = $blockOffset + strlen($blockText);
+            }
+        }
+
+        if ($offset < strlen($Text)) {
+            $segments[] = ['protected' => false, 'text' => substr($Text, $offset)];
+        }
+
+        return $segments === [] ? [['protected' => false, 'text' => $Text]] : $segments;
+    }
+
     private const availableLanguagesMaxAgeSeconds = 86400;
 
     private function RefreshAvailableLanguagesIfStale(): void
@@ -540,21 +626,44 @@ class SimpleLocale extends IPSModuleStrict
 
     private function FetchSupportedLanguages(): void
     {
-        $apiKey = $this->ReadPropertyString(self::propertyGoogleTranslateAPIKey);
-        if ($apiKey === '') {
+        if ($this->ReadPropertyString(self::propertyGoogleTranslateAPIKey) === '') {
             $this->SetStatus(self::STATUS_TRANSLATE_ERROR);
 
             return;
         }
 
         $target = $this->ReadPropertyString(self::propertySourceLanguage);
+        $names = $this->FetchLanguageNames($target);
+        if ($names === null) {
+            return;
+        }
+
+        $result = [];
+        foreach ($names as $code => $name) {
+            $result[] = ['code' => $code, 'name' => $name];
+        }
+
+        $this->WriteAttributeString(self::attributeAvailableLanguagesCache, json_encode($result));
+        $this->WriteAttributeInteger(self::attributeAvailableLanguagesFetchedAt, time());
+    }
+
+    // Von Google unterstützte Sprachen, mit Namen in $Target - gemeinsam genutzt von
+    // FetchSupportedLanguages() (Admin-Konsolensprache) und EnsureGuestLanguageNamesFresh()
+    // (aktuell aktive Gast-Sprache). null bei fehlendem Key oder Fehler beim Abruf.
+    private function FetchLanguageNames(string $Target): ?array
+    {
+        $apiKey = $this->ReadPropertyString(self::propertyGoogleTranslateAPIKey);
+        if ($apiKey === '') {
+            return null;
+        }
+
         $url = 'https://translation.googleapis.com/language/translate/v2/languages'
             . '?key=' . urlencode($apiKey)
-            . '&target=' . urlencode($target);
+            . '&target=' . urlencode($Target);
 
         $response = $this->CallGoogleTranslateAPI($url, null);
         if ($response === null) {
-            return;
+            return null;
         }
 
         $decoded = json_decode($response, true);
@@ -562,18 +671,18 @@ class SimpleLocale extends IPSModuleStrict
         if (!is_array($languages)) {
             $this->SetStatus(self::STATUS_TRANSLATE_ERROR);
 
-            return;
+            return null;
         }
 
-        $result = array_map(function ($entry) {
-            return [
-                'code' => $entry['language'] ?? '',
-                'name' => $entry['name'] ?? ($entry['language'] ?? ''),
-            ];
-        }, $languages);
+        $names = [];
+        foreach ($languages as $entry) {
+            $code = $entry['language'] ?? '';
+            if ($code !== '') {
+                $names[$code] = $entry['name'] ?? $code;
+            }
+        }
 
-        $this->WriteAttributeString(self::attributeAvailableLanguagesCache, json_encode($result));
-        $this->WriteAttributeInteger(self::attributeAvailableLanguagesFetchedAt, time());
+        return $names;
     }
 
     // Gemeinsamer HTTP-Client für die Google Cloud Translate API (GET ohne Body, POST mit JSON-Body)
@@ -639,27 +748,140 @@ class SimpleLocale extends IPSModuleStrict
         }
     }
 
+    // Symcon ruft diese Methode auf, sobald die Instanz selbst als Kachel in die
+    // Visualisierung gezogen wird (aktiviert per SetVisualizationType in Create()).
+    // Wird nur einmal beim Laden der Kachel aufgerufen - Aktualisierungen (z.B. nach
+    // einem Sprachwechsel) laufen über UpdateVisualizationValue()/PushVisualizationUpdate().
+    public function GetVisualizationTile(): string
+    {
+        return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>'
+            . '<body style="margin:0;">'
+            . '<div id="ipssl-select-wrapper">' . $this->BuildLanguageSelectHtml() . '</div>'
+            . '<script>'
+            . 'function handleMessage(data) {'
+            . 'let message; try { message = JSON.parse(data); } catch (e) { return; }'
+            . 'if (message.action === "REFRESH" && message.payload && typeof message.payload.html === "string") {'
+            . 'document.getElementById("ipssl-select-wrapper").innerHTML = message.payload.html;'
+            . '}'
+            . '}'
+            . '</script>'
+            . '</body></html>';
+    }
+
+    // Schickt bereits geöffneten Kacheln (z.B. andere Browser-Tabs/Geräte) die
+    // neu aufgebaute Sprachauswahl - die Kachel selbst, die den Wechsel ausgelöst
+    // hat, kennt ihre neue Auswahl bereits durch die native <select>-Interaktion.
+    private function PushVisualizationUpdate(): void
+    {
+        $payload = json_encode(['action' => 'REFRESH', 'payload' => ['html' => $this->BuildLanguageSelectHtml()]]);
+        $this->UpdateVisualizationValue($payload);
+    }
+
     // Schlankes natives <select> statt der Symcon-Standarddarstellung (Buttons
-    // untereinander) für Enumeration-Profile - ruft beim Ändern dieselbe
-    // RequestAction wie die Profil-Variable auf.
-    private function UpdateLanguageDropdown(): void
+    // untereinander) - ruft beim Ändern dieselbe RequestAction wie die
+    // Profil-Variable auf. Kein Text-Label ("Sprache" o.ä.), damit nicht die
+    // Konsolensprache des Admins mit der vom Gast gewählten Sprache gemischt wird -
+    // stattdessen ein sprachneutrales Globus-Symbol. Die Sprachnamen selbst werden
+    // live in die aktuell aktive Gast-Sprache übersetzt (siehe EnsureGuestLanguageNamesFresh).
+    private function BuildLanguageSelectHtml(): string
     {
         $currentLanguage = $this->ReadAttributeString(self::attributeCurrentLanguage);
+        $guestCache = $this->EnsureGuestLanguageNamesFresh();
 
         $optionsHtml = '';
         foreach ($this->GetSelectableLanguageCodes() as $code) {
             $selected = $code === $currentLanguage ? ' selected' : '';
             $value = htmlspecialchars($code, ENT_QUOTES, 'UTF-8');
-            $label = htmlspecialchars($this->GetLanguageDisplayName($code), ENT_QUOTES, 'UTF-8');
+            $label = htmlspecialchars($this->GetGuestLanguageLabel($code, $guestCache), ENT_QUOTES, 'UTF-8');
             $optionsHtml .= "<option value=\"{$value}\"{$selected}>{$label}</option>";
         }
 
-        $html = '<select style="width:100%;padding:8px;font-size:16px;border-radius:6px;"'
+        return '<div style="display:flex;align-items:center;gap:8px;">'
+            . '<span style="font-size:20px;line-height:1;" aria-hidden="true">🌐</span>'
+            . '<select style="flex:1;padding:8px;font-size:16px;border-radius:6px;"'
             . ' onchange="requestAction(\'' . self::identLanguage . '\', this.value);">'
             . $optionsHtml
-            . '</select>';
+            . '</select>'
+            . '</div>';
+    }
 
-        $this->SetValue(self::identLanguageDropdown, $html);
+    // "Name - code" mit vorangestellter Flagge (z.B. "🇬🇧 English - en"), Name live
+    // in die aktuell aktive Gast-Sprache übersetzt. "Original" ist kein echter
+    // Google-Sprachcode und bekommt daher weder Flagge noch Code-Suffix.
+    private function GetGuestLanguageLabel(string $Code, array $GuestCache): string
+    {
+        if ($Code === self::langOriginalImport) {
+            return '📄 ' . ($GuestCache['originalLabel'] ?? $this->Translate('Original (unbearbeitet)'));
+        }
+
+        $flag = self::LANGUAGE_FLAGS[$Code] ?? '';
+        $name = $GuestCache['names'][$Code] ?? $this->GetLanguageDisplayName($Code);
+        $prefix = $flag === '' ? '' : $flag . ' ';
+
+        return $prefix . $name . ' - ' . $Code;
+    }
+
+    private const guestLanguageNamesMaxAgeSeconds = 86400;
+
+    // Stellt sicher, dass GuestLanguageNamesCache zur aktuell aktiven Gast-Sprache
+    // passt (alle wählbaren Sprachcodes vorhanden, nicht älter als ein Tag) und
+    // aktualisiert sie andernfalls per Google. Ohne API-Key oder bei Fehlern wird
+    // der (ggf. leere) Cache unverändert zurückgegeben - GetGuestLanguageLabel()
+    // fällt dann auf die admin-sprachige Anzeige zurück, nichts bricht dadurch ab.
+    private function EnsureGuestLanguageNamesFresh(): array
+    {
+        $language = $this->ReadAttributeString(self::attributeCurrentLanguage);
+
+        // "Original" ist kein echter Google-Sprachcode - für die Beschriftung der
+        // *anderen* Dropdown-Einträge wird in diesem Fall die Basissprache verwendet
+        // (der Baum steht ja gerade unübersetzt/roh in genau dieser Sprache da).
+        if ($language === '' || $language === self::langOriginalImport) {
+            $language = $this->ReadPropertyString(self::propertySourceLanguage);
+        }
+
+        $cache = json_decode($this->ReadAttributeString(self::attributeGuestLanguageNamesCache), true);
+        if (!is_array($cache)) {
+            $cache = [];
+        }
+
+        if ($language === '') {
+            return $cache;
+        }
+
+        $neededCodes = array_diff($this->GetSelectableLanguageCodes(), [self::langOriginalImport]);
+        $missingCodes = array_diff($neededCodes, array_keys($cache['names'] ?? []));
+        $isFresh = ($cache['language'] ?? '') === $language
+            && $missingCodes === []
+            && (time() - ($cache['fetchedAt'] ?? 0)) < self::guestLanguageNamesMaxAgeSeconds;
+
+        if ($isFresh) {
+            return $cache;
+        }
+
+        $apiKey = $this->ReadPropertyString(self::propertyGoogleTranslateAPIKey);
+        if ($apiKey === '') {
+            return $cache;
+        }
+
+        $names = $this->FetchLanguageNames($language) ?? ($cache['names'] ?? []);
+
+        if ($language === 'de') {
+            $originalLabel = 'Original (unbearbeitet)';
+        } else {
+            $originalLabel = $this->TranslateBatch(['Original (unbearbeitet)'], 'de', $language)[0]
+                ?? ($cache['originalLabel'] ?? 'Original');
+        }
+
+        $cache = [
+            'language'      => $language,
+            'names'         => $names,
+            'originalLabel' => $originalLabel,
+            'fetchedAt'     => time(),
+        ];
+
+        $this->WriteAttributeString(self::attributeGuestLanguageNamesCache, json_encode($cache));
+
+        return $cache;
     }
 
     // Baut die Spalten für die "ObjectNames"/"ObjectTexts"-Listen dynamisch anhand
