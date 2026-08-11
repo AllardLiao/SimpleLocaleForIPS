@@ -85,6 +85,16 @@ trait SimpleLocaleConstants
     // unterschiedlichen Licensee-Adressen).
     private const attributeActivationLog = 'ActivationLog';
 
+    // SHA-256-Hash des aktuell als "geblockt" bekannten Lizenzschlüssels (leer =
+    // keiner) - gesetzt, wenn der Aktivierungs-Report-Server beim erstmaligen
+    // Aktivieren eines Schlüssels meldet, dieser sei bereits gegen eine
+    // hoeherwertige Edition eingetauscht worden (siehe RecordLicenseActivation/
+    // GetLicenseInfo). Rein lokaler Cache eines EINMALIGEN Online-Checks, kein
+    // laufender Server-Abgleich - siehe README Abschnitt 8. Wird ein ANDERER
+    // Schluessel eingetragen, greift dieser Hash nicht mehr (Vergleich ist
+    // schluesselgenau).
+    private const attributeBlockedLicenseKeyHash = 'BlockedLicenseKeyHash';
+
     // Zeitpunkt (Unix-Timestamp) des letzten TATSAECHLICHEN Sprachwechsels (zu einer
     // anderen als der bis dahin aktiven Sprache) - nur relevant ohne das Feature
     // "unlimited_language_switch" (siehe IsLanguageSwitchRateLimited), z.B. bei der

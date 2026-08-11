@@ -249,6 +249,7 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterAttributeString(self::attributeLicenseInfo, '{}');
         $this->RegisterAttributeInteger(self::attributeTrialStartedAt, 0);
         $this->RegisterAttributeString(self::attributeActivationLog, '[]');
+        $this->RegisterAttributeString(self::attributeBlockedLicenseKeyHash, '');
         $this->RegisterAttributeInteger(self::attributeLastLanguageSwitchAt, 0);
         $this->RegisterAttributeString(self::attributeRegisteredValueObjectIDs, '[]');
         $this->RegisterAttributeString(self::attributeLastSelfWrittenValues, '{}');
@@ -604,8 +605,19 @@ private const LANGUAGE_FLAGS = [
         $this->WriteAttributeString(self::attributeLicenseInfo, json_encode($info));
 
         if ($info['valid']) {
-            $this->TrackLicenseActivationIfNew();
-            $this->UpdateFormField('LicenseValidPopup', 'visible', true);
+            // true: ein expliziter Klick auf "Lizenz aktivieren" darf einen bereits
+            // bekannten geblockten Schluessel erneut online nachfragen (siehe dort) -
+            // der passive ApplyChanges()-Aufrufpfad tut das bewusst NICHT, sonst wuerde
+            // jedes "Uebernehmen" fuer ein voellig unabhaengiges Formularfeld (z.B. ein
+            // Checkbox-Toggle) still im Hintergrund einen weiteren Netzwerk-Request
+            // ausloesen.
+            $this->TrackLicenseActivationIfNew(true);
+            // TrackLicenseActivationIfNew() kann den Schluessel gerade erst als
+            // "geblockt" markiert (oder entsperrt) haben (siehe dort) - GetLicenseInfo()
+            // frisch neu abfragen statt das oben zwischengespeicherte $info weiterzuverwenden.
+            $info = $this->GetLicenseInfo();
+            $this->UpdateFormField('LicenseBlockedPopup', 'visible', $info['blocked'] ?? false);
+            $this->UpdateFormField('LicenseValidPopup', 'visible', !($info['blocked'] ?? false));
         } else {
             $this->UpdateFormField('LicenseInvalidPopup', 'visible', true);
         }
@@ -617,27 +629,33 @@ private const LANGUAGE_FLAGS = [
     // und über "Übernehmen" gespeichert wurde, ohne extra auf "Lizenz aktivieren" zu
     // klicken (die Lizenz wirkt bereits ab dem Speichern, siehe GetLicenseInfo/
     // HasFullLicense) - sonst ließe sich die Protokollierung fürs Erkennen von
-    // Weiterverkauf/Weitergabe einfach umgehen. Loggt nur beim ERSTEN Erkennen einer
-    // neuen Schlüssel+Licensee-Kombination (Vergleich gegen attributeActivationLog),
-    // nicht bei jedem Aufruf erneut.
-    private function TrackLicenseActivationIfNew(): void
+    // Weiterverkauf/Weitergabe einfach umgehen. Loggt/meldet nur beim ERSTEN Erkennen
+    // einer neuen Schlüssel+Licensee-Kombination (Vergleich gegen
+    // attributeActivationLog) - AUSSER $AllowRecheck ist true UND der Schlüssel ist
+    // gerade als geblockt bekannt: dann wird trotz vorhandenem Log-Eintrag erneut
+    // online nachgefragt (siehe ActivateLicense), ohne das würde ein serverseitiges
+    // Entsperren (siehe shop/admin) auf dieser Instanz nie ankommen.
+    private function TrackLicenseActivationIfNew(bool $AllowRecheck = false): void
     {
         $info = $this->GetLicenseInfo();
-        if (!($info['valid'] ?? false)) {
+        if (!($info['valid'] ?? false) && !($info['blocked'] ?? false)) {
             return;
         }
 
         $keyHash = hash('sha256', $this->ReadPropertyString(self::propertyLicenseKey));
         $licensee = $this->GetLicenseeIdentifier();
+        $recheckBlocked = $AllowRecheck && $this->ReadAttributeString(self::attributeBlockedLicenseKeyHash) === $keyHash;
 
         $log = json_decode($this->ReadAttributeString(self::attributeActivationLog), true);
         if (!is_array($log)) {
             $log = [];
         }
 
-        foreach ($log as $entry) {
-            if (($entry['licenseKeyHash'] ?? '') === $keyHash && ($entry['licensee'] ?? '') === $licensee) {
-                return;
+        if (!$recheckBlocked) {
+            foreach ($log as $entry) {
+                if (($entry['licenseKeyHash'] ?? '') === $keyHash && ($entry['licensee'] ?? '') === $licensee) {
+                    return;
+                }
             }
         }
 
@@ -656,7 +674,18 @@ private const LANGUAGE_FLAGS = [
     // meldet ihn zusätzlich an LICENSE_ACTIVATION_REPORT_URL, sofern dort eine echte
     // URL eingetragen ist. Taucht derselbe licenseKeyHash irgendwann mit mehreren
     // unterschiedlichen licensee-Werten auf, ist das ein Hinweis auf Weiterverkauf/
-    // Weitergabe des Schlüssels (z.B. als "gebraucht" im Ebay).
+    // Weitergabe des Schlüssels (z.B. als "gebraucht" im Ebay) - das wird server-
+    // seitig ausgewertet (siehe shop/admin/activations.php), nicht hier.
+    //
+    // Die Antwort des Report-Servers wird ausgewertet, um EINMALIG (bei diesem
+    // Aufruf) zu pruefen, ob dieser Schluessel laut Shop bereits gegen eine
+    // hoeherwertige Edition eingetauscht wurde (siehe includes SLIPS_UPGRADE_
+    // PRODUCTS/upgraded_to_license_id) - {"blocked": true} statt der sonst
+    // immer leeren 204-Antwort. Ein geblockter Schluessel wird NICHT hart
+    // ungueltig, sondern setzt die Testphase dieser Instanz frisch auf 30 Tage
+    // mit vollem Funktionsumfang zurueck (siehe README Abschnitt 8) - genug Zeit,
+    // um einen gueltigen Schluessel einzutragen, ohne die Kachel sofort
+    // zurückzustufen.
     private function RecordLicenseActivation(string $KeyHash, string $Licensee, array $Log): void
     {
         $entry = [
@@ -669,16 +698,32 @@ private const LANGUAGE_FLAGS = [
         $this->WriteAttributeString(self::attributeActivationLog, json_encode($log));
         $this->SendDebug('LicenseActivation', json_encode($entry), 0);
 
-        if (self::LICENSE_ACTIVATION_REPORT_URL !== '') {
-            $this->CallActivationReportAPI(self::LICENSE_ACTIVATION_REPORT_URL, json_encode($entry));
+        if (self::LICENSE_ACTIVATION_REPORT_URL === '') {
+            return;
+        }
+
+        $response = $this->CallActivationReportAPI(self::LICENSE_ACTIVATION_REPORT_URL, json_encode($entry));
+        $decoded = $response !== null ? json_decode($response, true) : null;
+        $blocked = is_array($decoded) && ($decoded['blocked'] ?? false) === true;
+
+        if ($blocked) {
+            $this->WriteAttributeString(self::attributeBlockedLicenseKeyHash, $KeyHash);
+            $this->WriteAttributeInteger(self::attributeTrialStartedAt, time());
+        } elseif ($this->ReadAttributeString(self::attributeBlockedLicenseKeyHash) === $KeyHash) {
+            // Server meldet jetzt "nicht (mehr) geblockt" fuer genau diesen
+            // Schluessel (z.B. serverseitig manuell entsperrt) - lokale Sperre
+            // aufheben. Die bereits zurueckgesetzte Testphase bleibt unangetastet
+            // (kein Grund, dem Nutzer die verbleibenden Tage wieder wegzunehmen).
+            $this->WriteAttributeString(self::attributeBlockedLicenseKeyHash, '');
         }
     }
 
     // Eigene, überschreibbare Methode fürs HTTP-POST (wie CallGoogleTranslateAPI) - so
     // bleibt der Netzwerkaufruf in Tests mockbar. Ein nicht erreichbarer Meldeserver
-    // darf die Aktivierung selbst nicht verhindern, daher wird der Rückgabewert/Fehler
-    // bewusst ignoriert.
-    private function CallActivationReportAPI(string $Url, string $JsonBody): void
+    // darf die Aktivierung selbst nicht verhindern, daher wird ein Netzwerkfehler
+    // bewusst ignoriert (null zurückgegeben) statt eine Exception zu werfen -
+    // "fail open" ist hier bewusst, siehe RecordLicenseActivation.
+    private function CallActivationReportAPI(string $Url, string $JsonBody): ?string
     {
         $ch = curl_init($Url);
         curl_setopt($ch, CURLOPT_POST, true);
@@ -686,8 +731,10 @@ private const LANGUAGE_FLAGS = [
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-        @curl_exec($ch);
+        $response = @curl_exec($ch);
         curl_close($ch);
+
+        return is_string($response) && $response !== '' ? $response : null;
     }
 
     // Lizenzschlüssel-Format: "<base64url(JSON-Payload)>.<base64url(Ed25519-Signatur)>".
@@ -786,6 +833,15 @@ private const LANGUAGE_FLAGS = [
         ];
         if ($expiresAt !== 0 && $expiresAt < time()) {
             return ['valid' => false, 'expired' => true] + $common;
+        }
+
+        // Rein lokaler Vergleich gegen den zuletzt vom Aktivierungs-Report-Server
+        // gemeldeten Block-Status (siehe attributeBlockedLicenseKeyHash/
+        // RecordLicenseActivation) - kein erneuter Online-Check bei jedem Aufruf.
+        // Ein ANDERER, hier eingetragener Schluessel ist davon nicht betroffen.
+        $blockedHash = $this->ReadAttributeString(self::attributeBlockedLicenseKeyHash);
+        if ($blockedHash !== '' && hash('sha256', $key) === $blockedHash) {
+            return ['valid' => false, 'blocked' => true] + $common;
         }
 
         return ['valid' => true] + $common;

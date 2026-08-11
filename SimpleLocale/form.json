@@ -398,6 +398,22 @@
                     }
                 ]
             }
+        },
+        {
+            "name": "LicenseBlockedPopup",
+            "type": "PopupAlert",
+            "visible": false,
+            "popup": {
+                "caption": "Dieser Lizenzschlüssel wurde bereits upgegradet",
+                "closeCaption": "OK",
+                "items": [
+                    {
+                        "type": "Label",
+                        "name": "LicenseBlockedPopupText",
+                        "caption": "Dieser Lizenzschlüssel wurde bereits gegen eine höherwertige Edition eingetauscht und ist daher nicht mehr gültig. Damit du in Ruhe einen gültigen Schlüssel eintragen kannst, läuft ab jetzt eine neue, volle 30-Tage-Testphase mit allen Pro-Funktionen."
+                    }
+                ]
+            }
         }
     ],
     "status": [

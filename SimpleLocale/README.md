@@ -430,6 +430,39 @@ Instanz) wird trotzdem immer protokolliert.
 E-Mail-Adresse - diese Erhebung/Übermittlung muss in den eigenen
 Lizenzbedingungen/Datenschutzhinweisen offengelegt sein.
 
+**Upgrade-Lizenzen und der Blockier-Mechanismus:** Kunden können eine
+bestehende Lizenz gegen Aufpreis auf eine höherwertige Edition upgraden
+(siehe Synergetix-Website-Repo, `shop/upgrade.php` +
+`includes/products.php` `SLIPS_UPGRADE_PRODUCTS`) - technisch wird dabei
+einfach ein komplett neuer, vollwertiger Schlüssel für die Zieledition
+ausgestellt, keine "Diff"-Lizenz. Der alte Schlüssel bleibt kryptographisch
+weiterhin gültig (siehe oben: die Signaturprüfung ist bewusst rein offline,
+ein echtes serverseitiges Sperren würde diese Offline-Fähigkeit aufgeben) -
+stattdessen merkt sich der Shop serverseitig, dass der alte Schlüssel
+bereits eingetauscht wurde.
+
+Dieser Zustand wird dem Modul NICHT laufend, sondern nur **einmalig beim
+Aktivieren** eines Schlüssels mitgeteilt: die ohnehin schon an
+`LICENSE_ACTIVATION_REPORT_URL` gemeldete Aktivierung (siehe oben) bekommt
+dabei als Antwort `{"blocked": true}`, falls genau dieser Schlüssel bereits
+upgegradet wurde. Ein nicht erreichbarer Meldeserver blockiert dabei nie
+die Aktivierung selbst ("fail open", wie schon beim reinen Melden). Ein
+Klick auf "Lizenz aktivieren" fragt für einen bereits als geblockt
+bekannten Schlüssel jedes Mal erneut online nach (z. B. um ein
+serverseitiges Entsperren zu bemerken, siehe Synergetix-Website-Repo,
+`shop/admin/activations.php`) - alle anderen Aktivierungspfade (z. B.
+"Übernehmen" mit unverändertem Schlüssel) fragen dagegen nur einmal pro
+Schlüssel+Licensee-Kombination nach, wie beim normalen Melden auch.
+
+Ist ein Schlüssel als geblockt bekannt, wird er **nicht hart abgelehnt**,
+sondern wie ein fehlender Lizenzschlüssel behandelt: die Testphase dieser
+Instanz startet dabei automatisch neu (volle 30 Tage, voller
+Funktionsumfang inkl. aller Pro-Features, unabhängig davon, was der
+geblockte Schlüssel tatsächlich abdeckte) - genug Zeit, in Ruhe einen
+gültigen Schlüssel einzutragen, ohne dass die Kachel sofort auf die
+unbearbeiteten Original-Texte zurückfällt. Ein Hinweis-Popup informiert
+beim Aktivieren entsprechend.
+
 Für Entwickler: Ob ein Build die Testversion-Einschränkungen überhaupt
 anwendet, steuert die Konstante `IS_TRIAL_BUILD` in `module.php` - für einen
 Vollversion-Build (z. B. an zahlende Kunden nach Kauf) dort auf `false`
@@ -457,10 +490,11 @@ Vor jedem echten Release:
    Lizenzschlüssel (`sodium_crypto_sign_detached($payloadJson, $privateKey)`,
    dieselbe base64url-Payload-plus-Signatur-Struktur wie oben beschrieben).
    Ein solches Tool ist bewusst nicht Teil dieses (öffentlichen) Repos.
-4. Der aktuell eingetragene `LICENSE_PUBLIC_KEY` ist ein Test-Schlüsselpaar
-   (siehe scratchpad-Smoke-Tests) - damit lassen sich keine echten,
-   vertrauenswürdigen Lizenzen ausstellen, nur der Mechanismus selbst ist
-   damit vollständig testbar.
+4. Der aktuell eingetragene `LICENSE_PUBLIC_KEY` ist das echte, produktiv
+   genutzte Schlüsselpaar (der private Gegenpart liegt in
+   Synergetix-Website's `includes/secrets.php`/`secrets.prod.php`,
+   `LICENSE_PRIVATE_KEY`) - damit signierte Schlüssel aus dem echten Shop
+   validieren hier direkt.
 
 ### 9. PHP-Befehlsreferenz
 
