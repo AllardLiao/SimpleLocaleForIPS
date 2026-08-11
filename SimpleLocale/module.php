@@ -202,11 +202,12 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterPropertyString(self::propertySourceLanguage, 'de');
         $this->RegisterPropertyString(self::propertyTargetLanguages, '[]');
         $this->RegisterPropertyString(self::propertyGoogleTranslateAPIKey, '');
-        // Default 'google': bestehende Installationen mit nur einem gespeicherten
-        // GoogleTranslateAPIKey funktionieren nach einem Modul-Update unveraendert
-        // weiter, ohne dass der Anbieter explizit umgestellt werden muss.
-        $this->RegisterPropertyString(self::propertyTranslationProvider, 'google');
         $this->RegisterPropertyString(self::propertyDeepLAPIKey, '');
+        $this->RegisterPropertyString(self::propertyFreeTranslateContactEmail, '');
+        // Default 'google': ohne bewusste Wahl greift diese Reihenfolge nur, sobald
+        // beide bezahlten Anbieter konfiguriert sind (siehe GetProviderChain) - ist
+        // nur einer konfiguriert oder keiner, ist dieser Wert wirkungslos.
+        $this->RegisterPropertyString(self::propertyPreferredPaidProvider, 'google');
         $this->RegisterPropertyInteger(self::propertyAutoRescanInterval, 0);
         $this->RegisterPropertyString(self::propertyObjectNames, '[]');
         $this->RegisterPropertyString(self::propertyObjectTexts, '[]');
@@ -352,10 +353,11 @@ private const LANGUAGE_FLAGS = [
             case self::identShowApiKeyWarning:
                 // Prüft die tatsächliche Ursache serverseitig nach, statt sich allein
                 // auf den (nur indirekten) Hinweis "hinzugefügte Zeile hat leeren Code"
-                // aus form.json zu verlassen.
-                if ($this->GetActiveApiKey() === '') {
-                    $this->UpdateFormField('ApiKeyMissingPopup', 'visible', true);
-                } elseif (!$this->HasCachedLanguages()) {
+                // aus form.json zu verlassen. Nur relevant, wenn ein bezahlter Anbieter
+                // konfiguriert ist, aber (noch) keine echte Liste geladen werden konnte
+                // (z.B. ungültiger Key) - ohne jeden bezahlten Anbieter liefert der
+                // kostenfreie Anbieter sofort eine nutzbare Liste, kein Popup nötig.
+                if ($this->GetProviderChain() !== ['free'] && !$this->HasCachedLanguages()) {
                     $this->UpdateFormField('ApiKeyInvalidPopup', 'visible', true);
                 }
                 break;
@@ -407,7 +409,8 @@ private const LANGUAGE_FLAGS = [
                     $element['values'] = $this->DecodeRows(self::propertyTargetLanguages);
                     $element['add'] = true;
 
-                    // Ohne geladene Sprachliste (oder bei erreichtem Sprachlimit einer
+                    // Ohne geladene Sprachliste UND ohne den immer verfuegbaren kostenfreien
+                    // Anbieter als Rueckfall (oder bei erreichtem Sprachlimit einer
                     // "Spezialversion"-Lizenz, siehe GetLicensedLanguageLimit) die ganze
                     // Liste (inkl. "Hinzufügen"-Button) sichtbar, aber ausgegraut lassen
                     // ("enabled": false) statt den Button komplett verschwinden zu lassen -
@@ -417,8 +420,9 @@ private const LANGUAGE_FLAGS = [
                     // anbietet und dessen "OK" eine Fake-Zeile in die Liste einträgt.
                     $languageLimit = $this->GetLicensedLanguageLimit();
                     $limitReached = $languageLimit > 0 && count($targetLanguages) >= $languageLimit;
+                    $hasUsableLanguageList = $this->GetProviderChain() === ['free'] || $this->HasCachedLanguages();
 
-                    if (!$this->HasCachedLanguages()) {
+                    if (!$hasUsableLanguageList) {
                         $element['enabled'] = false;
                         $element['caption'] .= ' (' . $this->Translate('bitte zuerst gültigen API-Key speichern und Formular neu öffnen') . ')';
                     } elseif ($limitReached) {
@@ -473,11 +477,12 @@ private const LANGUAGE_FLAGS = [
                     $element['caption'] = $this->BuildTrialInfoText();
                     break;
 
-                // Übersetzung-Panel klappt automatisch auf, sobald ein gültiger API-Key
-                // eine echte Sprachliste geladen hat - vorher gibt es dort ohnehin nichts
-                // sinnvoll zu tun (Zielsprachen-Auswahl ist deaktiviert, siehe oben).
+                // Übersetzung-Panel klappt automatisch auf, sobald eine echte Sprachliste
+                // nutzbar ist - entweder eine dynamisch geladene (Google/DeepL) oder,
+                // ganz ohne konfigurierten bezahlten Anbieter, die eingebaute Liste des
+                // kostenfreien Anbieters (siehe BuildTargetLanguageOptions).
                 case 'TranslationPanel':
-                    $element['expanded'] = $this->HasCachedLanguages();
+                    $element['expanded'] = $this->GetProviderChain() === ['free'] || $this->HasCachedLanguages();
                     break;
 
                 // Lizenz-Panel nur im Testversion-Build relevant; klappt automatisch auf,
@@ -1894,25 +1899,48 @@ private const LANGUAGE_FLAGS = [
         return mb_strtoupper(mb_substr($Text, 0, 1, 'UTF-8'), 'UTF-8') . mb_substr($Text, 1, null, 'UTF-8');
     }
 
-    // Welcher Anbieter TranslateBatch/FetchSupportedLanguages tatsaechlich bedient -
-    // 'google' (Default, Cloud Translation API v2) oder 'deepl' (DeepL API v2).
-    // Beide Provider sind gleichberechtigt waehlbar, jeweils mit eigenem API-Key
-    // (propertyGoogleTranslateAPIKey/propertyDeepLAPIKey) - NICHT gleichzeitig
-    // aktiv (kein kombiniertes Freivolumen aus beiden APIs, siehe README/Non-Goals).
-    private function GetActiveTranslationProvider(): string
+    // Die Anbieter-Kette in Versuchsreihenfolge: erst die konfigurierten bezahlten
+    // Anbieter (Reihenfolge per propertyPreferredPaidProvider, falls beide gesetzt
+    // sind), dann IMMER als letztes Glied 'free' (MyMemory, kein Key noetig). Jeder
+    // Text-/Sprachlisten-Abruf probiert die Kette der Reihe nach durch, bis einer
+    // erfolgreich antwortet (siehe TranslateChunk/FetchLanguageNames) - das macht
+    // die Uebersetzung strukturell ausfallsicher: schlaegt Google/DeepL fehl
+    // (Kontingent erschoepft, Preismodell geaendert, Key abgelaufen, Netzwerkfehler),
+    // uebernimmt automatisch der naechste Anbieter, im Zweifel der kostenfreie -
+    // die Kernfunktion des Moduls bleibt so IMMER erhalten, auch ganz ohne
+    // Google-/DeepL-Konto.
+    private function GetProviderChain(): array
     {
-        return $this->ReadPropertyString(self::propertyTranslationProvider) === 'deepl' ? 'deepl' : 'google';
+        $preferred = $this->ReadPropertyString(self::propertyPreferredPaidProvider) === 'deepl' ? 'deepl' : 'google';
+
+        $available = [];
+        if ($this->ReadPropertyString(self::propertyGoogleTranslateAPIKey) !== '') {
+            $available['google'] = true;
+        }
+        if ($this->ReadPropertyString(self::propertyDeepLAPIKey) !== '') {
+            $available['deepl'] = true;
+        }
+
+        $chain = [];
+        if (isset($available[$preferred])) {
+            $chain[] = $preferred;
+            unset($available[$preferred]);
+        }
+        foreach (array_keys($available) as $provider) {
+            $chain[] = $provider;
+        }
+        $chain[] = 'free';
+
+        return $chain;
     }
 
-    // Der fuer den aktuell gewaehlten Anbieter hinterlegte API-Key - zentrale Stelle,
-    // die alle bisherigen direkten ReadPropertyString(propertyGoogleTranslateAPIKey)-
-    // Aufrufe ersetzt, damit TranslateChunk/FetchLanguageNames/etc. den Anbieter nicht
-    // selbst kennen muessen.
-    private function GetActiveApiKey(): string
+    private function GetApiKeyForProvider(string $Provider): string
     {
-        return $this->GetActiveTranslationProvider() === 'deepl'
-            ? $this->ReadPropertyString(self::propertyDeepLAPIKey)
-            : $this->ReadPropertyString(self::propertyGoogleTranslateAPIKey);
+        return match ($Provider) {
+            'google' => $this->ReadPropertyString(self::propertyGoogleTranslateAPIKey),
+            'deepl'  => $this->ReadPropertyString(self::propertyDeepLAPIKey),
+            default  => '',
+        };
     }
 
     // Google Cloud Translate lehnt Anfragen mit mehr als 128 Texten in einem
@@ -1936,10 +1964,8 @@ private const LANGUAGE_FLAGS = [
             return $Texts;
         }
 
-        $apiKey = $this->GetActiveApiKey();
-        if ($apiKey === '') {
-            return array_fill(0, count($Texts), '');
-        }
+        // Kein Key-Check mehr hier: die Anbieter-Kette enthaelt IMMER mindestens
+        // 'free' (kein Key noetig), siehe GetProviderChain/TranslateChunk.
 
         // Jeder Text wird in abwechselnd übersetzbare/geschützte Segmente zerlegt -
         // nur die übersetzbaren Segmente werden überhaupt an Google geschickt (siehe
@@ -1960,7 +1986,7 @@ private const LANGUAGE_FLAGS = [
 
         $translatedFlat = [];
         foreach (array_chunk($translatable, self::translateMaxTextsPerRequest) as $chunk) {
-            $translatedFlat = array_merge($translatedFlat, $this->TranslateChunk($chunk, $Source, $Target, $apiKey, $DebugContext));
+            $translatedFlat = array_merge($translatedFlat, $this->TranslateChunk($chunk, $Source, $Target, $DebugContext));
         }
 
         $result = [];
@@ -1976,25 +2002,45 @@ private const LANGUAGE_FLAGS = [
         return $result;
     }
 
-    // Dispatcht an den gerade aktiven Anbieter - $Source/$Target sind hier bereits
-    // die Rohcodes, wie sie der jeweilige Anbieter selbst in FetchLanguageNames()
+    // Probiert die Anbieter-Kette der Reihe nach durch (siehe GetProviderChain) -
+    // der erste Anbieter, der erfolgreich antwortet, gewinnt. Schlaegt einer fehl
+    // (Kontingent erschoepft, ungueltiger/abgelaufener Key, Netzwerkfehler, ...),
+    // wird stillschweigend der naechste versucht, ohne den Rescan/Sprachwechsel
+    // insgesamt scheitern zu lassen. $Source/$Target sind hier bereits die
+    // Rohcodes, wie sie der jeweilige Anbieter selbst in FetchLanguageNames()
     // geliefert hat (Google: klein geschrieben "de"/"en", DeepL: groß geschrieben
-    // "DE"/"EN-GB") - beide Provider bekommen daher immer nur ihre eigene
+    // "DE"/"EN-GB") - jeder Provider bekommt daher immer nur seine eigene
     // Code-Schreibweise zu sehen, es findet keine Umschreibung zwischen den
     // Anbietern statt (siehe README, Abschnitt "Übersetzungsanbieter": ein
-    // Anbieterwechsel macht bereits gewählte Zielsprachen ungültig).
-    private function TranslateChunk(array $Texts, string $Source, string $Target, string $ApiKey, string $DebugContext = ''): array
+    // Anbieterwechsel macht bereits gewählte Zielsprachen ungültig). Ein
+    // Fehlerstatus (STATUS_TRANSLATE_ERROR) wird nur gesetzt, wenn ALLE Anbieter
+    // der Kette fehlschlagen - der kostenfreie Anbieter am Ende der Kette macht
+    // das praktisch unmoeglich, solange MyMemory selbst erreichbar ist.
+    private function TranslateChunk(array $Texts, string $Source, string $Target, string $DebugContext = ''): array
     {
         if ($Texts === []) {
             return [];
         }
 
-        return $this->GetActiveTranslationProvider() === 'deepl'
-            ? $this->TranslateChunkDeepL($Texts, $Source, $Target, $ApiKey, $DebugContext)
-            : $this->TranslateChunkGoogle($Texts, $Source, $Target, $ApiKey, $DebugContext);
+        foreach ($this->GetProviderChain() as $provider) {
+            $result = match ($provider) {
+                'google' => $this->TranslateChunkGoogle($Texts, $Source, $Target, $this->GetApiKeyForProvider('google'), $DebugContext),
+                'deepl'  => $this->TranslateChunkDeepL($Texts, $Source, $Target, $this->GetApiKeyForProvider('deepl'), $DebugContext),
+                default  => $this->TranslateChunkFree($Texts, $Source, $Target, $DebugContext),
+            };
+            if ($result !== null) {
+                return $result;
+            }
+        }
+
+        $this->SetStatus(self::STATUS_TRANSLATE_ERROR);
+
+        return array_fill(0, count($Texts), '');
     }
 
-    private function TranslateChunkGoogle(array $Texts, string $Source, string $Target, string $ApiKey, string $DebugContext = ''): array
+    // null = dieser Anbieter ist fehlgeschlagen (Kontingent/Key/Netzwerk) -
+    // TranslateChunk versucht dann den naechsten in der Kette.
+    private function TranslateChunkGoogle(array $Texts, string $Source, string $Target, string $ApiKey, string $DebugContext = ''): ?array
     {
         $body = [
             'q'      => $Texts,
@@ -2022,15 +2068,13 @@ private const LANGUAGE_FLAGS = [
         $this->SendDebug('GoogleTranslate_Response', $DebugContext . ' | ' . ($response ?? '(keine Antwort)'), 0);
 
         if ($response === null) {
-            return array_fill(0, count($Texts), '');
+            return null;
         }
 
         $decoded = json_decode($response, true);
         $translations = $decoded['data']['translations'] ?? null;
         if (!is_array($translations)) {
-            $this->SetStatus(self::STATUS_TRANSLATE_ERROR);
-
-            return array_fill(0, count($Texts), '');
+            return null;
         }
 
         return array_map(function ($entry) {
@@ -2038,7 +2082,7 @@ private const LANGUAGE_FLAGS = [
         }, $translations);
     }
 
-    private function TranslateChunkDeepL(array $Texts, string $Source, string $Target, string $ApiKey, string $DebugContext = ''): array
+    private function TranslateChunkDeepL(array $Texts, string $Source, string $Target, string $ApiKey, string $DebugContext = ''): ?array
     {
         $body = [
             'text'        => $Texts,
@@ -2057,20 +2101,80 @@ private const LANGUAGE_FLAGS = [
         $this->SendDebug('DeepLTranslate_Response', $DebugContext . ' | ' . ($response ?? '(keine Antwort)'), 0);
 
         if ($response === null) {
-            return array_fill(0, count($Texts), '');
+            return null;
         }
 
         $decoded = json_decode($response, true);
         $translations = $decoded['translations'] ?? null;
         if (!is_array($translations)) {
-            $this->SetStatus(self::STATUS_TRANSLATE_ERROR);
-
-            return array_fill(0, count($Texts), '');
+            return null;
         }
 
         return array_map(function ($entry) {
             return $entry['text'] ?? '';
         }, $translations);
+    }
+
+    // MyMemory unterstuetzt anders als Google/DeepL keinen Batch-Aufruf (ein Text
+    // pro Request) - dafuer ist ueberhaupt kein Account/Key noetig. Schlaegt EIN
+    // Text im Chunk fehl (z.B. Tageskontingent genau in diesem Moment erschoepft),
+    // gilt der komplette Chunk als fehlgeschlagen, damit TranslateChunk sauber zur
+    // naechsten Kettenstufe wechselt, statt halb-uebersetzte Zeilen zu hinterlassen.
+    private function TranslateChunkFree(array $Texts, string $Source, string $Target, string $DebugContext = ''): ?array
+    {
+        $results = [];
+        foreach ($Texts as $text) {
+            $translated = $this->TranslateSingleFree($text, $Source, $Target, $DebugContext);
+            if ($translated === null) {
+                return null;
+            }
+            $results[] = $translated;
+        }
+
+        return $results;
+    }
+
+    // MyMemory (https://mymemory.translated.net) - komplett account-/registrierungs-
+    // frei nutzbar, anonym 5.000 Zeichen/Tag, mit hinterlegter Kontaktadresse
+    // (propertyFreeTranslateContactEmail, Parameter "de") 50.000 Zeichen/Tag. Kein
+    // Batch-Endpoint, "q" ist zudem auf 500 Byte pro Aufruf begrenzt - laengere
+    // Texte (z.B. vollstaendige HTMLBox-Widgets als "Eigene Texte") koennen ueber
+    // diesen Anbieter grundsaetzlich nicht uebersetzt werden und scheitern hier
+    // bewusst frueh (kein sinnloser Request), damit die Kette ggf. zu einem
+    // bezahlten Anbieter ohne diese Begrenzung weiterreicht.
+    private function TranslateSingleFree(string $Text, string $Source, string $Target, string $DebugContext = ''): ?string
+    {
+        if (trim($Text) === '') {
+            return '';
+        }
+        if (strlen($Text) > 500) {
+            return null;
+        }
+
+        $email = $this->ReadPropertyString(self::propertyFreeTranslateContactEmail);
+        $url = 'https://api.mymemory.translated.net/get'
+            . '?q=' . urlencode($Text)
+            . '&langpair=' . urlencode($Source . '|' . $Target)
+            . ($email !== '' ? '&de=' . urlencode($email) : '');
+
+        $this->SendDebug('FreeTranslate_Request', $DebugContext . ' | ' . $url, 0);
+
+        $response = $this->CallFreeTranslateAPI($url);
+
+        $this->SendDebug('FreeTranslate_Response', $DebugContext . ' | ' . ($response ?? '(keine Antwort)'), 0);
+
+        if ($response === null) {
+            return null;
+        }
+
+        $decoded = json_decode($response, true);
+        if (!is_array($decoded) || ($decoded['quotaFinished'] ?? false) === true) {
+            return null;
+        }
+
+        $translated = $decoded['responseData']['translatedText'] ?? null;
+
+        return is_string($translated) ? $translated : null;
     }
 
     // Zerlegt einen Text in abwechselnd übersetzbare und geschützte (<style>/<script>-
@@ -2107,11 +2211,6 @@ private const LANGUAGE_FLAGS = [
 
     private function RefreshAvailableLanguagesIfStale(): void
     {
-        $apiKey = $this->GetActiveApiKey();
-        if ($apiKey === '') {
-            return;
-        }
-
         $fetchedAt = $this->ReadAttributeInteger(self::attributeAvailableLanguagesFetchedAt);
         if ((time() - $fetchedAt) < self::availableLanguagesMaxAgeSeconds) {
             return;
@@ -2122,15 +2221,18 @@ private const LANGUAGE_FLAGS = [
 
     private function FetchSupportedLanguages(): void
     {
-        if ($this->GetActiveApiKey() === '') {
-            $this->SetStatus(self::STATUS_TRANSLATE_ERROR);
-
-            return;
-        }
-
         $target = $this->ReadPropertyString(self::propertySourceLanguage);
         $names = $this->FetchLanguageNames($target);
         if ($names === null) {
+            // Ohne konfigurierten bezahlten Anbieter ist "keine dynamische Liste"
+            // der normale, unterstuetzte Zustand (GetKnownLanguages faellt auf die
+            // eingebaute DEFAULT_LANGUAGES-Liste zurueck) - nur ein echter Fehler,
+            // wenn tatsaechlich Google/DeepL konfiguriert sind und trotzdem
+            // scheitern.
+            if ($this->GetProviderChain() !== ['free']) {
+                $this->SetStatus(self::STATUS_TRANSLATE_ERROR);
+            }
+
             return;
         }
 
@@ -2143,18 +2245,25 @@ private const LANGUAGE_FLAGS = [
         $this->WriteAttributeInteger(self::attributeAvailableLanguagesFetchedAt, time());
     }
 
-    // Dispatcht an den aktiven Anbieter - siehe TranslateChunk fuer denselben Aufbau.
-    // null bei fehlendem Key oder Fehler beim Abruf.
+    // Probiert die Anbieter-Kette der Reihe nach (siehe GetProviderChain/
+    // TranslateChunk fuer denselben Aufbau) - der kostenfreie Anbieter hat keinen
+    // eigenen Sprachlisten-Endpunkt und liefert daher immer null; GetKnownLanguages
+    // faellt in dem Fall automatisch auf die statische DEFAULT_LANGUAGES-Liste
+    // zurueck.
     private function FetchLanguageNames(string $Target): ?array
     {
-        $apiKey = $this->GetActiveApiKey();
-        if ($apiKey === '') {
-            return null;
+        foreach ($this->GetProviderChain() as $provider) {
+            $names = match ($provider) {
+                'google' => $this->FetchLanguageNamesGoogle($this->GetApiKeyForProvider('google'), $Target),
+                'deepl'  => $this->FetchLanguageNamesDeepL($this->GetApiKeyForProvider('deepl')),
+                default  => null,
+            };
+            if ($names !== null) {
+                return $names;
+            }
         }
 
-        return $this->GetActiveTranslationProvider() === 'deepl'
-            ? $this->FetchLanguageNamesDeepL($apiKey)
-            : $this->FetchLanguageNamesGoogle($apiKey, $Target);
+        return null;
     }
 
     // Von Google unterstützte Sprachen, mit Namen in $Target - gemeinsam genutzt von
@@ -2174,8 +2283,6 @@ private const LANGUAGE_FLAGS = [
         $decoded = json_decode($response, true);
         $languages = $decoded['data']['languages'] ?? null;
         if (!is_array($languages)) {
-            $this->SetStatus(self::STATUS_TRANSLATE_ERROR);
-
             return null;
         }
 
@@ -2208,8 +2315,6 @@ private const LANGUAGE_FLAGS = [
 
         $decoded = json_decode($response, true);
         if (!is_array($decoded)) {
-            $this->SetStatus(self::STATUS_TRANSLATE_ERROR);
-
             return null;
         }
 
@@ -2243,8 +2348,11 @@ private const LANGUAGE_FLAGS = [
         curl_close($curl);
 
         if ($response === false || $httpCode >= 400 || $error !== '') {
+            // Kein SetStatus hier: dieser Aufruf kann Teil einer Anbieter-Kette sein
+            // (siehe TranslateChunk/FetchLanguageNames) - ein Fehlerstatus wird erst
+            // gesetzt, wenn die GESAMTE Kette fehlschlaegt, nicht bei jedem einzelnen
+            // Anbieter-Versuch.
             $this->SendDebug('GoogleTranslate', sprintf('HTTP %s, Fehler: %s, Antwort: %s', $httpCode, $error, (string) $response), 0);
-            $this->SetStatus(self::STATUS_TRANSLATE_ERROR);
 
             return null;
         }
@@ -2284,8 +2392,31 @@ private const LANGUAGE_FLAGS = [
         curl_close($curl);
 
         if ($response === false || $httpCode >= 400 || $error !== '') {
+            // Kein SetStatus hier - siehe CallGoogleTranslateAPI.
             $this->SendDebug('DeepLTranslate', sprintf('HTTP %s, Fehler: %s, Antwort: %s', $httpCode, $error, (string) $response), 0);
-            $this->SetStatus(self::STATUS_TRANSLATE_ERROR);
+
+            return null;
+        }
+
+        return $response;
+    }
+
+    // Gemeinsamer HTTP-Client fuer die kostenfreie MyMemory Translation API - kein
+    // Account, kein API-Key, keine Auth-Header noetig. GET-only (kein Batch-
+    // Endpoint, siehe TranslateChunkFree).
+    private function CallFreeTranslateAPI(string $Url): ?string
+    {
+        $curl = curl_init($Url);
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curl, CURLOPT_TIMEOUT, 15);
+
+        $response = curl_exec($curl);
+        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        $error = curl_error($curl);
+        curl_close($curl);
+
+        if ($response === false || $httpCode >= 400 || $error !== '') {
+            $this->SendDebug('FreeTranslate', sprintf('HTTP %s, Fehler: %s, Antwort: %s', $httpCode, $error, (string) $response), 0);
 
             return null;
         }
@@ -2518,11 +2649,6 @@ private const LANGUAGE_FLAGS = [
             return $cache;
         }
 
-        $apiKey = $this->GetActiveApiKey();
-        if ($apiKey === '') {
-            return $cache;
-        }
-
         $names = $this->FetchLanguageNames($language) ?? ($cache['names'] ?? []);
 
         // Info-Überschrift + Info-Hinweistexte in einem gemeinsamen Aufruf übersetzen
@@ -2710,24 +2836,17 @@ private const LANGUAGE_FLAGS = [
         }, $languages);
     }
 
-    // Dropdown-Optionen für die "Hinzufügen"-Zeile der Zielsprachen-Liste. Ohne
-    // gespeicherten API-Key ist noch keine echte Sprachliste bekannt - statt einer
-    // leeren/irreführenden Auswahl gibt es dann einen erklärenden Platzhalter.
+    // Dropdown-Optionen für die "Hinzufügen"-Zeile der Zielsprachen-Liste. Der
+    // kostenfreie Anbieter braucht keinen Key und liefert ueber die eingebaute
+    // DEFAULT_LANGUAGES-Liste (siehe GetKnownLanguages) sofort eine nutzbare
+    // Auswahl - nur wenn ZUSAETZLICH ein bezahlter Anbieter konfiguriert ist, aber
+    // noch nie erfolgreich eine echte Liste geladen hat (z.B. ungültiger Key), gibt
+    // es statt einer irreführenden Auswahl einen erklärenden Platzhalter.
     private function BuildTargetLanguageOptions(string $SourceLanguage): array
     {
-        if ($this->GetActiveApiKey() === '') {
+        if ($this->GetProviderChain() !== ['free'] && !$this->HasCachedLanguages()) {
             return [[
-                'caption' => $this->Translate('Bitte zuerst einen Übersetzungs-API-Key eintragen und übernehmen'),
-                'value'   => '',
-            ]];
-        }
-
-        // Ein API-Key ist gesetzt, aber noch nie erfolgreich eine echte Sprachliste
-        // geladen worden (z.B. ungültiger Key) - dann NICHT still auf die 6 fest
-        // eingebauten Standardsprachen zurückfallen, das sähe aus wie ein Erfolg.
-        if (!$this->HasCachedLanguages()) {
-            return [[
-                'caption' => $this->Translate('Sprachliste konnte nicht von Google geladen werden - bitte API-Key prüfen'),
+                'caption' => $this->Translate('Sprachliste konnte nicht geladen werden - bitte API-Key prüfen'),
                 'value'   => '',
             ]];
         }

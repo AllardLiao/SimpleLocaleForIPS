@@ -11,10 +11,17 @@ trait SimpleLocaleConstants
     private const propertySourceLanguage = 'SourceLanguage';
     private const propertyTargetLanguages = 'TargetLanguages';
     private const propertyGoogleTranslateAPIKey = 'GoogleTranslateAPIKey';
-    // 'google' oder 'deepl' - welcher Anbieter TranslateBatch/FetchSupportedLanguages
-    // tatsaechlich bedient, siehe GetActiveTranslationProvider/GetActiveApiKey.
-    private const propertyTranslationProvider = 'TranslationProvider';
     private const propertyDeepLAPIKey = 'DeepLAPIKey';
+    // Kontaktadresse fuer die kostenfreie MyMemory-API (Parameter "de") - komplett
+    // optional, hebt aber das anonyme 5.000-Zeichen/Tag-Limit auf 50.000 an (siehe
+    // TranslateSingleFree). Kein Account, keine Anmeldung - nur eine Anlaufstelle
+    // fuer MyMemory bei Problemen mit dem Kontingent.
+    private const propertyFreeTranslateContactEmail = 'FreeTranslateContactEmail';
+    // 'google' oder 'deepl' - welcher der beiden BEZAHLTEN Anbieter zuerst versucht
+    // wird, wenn beide konfiguriert sind (siehe GetProviderChain). Der kostenfreie
+    // Anbieter (MyMemory) ist immer aktiv und steht immer als letztes Glied der
+    // Kette - kein eigenes Freischalten noetig, kein Account, kein Key.
+    private const propertyPreferredPaidProvider = 'PreferredPaidProvider';
     private const propertyAutoRescanInterval = 'AutoRescanInterval';
     private const propertyObjectNames = 'ObjectNames';
     private const propertyObjectTexts = 'ObjectTexts';
@@ -151,7 +158,16 @@ trait SimpleLocaleConstants
     private const STATUS_TRANSLATE_ERROR = 203;
     private const STATUS_TRIAL_EXPIRED = 204;
 
-    // Fallback-Liste, solange noch keine Sprachliste von Google geladen wurde
+    // Dient als Fallback, solange keine dynamische Liste im Cache liegt (z.B. Google/
+    // DeepL noch nie erfolgreich abgefragt) UND als die einzige Liste, wenn nur der
+    // kostenfreie Anbieter aktiv ist (der hat selbst keinen Sprachlisten-Endpunkt,
+    // siehe FetchLanguageNames) - deshalb bewusst breiter als frueher, nicht nur ein
+    // Mini-Platzhalter. MyMemory akzeptiert praktisch jeden ISO-639-1-Code, diese
+    // Auswahl deckt die in der Praxis haeufigsten Zielsprachen ab. Enthaelt bewusst
+    // auch die 5 TRIAL_LANGUAGE_CODES (is/cy/zu/mi/la, siehe unten) - sonst waere in
+    // der Testphase ganz ohne Google/DeepL-Key (nur kostenfreier Anbieter) ueberhaupt
+    // keine Zielsprache waehlbar, da BuildTargetLanguageOptions() im Testphase-Build
+    // auf genau diese 5 Codes filtert.
     private const DEFAULT_LANGUAGES = [
         ['code' => 'de', 'name' => 'Deutsch'],
         ['code' => 'en', 'name' => 'English'],
@@ -159,6 +175,32 @@ trait SimpleLocaleConstants
         ['code' => 'es', 'name' => 'Español'],
         ['code' => 'it', 'name' => 'Italiano'],
         ['code' => 'nl', 'name' => 'Nederlands'],
+        ['code' => 'pt', 'name' => 'Português'],
+        ['code' => 'pl', 'name' => 'Polski'],
+        ['code' => 'cs', 'name' => 'Čeština'],
+        ['code' => 'da', 'name' => 'Dansk'],
+        ['code' => 'sv', 'name' => 'Svenska'],
+        ['code' => 'no', 'name' => 'Norsk'],
+        ['code' => 'fi', 'name' => 'Suomi'],
+        ['code' => 'el', 'name' => 'Ελληνικά'],
+        ['code' => 'ro', 'name' => 'Română'],
+        ['code' => 'hu', 'name' => 'Magyar'],
+        ['code' => 'tr', 'name' => 'Türkçe'],
+        ['code' => 'ru', 'name' => 'Русский'],
+        ['code' => 'uk', 'name' => 'Українська'],
+        ['code' => 'ar', 'name' => 'العربية'],
+        ['code' => 'zh', 'name' => '中文'],
+        ['code' => 'ja', 'name' => '日本語'],
+        ['code' => 'ko', 'name' => '한국어'],
+        ['code' => 'hi', 'name' => 'हिन्दी'],
+        ['code' => 'id', 'name' => 'Bahasa Indonesia'],
+        // TRIAL_LANGUAGE_CODES (siehe unten) - siehe Kommentar oben, warum die hier
+        // mit aufgefuehrt sind.
+        ['code' => 'is', 'name' => 'Íslenska'],
+        ['code' => 'cy', 'name' => 'Cymraeg'],
+        ['code' => 'zu', 'name' => 'isiZulu'],
+        ['code' => 'mi', 'name' => 'Māori'],
+        ['code' => 'la', 'name' => 'Latina'],
     ];
 
     // Isländisch, Walisisch, Zulu, Maori, Latein - alle von Google Cloud Translate

@@ -44,9 +44,46 @@
                     "caption": "Info-Symbol in der Kachel anzeigen"
                 },
                 {
-                    "type": "PasswordTextBox",
-                    "name": "GoogleTranslateAPIKey",
-                    "caption": "Google Cloud Translate API-Key"
+                    "type": "ExpansionPanel",
+                    "name": "TranslationProviderPanel",
+                    "caption": "Übersetzungsanbieter",
+                    "expanded": false,
+                    "items": [
+                        {
+                            "type": "Label",
+                            "caption": "Ohne jede Eingabe unten funktioniert die Übersetzung sofort über den kostenfreien Anbieter (kein Konto nötig). Google und/oder DeepL sind optional - sind beide eingetragen, wird zuerst der bevorzugte versucht; schlägt ein Anbieter fehl (z.B. Tageskontingent erschöpft), springt die Übersetzung automatisch zum nächsten."
+                        },
+                        {
+                            "type": "PasswordTextBox",
+                            "name": "GoogleTranslateAPIKey",
+                            "caption": "Google Cloud Translate API-Key (optional)"
+                        },
+                        {
+                            "type": "PasswordTextBox",
+                            "name": "DeepLAPIKey",
+                            "caption": "DeepL API-Key (optional)"
+                        },
+                        {
+                            "type": "Select",
+                            "name": "PreferredPaidProvider",
+                            "caption": "Bevorzugter Anbieter (nur relevant, wenn beide oben eingetragen sind)",
+                            "options": [
+                                {
+                                    "caption": "Google zuerst",
+                                    "value": "google"
+                                },
+                                {
+                                    "caption": "DeepL zuerst",
+                                    "value": "deepl"
+                                }
+                            ]
+                        },
+                        {
+                            "type": "ValidationTextBox",
+                            "name": "FreeTranslateContactEmail",
+                            "caption": "Kontakt-E-Mail für den kostenfreien Anbieter (optional, hebt das Tageskontingent von 5.000 auf 50.000 Zeichen)"
+                        }
+                    ]
                 },
                 {
                     "type": "NumberSpinner",
