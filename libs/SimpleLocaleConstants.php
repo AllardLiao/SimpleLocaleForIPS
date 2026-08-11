@@ -85,6 +85,13 @@ trait SimpleLocaleConstants
     // unterschiedlichen Licensee-Adressen).
     private const attributeActivationLog = 'ActivationLog';
 
+    // Zeitpunkt (Unix-Timestamp) des letzten TATSAECHLICHEN Sprachwechsels (zu einer
+    // anderen als der bis dahin aktiven Sprache) - nur relevant ohne das Feature
+    // "unlimited_language_switch" (siehe IsLanguageSwitchRateLimited), z.B. bei der
+    // "Light"-Edition: dort ist ein Wechsel auf max. einen pro rollierendem 24h-
+    // Fenster begrenzt. 0 = noch nie gewechselt.
+    private const attributeLastLanguageSwitchAt = 'LastLanguageSwitchAt';
+
     // ValueObjectIDs (JSON-Array), für die aktuell VM_UPDATE-Nachrichten registriert
     // sind (siehe SyncValueUpdateRegistrations) - nötig, um bei jedem ApplyChanges
     // sauber ab-/neu zu registrieren, wenn sich "Eigene Texte" ändert (neue/gelöschte

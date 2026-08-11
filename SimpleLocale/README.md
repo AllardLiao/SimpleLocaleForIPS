@@ -379,8 +379,19 @@ Standard-Tier) schaltet zusätzliche Fähigkeiten frei - aktuell:
   (Property "Automatischer Rescan (Minuten)"). Ohne das Flag bleibt das Feld
   ausgegraut und der Timer aus - der manuelle Rescan-Button ("Baum neu
   einlesen") ist davon unabhängig und in jeder Edition nutzbar.
+- `paid_providers`: schaltet Google Cloud Translate/DeepL als
+  Übersetzungsanbieter frei (siehe "Übersetzungsanbieter" oben). Ohne das
+  Flag wird ausschließlich der kostenfreie Anbieter genutzt, selbst wenn
+  Google-/DeepL-Keys eingetragen sind - die Keys werden dabei nie gelöscht,
+  nur ignoriert (greifen sofort, sobald ein Upgrade das Flag freischaltet).
+- `unlimited_language_switch`: hebt ein sonst geltendes Limit von einem
+  Sprachwechsel pro rollierendem 24h-Fenster auf. Ein wiederholter Wechsel
+  zur bereits aktiven Sprache oder zurück zur Basissprache/Original zählt nie
+  als Wechsel und ist immer erlaubt, auch ohne dieses Flag - nur ein
+  tatsächlicher Wechsel zu einer neuen Sprache innerhalb von 24h nach dem
+  letzten wird per Hinweis-Popup verweigert.
 
-Während der Testphase selbst bleiben beide Features bewusst immer erlaubt,
+Während der Testphase selbst bleiben alle Features bewusst immer erlaubt,
 damit der komplette Mechanismus vor dem Kauf ausprobierbar ist - die Sperre
 gilt nur für Vollversion-Lizenzen ohne das jeweilige Flag. Wie bei
 `allowedLanguages` einfach als weiteres Feld im selben Payload kombinierbar.

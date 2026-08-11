@@ -76,6 +76,12 @@ class SimpleLocale extends IPSModuleStrict
     // würde stattdessen die Admin-Konsolensprache treffen, nicht die Gast-Sprache.
     private const TRIAL_EXPIRED_ALERT_TEXT = 'Die Testversion ist abgelaufen. Bitte eine Lizenz erwerben:';
 
+    // Rohtext für den Gast-Hinweis, wenn ein Sprachwechsel am Tageslimit scheitert
+    // (siehe IsLanguageSwitchRateLimited/PushLanguageSwitchLimitAlert) - z.B. bei der
+    // "Light"-Edition, die auf einen Sprachwechsel pro rollierendem 24h-Fenster
+    // begrenzt ist.
+    private const LANGUAGE_SWITCH_LIMIT_ALERT_TEXT = 'Diese Lizenz erlaubt nur einen Sprachwechsel pro Tag. Bitte später erneut versuchen oder eine Lizenz mit unbegrenztem Sprachwechsel erwerben:';
+
     // Rein dekorativ fürs Gast-Dropdown (GetVisualizationTile) - nicht erschöpfend,
     // unbekannte Sprachcodes bekommen einfach keine Flagge vorangestellt.
 private const LANGUAGE_FLAGS = [
@@ -243,6 +249,7 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterAttributeString(self::attributeLicenseInfo, '{}');
         $this->RegisterAttributeInteger(self::attributeTrialStartedAt, 0);
         $this->RegisterAttributeString(self::attributeActivationLog, '[]');
+        $this->RegisterAttributeInteger(self::attributeLastLanguageSwitchAt, 0);
         $this->RegisterAttributeString(self::attributeRegisteredValueObjectIDs, '[]');
         $this->RegisterAttributeString(self::attributeLastSelfWrittenValues, '{}');
         $this->RegisterAttributeString(self::attributeEnumerationPresentationBackup, '{}');
@@ -337,8 +344,18 @@ private const LANGUAGE_FLAGS = [
                     $this->ResetToOriginalLanguageIfNeeded();
                     $this->PushVisualizationUpdate();
                     $this->PushTrialExpiredAlert($language);
+                } elseif ($this->IsLanguageSwitchRateLimited($language)) {
+                    // Bewusst kein Reset auf Original wie beim Testphase-Fall - die
+                    // aktuell aktive Sprache bleibt einfach stehen, es wird nur der
+                    // GEWÜNSCHTE Wechsel selbst verweigert.
+                    $this->PushLanguageSwitchLimitAlert($language);
                 } else {
+                    $isActualSwitch = $language !== $this->ReadPropertyString(self::propertyCurrentLanguage)
+                        && $language !== self::langOriginalImport;
                     $this->ApplyLanguage($language);
+                    if ($isActualSwitch) {
+                        $this->WriteAttributeInteger(self::attributeLastLanguageSwitchAt, time());
+                    }
                 }
                 break;
 
@@ -818,11 +835,17 @@ private const LANGUAGE_FLAGS = [
     //   - "auto_rescan" schaltet den Timer-gesteuerten automatischen Rescan frei,
     //     siehe ApplyChanges/PopulateFormElements. Der manuelle Rescan-Button ist
     //     davon unabhängig und immer nutzbar.
-    // Fehlt das Feature-Array (Standard-Tier-Lizenz ohne Zusatz-Features), gilt
-    // das jeweilige Feature als NICHT freigeschaltet -
-    // konservativer Default, siehe README Abschnitt 8. Während der Testphase
-    // selbst (keine/noch keine Lizenz) bleibt Editieren bewusst erlaubt, damit
-    // der komplette Mechanismus vor dem Kauf ausprobierbar ist.
+    //   - "paid_providers" schaltet Google/DeepL als Übersetzungsanbieter frei,
+    //     siehe GetProviderChain. Ohne dieses Feature (z.B. "Light"-Edition) wird
+    //     ausschließlich der kostenfreie Anbieter genutzt, selbst wenn Keys
+    //     eingetragen sind.
+    //   - "unlimited_language_switch" hebt das Ein-Wechsel-pro-24h-Limit auf, siehe
+    //     IsLanguageSwitchRateLimited.
+    // Fehlt das Feature-Array (z.B. "Light"-Edition ohne Zusatz-Features), gelten
+    // alle Features als NICHT freigeschaltet - konservativer Default, siehe README
+    // Abschnitt 8. Während der Testphase selbst (keine/noch keine Lizenz) bleiben
+    // alle Features bewusst freigeschaltet, damit der komplette Mechanismus vor dem
+    // Kauf ausprobierbar ist.
     private function HasLicenseFeature(string $Feature): bool
     {
         if (!self::IS_TRIAL_BUILD) {
@@ -1911,6 +1934,15 @@ private const LANGUAGE_FLAGS = [
     // Google-/DeepL-Konto.
     private function GetProviderChain(): array
     {
+        // Pro-Feature "paid_providers": ohne dieses Feature wird IMMER nur der
+        // kostenfreie Anbieter genutzt, unabhängig davon, ob Google-/DeepL-Keys
+        // eingetragen sind (z.B. bei der "Light"-Edition, README Abschnitt 8) -
+        // eingetragene, aber nicht nutzbare Keys werden dabei nie gelöscht, nur
+        // ignoriert (greifen sofort wieder, sobald ein Upgrade das Feature freischaltet).
+        if (!$this->HasLicenseFeature('paid_providers')) {
+            return ['free'];
+        }
+
         $preferred = $this->ReadPropertyString(self::propertyPreferredPaidProvider) === 'deepl' ? 'deepl' : 'google';
 
         $available = [];
@@ -2473,6 +2505,51 @@ private const LANGUAGE_FLAGS = [
     {
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
         $text = self::TRIAL_EXPIRED_ALERT_TEXT;
+
+        if ($RequestedLanguage !== $sourceLanguage && $RequestedLanguage !== self::langOriginalImport) {
+            $translated = $this->TranslateBatch([$text], $sourceLanguage, $RequestedLanguage);
+            if (($translated[0] ?? '') !== '') {
+                $text = $translated[0];
+            }
+        }
+
+        $payload = json_encode(['action' => 'ALERT', 'payload' => ['text' => $text . "\n" . self::LICENSE_PURCHASE_URL]]);
+        $this->UpdateVisualizationValue($payload);
+    }
+
+    // Pro-Feature "unlimited_language_switch": ohne dieses Feature ist ein
+    // tatsächlicher Sprachwechsel (zu einer ANDEREN als der aktuell aktiven Sprache)
+    // auf max. einen pro rollierendem 24h-Fenster begrenzt (siehe "Light"-Edition,
+    // README Abschnitt 8). Ein wiederholter Wechsel zur selben Sprache oder ein
+    // Wechsel zurück zur Basissprache/Original zählt NIE als Wechsel und ist immer
+    // erlaubt - Original bleibt so immer als Ausweg erreichbar, analog
+    // IsLanguageBlockedByTrial. Während der Testphase (keine/noch keine Lizenz)
+    // bleibt der Sprachwechsel bewusst immer uneingeschränkt, siehe HasLicenseFeature.
+    private const languageSwitchMinIntervalSeconds = 86400;
+
+    private function IsLanguageSwitchRateLimited(string $Language): bool
+    {
+        if ($this->HasLicenseFeature('unlimited_language_switch')) {
+            return false;
+        }
+
+        $current = $this->ReadPropertyString(self::propertyCurrentLanguage);
+        if ($Language === $current || $Language === self::langOriginalImport
+            || $Language === $this->ReadPropertyString(self::propertySourceLanguage)) {
+            return false;
+        }
+
+        $lastSwitchAt = $this->ReadAttributeInteger(self::attributeLastLanguageSwitchAt);
+
+        return $lastSwitchAt !== 0 && (time() - $lastSwitchAt) < self::languageSwitchMinIntervalSeconds;
+    }
+
+    // Aufbau bewusst identisch zu PushTrialExpiredAlert - kein Reset auf Original,
+    // der Aufrufer (RequestAction) lässt die aktuell aktive Sprache einfach stehen.
+    private function PushLanguageSwitchLimitAlert(string $RequestedLanguage): void
+    {
+        $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
+        $text = self::LANGUAGE_SWITCH_LIMIT_ALERT_TEXT;
 
         if ($RequestedLanguage !== $sourceLanguage && $RequestedLanguage !== self::langOriginalImport) {
             $translated = $this->TranslateBatch([$text], $sourceLanguage, $RequestedLanguage);
