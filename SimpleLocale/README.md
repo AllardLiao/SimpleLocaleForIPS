@@ -37,7 +37,8 @@ Beschreibung des Moduls.
   Beschriftungen in der Visualisierung.
 * Die Instanz selbst bietet eine eigene, schlanke Kachel für die Visualisierung
   (natives HTML-`<select>`-Dropdown statt Symcons Standard-Buttonliste) - dazu
-  einfach die Instanz per Drag & Drop in WebFront platzieren, keine zusätzliche
+  im WebFront-Baum die Zielkategorie markieren, per Rechtsklick "Instanz
+  erstellen" wählen und nach "Simple Locale" suchen, keine zusätzliche
   Variable nötig. Die Sprachnamen im Dropdown (inkl. kleiner Flagge und Google-
   Sprachcode, z. B. "🇬🇧 English - en") werden live in die gerade aktive Sprache
   übersetzt, damit dort nie mehrere Sprachen gemischt angezeigt werden. Ein
@@ -277,9 +278,10 @@ gesamte Zustand steckt in Instanz-Properties.
 
 ### 7. Visualisierung
 
-Die Simple-Locale-Instanz selbst per Drag & Drop in WebFront platzieren (bei
-der Kachel-Auswahl nicht eine Variable, sondern die Instanz selbst auswählen)
-- sie liefert eine eigene, kompakte Kachel mit `<select>`-Dropdown
+Im WebFront-Baum die Zielkategorie markieren, per Rechtsklick "Instanz
+erstellen" wählen und nach "Simple Locale" suchen (Drag & Drop einer Instanz
+in WebFront funktioniert in aktuellen Symcon-Versionen nicht) - sie liefert
+eine eigene, kompakte Kachel mit `<select>`-Dropdown
 (Weltkugel-Symbol statt Text-Label "Sprache", damit keine Sprachen gemischt
 angezeigt werden) und löst beim Auswählen direkt den Sprachwechsel aus. Die
 aktuell aktive Sprache wird als Instanz-Property gespeichert (kein
