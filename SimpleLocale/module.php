@@ -509,6 +509,17 @@ private const LANGUAGE_FLAGS = [
                     $element['visible'] = self::IS_TRIAL_BUILD;
                     $element['expanded'] = $this->IsTrialLocked() || $this->ReadPropertyString(self::propertyLicenseKey) !== '';
                     break;
+
+                // Zeigt die Details des aktiven Lizenzschlüssels (Typ, Ablauf,
+                // Sprachlimit, erlaubte Sprachen, Zusatzfunktionen) an, sobald ein
+                // gültiger Schlüssel eingetragen ist - siehe BuildLicenseInfoText.
+                case 'LicenseInfoLabel':
+                    $licenseInfoText = $this->BuildLicenseInfoText();
+                    $element['visible'] = $licenseInfoText !== '';
+                    if ($licenseInfoText !== '') {
+                        $element['caption'] = $licenseInfoText;
+                    }
+                    break;
             }
         }
         unset($element);
@@ -1003,6 +1014,53 @@ private const LANGUAGE_FLAGS = [
         return $this->Translate('Testversion abgelaufen am') . " $dateText. "
             . $this->Translate('Die Kachel zeigt Anwendern ab jetzt wieder den unbearbeiteten Original-Text, ein weiterer Rescan ist blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.')
             . ' ' . $this->Translate('Lizenz erwerben:') . ' ' . self::LICENSE_PURCHASE_URL;
+    }
+
+    // Zeigt den entschlüsselten Inhalt des aktuell aktiven Lizenzschlüssels an
+    // (siehe GetLicenseInfo/ValidateLicenseKey) - macht auf einen Blick sichtbar,
+    // was genau freigeschaltet ist, ohne den Payload selbst dekodieren zu müssen.
+    // Leerer String (Label bleibt unsichtbar, siehe PopulateFormElements), solange
+    // kein gültiger Schlüssel eingetragen ist.
+    private function BuildLicenseInfoText(): string
+    {
+        $info = $this->GetLicenseInfo();
+        if (!($info['valid'] ?? false)) {
+            return '';
+        }
+
+        $typeText = $info['type'] === 'subscription'
+            ? $this->Translate('Abo')
+            : $this->Translate('Einmalkauf');
+
+        $expiresAt = (int) $info['expiresAt'];
+        $expiryText = $expiresAt === 0
+            ? $this->Translate('läuft nie ab')
+            : $this->Translate('gültig bis') . ' ' . date('d.m.Y', $expiresAt);
+
+        $languageLimit = (int) $info['languageLimit'];
+        $limitText = $languageLimit === 0
+            ? $this->Translate('unbegrenzt')
+            : $this->Translate('max.') . " $languageLimit";
+
+        $allowedLanguages = $info['allowedLanguages'] ?? [];
+        $allowedText = $allowedLanguages === []
+            ? $this->Translate('alle')
+            : implode(', ', $allowedLanguages);
+
+        $featureLabels = [
+            'edit_translations'         => $this->Translate('Manuelles Editieren von Übersetzungen'),
+            'auto_rescan'                => $this->Translate('Automatischer Rescan nach Zeitplan'),
+            'paid_providers'             => $this->Translate('Google/DeepL als Übersetzungsanbieter'),
+            'unlimited_language_switch'  => $this->Translate('Unbegrenzter Sprachwechsel'),
+        ];
+        $features = array_values(array_intersect_key($featureLabels, array_flip($info['features'] ?? [])));
+        $featuresText = $features === [] ? $this->Translate('keine') : implode(', ', $features);
+
+        return $this->Translate('Typ') . ": $typeText\n"
+            . $this->Translate('Ablauf') . ": $expiryText\n"
+            . $this->Translate('Sprachlimit') . ": $limitText\n"
+            . $this->Translate('Erlaubte Sprachen') . ": $allowedText\n"
+            . $this->Translate('Zusatzfunktionen') . ": $featuresText";
     }
 
     private function ApplyLanguage(string $Language): void

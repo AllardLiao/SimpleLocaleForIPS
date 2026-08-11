@@ -110,6 +110,23 @@ Beschreibung des Moduls.
   Die betroffenen Objekt-IDs samt Pfad erscheinen dann als Liste im
   Konfigurationsformular - erst benennen, dann erneut "Baum neu einlesen"
   klicken.
+* **Bei großen Bäumen und/oder vielen Zielsprachen: "Could not load
+  configuration form" / "Output-Buffer exceeds Limit (... bytes)".** Das
+  Konfigurationsformular überträgt "Objektnamen", "Eigene Texte" und
+  "Beschriftungen" vollständig in einer einzigen Antwort - jede Zeile mit
+  jeder aktiven Zielsprache als eigener Spalte. Bei vielen Objekten (v. a.
+  "Eigene Texte" mit längeren HTMLBox-Inhalten) mal sieben oder mehr
+  Sprachen kann diese Antwort größer werden als das von Symcon selbst
+  gesetzte Limit für Skript-Ausgaben (`ScriptOutputBufferLimit`,
+  Standardwert 1.048.576 Byte = 1 MB) - das Formular lässt sich dann gar
+  nicht mehr öffnen. Das ist keine Fehlfunktion des Moduls, sondern eine
+  reine Transportgrenze der Symcon-Konsole selbst. Abhilfe: in der Konsole
+  unter **Einstellungen (Zahnrad oben rechts) → Kern-Instanzen → I/O
+  (Symcon-Konsole) → Special Switches** den Wert `ScriptOutputBufferLimit`
+  erhöhen (z. B. auf `8388608` = 8 MB) und das Konfigurationsformular
+  danach erneut öffnen. Der Wert gilt für die gesamte Symcon-Installation,
+  nicht nur für dieses Modul - eine Erhöhung ist unbedenklich und wirkt sich
+  auf keine andere Instanz negativ aus.
 * **Beschriftungen (Abschnitt 1): der "Fork"-Mechanismus und seine Grenzen.**
   Eine Variable im Root-Baum kann ihre Wert-Beschriftungen von einem
   klassischen Profil oder einer modernen Template-Presentation beziehen -

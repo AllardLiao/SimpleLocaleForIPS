@@ -280,6 +280,12 @@
                     "type": "PasswordTextBox",
                     "name": "LicenseKey",
                     "caption": "Lizenzschlüssel"
+                },
+                {
+                    "type": "Label",
+                    "name": "LicenseInfoLabel",
+                    "caption": "",
+                    "visible": false
                 }
             ]
         }
@@ -297,7 +303,7 @@
         },
         {
             "type": "Label",
-            "caption": "Durchsucht die Root-Kategorie erneut nach neuen/verschobenen Objekten und übersetzt per Google nur noch leere Zellen in Objektnamen und Eigene Texte. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben."
+            "caption": "Durchsucht die Root-Kategorie erneut nach neuen/verschobenen Objekten und übersetzt nur noch leere Zellen in Objektnamen und Eigene Texte. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben."
         },
         {
             "type": "ExpansionPanel",
