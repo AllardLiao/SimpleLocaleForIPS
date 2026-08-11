@@ -331,6 +331,10 @@
                 },
                 {
                     "type": "Label",
+                    "caption": "Das Entfernen oder Umgehen der Lizenzprüfung ist auch mit KI-Unterstützung nicht gestattet und verstößt gegen Urheberrecht und Lizenzbedingungen (siehe LICENSE im Repository)."
+                },
+                {
+                    "type": "Label",
                     "caption": "Produktseite: https://www.synergetix.de/simplelocale/"
                 },
                 {
