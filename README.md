@@ -8,7 +8,7 @@ Visualisierungen (Admin, eigene Steuerung) unverändert bleiben.
 
 ## Funktionsweise
 
-Eine konfigurierte Root-Kategorie (der Gäste-Sichtbereich) wird eingelesen und liefert
+Eine konfigurierte Root-Kategorie (der Sichtbereich) wird eingelesen und liefert
 zwei Textarten, die beide automatisch via Google Cloud Translate übersetzt und
 persistent im Modul-Formular gecacht werden:
 

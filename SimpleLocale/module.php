@@ -98,10 +98,7 @@ class SimpleLocale extends IPSModuleStrict
     // tatsächlichen Ausstellen von Lizenzen) gehört NIEMALS in dieses - oder
     // irgendein - Repo, sondern nur in ein eigenes, privates Verkaufs-/Signier-Tool.
     //
-    // PLATZHALTER (Test-Schlüsselpaar, siehe scratchpad-Smoke-Tests) - vor dem echten
-    // Release durch ein frisch generiertes Schlüsselpaar ersetzen
-    // (sodium_crypto_sign_keypair()), nur den PUBLIC-Teil hier eintragen.
-    private const LICENSE_PUBLIC_KEY = '7bD7SEmpp7XCVSUwvY/5SYCMn7cnSUlQP+9kBKac3QA=';
+    private const LICENSE_PUBLIC_KEY = 't+eCtcgi3e7U09kNO4vpqNpeSsLkYApMgyHYz4lVp4M=';
 
     // "Permalink" zum Lizenzerwerb - aktuell nur ein Verweis auf das GitHub-Repo,
     // da es noch keinen eigenen Shop gibt. Eine einzige zentrale Konstante, damit
@@ -915,7 +912,7 @@ private const LANGUAGE_FLAGS = [
         }
 
         return $this->Translate('Testversion abgelaufen am') . " $dateText. "
-            . $this->Translate('Die Kachel zeigt Gästen ab jetzt wieder den unbearbeiteten Original-Text, ein weiterer Rescan ist blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.')
+            . $this->Translate('Die Kachel zeigt Anwendern ab jetzt wieder den unbearbeiteten Original-Text, ein weiterer Rescan ist blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.')
             . ' ' . $this->Translate('Lizenz erwerben:') . ' ' . self::LICENSE_PURCHASE_URL;
     }
 

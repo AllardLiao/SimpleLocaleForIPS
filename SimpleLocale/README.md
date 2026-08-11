@@ -34,14 +34,14 @@ Beschreibung des Moduls.
 * Ein Rescan prüft vor jeder Übersetzung, ob alle Objekte im Root-Baum einen
   echten Namen haben, und bricht andernfalls komplett ab (siehe
   [Abschnitt 2](#2-bekannte-einschränkungen)) - verhindert leere
-  Beschriftungen in der Gäste-Visualisierung.
+  Beschriftungen in der Visualisierung.
 * Die Instanz selbst bietet eine eigene, schlanke Kachel für die Visualisierung
   (natives HTML-`<select>`-Dropdown statt Symcons Standard-Buttonliste) - dazu
   einfach die Instanz per Drag & Drop in WebFront platzieren, keine zusätzliche
   Variable nötig. Die Sprachnamen im Dropdown (inkl. kleiner Flagge und Google-
   Sprachcode, z. B. "🇬🇧 English - en") werden live in die gerade aktive Sprache
   übersetzt, damit dort nie mehrere Sprachen gemischt angezeigt werden. Ein
-  Info-Symbol (ⓘ) neben dem Dropdown erklärt Gästen auf Klick (ebenfalls live
+  Info-Symbol (ⓘ) neben dem Dropdown erklärt Anwendern auf Klick (ebenfalls live
   übersetzt) die wichtigsten Einschränkungen, siehe
   [Abschnitt 2](#2-bekannte-einschränkungen).
 * Die aktuell aktive Sprache ist eine reine Instanz-Property (kein Symcon-
@@ -51,7 +51,7 @@ Beschreibung des Moduls.
   "Eigene Texte" verfolgten String-Variablen vornehmen (z. B. ein Wetter-
   oder Messwert-Modul, das seinen Text bei jeder Aktualisierung selbst neu
   schreibt): der neue Wert wird automatisch als frischer Rohtext übernommen
-  und sofort in die aktuell aktive Gast-Sprache nachübersetzt - ganz ohne
+  und sofort in die aktuell aktive Sprache nachübersetzt - ganz ohne
   Zutun des anderen Modulentwicklers. Technisch über Symcons
   VariableManager-Update-Nachrichten (`VM_UPDATE`), siehe
   [Abschnitt 2](#2-bekannte-einschränkungen) für die eine Voraussetzung
@@ -69,7 +69,7 @@ Beschreibung des Moduls.
 
 * **Eine Sprache pro Instanz, nicht pro Besucher.** Die aktuell aktive Sprache
   ist ein Zustand der Instanz, kein Zustand der einzelnen Browser-Sitzung.
-  Zwei Gäste, die gleichzeitig dieselbe Visualisierung öffnen, sehen daher
+  Zwei Anwender, die gleichzeitig dieselbe Visualisierung öffnen, sehen daher
   immer dieselbe Sprache - es gibt keine getrennte Sprache je Person. Werden
   wirklich gleichzeitig unterschiedliche Sprachen für unterschiedliche
   Zielgruppen benötigt, braucht es mehrere Instanzen mit jeweils eigener
@@ -90,7 +90,7 @@ Beschreibung des Moduls.
   praktisch nie und werden daher nicht überwacht.
 
   Dieser Punkt ist auch direkt in der Kachel über das Info-Symbol (ⓘ)
-  neben dem Dropdown einsehbar, live in der jeweils aktiven Gast-Sprache.
+  neben dem Dropdown einsehbar, live in der jeweils aktiven Sprache.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
@@ -204,9 +204,9 @@ Felder auf einmal überfrachten:
 
 Name                            | Beschreibung
 -------------------------------- | ------------------
-Root-Kategorie                  | Kategorie im Objektbaum, deren Inhalt (Namen + Werte von String-Variablen) übersetzt wird. Sollte nur die Gäste-Sichtbereich-Kacheln enthalten, nicht die Admin-Oberfläche.
+Root-Kategorie                  | Kategorie im Objektbaum, deren Inhalt (Namen + Werte von String-Variablen) übersetzt wird. Sollte nur die Sichtbereich-Kacheln enthalten, nicht die Admin-Oberfläche.
 Basissprache                    | Sprache, in der die Objektnamen/-werte ursprünglich gepflegt sind. Dient Google Translate als feste Quellsprache für alle Zielsprachen-Übersetzungen; die Basissprache selbst hat keine eigene Übersetzungsspalte, siehe [Abschnitt 7](#7-visualisierung).
-Aktuell aktive Sprache          | Welche Sprache gerade angezeigt wird - normalerweise über die Kachel vom Gast selbst gesteuert (siehe Abschnitt 7), lässt sich hier aber auch manuell zu Testzwecken umschalten.
+Aktuell aktive Sprache          | Welche Sprache gerade angezeigt wird - normalerweise über die Kachel vom Anwender selbst gesteuert (siehe Abschnitt 7), lässt sich hier aber auch manuell zu Testzwecken umschalten.
 Weltkugel-Symbol in der Kachel anzeigen | Blendet das 🌐-Symbol links neben dem Dropdown aus, falls nicht gewünscht (z. B. bei eigenem Kachel-Design). Standardmäßig an.
 Info-Symbol in der Kachel anzeigen | Blendet das ⓘ-Symbol (Erklärung der Einschränkungen, siehe Abschnitt 2) aus. Standardmäßig an.
 Google Cloud Translate API-Key  | API-Key für die Cloud Translation API v2. **Muss zuerst eingetragen und über "Übernehmen" gespeichert werden**, bevor irgendetwas anderes funktioniert - insbesondere ist der "Hinzufügen"-Button bei den Zielsprachen bis dahin ausgegraut (nicht versteckt, sondern deaktiviert), da ohne gültigen Key keine echte Sprachliste von Google geladen werden kann.
@@ -271,7 +271,7 @@ Rohtext. Der Basissprache-Eintrag im Dropdown liefert deshalb technisch
 
 Die Einträge sind alphabetisch nach dem angezeigten Namen sortiert (nicht
 nach Sprachcode), und zwar nach den Sortierregeln der jeweils aktiven
-Gast-Sprache (z. B. korrekte Einordnung von Umlauten/Akzenten) - dafür wird,
+Sprache (z. B. korrekte Einordnung von Umlauten/Akzenten) - dafür wird,
 falls auf dem Symcon-Server installiert, PHPs `intl`-Erweiterung (Klasse
 `Collator`) genutzt; ist sie nicht verfügbar, greift eine einfache
 alphabetische Sortierung ohne sprachspezifische Sonderregeln.
@@ -279,7 +279,7 @@ alphabetische Sortierung ohne sprachspezifische Sonderregeln.
 Ein Info-Symbol (ⓘ) neben dem Dropdown öffnet auf Klick einen nativen
 Browser-Dialog (`alert()`) mit den in [Abschnitt 2](#2-bekannte-einschränkungen)
 beschriebenen Einschränkungen, ebenfalls live in der jeweils aktiven
-Gast-Sprache. Bewusst kein eigenes HTML-Popup: die Kachel läuft in einem
+Sprache. Bewusst kein eigenes HTML-Popup: die Kachel läuft in einem
 eigenen iframe und eigene Overlays können dessen Grenzen nicht überschreiten -
 ein Browser-Dialog dagegen schon.
 
@@ -302,7 +302,7 @@ Vollversion:
   schwenkt die Kachel automatisch auf die unbearbeiteten Original-Importe
   zurück (statt eine irgendwann eingefrorene, ggf. unvollständige Übersetzung
   dauerhaft stehen zu lassen), ein weiterer Rescan ist blockiert. Versucht ein
-  Gast trotzdem, über das Dropdown die Sprache zu wechseln, bleibt es beim
+  Anwender trotzdem, über das Dropdown die Sprache zu wechseln, bleibt es beim
   Original-Text und ein Hinweis-Popup (live in die gewünschte Sprache
   übersetzt) verweist auf den Lizenzerwerb - bis ein gültiger
   Lizenzschlüssel aktiviert wurde.
@@ -409,7 +409,7 @@ Beispiel:
 `IPSSL_Rescan(12345);`
 
 `string IPSSL_TranslateExternalText(integer $InstanzID, string $Text, string $Quellsprache);`
-Übersetzt beliebigen Text live in die aktuell aktive Gast-Sprache dieser
+Übersetzt beliebigen Text live in die aktuell aktive Sprache dieser
 Instanz - für Modulentwickler, deren eigenes Modul eine eigene HTML-Kachel
 ausliefert (`GetVisualizationTile()`) statt Text in einer von Simple Locale
 beobachtbaren Variable zu halten, siehe
@@ -422,9 +422,8 @@ Beispiel:
 `IPSSL_TranslateExternalText(12345, 'Guten Tag', 'de');`
 
 `string IPSSL_GetCurrentLanguageCode(integer $InstanzID);`
-Liefert den aktuell aktiven Gast-Sprachcode dieser Instanz (z. B. `"en"`) -
-immer ein echter Sprachcode, nie die interne Pseudo-Sprache
-`"ORIGINAL_IMPORT"`. Nützlich, um eigene Inhalte nur bei einem tatsächlichen
+Liefert den aktuell aktiven Sprachcode dieser Instanz (z. B. `"en"`) - 
+nützlich, um eigene Inhalte nur bei einem tatsächlichen
 Sprachwechsel neu aufzubauen, statt bei jedem Rendern blind zu übersetzen.
 
 Beispiel:
@@ -432,8 +431,8 @@ Beispiel:
 ### 10. Integration für Modulentwickler
 
 Liefert dein eigenes Modul eine eigene HTML-Kachel aus
-(`GetVisualizationTile()`), lässt sich dessen Text-Inhalt live in die
-gerade aktive Gast-Sprache einer Simple-Locale-Instanz übersetzen - ganz
+(via `GetVisualizationTile()`), lässt sich dessen Text-Inhalt live in die
+gerade aktive Sprache einer Visualisierung mit Simple-Locale-Instanz übersetzen - ganz
 ohne eigenen Google-Account, da `IPSSL_TranslateExternalText()` den
 Google-API-Key der jeweiligen Simple-Locale-Instanz mitverwendet.
 
