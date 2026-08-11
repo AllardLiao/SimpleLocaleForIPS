@@ -121,8 +121,8 @@ Beschreibung des Moduls.
   Standardwert 1.048.576 Byte = 1 MB) - das Formular lässt sich dann gar
   nicht mehr öffnen. Das ist keine Fehlfunktion des Moduls, sondern eine
   reine Transportgrenze der Symcon-Konsole selbst. Abhilfe: in der Konsole
-  unter **Einstellungen (Zahnrad oben rechts) → Kern-Instanzen → I/O
-  (Symcon-Konsole) → Special Switches** den Wert `ScriptOutputBufferLimit`
+  unter **License Information ("i"-Symbol oben rechts) → Special Switches
+  (unten mittig)** den Wert `ScriptOutputBufferLimit`
   erhöhen (z. B. auf `8388608` = 8 MB) und das Konfigurationsformular
   danach erneut öffnen. Der Wert gilt für die gesamte Symcon-Installation,
   nicht nur für dieses Modul - eine Erhöhung ist unbedenklich und wirkt sich
