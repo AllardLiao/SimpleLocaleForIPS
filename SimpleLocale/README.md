@@ -342,6 +342,31 @@ ausgetauscht wird. Wie beim Zeitraum von Marketing-Aktionen ist auch der
 eigentliche Rabatt-Verkaufsprozess (Preis, Zeitfenster, Bezahlung) nicht Teil
 des Moduls - das Modul prüft nur den fertig ausgestellten Schlüssel.
 
+**Promo-Lizenzen mit gezielter Sprachbindung:** Zusätzlich zu `languageLimit`
+kann ein Lizenzschlüssel ein `allowedLanguages`-Feld tragen (Liste von
+Sprachcodes, leer = keine Einschränkung). Damit lassen sich Aktionen mit
+festen statt frei wählbaren Sprachen abbilden, z. B. "Finnisch - die Sprache
+des Weihnachtsmanns - kostenfrei zu Nikolaus" (`allowedLanguages: ["fi"]`)
+oder "alle neun Nachbarländer zum Tag der Deutschen Einheit"
+(`allowedLanguages: [9 Ländercodes]`, kombiniert mit `languageLimit: 0` für
+die Standard- bzw. `languageLimit: 1` für die "Spezialversion"-Variante
+derselben Aktion - Kunde wählt dann 1 Sprache frei, aber nur aus den 9
+Nachbarländern). Beide Felder sind unabhängig kombinierbar: `allowedLanguages`
+regelt WELCHE Sprachcodes wählbar sind, `languageLimit` WIE VIELE gleichzeitig.
+Durchgesetzt an derselben Stelle wie das Sprachlimit (Formular-Dropdown zeigt
+nur erlaubte Sprachen, `EnforceLicensedLanguageLimit` entfernt serverseitig
+alles außerhalb der Liste).
+
+**Pro-Feature-Flags:** Ein `features`-Feld (Liste von Flag-Namen, leer =
+Standard-Tier) schaltet zusätzliche Fähigkeiten frei - aktuell
+`edit_translations`: erlaubt das manuelle Korrigieren einzelner
+Übersetzungszellen in den Listen "Objektnamen"/"Eigene Texte"/"Enum-
+Beschriftungen" (ohne das Flag sind diese Spalten rein lesend). Während der
+Testphase selbst bleibt Editieren bewusst immer erlaubt, damit der komplette
+Mechanismus vor dem Kauf ausprobierbar ist - die Sperre gilt nur für
+Vollversion-Lizenzen ohne das Flag. Wie bei `allowedLanguages` einfach als
+weiteres Feld im selben Payload kombinierbar.
+
 **Erkennung von Lizenzmissbrauch:** Bei jeder Aktivierung (Button "Lizenz
 aktivieren" oder einfach nur "Übernehmen" mit einem neuen gültigen Schlüssel)
 wird lokal protokolliert, welcher `IPS_GetLicensee()` (die beim Kauf von
@@ -350,13 +375,14 @@ mit welchem Lizenzschlüssel aktiviert wurde. Taucht derselbe Schlüssel mit
 mehreren unterschiedlichen Licensee-Adressen auf, ist das ein Hinweis auf
 Weiterverkauf/Weitergabe (z. B. ein Schlüssel, der als "gebraucht" mehrfach
 bei Ebay verkauft wird). Die Konstante `LICENSE_ACTIVATION_REPORT_URL` in
-`module.php` ist aktuell ein leerer Platzhalter - ohne echte URL bleibt es
-bei der rein lokalen Protokollierung (Debug-Log der Instanz); erst mit einer
-echten Meldeserver-URL wird jede Aktivierung zusätzlich dorthin gemeldet
-(Lizenzschlüssel-Hash statt Klartext-Schlüssel, plus Licensee und Zeitpunkt).
+`module.php` zeigt auf einen echten Meldeserver-Endpoint (siehe
+Synergetix-Website-Repo, `shop/license-activation-report.php`) - jede
+Aktivierung wird zusätzlich dorthin gemeldet (Lizenzschlüssel-Hash statt
+Klartext-Schlüssel, plus Licensee und Zeitpunkt); lokal (Debug-Log der
+Instanz) wird trotzdem immer protokolliert.
 **Wichtig:** `IPS_GetLicensee()` liefert eine echte, personenbezogene
-E-Mail-Adresse - diese Erhebung/Übermittlung gehört vor dem Eintragen einer
-echten Meldeserver-URL in die eigenen Lizenzbedingungen/Datenschutzhinweise.
+E-Mail-Adresse - diese Erhebung/Übermittlung muss in den eigenen
+Lizenzbedingungen/Datenschutzhinweisen offengelegt sein.
 
 Für Entwickler: Ob ein Build die Testversion-Einschränkungen überhaupt
 anwendet, steuert die Konstante `IS_TRIAL_BUILD` in `module.php` - für einen

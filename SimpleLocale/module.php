@@ -687,6 +687,22 @@ private const LANGUAGE_FLAGS = [
         }
         $payload['languageLimit'] = (int) ($payload['languageLimit'] ?? 0);
 
+        // [] = keine Einschraenkung (Normalfall) - nur bei gezielten Promo-
+        // Lizenzen befuellt, die auf bestimmte Sprachcodes zielen (z.B. "Finnisch
+        // zu Nikolaus" oder "Nachbarlaender zum Tag der Deutschen Einheit"), siehe
+        // GetLicensedAllowedLanguages/README Abschnitt 8. Kombinierbar mit
+        // languageLimit (z.B. "1 frei waehlbare Sprache AUS den Nachbarlaendern").
+        $payload['allowedLanguages'] = is_array($payload['allowedLanguages'] ?? null)
+            ? array_values(array_filter($payload['allowedLanguages'], 'is_string'))
+            : [];
+
+        // [] = keine Zusatz-Features (Standard-Tier) - z.B. "edit_translations"
+        // schaltet das manuelle Korrigieren von Uebersetzungen frei, siehe
+        // HasLicenseFeature/BuildLanguageColumnSet.
+        $payload['features'] = is_array($payload['features'] ?? null)
+            ? array_values(array_filter($payload['features'], 'is_string'))
+            : [];
+
         return $payload;
     }
 
@@ -706,11 +722,18 @@ private const LANGUAGE_FLAGS = [
         }
 
         $expiresAt = (int) $payload['expiresAt'];
+        $common = [
+            'type'             => $payload['type'],
+            'expiresAt'        => $expiresAt,
+            'languageLimit'    => $payload['languageLimit'],
+            'allowedLanguages' => $payload['allowedLanguages'],
+            'features'         => $payload['features'],
+        ];
         if ($expiresAt !== 0 && $expiresAt < time()) {
-            return ['valid' => false, 'expired' => true, 'type' => $payload['type'], 'expiresAt' => $expiresAt, 'languageLimit' => $payload['languageLimit']];
+            return ['valid' => false, 'expired' => true] + $common;
         }
 
-        return ['valid' => true, 'type' => $payload['type'], 'expiresAt' => $expiresAt, 'languageLimit' => $payload['languageLimit']];
+        return ['valid' => true] + $common;
     }
 
     private function HasFullLicense(): bool
@@ -740,26 +763,82 @@ private const LANGUAGE_FLAGS = [
         return (int) ($info['languageLimit'] ?? 0);
     }
 
+    // [] = keine Einschraenkung (alle von Google unterstuetzten Sprachen frei
+    // waehlbar - der Normalfall). Nur bei gezielten Promo-Lizenzen befuellt,
+    // z.B. "Finnisch zu Nikolaus" (allowedLanguages: ["fi"]) oder "Nachbar-
+    // laender zum Tag der Deutschen Einheit" (allowedLanguages: [9 Laender-
+    // Codes], kombiniert mit languageLimit: 0 fuer die Standard- bzw.
+    // languageLimit: 1 fuer die "Spezialversion"-Variante derselben Aktion).
+    // Kombinierbar mit GetLicensedLanguageLimit: allowedLanguages schraenkt
+    // WELCHE Codes waehlbar sind, languageLimit WIE VIELE gleichzeitig.
+    private function GetLicensedAllowedLanguages(): array
+    {
+        if (!self::IS_TRIAL_BUILD) {
+            return [];
+        }
+
+        $info = $this->GetLicenseInfo();
+        if (!($info['valid'] ?? false)) {
+            return [];
+        }
+
+        return $info['allowedLanguages'] ?? [];
+    }
+
+    // Pro-Feature-Flags im Lizenzschlüssel (aktuell nur "edit_translations" -
+    // schaltet das manuelle Korrigieren einzelner Übersetzungszellen frei,
+    // siehe BuildLanguageColumnSet). Fehlt das Feature-Array (Standard-Tier-
+    // Lizenz ohne Zusatz-Features), gilt das Feature als NICHT freigeschaltet -
+    // konservativer Default, siehe README Abschnitt 8. Während der Testphase
+    // selbst (keine/noch keine Lizenz) bleibt Editieren bewusst erlaubt, damit
+    // der komplette Mechanismus vor dem Kauf ausprobierbar ist.
+    private function HasLicenseFeature(string $Feature): bool
+    {
+        if (!self::IS_TRIAL_BUILD) {
+            return true;
+        }
+
+        $info = $this->GetLicenseInfo();
+        if (!($info['valid'] ?? false)) {
+            return true;
+        }
+
+        return in_array($Feature, $info['features'] ?? [], true);
+    }
+
     // Defensive Absicherung gegen ein Downgrade (z.B. eine zeitlich befristete
     // "Spezialversion"-Lizenz läuft ab und der Schlüssel wird gegen eine mit
-    // kleinerem languageLimit ausgetauscht) oder eine von Hand editierte
-    // Konfiguration: kappt bei jedem ApplyChanges auf die ersten N bereits
-    // konfigurierten Zielsprachen, statt mehr zuzulassen als lizenziert. Die
-    // Admin-Oberfläche verhindert das Hinzufügen weiterer Sprachen zusätzlich schon
-    // vorher (siehe PopulateFormElements), das hier ist nur das serverseitige Netz.
+    // kleinerem languageLimit/anderen allowedLanguages ausgetauscht) oder eine
+    // von Hand editierte Konfiguration: entfernt bei jedem ApplyChanges zuerst
+    // Zielsprachen außerhalb einer ggf. gesetzten allowedLanguages-Liste, kappt
+    // danach auf die ersten N verbleibenden - statt mehr/andere zuzulassen als
+    // lizenziert. Die Admin-Oberfläche verhindert das Hinzufügen unpassender
+    // Sprachen zusätzlich schon vorher (siehe BuildTargetLanguageOptions), das
+    // hier ist nur das serverseitige Netz.
     private function EnforceLicensedLanguageLimit(): void
     {
-        $limit = $this->GetLicensedLanguageLimit();
-        if ($limit <= 0) {
-            return;
-        }
-
         $rows = json_decode($this->ReadPropertyString(self::propertyTargetLanguages), true);
-        if (!is_array($rows) || count($rows) <= $limit) {
+        if (!is_array($rows)) {
             return;
         }
 
-        IPS_SetProperty($this->InstanceID, self::propertyTargetLanguages, json_encode(array_slice($rows, 0, $limit)));
+        $allowed = $this->GetLicensedAllowedLanguages();
+        $filtered = $allowed === []
+            ? $rows
+            : array_values(array_filter($rows, function ($row) use ($allowed) {
+                return in_array($row['code'] ?? '', $allowed, true);
+            }));
+
+        $limit = $this->GetLicensedLanguageLimit();
+        if ($limit > 0 && count($filtered) > $limit) {
+            $filtered = array_slice($filtered, 0, $limit);
+        }
+
+        if ($filtered === $rows) {
+            return;
+        }
+
+        IPS_SetProperty($this->InstanceID, self::propertyTargetLanguages, json_encode($filtered));
         IPS_ApplyChanges($this->InstanceID);
     }
 
@@ -2362,16 +2441,19 @@ private const LANGUAGE_FLAGS = [
         return $columns;
     }
 
-    // Baut die editierbaren Sprachspalten für eine Feldgruppe: eine Spalte je
-    // ausgewählter Zielsprache (direkt aus Original-Import übersetzt, siehe
+    // Baut die Sprachspalten für eine Feldgruppe: eine Spalte je ausgewählter
+    // Zielsprache (direkt aus Original-Import übersetzt, siehe
     // FillMissingTranslations - keine eigene Basissprachen-Spalte). $Label
     // unterscheidet bei "Eigene Texte" zwischen Name- und Text-Spalten (leer für
-    // Objektnamen, die nur eine Feldgruppe haben).
+    // Objektnamen, die nur eine Feldgruppe haben). Editierbar (Spalte 'edit'
+    // gesetzt) nur mit dem Feature-Flag "edit_translations" (siehe
+    // HasLicenseFeature) - ohne das Flag rein lesend, wie z.B. die 'Pfad'-Spalte.
     private function BuildLanguageColumnSet(string $Prefix, string $Label, string $SourceLanguage, array $TargetLanguages): array
     {
         $withLabel = function (string $Text) use ($Label): string {
             return $Label !== '' ? sprintf('%s %s', $Label, $Text) : $Text;
         };
+        $editable = $this->HasLicenseFeature('edit_translations');
 
         $columns = [];
 
@@ -2379,14 +2461,17 @@ private const LANGUAGE_FLAGS = [
             if ($language === $SourceLanguage) {
                 continue;
             }
-            $columns[] = [
+            $column = [
                 'caption' => $withLabel($this->GetLanguageDisplayName($language)),
                 'name'    => $Prefix . $language,
                 'width'   => '200px',
                 'add'     => '',
-                'edit'    => ['type' => 'ValidationTextBox'],
                 'save'    => true,
             ];
+            if ($editable) {
+                $column['edit'] = ['type' => 'ValidationTextBox'];
+            }
+            $columns[] = $column;
         }
 
         return $columns;
@@ -2456,6 +2541,9 @@ private const LANGUAGE_FLAGS = [
         // vorwegzunehmen.
         $restrictToTrialLanguages = self::IS_TRIAL_BUILD && !$this->HasFullLicense();
         $freeLanguageCodes = $this->GetFreeLanguageCodes();
+        // Promo-Lizenzen mit gezielter Sprachbindung (z.B. "Finnisch zu
+        // Nikolaus") - [] = keine Einschränkung, siehe GetLicensedAllowedLanguages.
+        $allowedLanguages = $this->GetLicensedAllowedLanguages();
 
         $options = [];
         foreach ($this->BuildLanguageOptions() as $option) {
@@ -2463,6 +2551,9 @@ private const LANGUAGE_FLAGS = [
                 continue;
             }
             if ($restrictToTrialLanguages && !in_array($option['value'], $freeLanguageCodes, true)) {
+                continue;
+            }
+            if ($allowedLanguages !== [] && !in_array($option['value'], $allowedLanguages, true)) {
                 continue;
             }
             $options[] = $option;
