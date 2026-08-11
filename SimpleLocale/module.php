@@ -2048,15 +2048,6 @@ private const LANGUAGE_FLAGS = [
     // Google-/DeepL-Konto.
     private function GetProviderChain(): array
     {
-        // Pro-Feature "paid_providers": ohne dieses Feature wird IMMER nur der
-        // kostenfreie Anbieter genutzt, unabhängig davon, ob Google-/DeepL-Keys
-        // eingetragen sind (z.B. bei der "Light"-Edition, README Abschnitt 8) -
-        // eingetragene, aber nicht nutzbare Keys werden dabei nie gelöscht, nur
-        // ignoriert (greifen sofort wieder, sobald ein Upgrade das Feature freischaltet).
-        if (!$this->HasLicenseFeature('paid_providers')) {
-            return ['free'];
-        }
-
         $preferred = $this->ReadPropertyString(self::propertyPreferredPaidProvider) === 'deepl' ? 'deepl' : 'google';
 
         $available = [];
@@ -2067,15 +2058,46 @@ private const LANGUAGE_FLAGS = [
             $available['deepl'] = true;
         }
 
-        $chain = [];
+        // Pro-Feature "paid_providers": schaltet die VOLLE Anbieter-Verkettung frei -
+        // beide bezahlten Anbieter kombiniert (falls beide konfiguriert), bezahlte
+        // Anbieter VOR dem kostenfreien versucht, Reihenfolge unter den bezahlten frei
+        // waehlbar (propertyPreferredPaidProvider). Das ist der eigentliche "mehrere
+        // Kontingente kombinieren"-Mehrwert (siehe README Abschnitt "Ausfallsicher") -
+        // ohne dieses Feature (z.B. "Light"-Edition) bleibt es bei einer abgespeckten
+        // Variante unten, kein Upgrade-Feature wird dadurch komplett unbrauchbar.
+        if ($this->HasLicenseFeature('paid_providers')) {
+            $chain = [];
+            if (isset($available[$preferred])) {
+                $chain[] = $preferred;
+                unset($available[$preferred]);
+            }
+            foreach (array_keys($available) as $provider) {
+                $chain[] = $provider;
+            }
+            $chain[] = 'free';
+
+            return $chain;
+        }
+
+        // Ohne "paid_providers" (z.B. "Light"-Edition): der kostenfreie Anbieter bleibt
+        // IMMER die primaere, garantierte Grundausstattung (steht schon ab Werk, ohne
+        // jede Konfiguration, siehe README) - zusaetzlich darf hoechstens EIN einzelner
+        // bezahlter Anbieter als Rueckfall danach greifen, nie beide gleichzeitig
+        // verkettet (das bleibt dem "paid_providers"-Feature vorbehalten). Sind beide
+        // Keys eingetragen, entscheidet propertyPreferredPaidProvider, WELCHER der
+        // beiden genutzt wird - ist nur einer eingetragen, wird automatisch dieser eine
+        // verwendet, unabhaengig von der Praeferenz-Einstellung.
+        $singleFallback = null;
         if (isset($available[$preferred])) {
-            $chain[] = $preferred;
-            unset($available[$preferred]);
+            $singleFallback = $preferred;
+        } elseif ($available !== []) {
+            $singleFallback = array_key_first($available);
         }
-        foreach (array_keys($available) as $provider) {
-            $chain[] = $provider;
+
+        $chain = ['free'];
+        if ($singleFallback !== null) {
+            $chain[] = $singleFallback;
         }
-        $chain[] = 'free';
 
         return $chain;
     }

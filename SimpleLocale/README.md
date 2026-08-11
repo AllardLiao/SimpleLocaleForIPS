@@ -234,8 +234,9 @@ Automatischer Rescan (Minuten)  | Intervall für automatisches Neu-Einlesen des 
 Simple Locale funktioniert **ab Werk ohne jede Konfiguration**: Ganz ohne eingetragenen API-Key läuft die Übersetzung sofort über einen kostenfreien, account-losen Anbieter ([MyMemory](https://mymemory.translated.net)). Google Cloud Translate und DeepL sind beide **optional** und lassen sich unabhängig voneinander zusätzlich eintragen (eigene Panels "Übersetzungsanbieter" im Konfigurationsformular):
 
 - **Nur kostenfrei** (Auslieferungszustand): 5.000 Zeichen/Tag anonym, mit hinterlegter Kontakt-E-Mail (Feld "Kontakt-E-Mail für den kostenfreien Anbieter") 50.000 Zeichen/Tag. Kein Konto, kein Key.
-- **Google und/oder DeepL zusätzlich eingetragen**: werden bevorzugt verwendet (Reihenfolge über "Bevorzugter Anbieter" wählbar, falls beide eingetragen sind) - deutlich großzügigere Freikontingente/Qualität, aber jeweils ein eigenes Konto samt API-Key nötig.
-- **Ausfallsicher durch Verkettung**: Schlägt ein Anbieter fehl (Tageskontingent erschöpft, Preismodell geändert, Key abgelaufen, Netzwerkfehler), übernimmt automatisch der nächste in der Kette - der kostenfreie Anbieter steht dabei immer als letztes, garantiert verfügbares Glied am Ende. Die Übersetzung funktioniert dadurch strukturell auch dann noch, wenn Google/DeepL komplett ausfallen oder ihr Preismodell ändern sollten.
+- **Google und/oder DeepL zusätzlich eingetragen, volle Verkettung** (Pro-Feature `paid_providers`, siehe [Abschnitt 8](#8-lizenz-und-testversion)): bezahlte Anbieter werden VOR dem kostenfreien versucht (Reihenfolge über "Bevorzugter Anbieter" wählbar, falls beide eingetragen sind), beide bezahlten Anbieter kombiniert, falls beide konfiguriert - deutlich großzügigere Freikontingente/Qualität, aber jeweils ein eigenes Konto samt API-Key nötig.
+- **Google und/oder DeepL eingetragen, ohne `paid_providers`** (z. B. "Light"-Edition): der kostenfreie Anbieter bleibt immer die primäre Grundausstattung, zusätzlich darf höchstens EIN einzelner bezahlter Anbieter als Rückfall danach greifen (nie beide gleichzeitig verkettet) - welcher, entscheidet "Bevorzugter Anbieter", falls beide eingetragen sind.
+- **Ausfallsicher durch Verkettung**: Schlägt ein Anbieter fehl (Tageskontingent erschöpft, Preismodell geändert, Key abgelaufen, Netzwerkfehler), übernimmt automatisch der nächste in der jeweiligen Kette - der kostenfreie Anbieter steht dabei immer als garantiert verfügbares Glied bereit (mit `paid_providers` am Ende, ohne dieses Feature am Anfang). Die Übersetzung funktioniert dadurch strukturell auch dann noch, wenn Google/DeepL komplett ausfallen oder ihr Preismodell ändern sollten.
 
 Ein Anbieterwechsel (z. B. Google zu DeepL) macht bereits gewählte Zielsprachen ungültig, wenn die neue Sprachliste andere Codes verwendet (Google: klein geschrieben "de"/"en", DeepL: teils groß geschrieben mit Regionsvariante "DE"/"EN-GB") - betroffene Zielsprachen müssen dann neu ausgewählt werden. Der kostenfreie Anbieter hat keinen eigenen Sprachlisten-Endpunkt und nutzt eine eingebaute, rund 25 Sprachen umfassende statische Liste.
 
@@ -396,11 +397,20 @@ Standard-Tier) schaltet zusätzliche Fähigkeiten frei - aktuell:
   (Property "Automatischer Rescan (Minuten)"). Ohne das Flag bleibt das Feld
   ausgegraut und der Timer aus - der manuelle Rescan-Button ("Baum neu
   einlesen") ist davon unabhängig und in jeder Edition nutzbar.
-- `paid_providers`: schaltet Google Cloud Translate/DeepL als
-  Übersetzungsanbieter frei (siehe "Übersetzungsanbieter" oben). Ohne das
-  Flag wird ausschließlich der kostenfreie Anbieter genutzt, selbst wenn
-  Google-/DeepL-Keys eingetragen sind - die Keys werden dabei nie gelöscht,
-  nur ignoriert (greifen sofort, sobald ein Upgrade das Flag freischaltet).
+- `paid_providers`: schaltet die VOLLE Anbieter-Verkettung frei - beide
+  bezahlten Anbieter kombiniert (falls beide konfiguriert), bezahlte
+  Anbieter VOR dem kostenfreien versucht, Reihenfolge unter den bezahlten
+  frei wählbar (siehe "Übersetzungsanbieter" oben). Ohne dieses Flag (z. B.
+  "Light"-Edition) bleibt der kostenfreie Anbieter immer die primäre,
+  garantierte Grundausstattung - zusätzlich darf höchstens EIN einzelner
+  bezahlter Anbieter als Rückfall danach greifen, nie beide gleichzeitig
+  verkettet. Sind beide Keys eingetragen, entscheidet "Bevorzugter
+  Anbieter", welcher der beiden genutzt wird; ist nur einer eingetragen,
+  wird automatisch dieser eine verwendet. Kette also z. B. `['free',
+  'google']` statt `['google', 'deepl', 'free']` bei voller Freischaltung.
+  Kein eingetragener Key geht dabei je verloren - ein Upgrade schaltet
+  sofort die volle Verkettung frei, ohne dass etwas neu eingegeben werden
+  müsste.
 - `unlimited_language_switch`: hebt ein sonst geltendes Limit von einem
   Sprachwechsel pro rollierendem 24h-Fenster auf. Ein wiederholter Wechsel
   zur bereits aktiven Sprache oder zurück zur Basissprache/Original zählt nie
