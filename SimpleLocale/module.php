@@ -202,6 +202,11 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterPropertyString(self::propertySourceLanguage, 'de');
         $this->RegisterPropertyString(self::propertyTargetLanguages, '[]');
         $this->RegisterPropertyString(self::propertyGoogleTranslateAPIKey, '');
+        // Default 'google': bestehende Installationen mit nur einem gespeicherten
+        // GoogleTranslateAPIKey funktionieren nach einem Modul-Update unveraendert
+        // weiter, ohne dass der Anbieter explizit umgestellt werden muss.
+        $this->RegisterPropertyString(self::propertyTranslationProvider, 'google');
+        $this->RegisterPropertyString(self::propertyDeepLAPIKey, '');
         $this->RegisterPropertyInteger(self::propertyAutoRescanInterval, 0);
         $this->RegisterPropertyString(self::propertyObjectNames, '[]');
         $this->RegisterPropertyString(self::propertyObjectTexts, '[]');
@@ -289,7 +294,12 @@ private const LANGUAGE_FLAGS = [
             $this->SetStatus(102);
         }
 
-        $interval = $this->ReadPropertyInteger(self::propertyAutoRescanInterval);
+        // Automatischer (Timer-gesteuerter) Rescan ist ein Pro-Feature (siehe
+        // HasLicenseFeature) - ohne "auto_rescan" bleibt der Timer aus, unabhängig
+        // vom gespeicherten Property-Wert (der selbst nicht zurückgesetzt wird, damit
+        // er bei erneuter Lizenzierung sofort wieder greift). Manueller Rescan per
+        // Button/IPSSL_Rescan bleibt davon unberührt und für alle Editionen nutzbar.
+        $interval = $this->HasLicenseFeature('auto_rescan') ? $this->ReadPropertyInteger(self::propertyAutoRescanInterval) : 0;
         $this->SetTimerInterval($this->GetAutoRescanTimerIdent(), $interval > 0 ? $interval * 60 * 1000 : 0);
 
         $this->SyncValueUpdateRegistrations();
@@ -343,7 +353,7 @@ private const LANGUAGE_FLAGS = [
                 // Prüft die tatsächliche Ursache serverseitig nach, statt sich allein
                 // auf den (nur indirekten) Hinweis "hinzugefügte Zeile hat leeren Code"
                 // aus form.json zu verlassen.
-                if ($this->ReadPropertyString(self::propertyGoogleTranslateAPIKey) === '') {
+                if ($this->GetActiveApiKey() === '') {
                     $this->UpdateFormField('ApiKeyMissingPopup', 'visible', true);
                 } elseif (!$this->HasCachedLanguages()) {
                     $this->UpdateFormField('ApiKeyInvalidPopup', 'visible', true);
@@ -436,6 +446,18 @@ private const LANGUAGE_FLAGS = [
 
                 case self::propertyCurrentLanguage:
                     $element['options'] = $this->BuildCurrentLanguageOptions();
+                    break;
+
+                // Automatischer (Timer-gesteuerter) Rescan ist ein Pro-Feature (siehe
+                // HasLicenseFeature/ApplyChanges) - ohne "auto_rescan" bleibt das Feld
+                // sichtbar, aber ausgegraut, statt es zu verstecken (macht auf einen
+                // Blick klar, dass hier ein Upgrade nötig ist). Der manuelle Rescan-
+                // Button bleibt davon unberührt.
+                case self::propertyAutoRescanInterval:
+                    if (!$this->HasLicenseFeature('auto_rescan')) {
+                        $element['enabled'] = false;
+                        $element['caption'] .= ' (' . $this->Translate('Pro Edition erforderlich') . ')';
+                    }
                     break;
 
                 case 'UnnamedObjectsLabel':
@@ -785,10 +807,14 @@ private const LANGUAGE_FLAGS = [
         return $info['allowedLanguages'] ?? [];
     }
 
-    // Pro-Feature-Flags im Lizenzschlüssel (aktuell nur "edit_translations" -
-    // schaltet das manuelle Korrigieren einzelner Übersetzungszellen frei,
-    // siehe BuildLanguageColumnSet). Fehlt das Feature-Array (Standard-Tier-
-    // Lizenz ohne Zusatz-Features), gilt das Feature als NICHT freigeschaltet -
+    // Pro-Feature-Flags im Lizenzschlüssel:
+    //   - "edit_translations" schaltet das manuelle Korrigieren einzelner
+    //     Übersetzungszellen frei, siehe BuildLanguageColumnSet.
+    //   - "auto_rescan" schaltet den Timer-gesteuerten automatischen Rescan frei,
+    //     siehe ApplyChanges/PopulateFormElements. Der manuelle Rescan-Button ist
+    //     davon unabhängig und immer nutzbar.
+    // Fehlt das Feature-Array (Standard-Tier-Lizenz ohne Zusatz-Features), gilt
+    // das jeweilige Feature als NICHT freigeschaltet -
     // konservativer Default, siehe README Abschnitt 8. Während der Testphase
     // selbst (keine/noch keine Lizenz) bleibt Editieren bewusst erlaubt, damit
     // der komplette Mechanismus vor dem Kauf ausprobierbar ist.
@@ -1086,7 +1112,7 @@ private const LANGUAGE_FLAGS = [
         // auf die dann derselbe generische Mechanismus angewendet werden kann.
         if (($presentation['PRESENTATION'] ?? '') === VARIABLE_PRESENTATION_LEGACY) {
             $profileName = $presentation['PROFILE'] ?? '';
-            if ($profileName === '' || !@IPS_VariableProfileExists($profileName)) {
+            if ($profileName === '' || !@IPS_VariableProfileExists($profileName) || $this->IsContinuousLegacyProfile($profileName)) {
                 return;
             }
             $associations = IPS_GetVariableProfile($profileName)['Associations'] ?? [];
@@ -1530,6 +1556,22 @@ private const LANGUAGE_FLAGS = [
         return IPS_GetVariable($variableID)['VariableType'] === VARIABLETYPE_STRING ? $variableID : null;
     }
 
+    // Ein Legacy-Profil mit MaxValue > MinValue ist ein echter kontinuierlicher
+    // Wertebereich (Schieberegler) - selbst wenn es zusätzlich ein paar Associations
+    // als reine Icon-/Text-Marker trägt (z. B. "Aus" bei 0), darf es NIE zu einer
+    // reinen VARIABLE_PRESENTATION_ENUMERATION umgeschrieben werden: das würde
+    // MinValue/MaxValue/StepSize/Digits/Suffix verwerfen und WebFront auf eine reine
+    // Werteingabe zurückfallen lassen statt eines Schiebereglers (live als Bug
+    // gemeldet: ein Licht-Dimmer verlor nach der Übersetzung seinen Schieberegler).
+    // Solche Profile werden daher weder gescannt noch geforkt - ihre Associations
+    // bleiben unübersetzt, aber der Schieberegler selbst bleibt intakt.
+    private function IsContinuousLegacyProfile(string $ProfileName): bool
+    {
+        $profile = IPS_GetVariableProfile($ProfileName);
+
+        return (float) ($profile['MaxValue'] ?? 0) > (float) ($profile['MinValue'] ?? 0);
+    }
+
     // Liest die aktuell wirksamen Enum-Optionen einer Variable (Value+Caption+Icon+
     // Color je Option), unabhängig davon, ob sie über ein klassisches, ggf. geteiltes
     // Profil (VARIABLE_PRESENTATION_LEGACY) oder eine moderne Enumeration-Presentation
@@ -1568,7 +1610,7 @@ private const LANGUAGE_FLAGS = [
         // gebracht, damit ab hier derselbe generische Mechanismus greift.
         if (($presentation['PRESENTATION'] ?? '') === VARIABLE_PRESENTATION_LEGACY) {
             $profileName = $presentation['PROFILE'] ?? '';
-            if ($profileName === '' || !@IPS_VariableProfileExists($profileName)) {
+            if ($profileName === '' || !@IPS_VariableProfileExists($profileName) || $this->IsContinuousLegacyProfile($profileName)) {
                 return null;
             }
             $associations = IPS_GetVariableProfile($profileName)['Associations'] ?? [];
@@ -1852,9 +1894,31 @@ private const LANGUAGE_FLAGS = [
         return mb_strtoupper(mb_substr($Text, 0, 1, 'UTF-8'), 'UTF-8') . mb_substr($Text, 1, null, 'UTF-8');
     }
 
+    // Welcher Anbieter TranslateBatch/FetchSupportedLanguages tatsaechlich bedient -
+    // 'google' (Default, Cloud Translation API v2) oder 'deepl' (DeepL API v2).
+    // Beide Provider sind gleichberechtigt waehlbar, jeweils mit eigenem API-Key
+    // (propertyGoogleTranslateAPIKey/propertyDeepLAPIKey) - NICHT gleichzeitig
+    // aktiv (kein kombiniertes Freivolumen aus beiden APIs, siehe README/Non-Goals).
+    private function GetActiveTranslationProvider(): string
+    {
+        return $this->ReadPropertyString(self::propertyTranslationProvider) === 'deepl' ? 'deepl' : 'google';
+    }
+
+    // Der fuer den aktuell gewaehlten Anbieter hinterlegte API-Key - zentrale Stelle,
+    // die alle bisherigen direkten ReadPropertyString(propertyGoogleTranslateAPIKey)-
+    // Aufrufe ersetzt, damit TranslateChunk/FetchLanguageNames/etc. den Anbieter nicht
+    // selbst kennen muessen.
+    private function GetActiveApiKey(): string
+    {
+        return $this->GetActiveTranslationProvider() === 'deepl'
+            ? $this->ReadPropertyString(self::propertyDeepLAPIKey)
+            : $this->ReadPropertyString(self::propertyGoogleTranslateAPIKey);
+    }
+
     // Google Cloud Translate lehnt Anfragen mit mehr als 128 Texten in einem
     // Aufruf komplett ab ("Too many text segments") - größere Batches werden
-    // daher in mehrere Aufrufe aufgeteilt.
+    // daher in mehrere Aufrufe aufgeteilt. DeepL dokumentiert kein hartes Limit,
+    // dieselbe Chunk-Groesse ist trotzdem eine vernuenftige Obergrenze pro Request.
     private const translateMaxTextsPerRequest = 128;
 
     private function TranslateBatch(array $Texts, string $Source, string $Target, string $DebugContext = ''): array
@@ -1872,7 +1936,7 @@ private const LANGUAGE_FLAGS = [
             return $Texts;
         }
 
-        $apiKey = $this->ReadPropertyString(self::propertyGoogleTranslateAPIKey);
+        $apiKey = $this->GetActiveApiKey();
         if ($apiKey === '') {
             return array_fill(0, count($Texts), '');
         }
@@ -1912,12 +1976,26 @@ private const LANGUAGE_FLAGS = [
         return $result;
     }
 
+    // Dispatcht an den gerade aktiven Anbieter - $Source/$Target sind hier bereits
+    // die Rohcodes, wie sie der jeweilige Anbieter selbst in FetchLanguageNames()
+    // geliefert hat (Google: klein geschrieben "de"/"en", DeepL: groß geschrieben
+    // "DE"/"EN-GB") - beide Provider bekommen daher immer nur ihre eigene
+    // Code-Schreibweise zu sehen, es findet keine Umschreibung zwischen den
+    // Anbietern statt (siehe README, Abschnitt "Übersetzungsanbieter": ein
+    // Anbieterwechsel macht bereits gewählte Zielsprachen ungültig).
     private function TranslateChunk(array $Texts, string $Source, string $Target, string $ApiKey, string $DebugContext = ''): array
     {
         if ($Texts === []) {
             return [];
         }
 
+        return $this->GetActiveTranslationProvider() === 'deepl'
+            ? $this->TranslateChunkDeepL($Texts, $Source, $Target, $ApiKey, $DebugContext)
+            : $this->TranslateChunkGoogle($Texts, $Source, $Target, $ApiKey, $DebugContext);
+    }
+
+    private function TranslateChunkGoogle(array $Texts, string $Source, string $Target, string $ApiKey, string $DebugContext = ''): array
+    {
         $body = [
             'q'      => $Texts,
             'source' => $Source,
@@ -1960,6 +2038,41 @@ private const LANGUAGE_FLAGS = [
         }, $translations);
     }
 
+    private function TranslateChunkDeepL(array $Texts, string $Source, string $Target, string $ApiKey, string $DebugContext = ''): array
+    {
+        $body = [
+            'text'        => $Texts,
+            'source_lang' => $Source,
+            'target_lang' => $Target,
+            // "html": DeepL uebersetzt dann nur den Text zwischen Tags, analog zum
+            // "format": "html" bei Google - siehe TranslateChunkGoogle.
+            'tag_handling' => 'html',
+        ];
+        $payload = json_encode($body);
+
+        $this->SendDebug('DeepLTranslate_Request', $DebugContext . ' | ' . $payload, 0);
+
+        $response = $this->CallDeepLAPI($ApiKey, '/v2/translate', $payload);
+
+        $this->SendDebug('DeepLTranslate_Response', $DebugContext . ' | ' . ($response ?? '(keine Antwort)'), 0);
+
+        if ($response === null) {
+            return array_fill(0, count($Texts), '');
+        }
+
+        $decoded = json_decode($response, true);
+        $translations = $decoded['translations'] ?? null;
+        if (!is_array($translations)) {
+            $this->SetStatus(self::STATUS_TRANSLATE_ERROR);
+
+            return array_fill(0, count($Texts), '');
+        }
+
+        return array_map(function ($entry) {
+            return $entry['text'] ?? '';
+        }, $translations);
+    }
+
     // Zerlegt einen Text in abwechselnd übersetzbare und geschützte (<style>/<script>-
     // Block-)Segmente, in ursprünglicher Reihenfolge. Style-/Script-Inhalte gehen nie
     // an Google - dort würden CSS-Eigenschaften/JS-Code wie normaler Fließtext
@@ -1994,7 +2107,7 @@ private const LANGUAGE_FLAGS = [
 
     private function RefreshAvailableLanguagesIfStale(): void
     {
-        $apiKey = $this->ReadPropertyString(self::propertyGoogleTranslateAPIKey);
+        $apiKey = $this->GetActiveApiKey();
         if ($apiKey === '') {
             return;
         }
@@ -2009,7 +2122,7 @@ private const LANGUAGE_FLAGS = [
 
     private function FetchSupportedLanguages(): void
     {
-        if ($this->ReadPropertyString(self::propertyGoogleTranslateAPIKey) === '') {
+        if ($this->GetActiveApiKey() === '') {
             $this->SetStatus(self::STATUS_TRANSLATE_ERROR);
 
             return;
@@ -2030,18 +2143,27 @@ private const LANGUAGE_FLAGS = [
         $this->WriteAttributeInteger(self::attributeAvailableLanguagesFetchedAt, time());
     }
 
-    // Von Google unterstützte Sprachen, mit Namen in $Target - gemeinsam genutzt von
-    // FetchSupportedLanguages() (Admin-Konsolensprache) und EnsureGuestLanguageNamesFresh()
-    // (aktuell aktive Gast-Sprache). null bei fehlendem Key oder Fehler beim Abruf.
+    // Dispatcht an den aktiven Anbieter - siehe TranslateChunk fuer denselben Aufbau.
+    // null bei fehlendem Key oder Fehler beim Abruf.
     private function FetchLanguageNames(string $Target): ?array
     {
-        $apiKey = $this->ReadPropertyString(self::propertyGoogleTranslateAPIKey);
+        $apiKey = $this->GetActiveApiKey();
         if ($apiKey === '') {
             return null;
         }
 
+        return $this->GetActiveTranslationProvider() === 'deepl'
+            ? $this->FetchLanguageNamesDeepL($apiKey)
+            : $this->FetchLanguageNamesGoogle($apiKey, $Target);
+    }
+
+    // Von Google unterstützte Sprachen, mit Namen in $Target - gemeinsam genutzt von
+    // FetchSupportedLanguages() (Admin-Konsolensprache) und EnsureGuestLanguageNamesFresh()
+    // (aktuell aktive Gast-Sprache).
+    private function FetchLanguageNamesGoogle(string $ApiKey, string $Target): ?array
+    {
         $url = 'https://translation.googleapis.com/language/translate/v2/languages'
-            . '?key=' . urlencode($apiKey)
+            . '?key=' . urlencode($ApiKey)
             . '&target=' . urlencode($Target);
 
         $response = $this->CallGoogleTranslateAPI($url, null);
@@ -2059,6 +2181,40 @@ private const LANGUAGE_FLAGS = [
 
         $names = [];
         foreach ($languages as $entry) {
+            $code = $entry['language'] ?? '';
+            if ($code !== '') {
+                $names[$code] = $entry['name'] ?? $code;
+            }
+        }
+
+        return $names;
+    }
+
+    // DeepL liefert ausschliesslich englische Namen (kein "?target="-Parameter wie
+    // bei Google) - akzeptierte Vereinfachung. type=target liefert alle waehlbaren
+    // Zielsprachen (inkl. Regionsvarianten wie EN-GB/EN-US/PT-PT/PT-BR) und wird
+    // hier als EINZIGE Liste fuer Quell-, Ziel- und "aktuell aktive Sprache"-
+    // Dropdowns wiederverwendet (Modul kennt bisher nur eine gemeinsame Liste, siehe
+    // GetKnownLanguages) - DeepLs separate, schmalere "type=source"-Liste bliebe
+    // sonst ungenutzt. Praktische Folge: ein paar zusaetzliche Regionscodes tauchen
+    // auch im Basissprache-Dropdown auf, obwohl DeepL sie dort nicht akzeptieren
+    // wuerde - siehe README, Abschnitt "Übersetzungsanbieter".
+    private function FetchLanguageNamesDeepL(string $ApiKey): ?array
+    {
+        $response = $this->CallDeepLAPI($ApiKey, '/v2/languages?type=target', null);
+        if ($response === null) {
+            return null;
+        }
+
+        $decoded = json_decode($response, true);
+        if (!is_array($decoded)) {
+            $this->SetStatus(self::STATUS_TRANSLATE_ERROR);
+
+            return null;
+        }
+
+        $names = [];
+        foreach ($decoded as $entry) {
             $code = $entry['language'] ?? '';
             if ($code !== '') {
                 $names[$code] = $entry['name'] ?? $code;
@@ -2088,6 +2244,47 @@ private const LANGUAGE_FLAGS = [
 
         if ($response === false || $httpCode >= 400 || $error !== '') {
             $this->SendDebug('GoogleTranslate', sprintf('HTTP %s, Fehler: %s, Antwort: %s', $httpCode, $error, (string) $response), 0);
+            $this->SetStatus(self::STATUS_TRANSLATE_ERROR);
+
+            return null;
+        }
+
+        return $response;
+    }
+
+    // Freie DeepL-API-Keys enden dokumentiert immer auf ":fx" - daran laesst sich
+    // die richtige Basis-URL automatisch waehlen, ohne dass der Nutzer selbst
+    // zwischen "Free"/"Pro" unterscheiden muss.
+    private function GetDeepLBaseUrl(string $ApiKey): string
+    {
+        return str_ends_with($ApiKey, ':fx') ? 'https://api-free.deepl.com' : 'https://api.deepl.com';
+    }
+
+    // Gemeinsamer HTTP-Client fuer die DeepL API (GET ohne Body, POST mit JSON-Body) -
+    // Aufbau bewusst parallel zu CallGoogleTranslateAPI, nur mit DeepL-spezifischer
+    // Auth (Header statt URL-Parameter) und Basis-URL-Wahl.
+    private function CallDeepLAPI(string $ApiKey, string $Path, ?string $JsonBody): ?string
+    {
+        $url = $this->GetDeepLBaseUrl($ApiKey) . $Path;
+        $curl = curl_init($url);
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curl, CURLOPT_TIMEOUT, 15);
+
+        $headers = ['Authorization: DeepL-Auth-Key ' . $ApiKey];
+        if ($JsonBody !== null) {
+            curl_setopt($curl, CURLOPT_POST, true);
+            curl_setopt($curl, CURLOPT_POSTFIELDS, $JsonBody);
+            $headers[] = 'Content-Type: application/json';
+        }
+        curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
+
+        $response = curl_exec($curl);
+        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        $error = curl_error($curl);
+        curl_close($curl);
+
+        if ($response === false || $httpCode >= 400 || $error !== '') {
+            $this->SendDebug('DeepLTranslate', sprintf('HTTP %s, Fehler: %s, Antwort: %s', $httpCode, $error, (string) $response), 0);
             $this->SetStatus(self::STATUS_TRANSLATE_ERROR);
 
             return null;
@@ -2321,7 +2518,7 @@ private const LANGUAGE_FLAGS = [
             return $cache;
         }
 
-        $apiKey = $this->ReadPropertyString(self::propertyGoogleTranslateAPIKey);
+        $apiKey = $this->GetActiveApiKey();
         if ($apiKey === '') {
             return $cache;
         }
@@ -2518,9 +2715,9 @@ private const LANGUAGE_FLAGS = [
     // leeren/irreführenden Auswahl gibt es dann einen erklärenden Platzhalter.
     private function BuildTargetLanguageOptions(string $SourceLanguage): array
     {
-        if ($this->ReadPropertyString(self::propertyGoogleTranslateAPIKey) === '') {
+        if ($this->GetActiveApiKey() === '') {
             return [[
-                'caption' => $this->Translate('Bitte zuerst Google Cloud Translate API-Key eintragen und übernehmen'),
+                'caption' => $this->Translate('Bitte zuerst einen Übersetzungs-API-Key eintragen und übernehmen'),
                 'value'   => '',
             ]];
         }

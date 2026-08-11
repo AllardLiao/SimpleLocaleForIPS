@@ -11,6 +11,10 @@ trait SimpleLocaleConstants
     private const propertySourceLanguage = 'SourceLanguage';
     private const propertyTargetLanguages = 'TargetLanguages';
     private const propertyGoogleTranslateAPIKey = 'GoogleTranslateAPIKey';
+    // 'google' oder 'deepl' - welcher Anbieter TranslateBatch/FetchSupportedLanguages
+    // tatsaechlich bedient, siehe GetActiveTranslationProvider/GetActiveApiKey.
+    private const propertyTranslationProvider = 'TranslationProvider';
+    private const propertyDeepLAPIKey = 'DeepLAPIKey';
     private const propertyAutoRescanInterval = 'AutoRescanInterval';
     private const propertyObjectNames = 'ObjectNames';
     private const propertyObjectTexts = 'ObjectTexts';
@@ -176,10 +180,8 @@ trait SimpleLocaleConstants
     // irgendein - Repo, sondern nur in ein eigenes, privates Verkaufs-/Signier-Tool.
     private const LICENSE_PUBLIC_KEY = 't+eCtcgi3e7U09kNO4vpqNpeSsLkYApMgyHYz4lVp4M=';
 
-    // "Permalink" zum Lizenzerwerb - aktuell nur ein Verweis auf das GitHub-Repo,
-    // da es noch keinen eigenen Shop gibt. Eine einzige zentrale Konstante, damit
-    // später nur hier eine echte Verkaufs-URL eingetragen werden muss.
-    private const LICENSE_PURCHASE_URL = 'https://github.com/AllardLiao/SimpleLocaleForIPS';
+    // "Permalink" zum Lizenzerwerb - zeigt auf den Preisvergleich im echten Shop.
+    private const LICENSE_PURCHASE_URL = 'https://www.synergetix.de/simplelocale/pricing.php';
 
     // Meldeserver fürs Erkennen von Lizenzmissbrauch (z.B. ein Schlüssel wird als
     // "gebraucht" mehrfach weiterverkauft) - siehe TrackLicenseActivationIfNew.

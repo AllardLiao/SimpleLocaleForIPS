@@ -210,7 +210,7 @@ Aktuell aktive Sprache          | Welche Sprache gerade angezeigt wird - normale
 Weltkugel-Symbol in der Kachel anzeigen | Blendet das 🌐-Symbol links neben dem Dropdown aus, falls nicht gewünscht (z. B. bei eigenem Kachel-Design). Standardmäßig an.
 Info-Symbol in der Kachel anzeigen | Blendet das ⓘ-Symbol (Erklärung der Einschränkungen, siehe Abschnitt 2) aus. Standardmäßig an.
 Google Cloud Translate API-Key  | API-Key für die Cloud Translation API v2. **Muss zuerst eingetragen und über "Übernehmen" gespeichert werden**, bevor irgendetwas anderes funktioniert - insbesondere ist der "Hinzufügen"-Button bei den Zielsprachen bis dahin ausgegraut (nicht versteckt, sondern deaktiviert), da ohne gültigen Key keine echte Sprachliste von Google geladen werden kann.
-Automatischer Rescan (Minuten)  | Intervall für automatisches Neu-Einlesen des Baums, 0 = nur manuell über den Button "Baum neu einlesen" (siehe unten).
+Automatischer Rescan (Minuten)  | Intervall für automatisches Neu-Einlesen des Baums, 0 = nur manuell über den Button "Baum neu einlesen" (siehe unten). **Pro-Feature** (`auto_rescan`, siehe [Abschnitt 8](#8-lizenz-und-testversion)) - ohne dieses Feature bleibt das Feld ausgegraut und der Timer aus, der manuelle Rescan-Button bleibt aber in jeder Edition nutzbar.
 
 **Übersetzung:**
 
@@ -358,14 +358,20 @@ nur erlaubte Sprachen, `EnforceLicensedLanguageLimit` entfernt serverseitig
 alles außerhalb der Liste).
 
 **Pro-Feature-Flags:** Ein `features`-Feld (Liste von Flag-Namen, leer =
-Standard-Tier) schaltet zusätzliche Fähigkeiten frei - aktuell
-`edit_translations`: erlaubt das manuelle Korrigieren einzelner
-Übersetzungszellen in den Listen "Objektnamen"/"Eigene Texte"/"Enum-
-Beschriftungen" (ohne das Flag sind diese Spalten rein lesend). Während der
-Testphase selbst bleibt Editieren bewusst immer erlaubt, damit der komplette
-Mechanismus vor dem Kauf ausprobierbar ist - die Sperre gilt nur für
-Vollversion-Lizenzen ohne das Flag. Wie bei `allowedLanguages` einfach als
-weiteres Feld im selben Payload kombinierbar.
+Standard-Tier) schaltet zusätzliche Fähigkeiten frei - aktuell:
+
+- `edit_translations`: erlaubt das manuelle Korrigieren einzelner
+  Übersetzungszellen in den Listen "Objektnamen"/"Eigene Texte"/"Enum-
+  Beschriftungen" (ohne das Flag sind diese Spalten rein lesend).
+- `auto_rescan`: schaltet den Timer-gesteuerten automatischen Rescan frei
+  (Property "Automatischer Rescan (Minuten)"). Ohne das Flag bleibt das Feld
+  ausgegraut und der Timer aus - der manuelle Rescan-Button ("Baum neu
+  einlesen") ist davon unabhängig und in jeder Edition nutzbar.
+
+Während der Testphase selbst bleiben beide Features bewusst immer erlaubt,
+damit der komplette Mechanismus vor dem Kauf ausprobierbar ist - die Sperre
+gilt nur für Vollversion-Lizenzen ohne das jeweilige Flag. Wie bei
+`allowedLanguages` einfach als weiteres Feld im selben Payload kombinierbar.
 
 **Erkennung von Lizenzmissbrauch:** Bei jeder Aktivierung (Button "Lizenz
 aktivieren" oder einfach nur "Übernehmen" mit einem neuen gültigen Schlüssel)

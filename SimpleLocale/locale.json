@@ -61,9 +61,11 @@
             "Lizenz": "License",
             "\nLizenz": "\nLicense",
             "Produktinformationen": "Product information",
-            "Simple Locale for IP-Symcon ist kommerzielle Software mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben).": "Simple Locale for IP-Symcon is commercial software with a free trial version (see the \"License\" section above).",
-            "Lizenz erwerben, Quellcode und Dokumentation: https://github.com/AllardLiao/SimpleLocaleForIPS": "Purchase a license, source code and documentation: https://github.com/AllardLiao/SimpleLocaleForIPS",
-            "Sprachlimit dieser Lizenz erreicht, max.": "Language limit of this license reached, max."
+            "Simple Locale for IP-Symcon ist proprietäre, kommerzielle Software von Synergetix mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben) - kein Open-Source-Projekt.": "Simple Locale for IP-Symcon is proprietary, commercial software by Synergetix with a free trial version (see the \"License\" section above) - not an open-source project.",
+            "Produktseite: https://www.synergetix.de/simplelocale/": "Product page: https://www.synergetix.de/simplelocale/",
+            "Lizenz erwerben: https://www.synergetix.de/simplelocale/pricing.php": "Purchase a license: https://www.synergetix.de/simplelocale/pricing.php",
+            "Sprachlimit dieser Lizenz erreicht, max.": "Language limit of this license reached, max.",
+            "Pro Edition erforderlich": "Pro Edition required"
         },
         "es": {
             "Sprache": "Idioma",
@@ -126,9 +128,11 @@
             "Lizenz": "Licencia",
             "\nLizenz": "\nLicencia",
             "Produktinformationen": "Información del producto",
-            "Simple Locale for IP-Symcon ist kommerzielle Software mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben).": "Simple Locale for IP-Symcon es software comercial con una versión de prueba gratuita (véase la sección \"Licencia\" más arriba).",
-            "Lizenz erwerben, Quellcode und Dokumentation: https://github.com/AllardLiao/SimpleLocaleForIPS": "Adquirir una licencia, código fuente y documentación: https://github.com/AllardLiao/SimpleLocaleForIPS",
-            "Sprachlimit dieser Lizenz erreicht, max.": "Límite de idiomas de esta licencia alcanzado, máx."
+            "Simple Locale for IP-Symcon ist proprietäre, kommerzielle Software von Synergetix mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben) - kein Open-Source-Projekt.": "Simple Locale for IP-Symcon es software propietaria y comercial de Synergetix con una versión de prueba gratuita (véase la sección \"Licencia\" más arriba) - no es un proyecto de código abierto.",
+            "Produktseite: https://www.synergetix.de/simplelocale/": "Página del producto: https://www.synergetix.de/simplelocale/",
+            "Lizenz erwerben: https://www.synergetix.de/simplelocale/pricing.php": "Adquirir una licencia: https://www.synergetix.de/simplelocale/pricing.php",
+            "Sprachlimit dieser Lizenz erreicht, max.": "Límite de idiomas de esta licencia alcanzado, máx.",
+            "Pro Edition erforderlich": "Se requiere la edición Pro"
         },
         "it": {
             "Sprache": "Lingua",
@@ -191,9 +195,11 @@
             "Lizenz": "Licenza",
             "\nLizenz": "\nLicenza",
             "Produktinformationen": "Informazioni sul prodotto",
-            "Simple Locale for IP-Symcon ist kommerzielle Software mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben).": "Simple Locale for IP-Symcon è software commerciale con una versione di prova gratuita (vedi la sezione \"Licenza\" sopra).",
-            "Lizenz erwerben, Quellcode und Dokumentation: https://github.com/AllardLiao/SimpleLocaleForIPS": "Acquista una licenza, codice sorgente e documentazione: https://github.com/AllardLiao/SimpleLocaleForIPS",
-            "Sprachlimit dieser Lizenz erreicht, max.": "Limite di lingue di questa licenza raggiunto, massimo"
+            "Simple Locale for IP-Symcon ist proprietäre, kommerzielle Software von Synergetix mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben) - kein Open-Source-Projekt.": "Simple Locale for IP-Symcon è software proprietario e commerciale di Synergetix con una versione di prova gratuita (vedi la sezione \"Licenza\" sopra) - non è un progetto open source.",
+            "Produktseite: https://www.synergetix.de/simplelocale/": "Pagina del prodotto: https://www.synergetix.de/simplelocale/",
+            "Lizenz erwerben: https://www.synergetix.de/simplelocale/pricing.php": "Acquista una licenza: https://www.synergetix.de/simplelocale/pricing.php",
+            "Sprachlimit dieser Lizenz erreicht, max.": "Limite di lingue di questa licenza raggiunto, massimo",
+            "Pro Edition erforderlich": "Edizione Pro richiesta"
         },
         "fr": {
             "Sprache": "Langue",
@@ -256,9 +262,11 @@
             "Lizenz": "Licence",
             "\nLizenz": "\nLicence",
             "Produktinformationen": "Informations sur le produit",
-            "Simple Locale for IP-Symcon ist kommerzielle Software mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben).": "Simple Locale for IP-Symcon est un logiciel commercial avec une version d'essai gratuite (voir la section \"Licence\" ci-dessus).",
-            "Lizenz erwerben, Quellcode und Dokumentation: https://github.com/AllardLiao/SimpleLocaleForIPS": "Acheter une licence, code source et documentation : https://github.com/AllardLiao/SimpleLocaleForIPS",
-            "Sprachlimit dieser Lizenz erreicht, max.": "Limite de langues de cette licence atteinte, max."
+            "Simple Locale for IP-Symcon ist proprietäre, kommerzielle Software von Synergetix mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben) - kein Open-Source-Projekt.": "Simple Locale for IP-Symcon est un logiciel propriétaire et commercial de Synergetix avec une version d'essai gratuite (voir la section \"Licence\" ci-dessus) - ce n'est pas un projet open source.",
+            "Produktseite: https://www.synergetix.de/simplelocale/": "Page produit : https://www.synergetix.de/simplelocale/",
+            "Lizenz erwerben: https://www.synergetix.de/simplelocale/pricing.php": "Acheter une licence : https://www.synergetix.de/simplelocale/pricing.php",
+            "Sprachlimit dieser Lizenz erreicht, max.": "Limite de langues de cette licence atteinte, max.",
+            "Pro Edition erforderlich": "Édition Pro requise"
         }
     }
 }
