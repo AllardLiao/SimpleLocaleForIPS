@@ -11,16 +11,6 @@ class SimpleLocale extends IPSModuleStrict
 {
     use SimpleLocaleConstants\SimpleLocaleConstants;
 
-    // Fallback-Liste, solange noch keine Sprachliste von Google geladen wurde
-    private const DEFAULT_LANGUAGES = [
-        ['code' => 'de', 'name' => 'Deutsch'],
-        ['code' => 'en', 'name' => 'English'],
-        ['code' => 'fr', 'name' => 'Français'],
-        ['code' => 'es', 'name' => 'Español'],
-        ['code' => 'it', 'name' => 'Italiano'],
-        ['code' => 'nl', 'name' => 'Nederlands'],
-    ];
-
     // Hinweistexte fürs Info-Symbol neben dem Dropdown - live in die aktive
     // Gast-Sprache übersetzt (siehe EnsureGuestLanguageNamesFresh), damit auch
     // dieser Text nicht die Konsolensprache des Admins mit der Gast-Sprache mischt.
@@ -40,12 +30,6 @@ class SimpleLocale extends IPSModuleStrict
     // TRIAL_DURATION_DAYS ab der ersten Einrichtung blockiert ein Rescan.
     private const IS_TRIAL_BUILD = true;
     private const TRIAL_DURATION_DAYS = 30;
-
-    // Isländisch, Walisisch, Zulu, Maori, Latein - alle von Google Cloud Translate
-    // unterstützt, aber für die allermeisten Gäste-Visualisierungen (Ferienwohnung,
-    // Showroom) kaum praxisrelevant. Voll funktionsfähig zum Testen des kompletten
-    // Mechanismus, aber ohne die Sprachen, die man in der Praxis tatsächlich braucht.
-    private const TRIAL_LANGUAGE_CODES = ['is', 'cy', 'zu', 'mi', 'la'];
 
     // Marketing: zeitlich begrenzte Aktionen, die für ALLE Installationen
     // gleichzeitig zusätzliche Sprachen kostenfrei freischalten (zusätzlich zu
@@ -86,39 +70,11 @@ class SimpleLocale extends IPSModuleStrict
         // ],
     ];
 
-    // Öffentlicher Ed25519-Schlüssel zur Prüfung von Lizenzschlüsseln (asymmetrische
-    // Signatur, siehe ValidateLicenseKey) - base64-kodiert, 32 Rohbytes.
-    //
-    // WICHTIG, Unterschied zum früheren HMAC-Ansatz: dieser Schlüssel darf öffentlich
-    // sein (er steckt zwangsläufig in jeder installierten Kopie von module.php - auch
-    // ohne öffentliches Repo könnte ihn jeder Nutzer aus seiner eigenen Installation
-    // auslesen). Er kann NUR prüfen, nicht signieren - im Gegensatz zu einem HMAC-
-    // Geheimnis (dieselbe Zeichenkette signiert UND prüft) lässt sich mit ihm KEIN
-    // gültiger Lizenzschlüssel erzeugen. Der dazugehörige PRIVATE Schlüssel (zum
-    // tatsächlichen Ausstellen von Lizenzen) gehört NIEMALS in dieses - oder
-    // irgendein - Repo, sondern nur in ein eigenes, privates Verkaufs-/Signier-Tool.
-    //
-    private const LICENSE_PUBLIC_KEY = 't+eCtcgi3e7U09kNO4vpqNpeSsLkYApMgyHYz4lVp4M=';
-
-    // "Permalink" zum Lizenzerwerb - aktuell nur ein Verweis auf das GitHub-Repo,
-    // da es noch keinen eigenen Shop gibt. Eine einzige zentrale Konstante, damit
-    // später nur hier eine echte Verkaufs-URL eingetragen werden muss.
-    private const LICENSE_PURCHASE_URL = 'https://github.com/AllardLiao/SimpleLocaleForIPS';
-
     // Rohtext (nicht über $this->Translate()!) für den Gast-Hinweis nach Ablauf der
     // Testphase - wie INFO_LIMITATION_TEXTS live per Google in die vom Gast gerade
     // gewünschte Sprache übersetzt, siehe PushTrialExpiredAlert. $this->Translate()
     // würde stattdessen die Admin-Konsolensprache treffen, nicht die Gast-Sprache.
     private const TRIAL_EXPIRED_ALERT_TEXT = 'Die Testversion ist abgelaufen. Bitte eine Lizenz erwerben:';
-
-    // Meldeserver fürs Erkennen von Lizenzmissbrauch (z.B. ein Schlüssel wird als
-    // "gebraucht" mehrfach weiterverkauft) - siehe TrackLicenseActivationIfNew.
-    // PLATZHALTER (leer): solange hier keine echte URL eingetragen ist, wird nichts
-    // verschickt, Aktivierungen landen nur lokal in attributeActivationLog/SendDebug.
-    // WICHTIG: IPS_GetLicensee() liefert eine echte, personenbezogene E-Mail-Adresse -
-    // die Erhebung/Übermittlung gehört vor dem Eintragen einer echten URL in die
-    // eigenen Lizenzbedingungen/Datenschutzhinweise.
-    private const LICENSE_ACTIVATION_REPORT_URL = '';
 
     // Rein dekorativ fürs Gast-Dropdown (GetVisualizationTile) - nicht erschöpfend,
     // unbekannte Sprachcodes bekommen einfach keine Flagge vorangestellt.

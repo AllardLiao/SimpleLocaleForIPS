@@ -146,6 +146,49 @@ trait SimpleLocaleConstants
     private const STATUS_UNNAMED_OBJECTS = 202;
     private const STATUS_TRANSLATE_ERROR = 203;
     private const STATUS_TRIAL_EXPIRED = 204;
+
+    // Fallback-Liste, solange noch keine Sprachliste von Google geladen wurde
+    private const DEFAULT_LANGUAGES = [
+        ['code' => 'de', 'name' => 'Deutsch'],
+        ['code' => 'en', 'name' => 'English'],
+        ['code' => 'fr', 'name' => 'Français'],
+        ['code' => 'es', 'name' => 'Español'],
+        ['code' => 'it', 'name' => 'Italiano'],
+        ['code' => 'nl', 'name' => 'Nederlands'],
+    ];
+
+    // Isländisch, Walisisch, Zulu, Maori, Latein - alle von Google Cloud Translate
+    // unterstützt, aber für die allermeisten Gäste-Visualisierungen (Ferienwohnung,
+    // Showroom) kaum praxisrelevant. Voll funktionsfähig zum Testen des kompletten
+    // Mechanismus, aber ohne die Sprachen, die man in der Praxis tatsächlich braucht.
+    private const TRIAL_LANGUAGE_CODES = ['is', 'cy', 'zu', 'mi', 'la'];
+
+    // Öffentlicher Ed25519-Schlüssel zur Prüfung von Lizenzschlüsseln (asymmetrische
+    // Signatur, siehe ValidateLicenseKey) - base64-kodiert, 32 Rohbytes.
+    //
+    // WICHTIG, Unterschied zum früheren HMAC-Ansatz: dieser Schlüssel darf öffentlich
+    // sein (er steckt zwangsläufig in jeder installierten Kopie von module.php - auch
+    // ohne öffentliches Repo könnte ihn jeder Nutzer aus seiner eigenen Installation
+    // auslesen). Er kann NUR prüfen, nicht signieren - im Gegensatz zu einem HMAC-
+    // Geheimnis (dieselbe Zeichenkette signiert UND prüft) lässt sich mit ihm KEIN
+    // gültiger Lizenzschlüssel erzeugen. Der dazugehörige PRIVATE Schlüssel (zum
+    // tatsächlichen Ausstellen von Lizenzen) gehört NIEMALS in dieses - oder
+    // irgendein - Repo, sondern nur in ein eigenes, privates Verkaufs-/Signier-Tool.
+    private const LICENSE_PUBLIC_KEY = 't+eCtcgi3e7U09kNO4vpqNpeSsLkYApMgyHYz4lVp4M=';
+
+    // "Permalink" zum Lizenzerwerb - aktuell nur ein Verweis auf das GitHub-Repo,
+    // da es noch keinen eigenen Shop gibt. Eine einzige zentrale Konstante, damit
+    // später nur hier eine echte Verkaufs-URL eingetragen werden muss.
+    private const LICENSE_PURCHASE_URL = 'https://github.com/AllardLiao/SimpleLocaleForIPS';
+
+    // Meldeserver fürs Erkennen von Lizenzmissbrauch (z.B. ein Schlüssel wird als
+    // "gebraucht" mehrfach weiterverkauft) - siehe TrackLicenseActivationIfNew.
+    // Nimmt {licenseKeyHash, licensee, activatedAt} entgegen, siehe
+    // Synergetix-Website/shop/license-activation-report.php.
+    // WICHTIG: IPS_GetLicensee() liefert eine echte, personenbezogene E-Mail-Adresse -
+    // muss vor dem produktiven Release in den eigenen Lizenzbedingungen/
+    // Datenschutzhinweisen offengelegt sein.
+    private const LICENSE_ACTIVATION_REPORT_URL = 'https://www.synergetix.de/shop/license-activation-report.php';
 }
 
 class GUIDs
