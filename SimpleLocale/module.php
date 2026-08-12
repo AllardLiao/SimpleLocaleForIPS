@@ -1185,13 +1185,21 @@ private const LANGUAGE_FLAGS = [
             'custom_tile'                => $this->Translate('Eigene Sprachauswahl-Kachel'),
         ];
         $features = array_values(array_intersect_key($featureLabels, array_flip($info['features'] ?? [])));
-        $featuresText = $features === [] ? $this->Translate('keine') : implode(', ', $features);
 
-        return $this->Translate('Typ') . ": $typeText\n"
-            . $this->Translate('Ablauf') . ": $expiryText\n"
-            . $this->Translate('Sprachlimit') . ": $limitText\n"
-            . $this->Translate('Erlaubte Sprachen') . ": $allowedText\n"
-            . $this->Translate('Zusatzfunktionen') . ": $featuresText";
+        // Checkliste statt Fließtext (Vorbild: die Feature-Haken auf der
+        // Preisseite) - jede Zeile eine abgeschlossene Aussage, keine
+        // "Label: Wert"-Aufzählung mehr. Eine leere Zusatzfunktionen-Liste
+        // (z.B. Light-Edition) erzeugt bewusst keine "✓ keine"-Zeile, das
+        // wäre ein Widerspruch in sich - die Zeile entfällt dann einfach.
+        $lines = [
+            $this->Translate('Typ') . ': ' . $typeText,
+            $this->Translate('Ablauf') . ': ' . $expiryText,
+            $this->Translate('Sprachlimit') . ': ' . $limitText,
+            $this->Translate('Erlaubte Sprachen') . ': ' . $allowedText,
+            ...$features,
+        ];
+
+        return implode("\n", array_map(fn (string $line): string => "✓ $line", $lines));
     }
 
     private function ApplyLanguage(string $Language): void
