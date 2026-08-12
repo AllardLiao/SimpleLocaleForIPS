@@ -44,7 +44,9 @@ Beschreibung des Moduls.
   übersetzt, damit dort nie mehrere Sprachen gemischt angezeigt werden. Ein
   Info-Symbol (ⓘ) neben dem Dropdown erklärt Anwendern auf Klick (ebenfalls live
   übersetzt) die wichtigsten Einschränkungen, siehe
-  [Abschnitt 2](#2-bekannte-einschränkungen).
+  [Abschnitt 2](#2-bekannte-einschränkungen). Alternativ lässt sich diese
+  eingebaute Kachel zugunsten einer selbstgebauten unterdrücken (**Pro-Feature**
+  `custom_tile`, siehe [Abschnitt 7](#7-visualisierung)).
 * Die aktuell aktive Sprache ist eine reine Instanz-Property (kein Symcon-
   Variablenprofil, das wäre global über alle Instanzen hinweg geteilt) - sie
   ist direkt im Konfigurationsformular sicht- und änderbar.
@@ -227,6 +229,7 @@ Basissprache                    | Sprache, in der die Objektnamen/-werte ursprü
 Aktuell aktive Sprache          | Welche Sprache gerade angezeigt wird - normalerweise über die Kachel vom Anwender selbst gesteuert (siehe Abschnitt 7), lässt sich hier aber auch manuell zu Testzwecken umschalten.
 Weltkugel-Symbol in der Kachel anzeigen | Blendet das 🌐-Symbol links neben dem Dropdown aus, falls nicht gewünscht (z. B. bei eigenem Kachel-Design). Standardmäßig an.
 Info-Symbol in der Kachel anzeigen | Blendet das ⓘ-Symbol (Erklärung der Einschränkungen, siehe Abschnitt 2) aus. Standardmäßig an.
+Eigene Sprachauswahl-Kachel verwenden | Unterdrückt die eingebaute Dropdown-Kachel zugunsten einer selbstgebauten (siehe Abschnitt 7). **Pro-Feature** (`custom_tile`, siehe [Abschnitt 8](#8-lizenz-und-testversion)) - ohne dieses Feature bleibt das Feld ausgegraut und die eingebaute Kachel aktiv.
 Übersetzungsanbieter (Panel)    | Siehe eigenen Abschnitt unten ("Übersetzungsanbieter: Google/DeepL/kostenfrei") - funktioniert ab Werk ohne jede Eingabe.
 Automatischer Rescan (Minuten)  | Intervall für automatisches Neu-Einlesen des Baums, 0 = nur manuell über den Button "Baum neu einlesen" (siehe unten). **Pro-Feature** (`auto_rescan`, siehe [Abschnitt 8](#8-lizenz-und-testversion)) - ohne dieses Feature bleibt das Feld ausgegraut und der Timer aus, der manuelle Rescan-Button bleibt aber in jeder Edition nutzbar.
 
@@ -318,6 +321,30 @@ ein Browser-Dialog dagegen schon.
 Für eigene HTMLBox-Popups oder Hinweise außerhalb der live umbenannten
 Objekte liefert `IPSSL_TranslateText()` den Text in der aktuell aktiven
 Sprache.
+
+**Eigene Sprachauswahl-Kachel (Pro-Feature `custom_tile`):** Wer statt des
+eingebauten `<select>`-Dropdowns eine eigene, frei gestaltbare Kachel bauen
+möchte (z. B. Buttons statt Dropdown, eigenes Design, Integration in eine
+größere selbstgebaute Kachel), aktiviert dazu die Option "Eigene
+Sprachauswahl-Kachel verwenden" im Konfigurationsformular - die eingebaute
+Dropdown-Kachel wird dadurch unterdrückt (zeigt nur noch einen kurzen
+Hinweistext, falls diese Instanz trotzdem als Kachel platziert wird). Die
+eigene Kachel (typischerweise eine separate HTMLBox-Instanz) nutzt zwei
+neue Befehle:
+
+- `IPSSL_GetAvailableLanguages(int $InstanzID): string` - liefert die
+  wählbaren Sprachen als JSON-Array `[{code, name, current}, ...]`, live in
+  die aktuell aktive Sprache übersetzt und alphabetisch sortiert - exakt
+  dieselbe Liste wie im eingebauten Dropdown. `code` ist entweder ein
+  echter Sprachcode oder die interne Pseudo-Sprache `ORIGINAL_IMPORT`
+  (unbearbeiteter Rohtext, siehe oben).
+- `IPSSL_SetLanguage(int $InstanzID, string $Sprachcode): void` - wechselt
+  die aktive Sprache, mit derselben Logik wie ein Klick im eingebauten
+  Dropdown (Testphase-/Rate-Limit-Prüfung inklusive).
+
+Ohne das Feature `custom_tile` bleibt die Option ausgegraut und die
+eingebaute Kachel aktiv, unabhängig vom gespeicherten Wert - siehe
+[Abschnitt 8](#8-lizenz-und-testversion).
 
 ### 8. Lizenz und Testversion
 
@@ -419,6 +446,12 @@ Standard-Tier) schaltet zusätzliche Fähigkeiten frei - aktuell:
   als Wechsel und ist immer erlaubt, auch ohne dieses Flag - nur ein
   tatsächlicher Wechsel zu einer neuen Sprache innerhalb von 24h nach dem
   letzten wird per Hinweis-Popup verweigert.
+- `custom_tile`: erlaubt, die eingebaute Dropdown-Kachel zugunsten einer
+  selbstgebauten zu unterdrücken (siehe [Abschnitt 7](#7-visualisierung),
+  Property "Eigene Sprachauswahl-Kachel verwenden" sowie die Befehle
+  `IPSSL_GetAvailableLanguages`/`IPSSL_SetLanguage` in
+  [Abschnitt 9](#9-php-befehlsreferenz)). Ohne dieses Flag bleibt die Option
+  ausgegraut und die eingebaute Kachel immer aktiv.
 
 Während der Testphase selbst bleiben alle Features bewusst immer erlaubt,
 damit der komplette Mechanismus vor dem Kauf ausprobierbar ist - die Sperre
@@ -546,6 +579,25 @@ Sprachwechsel neu aufzubauen, statt bei jedem Rendern blind zu übersetzen.
 
 Beispiel:
 `IPSSL_GetCurrentLanguageCode(12345);`
+
+`string IPSSL_GetAvailableLanguages(integer $InstanzID);`
+Pro-Feature `custom_tile` (siehe [Abschnitt 8](#8-lizenz-und-testversion)):
+liefert die aktuell wählbaren Sprachen als JSON-Array
+`[{code, name, current}, ...]`, live in die aktuell aktive Sprache übersetzt
+und alphabetisch sortiert - für eine selbstgebaute Sprachauswahl-Kachel
+(siehe [Abschnitt 7](#7-visualisierung)).
+
+Beispiel:
+`IPSSL_GetAvailableLanguages(12345);`
+
+`void IPSSL_SetLanguage(integer $InstanzID, string $Sprachcode);`
+Pro-Feature `custom_tile`: wechselt die aktive Sprache von außen, mit
+derselben Logik wie ein Klick im eingebauten Dropdown (Testphase-/
+Rate-Limit-Prüfung inklusive) - für eine selbstgebaute Sprachauswahl-Kachel.
+
+Beispiel:
+`IPSSL_SetLanguage(12345, 'en');`
+
 ### 10. Integration für Modulentwickler
 
 Liefert dein eigenes Modul eine eigene HTML-Kachel aus

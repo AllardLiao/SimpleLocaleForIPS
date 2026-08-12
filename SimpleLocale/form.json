@@ -44,6 +44,15 @@
                     "caption": "Info-Symbol in der Kachel anzeigen"
                 },
                 {
+                    "type": "CheckBox",
+                    "name": "UseCustomTile",
+                    "caption": "Eigene Sprachauswahl-Kachel verwenden (Pro)"
+                },
+                {
+                    "type": "Label",
+                    "caption": "Aktiviert: die eingebaute Dropdown-Kachel wird unterdrückt - baue stattdessen eine eigene Kachel (z.B. HTMLBox), die IPSSL_GetAvailableLanguages() zum Anzeigen und IPSSL_SetLanguage() zum Wechseln der Sprache nutzt. Siehe Dokumentation Abschnitt 7."
+                },
+                {
                     "type": "ExpansionPanel",
                     "name": "TranslationProviderPanel",
                     "caption": "Übersetzungsanbieter",

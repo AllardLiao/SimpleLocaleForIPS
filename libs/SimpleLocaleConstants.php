@@ -59,6 +59,13 @@ trait SimpleLocaleConstants
     private const propertyShowGlobeIcon = 'ShowGlobeIcon';
     private const propertyShowInfoIcon = 'ShowInfoIcon';
 
+    // Pro-Feature "custom_tile": unterdrückt die eingebaute <select>-Dropdown-
+    // Kachel (siehe GetVisualizationTile) zugunsten einer selbstgebauten Kachel,
+    // die stattdessen IPSSL_GetAvailableLanguages()/IPSSL_SetLanguage() nutzt.
+    // Nur wirksam mit dem Feature-Flag - siehe HasLicenseFeature in GetVisualizationTile,
+    // exakt analog zu propertyAutoRescanInterval/"auto_rescan".
+    private const propertyUseCustomTile = 'UseCustomTile';
+
     // Lizenzschlüssel (deckt sowohl Einmalkauf als auch Abo ab, siehe
     // ValidateLicenseKey) - eingetragen, aber erst nach Klick auf "Lizenz
     // aktivieren" tatsächlich geprüft/übernommen.
