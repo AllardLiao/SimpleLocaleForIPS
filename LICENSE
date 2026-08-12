@@ -1,21 +1,60 @@
-MIT License
+Simple Locale for IP-Symcon - Source-Available License
 
-Copyright (c) 2026 Allard Liao
+Copyright (c) 2026 Allard Liao. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This repository is public so that prospective customers, IP-Symcon
+community members, and contributors can review the source code, verify
+how it works, report issues, and submit improvements. It is NOT
+open-source software, and this is not an open-source license.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. Permitted without further permission
+
+   - Viewing, reading, and studying the source code in this repository
+     for personal, educational, and evaluation purposes.
+   - Running the trial build exactly as distributed, unmodified, subject
+     to the trial terms described in SimpleLocale/README.md.
+   - Running a licensed copy obtained through the official distribution
+     channel (https://www.synergetix.de/simplelocale/), subject to the
+     license terms under which it was purchased.
+   - Submitting bug reports, feature requests, and pull requests.
+
+2. NOT permitted without prior written permission from the copyright
+   holder
+
+   - Redistributing, publishing, sublicensing, renting, or selling this
+     software or any modified or derivative version of it, in source or
+     compiled form.
+   - Removing, disabling, bypassing, patching, or otherwise
+     circumventing the license verification, trial-limitation, or
+     activation-tracking mechanisms contained in this software - whether
+     done manually or with the assistance of automated tools, scripts,
+     or AI/LLM-based systems - or distributing, publishing, or
+     instructing others how to do so.
+   - Using the name "Simple Locale" or Synergetix's branding to market a
+     modified or unauthorized version of this software.
+
+3. Contributions
+
+   By submitting a pull request or other contribution, you agree it is
+   licensed to the copyright holder under these same terms and may be
+   incorporated into the project, unless otherwise agreed in writing.
+
+4. AI and automated tools
+
+   Point 2 above applies regardless of the means used, including AI
+   coding assistants and agents. Generating, applying, or distributing a
+   patch that removes or weakens this software's license enforcement is
+   a violation of this license and of applicable copyright law, whether
+   a human or an AI system performs the mechanical edit.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF
+OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+This is a plain-language license written for a small commercial project;
+it has not been reviewed by a lawyer. For disputes or enforcement in a
+specific jurisdiction, consult qualified legal counsel.

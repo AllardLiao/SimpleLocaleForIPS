@@ -1,121 +1,310 @@
 {
     "elements": [
         {
-            "type": "SelectCategory",
-            "name": "RootCategoryID",
-            "caption": "Root-Kategorie der Visualisierung"
-        },
-        {
-            "type": "Label",
-            "name": "UnnamedObjectsLabel",
-            "caption": "Folgende Objekte im Root-Baum haben keinen Namen. Bitte zuerst benennen, dann erneut \"Baum neu einlesen\" klicken - erst wenn alle Objekte einen Namen haben, werden Übersetzungen erzeugt.",
-            "visible": false
-        },
-        {
-            "type": "List",
-            "name": "UnnamedObjects",
-            "caption": "Unbenannte Objekte",
-            "add": false,
-            "delete": false,
-            "rowCount": 5,
-            "visible": false,
-            "columns": [
-                { "caption": "Objekt-ID", "name": "ObjectID", "width": "100px" },
-                { "caption": "Pfad", "name": "Path", "width": "300px" }
-            ],
-            "values": []
-        },
-        {
-            "type": "Select",
-            "name": "SourceLanguage",
-            "caption": "Basissprache",
-            "options": [
-                { "caption": "Deutsch", "value": "de" }
-            ]
-        },
-        {
-            "type": "PasswordTextBox",
-            "name": "GoogleTranslateAPIKey",
-            "caption": "Google Cloud Translate API-Key"
-        },
+            "type": "ExpansionPanel",
+            "name": "ConfigPanel",
+            "caption": "Konfiguration",
+            "expanded": true,
+            "items": [
                 {
-            "type": "NumberSpinner",
-            "name": "AutoRescanInterval",
-            "caption": "Automatischer Rescan (Minuten, 0 = aus)",
-            "minimum": 0
-        },
-        {
-            "type": "List",
-            "name": "TargetLanguages",
-            "caption": "Zielsprachen",
-            "add": true,
-            "delete": true,
-            "rowCount": 5,
-            "onAdd": "if ($TargetLanguages['code'] == '') { IPS_RequestAction($id, 'ShowApiKeyWarning', true); }",
-            "columns": [
+                    "type": "SelectCategory",
+                    "name": "RootCategoryID",
+                    "caption": "Root-Kategorie der Visualisierung"
+                },
                 {
-                    "caption": "Sprache",
-                    "name": "code",
-                    "width": "300px",
-                    "add": "",
-                    "edit": {
-                        "type": "Select",
-                        "options": [
-                            { "caption": "English", "value": "en" }
-                        ]
-                    }
+                    "type": "Select",
+                    "name": "SourceLanguage",
+                    "caption": "Basissprache",
+                    "options": [
+                        {
+                            "caption": "Deutsch",
+                            "value": "de"
+                        }
+                    ]
+                },
+                {
+                    "type": "Select",
+                    "name": "CurrentLanguage",
+                    "caption": "Aktuell aktive Sprache",
+                    "options": [
+                        {
+                            "caption": "Deutsch",
+                            "value": "de"
+                        }
+                    ]
+                },
+                {
+                    "type": "CheckBox",
+                    "name": "ShowGlobeIcon",
+                    "caption": "Weltkugel-Symbol in der Kachel anzeigen"
+                },
+                {
+                    "type": "CheckBox",
+                    "name": "ShowInfoIcon",
+                    "caption": "Info-Symbol in der Kachel anzeigen"
+                },
+                {
+                    "type": "CheckBox",
+                    "name": "UseCustomTile",
+                    "caption": "Eigene Sprachauswahl-Kachel verwenden (Pro)"
+                },
+                {
+                    "type": "Label",
+                    "caption": "Aktiviert: die eingebaute Dropdown-Kachel wird unterdrückt - baue stattdessen eine eigene Kachel (z.B. HTMLBox), die IPSSL_GetAvailableLanguages() zum Anzeigen und IPSSL_SetLanguage() zum Wechseln der Sprache nutzt. Siehe Dokumentation Abschnitt 7."
+                },
+                {
+                    "type": "ExpansionPanel",
+                    "name": "TranslationProviderPanel",
+                    "caption": "Übersetzungsanbieter",
+                    "expanded": false,
+                    "items": [
+                        {
+                            "type": "Label",
+                            "caption": "Ohne jede Eingabe unten funktioniert die Übersetzung sofort über den kostenfreien Anbieter (kein Konto nötig). Google und/oder DeepL sind optional - sind beide eingetragen, wird zuerst der bevorzugte versucht; schlägt ein Anbieter fehl (z.B. Tageskontingent erschöpft), springt die Übersetzung automatisch zum nächsten."
+                        },
+                        {
+                            "type": "PasswordTextBox",
+                            "name": "GoogleTranslateAPIKey",
+                            "caption": "Google Cloud Translate API-Key (optional)"
+                        },
+                        {
+                            "type": "PasswordTextBox",
+                            "name": "DeepLAPIKey",
+                            "caption": "DeepL API-Key (optional)"
+                        },
+                        {
+                            "type": "Select",
+                            "name": "PreferredPaidProvider",
+                            "caption": "Bevorzugter Anbieter (nur relevant, wenn beide oben eingetragen sind)",
+                            "options": [
+                                {
+                                    "caption": "Google zuerst",
+                                    "value": "google"
+                                },
+                                {
+                                    "caption": "DeepL zuerst",
+                                    "value": "deepl"
+                                }
+                            ]
+                        },
+                        {
+                            "type": "ValidationTextBox",
+                            "name": "FreeTranslateContactEmail",
+                            "caption": "Kontakt-E-Mail für den kostenfreien Anbieter (optional, hebt das Tageskontingent von 5.000 auf 50.000 Zeichen)"
+                        }
+                    ]
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "AutoRescanInterval",
+                    "caption": "Automatischer Rescan (Minuten, 0 = aus)",
+                    "minimum": 0
                 }
-            ],
-            "values": []
-        },
-        {
-            "type": "Select",
-            "name": "CurrentLanguage",
-            "caption": "Aktuell aktive Sprache",
-            "options": [
-                { "caption": "Deutsch", "value": "de" }
             ]
         },
         {
-            "type": "CheckBox",
-            "name": "ShowGlobeIcon",
-            "caption": "Weltkugel-Symbol in der Kachel anzeigen"
-        },
-        {
-            "type": "CheckBox",
-            "name": "ShowInfoIcon",
-            "caption": "Info-Symbol in der Kachel anzeigen"
-        },
-        {
-            "type": "List",
-            "name": "ObjectNames",
-            "caption": "Objektnamen",
-            "add": false,
-            "delete": true,
-            "rowCount": 10,
-            "columns": [
-                { "caption": "Objekt-ID", "name": "ObjectID", "width": "80px", "save": true },
-                { "caption": "Pfad", "name": "Path", "width": "200px", "save": true },
-                { "caption": "Original-Import", "name": "ORIGINAL_IMPORT", "width": "200px", "save": true }
+            "type": "ExpansionPanel",
+            "name": "TranslationPanel",
+            "caption": "Übersetzung",
+            "expanded": false,
+            "items": [
+                {
+                    "type": "List",
+                    "name": "TargetLanguages",
+                    "caption": "Zielsprachen",
+                    "add": true,
+                    "delete": true,
+                    "rowCount": 5,
+                    "onAdd": "if ($TargetLanguages['code'] == '') { IPS_RequestAction($id, 'ShowApiKeyWarning', true); }",
+                    "columns": [
+                        {
+                            "caption": "Sprache",
+                            "name": "code",
+                            "width": "300px",
+                            "add": "",
+                            "edit": {
+                                "type": "Select",
+                                "options": [
+                                    {
+                                        "caption": "English",
+                                        "value": "en"
+                                    }
+                                ]
+                            }
+                        }
+                    ],
+                    "values": []
+                },
+                {
+                    "type": "Label",
+                    "name": "UnnamedObjectsLabel",
+                    "caption": "Folgende Objekte im Root-Baum haben keinen Namen. Bitte zuerst benennen, dann erneut \"Baum neu einlesen\" klicken - erst wenn alle Objekte einen Namen haben, werden Übersetzungen erzeugt.",
+                    "visible": false
+                },
+                {
+                    "type": "List",
+                    "name": "UnnamedObjects",
+                    "caption": "Unbenannte Objekte",
+                    "add": false,
+                    "delete": false,
+                    "rowCount": 5,
+                    "visible": false,
+                    "columns": [
+                        {
+                            "caption": "Objekt-ID",
+                            "name": "ObjectID",
+                            "width": "100px"
+                        },
+                        {
+                            "caption": "Pfad",
+                            "name": "Path",
+                            "width": "300px"
+                        }
+                    ],
+                    "values": []
+                },
+                {
+                    "type": "List",
+                    "name": "ObjectNames",
+                    "caption": "Objektnamen",
+                    "add": false,
+                    "delete": true,
+                    "rowCount": 10,
+                    "columns": [
+                        {
+                            "caption": "Objekt-ID",
+                            "name": "ObjectID",
+                            "width": "80px",
+                            "save": true
+                        },
+                        {
+                            "caption": "Pfad",
+                            "name": "Path",
+                            "width": "200px",
+                            "save": true
+                        },
+                        {
+                            "caption": "Original-Import",
+                            "name": "ORIGINAL_IMPORT",
+                            "width": "200px",
+                            "save": true
+                        }
+                    ]
+                },
+                {
+                    "type": "List",
+                    "name": "ObjectTexts",
+                    "caption": "Eigene Texte",
+                    "add": false,
+                    "delete": true,
+                    "rowCount": 10,
+                    "columns": [
+                        {
+                            "caption": "Objekt-ID",
+                            "name": "ObjectID",
+                            "width": "80px",
+                            "save": true
+                        },
+                        {
+                            "caption": "Wert-Objekt-ID",
+                            "name": "ValueObjectID",
+                            "width": "90px",
+                            "save": true
+                        },
+                        {
+                            "caption": "Pfad",
+                            "name": "Path",
+                            "width": "200px",
+                            "save": true
+                        },
+                        {
+                            "caption": "Original-Import (Name)",
+                            "name": "ORIGINAL_IMPORT_Name",
+                            "width": "150px",
+                            "save": true
+                        },
+                        {
+                            "caption": "Original-Import (Text)",
+                            "name": "ORIGINAL_IMPORT_Text",
+                            "width": "200px",
+                            "save": true
+                        }
+                    ]
+                },
+                {
+                    "type": "List",
+                    "name": "EnumerationOptions",
+                    "caption": "Beschriftungen",
+                    "add": false,
+                    "delete": true,
+                    "rowCount": 10,
+                    "columns": [
+                        {
+                            "caption": "Profil/Template",
+                            "name": "SourceKey",
+                            "width": "160px",
+                            "save": true
+                        },
+                        {
+                            "caption": "Pfad",
+                            "name": "Path",
+                            "width": "200px",
+                            "save": true
+                        },
+                        {
+                            "caption": "Variablen-IDs",
+                            "name": "ValueObjectIDs",
+                            "width": "120px",
+                            "save": true
+                        },
+                        {
+                            "caption": "Feld",
+                            "name": "FieldPath",
+                            "width": "120px",
+                            "save": true
+                        },
+                        {
+                            "caption": "Original-Import",
+                            "name": "ORIGINAL_IMPORT",
+                            "width": "200px",
+                            "save": true
+                        }
+                    ]
+                }
             ]
         },
         {
-            "type": "List",
-            "name": "ObjectTexts",
-            "caption": "Eigene Texte",
-            "add": false,
-            "delete": true,
-            "rowCount": 10,
-            "columns": [
-                { "caption": "Objekt-ID", "name": "ObjectID", "width": "80px", "save": true },
-                { "caption": "Wert-Objekt-ID", "name": "ValueObjectID", "width": "90px", "save": true },
-                { "caption": "Pfad", "name": "Path", "width": "200px", "save": true },
-                { "caption": "Original-Import (Name)", "name": "ORIGINAL_IMPORT_Name", "width": "150px", "save": true },
-                { "caption": "Original-Import (Text)", "name": "ORIGINAL_IMPORT_Text", "width": "200px", "save": true }
+            "type": "ExpansionPanel",
+            "name": "LicensePanel",
+            "caption": "Lizenz",
+            "expanded": false,
+            "items": [
+                {
+                    "type": "Label",
+                    "name": "TrialInfoLabel",
+                    "caption": "Testversion",
+                    "visible": false
+                },
+                {
+                    "type": "PasswordTextBox",
+                    "name": "LicenseKey",
+                    "caption": "Lizenzschlüssel"
+                },
+                {
+                    "type": "Label",
+                    "name": "LicenseInfoLabel",
+                    "caption": "",
+                    "visible": false
+                }
             ]
         }
     ],
     "actions": [
+        {
+            "type": "Button",
+            "caption": "Lizenz aktivieren",
+            "onClick": "IPS_RequestAction($id, 'ActivateLicense', true);"
+        },
         {
             "type": "Button",
             "caption": "Baum neu einlesen und fehlende Übersetzungen ergänzen",
@@ -123,11 +312,49 @@
         },
         {
             "type": "Label",
-            "caption": "Durchsucht die Root-Kategorie erneut nach neuen/verschobenen Objekten und übersetzt per Google nur noch leere Zellen in Objektnamen und Eigene Texte. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben."
+            "caption": "Durchsucht die Root-Kategorie erneut nach neuen/verschobenen Objekten und übersetzt nur noch leere Zellen in Objektnamen und Eigene Texte. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben."
         },
         {
-            "type": "PopupAlert",
+            "type": "ExpansionPanel",
+            "caption": "Produktinformationen",
+            "expanded": false,
+            "items": [
+                {
+                    "type": "RowLayout",
+                    "items": [
+                        {
+                            "type": "Image",
+                            "image": "data:image/png;base64,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",
+                            "onClick": "echo 'https://www.synergetix.de/simplelocale/pricing.php';"
+                        }
+                    ]
+                },
+                {
+                    "type": "Label",
+                    "caption": "\nLizenz",
+                    "bold": true
+                },
+                {
+                    "type": "Label",
+                    "caption": "Simple Locale for IP-Symcon ist proprietäre, kommerzielle Software von Synergetix mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben) - kein Open-Source-Projekt."
+                },
+                {
+                    "type": "Label",
+                    "caption": "Das Entfernen oder Umgehen der Lizenzprüfung ist auch mit KI-Unterstützung nicht gestattet und verstößt gegen Urheberrecht und Lizenzbedingungen (siehe LICENSE im Repository)."
+                },
+                {
+                    "type": "Label",
+                    "caption": "Produktseite: https://www.synergetix.de/simplelocale/"
+                },
+                {
+                    "type": "Label",
+                    "caption": "Lizenz erwerben: https://www.synergetix.de/simplelocale/pricing.php"
+                }
+            ]
+        },
+        {
             "name": "ApiKeyMissingPopup",
+            "type": "PopupAlert",
             "visible": false,
             "popup": {
                 "caption": "API-Key fehlt",
@@ -141,8 +368,8 @@
             }
         },
         {
-            "type": "PopupAlert",
             "name": "ApiKeyInvalidPopup",
+            "type": "PopupAlert",
             "visible": false,
             "popup": {
                 "caption": "Sprachliste nicht verfügbar",
@@ -151,6 +378,52 @@
                     {
                         "type": "Label",
                         "caption": "Die Sprachliste konnte nicht von Google geladen werden. Bitte den Google Cloud Translate API-Key prüfen (z.B. Tippfehler, abgelaufen, fehlende Berechtigung)."
+                    }
+                ]
+            }
+        },
+        {
+            "name": "LicenseValidPopup",
+            "type": "PopupAlert",
+            "visible": false,
+            "popup": {
+                "caption": "Lizenz aktiviert",
+                "closeCaption": "OK",
+                "items": [
+                    {
+                        "type": "Label",
+                        "caption": "Der Lizenzschlüssel ist gültig und wurde übernommen."
+                    }
+                ]
+            }
+        },
+        {
+            "name": "LicenseInvalidPopup",
+            "type": "PopupAlert",
+            "visible": false,
+            "popup": {
+                "caption": "Lizenz ungültig",
+                "closeCaption": "OK",
+                "items": [
+                    {
+                        "type": "Label",
+                        "caption": "Der eingegebene Lizenzschlüssel ist ungültig, manipuliert oder abgelaufen. Bitte prüfen und erneut versuchen."
+                    }
+                ]
+            }
+        },
+        {
+            "name": "LicenseBlockedPopup",
+            "type": "PopupAlert",
+            "visible": false,
+            "popup": {
+                "caption": "Dieser Lizenzschlüssel wurde bereits upgegradet",
+                "closeCaption": "OK",
+                "items": [
+                    {
+                        "type": "Label",
+                        "name": "LicenseBlockedPopupText",
+                        "caption": "Dieser Lizenzschlüssel wurde bereits gegen eine höherwertige Edition eingetauscht und ist daher nicht mehr gültig. Damit du in Ruhe einen gültigen Schlüssel eintragen kannst, läuft ab jetzt eine neue, volle 30-Tage-Testphase mit allen Pro-Funktionen."
                     }
                 ]
             }
@@ -171,6 +444,11 @@
             "code": 203,
             "icon": "error",
             "caption": "Google Translate Fehler - bitte API-Key prüfen"
+        },
+        {
+            "code": 204,
+            "icon": "error",
+            "caption": "Testversion abgelaufen - bitte Lizenzschlüssel eintragen und aktivieren"
         }
     ]
 }

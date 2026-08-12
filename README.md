@@ -8,7 +8,7 @@ Visualisierungen (Admin, eigene Steuerung) unverändert bleiben.
 
 ## Funktionsweise
 
-Eine konfigurierte Root-Kategorie (der Gäste-Sichtbereich) wird eingelesen und liefert
+Eine konfigurierte Root-Kategorie (der Sichtbereich) wird eingelesen und liefert
 zwei Textarten, die beide automatisch via Google Cloud Translate übersetzt und
 persistent im Modul-Formular gecacht werden:
 
@@ -52,4 +52,9 @@ git clone https://github.com/AllardLiao/SimpleLocaleForIPS.git
 
 ## Lizenz
 
-[MIT](LICENSE)
+Simple Locale for IP-Symcon ist proprietäre, kommerzielle Software - dieses
+Repository ist aus Transparenz- und Community-Gründen öffentlich (Code-
+Review, Bug-Reports, Pull-Requests), aber kein Open-Source-Projekt. Siehe
+[LICENSE](LICENSE) für die genauen Bedingungen, insbesondere zum Verbot,
+die Lizenzprüfmechanismen zu entfernen oder zu umgehen (auch nicht mit
+KI-Unterstützung).
