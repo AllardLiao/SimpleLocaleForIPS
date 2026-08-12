@@ -46,7 +46,7 @@
                 {
                     "type": "CheckBox",
                     "name": "UseCustomTile",
-                    "caption": "Eigene Sprachauswahl-Kachel verwenden (Pro)"
+                    "caption": "Eigene Sprachauswahl-Kachel verwenden"
                 },
                 {
                     "type": "Label",
@@ -312,7 +312,7 @@
         },
         {
             "type": "Label",
-            "caption": "Durchsucht die Root-Kategorie erneut nach neuen/verschobenen Objekten und übersetzt nur noch leere Zellen in Objektnamen und Eigene Texte. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben."
+            "caption": "Durchsucht die Root-Kategorie erneut nach neuen/verschobenen Objekten und übersetzt nur noch leere Zellen in Objektnamen, Eigene Texte und Beschriftungen. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben."
         },
         {
             "type": "ExpansionPanel",
