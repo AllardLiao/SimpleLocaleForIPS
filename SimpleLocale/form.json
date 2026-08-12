@@ -286,15 +286,21 @@
                     "visible": false
                 },
                 {
-                    "type": "PasswordTextBox",
-                    "name": "LicenseKey",
-                    "caption": "Lizenzschlüssel"
-                },
-                {
-                    "type": "Label",
-                    "name": "LicenseInfoLabel",
-                    "caption": "",
-                    "visible": false
+                    "type": "RowLayout",
+                    "items": [
+                        {
+                            "type": "PasswordTextBox",
+                            "name": "LicenseKey",
+                            "caption": "Lizenzschlüssel",
+                            "width": "400px"
+                        },
+                        {
+                            "type": "Label",
+                            "name": "LicenseInfoLabel",
+                            "caption": "",
+                            "visible": false
+                        }
+                    ]
                 }
             ]
         }
