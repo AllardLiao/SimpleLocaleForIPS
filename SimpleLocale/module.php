@@ -36,6 +36,11 @@ class SimpleLocale extends IPSModuleStrict
     // daher als erste Zeile des Texts selbst (siehe BuildInfoAlertJs).
     private const INFO_HEADING_TEXT = 'Hinweise';
 
+    // Kleiner, roter Hinweis unter dem Dropdown während der Testphase (siehe
+    // BuildTrialNoticeHtml) - wie die Info-Texte oben live in die aktive
+    // Gast-Sprache übersetzt, nicht die Konsolensprache des Admins.
+    private const TRIAL_NOTICE_PREFIX_TEXT = 'Testlizenz gültig bis';
+
     // ===== Lizenz / Testversion =====
     // Für den Vollversion-Build vor dem echten Release auf false setzen (siehe
     // README) - dann entfallen alle Einschränkungen unten unabhängig vom
@@ -2847,7 +2852,33 @@ private const LANGUAGE_FLAGS = [
             . $optionsHtml
             . '</select>'
             . $infoIconHtml
-            . '</div>';
+            . '</div>'
+            . $this->BuildTrialNoticeHtml($guestCache);
+    }
+
+    // Kleiner roter Hinweis unter dem Dropdown, solange diese Instanz auf einer
+    // laufenden (noch nicht abgelaufenen) Testphase ohne Vollversion-Lizenz steht -
+    // macht direkt in der Kachel sichtbar, dass/bis wann es sich um eine
+    // Testlizenz handelt, statt das nur im (Admin-only) Konfigurationsformular
+    // zu zeigen (siehe BuildTrialInfoText). Leerer String, sobald eine gültige
+    // Lizenz aktiv ist, die Testphase noch nicht gestartet wurde (kein
+    // Ablaufdatum) oder bereits abgelaufen ist (dafür sorgt bereits der
+    // Revert-auf-Original + die Alert-Meldung beim Sprachwechselversuch).
+    private function BuildTrialNoticeHtml(array $GuestCache): string
+    {
+        if (!self::IS_TRIAL_BUILD || $this->HasFullLicense() || $this->IsTrialLocked()) {
+            return '';
+        }
+
+        $expiresAt = $this->GetTrialExpiresAt();
+        if ($expiresAt === 0) {
+            return '';
+        }
+
+        $prefix = $GuestCache['trialNoticePrefix'] ?? self::TRIAL_NOTICE_PREFIX_TEXT;
+        $text = htmlspecialchars($prefix . ' ' . date('d.m.Y', $expiresAt), ENT_QUOTES, 'UTF-8');
+
+        return '<div class="ipssl-trial-notice" style="font-size:11px; color:#c0392b;">' . $text . '</div>';
     }
 
     // Sortiert $Codes anhand von $Names (ObjectID-Code => angezeigter Name) alphabetisch
@@ -2972,10 +3003,11 @@ private const LANGUAGE_FLAGS = [
 
         $names = $this->FetchLanguageNames($language) ?? ($cache['names'] ?? []);
 
-        // Info-Überschrift + Info-Hinweistexte in einem gemeinsamen Aufruf übersetzen
-        // (statt je einem eigenen) - alles feste, kurze Texte, die ohnehin nur bei
-        // Sprachwechsel/Cache-Ablauf einmal aktualisiert werden.
-        $ownTexts = array_merge([self::INFO_HEADING_TEXT], self::INFO_LIMITATION_TEXTS);
+        // Info-Überschrift + Info-Hinweistexte + Testphasen-Hinweis-Präfix in einem
+        // gemeinsamen Aufruf übersetzen (statt je einem eigenen) - alles feste, kurze
+        // Texte, die ohnehin nur bei Sprachwechsel/Cache-Ablauf einmal aktualisiert
+        // werden.
+        $ownTexts = array_merge([self::INFO_HEADING_TEXT], self::INFO_LIMITATION_TEXTS, [self::TRIAL_NOTICE_PREFIX_TEXT]);
         if ($language === 'de') {
             $translatedOwnTexts = $ownTexts;
         } else {
@@ -2987,13 +3019,15 @@ private const LANGUAGE_FLAGS = [
         foreach (self::INFO_LIMITATION_TEXTS as $i => $originalText) {
             $infoTexts[] = $translatedOwnTexts[$i + 1] ?? $originalText;
         }
+        $trialNoticePrefix = $translatedOwnTexts[count(self::INFO_LIMITATION_TEXTS) + 1] ?? self::TRIAL_NOTICE_PREFIX_TEXT;
 
         $cache = [
-            'language'    => $language,
-            'names'       => $names,
-            'infoHeading' => $infoHeading,
-            'infoTexts'   => $infoTexts,
-            'fetchedAt'   => time(),
+            'language'          => $language,
+            'names'             => $names,
+            'infoHeading'       => $infoHeading,
+            'infoTexts'         => $infoTexts,
+            'trialNoticePrefix' => $trialNoticePrefix,
+            'fetchedAt'         => time(),
         ];
 
         $this->WriteAttributeString(self::attributeGuestLanguageNamesCache, json_encode($cache));
