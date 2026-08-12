@@ -1,0 +1,11 @@
+{
+    "version": "0.0.1",
+    "configurations": [
+        {
+            "name": "synergetix-website",
+            "runtimeExecutable": "php",
+            "runtimeArgs": ["-S", "localhost:8000", "-t", "/Users/kai/Documents/Codings/Synergetix-Website"],
+            "port": 8000
+        }
+    ]
+}
