@@ -276,7 +276,7 @@ Name                            | Beschreibung
 Zielsprachen                    | Sprachen, in die übersetzt werden soll. Auswahl-Optionen kommen ab Werk aus der eingebauten Liste, mit konfiguriertem Google-/DeepL-Key aus deren dynamisch geladener Liste (siehe oben). Ausgegraut, wenn ein bezahlter Anbieter konfiguriert ist, aber noch keine Liste laden konnte, oder wenn das Sprachlimit einer "Spezialversion"-Lizenz erreicht ist (siehe Abschnitt 8). Wichtig: Nach dem Klick auf "Sprachliste aktualisieren" die Instanzkonfiguration einmal schließen und neu öffnen, bevor Häkchen gesetzt werden - sonst kann die Konsole falsche Sprachen speichern.
 Objektnamen / Eigene Texte / Beschriftungen | Listen der gefundenen Objekte mit Quelltext und je einer Spalte pro Zielsprache. Übersetzungen sind hier direkt editierbar; leere Zellen werden beim nächsten Rescan automatisch übersetzt. "Beschriftungen" siehe [Abschnitt 2](#2-bekannte-einschränkungen) (Fork-Mechanismus).
 Automations                     | Liste der gefundenen Automation-Einträge der oben unter "Kachel-Visualisierung" gewählten Instanz mit Quelltext und je einer Spalte pro Zielsprache - funktioniert genauso wie Objektnamen.
-Begrüßung                       | Übersetzt den Begrüßungstext der Kachel-Visualisierung ("Show Greeting" = "Automatic" oder "Static" in deren Instanzkonfiguration, Feld "Name"/Property `GreetingName`) - siehe eigenen Absatz unten. Bei "Show Greeting" = "Variable" oder "None" bleibt diese Liste leer (nichts zu übersetzen bzw. bereits über Objektnamen/Eigene Texte abgedeckt).
+Begrüßung                       | Übersetzt den Begrüßungstext der Kachel-Visualisierung, unabhängig davon, ob "Show Greeting" gerade "Automatic"/"Static" (freier Text, Feld "Name"/Property `GreetingName`) oder "Variable" (Live-Wert einer String-Variable) ist - beide landen in derselben einen Zeile hier, siehe eigenen Absatz unten. Ein Hinweistext direkt über der Liste zeigt an, welcher Modus gerade aktiv ist. Bei "Show Greeting" = "None" bleibt die Liste leer.
 
 **Wann sollte ein Rescan ausgeführt werden?**
 
@@ -284,6 +284,7 @@ Inhaltstyp        | Neue/verschobene Objekte | Inhaltliche Änderungen
 ------------------ | ------------------------- | ------------------------
 Objektnamen        | Nur per Rescan (manuell/Timer) erkannt. | Ändert sich ein Name selten spontan; falls doch, Zelle im Formular leeren + Rescan.
 Eigene Texte (Werte) | Nur per Rescan erkannt. | Automatisch (siehe Abschnitt 1, `VM_UPDATE`) - **kein** Rescan nötig, solange die Basissprache stimmt.
+Begrüßung           | Nur per Rescan erkannt (auch ein Moduswechsel zwischen "Automatic"/"Static"/"Variable"). | Modus "Variable": automatisch, genau wie Eigene Texte (Werte). Modi "Automatic"/"Static" (freier Text im Feld "Name"): nur per Rescan.
 Beschriftungen      | Nur per Rescan erkannt. | **Kein** automatisches Erkennen von Änderungen am zugrunde liegenden Profil/Template - Symcon liefert dafür keine Update-Benachrichtigung. Ändert ein anderes Modul/der Admin die Beschriftungen eines Profils, das eine bereits geforkte Variable nutzt, wird das erst nach manuellem Löschen der betroffenen Original-Import-Zelle + Rescan übernommen.
 
 **Kachel-Visualisierung: Root der Visualisierung, Automations und Favoriten**
@@ -333,17 +334,25 @@ Visualisierung fehlt" und übersetzt nichts.
   - **Static**: zeigt ausschließlich das Feld "Name" (`GreetingName`), keine
     Anrede davor.
   - **Variable**: zeigt den Live-Wert einer echten String-Variable (Property
-    `GreetingVariableID`) - genau wie bei Favoriten oben bereits automatisch
-    mitübersetzt, sofern die Variable innerhalb des Root der Visualisierung
-    liegt; liegt sie außerhalb, wird sie beim Rescan zusätzlich als eigene
-    Zeile in "Eigene Texte" ergänzt (Pfad "Begrüßung").
+    `GreetingVariableID`).
 
   Für die Modi **Automatic** und **Static** trägt `GreetingName` einen frei
   vergebenen Text, der komplett unabhängig vom Root-Baum lebt - genau wie bei
-  Automations. Simple Locale übersetzt ihn, wenn die Instanz oben ausgewählt
-  ist: der Rescan-Button liest dann zusätzlich diese Property ein (Liste
-  "Begrüßung") und schreibt beim Sprachwechsel den übersetzten Text dort
-  zurück.
+  Automations. Für den Modus **Variable** ist stattdessen der aktuelle Wert
+  der verlinkten Variable maßgeblich. **Alle drei Modi landen in derselben
+  einen Zeile der Liste "Begrüßung"** im Abschnitt "Übersetzung" (nicht in
+  "Eigene Texte") - ein Hinweistext direkt über der Liste zeigt an, welcher
+  Modus gerade aktiv ist, damit klar bleibt, was die eine Zeile gerade
+  bedeutet. Der Rescan-Button liest die passende Quelle ein (Property bzw.
+  Live-Wert der Variable) und schreibt beim Sprachwechsel den übersetzten
+  Text zurück - bei Modus **Variable** per `SetValueString` auf die Variable,
+  exakt wie bei "Eigene Texte" (inkl. automatischer Live-Nachübersetzung bei
+  externen Änderungen der Variable, siehe `VM_UPDATE`-Zeile in der
+  Rescan-Tabelle oben). Liegt die Variable zufällig selbst innerhalb des Root
+  der Visualisierung (eigener Name/Ident dort), hat der normale Baum-Scan
+  Vorrang und sie erscheint stattdessen ganz gewöhnlich unter "Eigene Texte"
+  - verhindert zwei unabhängige, gleichzeitig schreibende
+  Übersetzungs-Zeilen für dieselbe Variable.
 
 **Lizenz:**
 
