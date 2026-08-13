@@ -1804,11 +1804,13 @@ private const LANGUAGE_FLAGS = [
         $this->WriteAttributeString(self::attributeUnnamedObjects, json_encode($unnamedObjects));
 
         if ($unnamedObjects !== []) {
+            IPS_LogMessage('IPSSL_Debug', 'ScanRootTree: abort - unnamed objects found: ' . json_encode($unnamedObjects));
             $this->SetStatus(self::STATUS_UNNAMED_OBJECTS);
             $this->ReloadForm();
 
             return;
         }
+        IPS_LogMessage('IPSSL_Debug', 'ScanRootTree: no unnamed objects, continuing to merges');
 
         $objectNames = $this->MergeRows($this->DecodeRows(self::propertyObjectNames), $scannedNames);
         $objectTexts = $this->MergeRows($this->DecodeRows(self::propertyObjectTexts), $scannedTexts);
@@ -1830,10 +1832,11 @@ private const LANGUAGE_FLAGS = [
 
         // Begrüßungstext (Modi "Automatic"/"Static") - ebenfalls unabhängig vom
         // Root-Baum, siehe ScanGreetingText/MergeGreetingRows.
-        $objectGreeting = $this->MergeGreetingRows(
-            $this->DecodeRows(self::propertyObjectGreeting),
-            $this->ScanGreetingText()
-        );
+        $existingGreeting = $this->DecodeRows(self::propertyObjectGreeting);
+        $scannedGreeting = $this->ScanGreetingText();
+        IPS_LogMessage('IPSSL_Debug', 'ScanRootTree: existingGreeting=' . json_encode($existingGreeting) . ' scannedGreeting=' . json_encode($scannedGreeting));
+        $objectGreeting = $this->MergeGreetingRows($existingGreeting, $scannedGreeting);
+        IPS_LogMessage('IPSSL_Debug', 'ScanRootTree: mergedGreeting=' . json_encode($objectGreeting));
 
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
         $targetLanguages = $this->GetSelectedTargetLanguages();
@@ -1862,6 +1865,7 @@ private const LANGUAGE_FLAGS = [
         $objectGreeting = $this->FillMissingTranslations($objectGreeting, [
             ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],
         ], $sourceLanguage, $targetLanguages);
+        IPS_LogMessage('IPSSL_Debug', 'ScanRootTree: filledGreeting=' . json_encode($objectGreeting) . ' -> persisting now');
 
         IPS_SetProperty($this->InstanceID, self::propertyObjectNames, json_encode(array_values($objectNames)));
         IPS_SetProperty($this->InstanceID, self::propertyObjectTexts, json_encode(array_values($objectTexts)));
@@ -1869,6 +1873,7 @@ private const LANGUAGE_FLAGS = [
         IPS_SetProperty($this->InstanceID, self::propertyObjectAutomations, json_encode(array_values($objectAutomations)));
         IPS_SetProperty($this->InstanceID, self::propertyObjectGreeting, json_encode(array_values($objectGreeting)));
         IPS_ApplyChanges($this->InstanceID);
+        IPS_LogMessage('IPSSL_Debug', 'ScanRootTree: persisted, ObjectGreeting now=' . IPS_GetProperty($this->InstanceID, self::propertyObjectGreeting));
 
         // Kompletter Formular-Neuaufbau statt UpdateFormField: ein offenes Formular hat
         // sonst noch den alten (leeren) Stand im Speicher und würde ihn bei "Übernehmen"
@@ -2276,21 +2281,34 @@ private const LANGUAGE_FLAGS = [
     private function ScanGreetingText(): array
     {
         $webFrontID = $this->ReadPropertyInteger(self::propertyWebFrontVisuInstanceID);
+        // TEMPORÄR zur Fehlersuche (leere ObjectGreeting-Property trotz korrekt
+        // gesetztem ShowGreeting/GreetingName) - wird nach Klärung wieder entfernt.
+        IPS_LogMessage('IPSSL_Debug', 'ScanGreetingText: webFrontID=' . $webFrontID);
         if ($webFrontID === 0 || !@IPS_ObjectExists($webFrontID)) {
+            IPS_LogMessage('IPSSL_Debug', 'ScanGreetingText: abort - webFrontID invalid/missing');
             return [];
         }
 
-        $showGreeting = (int) @IPS_GetProperty($webFrontID, 'ShowGreeting');
+        $rawShowGreeting = @IPS_GetProperty($webFrontID, 'ShowGreeting');
+        $showGreeting = (int) $rawShowGreeting;
+        IPS_LogMessage('IPSSL_Debug', 'ScanGreetingText: rawShowGreeting=' . var_export($rawShowGreeting, true) . ' castTo=' . $showGreeting);
         if ($showGreeting !== 1 && $showGreeting !== 3) {
+            IPS_LogMessage('IPSSL_Debug', 'ScanGreetingText: abort - showGreeting not 1/3');
             return [];
         }
 
-        $name = (string) @IPS_GetProperty($webFrontID, 'GreetingName');
+        $rawName = @IPS_GetProperty($webFrontID, 'GreetingName');
+        $name = (string) $rawName;
+        IPS_LogMessage('IPSSL_Debug', 'ScanGreetingText: rawName=' . var_export($rawName, true) . ' castTo="' . $name . '"');
         if ($name === '') {
+            IPS_LogMessage('IPSSL_Debug', 'ScanGreetingText: abort - name empty');
             return [];
         }
 
-        return [[self::langOriginalImport => $name]];
+        $result = [[self::langOriginalImport => $name]];
+        IPS_LogMessage('IPSSL_Debug', 'ScanGreetingText: returning ' . json_encode($result));
+
+        return $result;
     }
 
     // "Begrüßung" hat immer höchstens eine Zeile - kein ID-Abgleich wie bei
