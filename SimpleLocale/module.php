@@ -1355,8 +1355,11 @@ private const LANGUAGE_FLAGS = [
             if ($row === null) {
                 continue;
             }
-            $entry['Name'] = $this->ResolveRowValue($row, $Language, $Language, $SourceLanguage, self::langOriginalImport);
-            $changed = true;
+            $resolvedName = $this->ResolveRowValue($row, $Language, $Language, $SourceLanguage, self::langOriginalImport);
+            if (($entry['Name'] ?? null) !== $resolvedName) {
+                $entry['Name'] = $resolvedName;
+                $changed = true;
+            }
         }
         unset($entry);
 
