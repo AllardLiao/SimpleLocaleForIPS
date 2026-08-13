@@ -425,6 +425,26 @@
             ]
         },
         {
+            "type": "ExpansionPanel",
+            "caption": "Nutzungsbedingungen",
+            "expanded": false,
+            "items": [
+                {
+                    "type": "Label",
+                    "caption": "Für den Kauf einer Lizenz gelten unsere Nutzungsbedingungen (Zahlung, Gewährleistung, Support, anwendbares Recht) sowie die Lizenzbedingungen zum erlaubten Funktionsumfang - Volltext:"
+                },
+                {
+                    "type": "Label",
+                    "caption": "https://www.synergetix.de/simplelocale/license.php"
+                },
+                {
+                    "type": "Label",
+                    "caption": "Mit Klick auf \"Lizenz aktivieren\" oben bestätigst du, dass du diese Nutzungsbedingungen gelesen hast und akzeptierst. Beim Kauf im Shop werden sie zusätzlich vor Zahlungsabschluss per Checkbox abgefragt.",
+                    "bold": true
+                }
+            ]
+        },
+        {
             "name": "ApiKeyMissingPopup",
             "type": "PopupAlert",
             "visible": false,
