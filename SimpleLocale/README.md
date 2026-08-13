@@ -643,18 +643,23 @@ gefundene oder noch unübersetzte Einträge. Entspricht dem Button
 Beispiel:
 `IPSSL_Rescan(12345);`
 
-`string IPSSL_TranslateExternalText(integer $InstanzID, string $Text, string $Quellsprache);`
+`string IPSSL_TranslateExternalText(integer $InstanzID, string $Text, string $Quellsprache = "");`
 Übersetzt beliebigen Text live in die aktuell aktive Sprache dieser
 Instanz - für Modulentwickler, deren eigenes Modul eine eigene HTML-Kachel
 ausliefert (`GetVisualizationTile()`) statt Text in einer von Simple Locale
 beobachtbaren Variable zu halten, siehe
-[Abschnitt 10](#10-integration-für-modulentwickler). Leerer Text,
-Quellsprache = aktive Sprache, oder eine wegen abgelaufener Testphase
-gerade nicht kostenfreie Sprache liefern den Text unverändert zurück -
-nie ein Fehler.
+[Abschnitt 10](#10-integration-für-modulentwickler). `$Quellsprache` ist
+optional - weggelassen (oder `""`), greift die in dieser Instanz
+konfigurierte Basissprache; nur bei abweichender Fremdtext-Sprache explizit
+angeben. Leerer Text, Quellsprache = aktive Sprache, oder eine wegen
+abgelaufener Testphase gerade nicht kostenfreie Sprache liefern den Text
+unverändert zurück - nie ein Fehler.
 
-Beispiel:
-`IPSSL_TranslateExternalText(12345, 'Guten Tag', 'de');`
+Beispiel (Basissprache dieser Instanz, z. B. Deutsch):
+`IPSSL_TranslateExternalText(12345, 'Guten Tag');`
+
+Beispiel (abweichende, explizit angegebene Quellsprache):
+`IPSSL_TranslateExternalText(12345, 'Good day', 'en');`
 
 `string IPSSL_GetCurrentLanguageCode(integer $InstanzID);`
 Liefert den aktuell aktiven Sprachcode dieser Instanz (z. B. `"en"`) - 
