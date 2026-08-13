@@ -319,7 +319,7 @@ private const LANGUAGE_FLAGS = [
             $this->EnforceLicensedLanguageLimit();
         }
 
-        $rootID = $this->ReadPropertyInteger(self::propertyRootCategoryID);
+        $rootID = $this->GetEffectiveRootCategoryID();
         if ($rootID === 0 || !@IPS_ObjectExists($rootID)) {
             $this->SetStatus(self::STATUS_ROOT_CATEGORY_MISSING);
         } elseif ($this->IsTrialLocked()) {
@@ -444,6 +444,24 @@ private const LANGUAGE_FLAGS = [
             }
 
             switch ($element['name'] ?? '') {
+                // Ist unten eine Kachel-Visualisierungs-Instanz mit gültiger BaseID
+                // ausgewählt, übernimmt GetEffectiveRootCategoryID() automatisch deren
+                // Root-Kategorie - das manuelle Feld wird dann nur noch informativ mit
+                // dem übernommenen Wert angezeigt (ausgegraut statt versteckt, gleiches
+                // Muster wie AutoRescanInterval/UseCustomTile), damit kein widersprüchlich
+                // konfigurierter zweiter Baum entstehen kann.
+                case self::propertyRootCategoryID:
+                    $webFrontID = $this->ReadPropertyInteger(self::propertyWebFrontVisuInstanceID);
+                    if ($webFrontID !== 0 && @IPS_ObjectExists($webFrontID)) {
+                        $baseID = (int) @IPS_GetProperty($webFrontID, 'BaseID');
+                        if ($baseID !== 0 && @IPS_ObjectExists($baseID)) {
+                            $element['value'] = $baseID;
+                            $element['enabled'] = false;
+                            $element['caption'] .= ' (' . $this->Translate('automatisch aus der Kachel-Visualisierung übernommen') . ')';
+                        }
+                    }
+                    break;
+
                 case self::propertySourceLanguage:
                     $element['options'] = $this->BuildLanguageOptions();
                     break;
@@ -1645,9 +1663,29 @@ private const LANGUAGE_FLAGS = [
         return $Row[$RawField] ?? '';
     }
 
+    // Ist eine Kachel-Visualisierungs-Instanz ausgewählt (siehe
+    // propertyWebFrontVisuInstanceID), liefert deren eigene "BaseID"-Property (dort als
+    // "Startkategorie" bezeichnet) automatisch die Root-Kategorie für den Scan - der
+    // Nutzer muss sie dann nicht zusätzlich manuell in RootCategoryID auswählen und
+    // riskiert so nicht, versehentlich zwei unterschiedliche Bäume zu konfigurieren.
+    // Nur wenn keine Instanz gewählt ist oder deren BaseID (noch) ungültig ist, greift
+    // die manuelle RootCategoryID-Property als Rückfall.
+    private function GetEffectiveRootCategoryID(): int
+    {
+        $webFrontID = $this->ReadPropertyInteger(self::propertyWebFrontVisuInstanceID);
+        if ($webFrontID !== 0 && @IPS_ObjectExists($webFrontID)) {
+            $baseID = (int) @IPS_GetProperty($webFrontID, 'BaseID');
+            if ($baseID !== 0 && @IPS_ObjectExists($baseID)) {
+                return $baseID;
+            }
+        }
+
+        return $this->ReadPropertyInteger(self::propertyRootCategoryID);
+    }
+
     private function ScanRootTree(): void
     {
-        $rootID = $this->ReadPropertyInteger(self::propertyRootCategoryID);
+        $rootID = $this->GetEffectiveRootCategoryID();
         if ($rootID === 0 || !@IPS_ObjectExists($rootID)) {
             $this->SetStatus(self::STATUS_ROOT_CATEGORY_MISSING);
             return;
