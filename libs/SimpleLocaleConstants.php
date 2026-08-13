@@ -7,7 +7,6 @@ namespace SimpleLocaleConstants;
 trait SimpleLocaleConstants
 {
     // Properties
-    private const propertyRootCategoryID = 'RootCategoryID';
     private const propertySourceLanguage = 'SourceLanguage';
     private const propertyTargetLanguages = 'TargetLanguages';
     private const propertyGoogleTranslateAPIKey = 'GoogleTranslateAPIKey';
@@ -35,13 +34,17 @@ trait SimpleLocaleConstants
     // zufällig dasselbe Profil/Template nutzen, bleiben unangetastet.
     private const propertyEnumerationOptions = 'EnumerationOptions';
 
-    // Automations der eingebauten Kachel-Visualisierung (WebFront-Kernmodul, nicht
-    // Teil von Simple Locale) - deren Property "Automations" traegt neben der
-    // Automation-Referenz einen frei vergebenen Anzeigetext ("Name"), der komplett
-    // unabhaengig vom Root-Baum lebt (aehnlich einer Verknuepfung mit eigenem
-    // Namensfeld) und daher separat gescannt/uebersetzt werden muss - siehe
-    // ScanAutomations/ApplyAutomationsLanguage. 0 = Feature deaktiviert (keine
-    // Kachel-Visualisierungs-Instanz ausgewaehlt).
+    // Kachel-Visualisierungs-Instanz (WebFront-Kernmodul, nicht Teil von Simple
+    // Locale) - EINZIGE Quelle der Root-Kategorie (siehe GetEffectiveRootCategoryID,
+    // liest deren "BaseID"-Property = die dort als "Startkategorie" bezeichnete
+    // Kategorie) sowie der Automations/Favoriten-Übersetzung. Kein manuelles
+    // Rückfall-Feld mehr (Stand vor Build 24 gab es zusätzlich RootCategoryID als
+    // eigene Property) - ohne gewählte Instanz bzw. ohne deren BaseID bleibt die
+    // Instanz im Status STATUS_ROOT_CATEGORY_MISSING. Automations: deren Property
+    // "Automations" traegt neben der Automation-Referenz einen frei vergebenen
+    // Anzeigetext ("Name"), der komplett unabhaengig vom Root-Baum lebt (aehnlich
+    // einer Verknuepfung mit eigenem Namensfeld) und daher separat
+    // gescannt/uebersetzt werden muss - siehe ScanAutomations/ApplyAutomationsLanguage.
     private const propertyWebFrontVisuInstanceID = 'WebFrontVisuInstanceID';
     private const propertyObjectAutomations = 'ObjectAutomations';
 
@@ -84,6 +87,14 @@ trait SimpleLocaleConstants
     // Attribute
     private const attributeAvailableLanguagesCache = 'AvailableLanguagesCache';
     private const attributeAvailableLanguagesFetchedAt = 'AvailableLanguagesFetchedAt';
+
+    // Rein informativer, intern gepflegter Cache der zuletzt aus der
+    // Kachel-Visualisierungs-Instanz übernommenen Root-Kategorie (siehe
+    // GetEffectiveRootCategoryID) - kein Formularfeld, wird bei jedem
+    // ApplyChanges/Rescan aus deren "BaseID"-Property neu geschrieben. Erlaubt
+    // Fehlersuche (sichtbar im "Attribute"-Reiter der Instanz), ohne dass der Nutzer
+    // die Root-Kategorie versehentlich manuell auf einen anderen Baum umstellen kann.
+    private const attributeEffectiveRootCategoryID = 'EffectiveRootCategoryID';
 
     // Zuletzt erfolgreich geprüfte Lizenzinformationen (JSON, siehe
     // ValidateLicenseKey) - Cache, damit nicht bei jedem Aufruf neu geprüft werden

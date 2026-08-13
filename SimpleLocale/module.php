@@ -223,7 +223,6 @@ private const LANGUAGE_FLAGS = [
         //Never delete this line!
         parent::Create();
 
-        $this->RegisterPropertyInteger(self::propertyRootCategoryID, 0);
         $this->RegisterPropertyString(self::propertySourceLanguage, 'de');
         $this->RegisterPropertyString(self::propertyTargetLanguages, '[]');
         $this->RegisterPropertyString(self::propertyGoogleTranslateAPIKey, '');
@@ -280,6 +279,7 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterAttributeString(self::attributeRegisteredValueObjectIDs, '[]');
         $this->RegisterAttributeString(self::attributeLastSelfWrittenValues, '{}');
         $this->RegisterAttributeString(self::attributeEnumerationPresentationBackup, '{}');
+        $this->RegisterAttributeInteger(self::attributeEffectiveRootCategoryID, 0);
 
         $this->SetVisualizationType(1);
 
@@ -444,24 +444,6 @@ private const LANGUAGE_FLAGS = [
             }
 
             switch ($element['name'] ?? '') {
-                // Ist unten eine Kachel-Visualisierungs-Instanz mit gültiger BaseID
-                // ausgewählt, übernimmt GetEffectiveRootCategoryID() automatisch deren
-                // Root-Kategorie - das manuelle Feld wird dann nur noch informativ mit
-                // dem übernommenen Wert angezeigt (ausgegraut statt versteckt, gleiches
-                // Muster wie AutoRescanInterval/UseCustomTile), damit kein widersprüchlich
-                // konfigurierter zweiter Baum entstehen kann.
-                case self::propertyRootCategoryID:
-                    $webFrontID = $this->ReadPropertyInteger(self::propertyWebFrontVisuInstanceID);
-                    if ($webFrontID !== 0 && @IPS_ObjectExists($webFrontID)) {
-                        $baseID = (int) @IPS_GetProperty($webFrontID, 'BaseID');
-                        if ($baseID !== 0 && @IPS_ObjectExists($baseID)) {
-                            $element['value'] = $baseID;
-                            $element['enabled'] = false;
-                            $element['caption'] .= ' (' . $this->Translate('automatisch aus der Kachel-Visualisierung übernommen') . ')';
-                        }
-                    }
-                    break;
-
                 case self::propertySourceLanguage:
                     $element['options'] = $this->BuildLanguageOptions();
                     break;
@@ -1663,24 +1645,28 @@ private const LANGUAGE_FLAGS = [
         return $Row[$RawField] ?? '';
     }
 
-    // Ist eine Kachel-Visualisierungs-Instanz ausgewählt (siehe
-    // propertyWebFrontVisuInstanceID), liefert deren eigene "BaseID"-Property (dort als
-    // "Startkategorie" bezeichnet) automatisch die Root-Kategorie für den Scan - der
-    // Nutzer muss sie dann nicht zusätzlich manuell in RootCategoryID auswählen und
-    // riskiert so nicht, versehentlich zwei unterschiedliche Bäume zu konfigurieren.
-    // Nur wenn keine Instanz gewählt ist oder deren BaseID (noch) ungültig ist, greift
-    // die manuelle RootCategoryID-Property als Rückfall.
+    // Einzige Quelle der Root-Kategorie: die "BaseID"-Property (dort als
+    // "Startkategorie" bezeichnet) der gewählten Kachel-Visualisierungs-Instanz
+    // (propertyWebFrontVisuInstanceID) - kein manuelles Rückfall-Feld mehr, damit
+    // nie versehentlich ein anderer Baum konfiguriert werden kann als der, den die
+    // Visualisierung tatsächlich anzeigt. Der aufgelöste Wert wird zusätzlich rein
+    // informativ in attributeEffectiveRootCategoryID gespiegelt (kein Formularfeld,
+    // nur zur Fehlersuche im "Attribute"-Reiter). Ohne gewählte Instanz oder ohne
+    // deren BaseID liefert diese Funktion 0 (siehe STATUS_ROOT_CATEGORY_MISSING).
     private function GetEffectiveRootCategoryID(): int
     {
+        $rootID = 0;
         $webFrontID = $this->ReadPropertyInteger(self::propertyWebFrontVisuInstanceID);
         if ($webFrontID !== 0 && @IPS_ObjectExists($webFrontID)) {
             $baseID = (int) @IPS_GetProperty($webFrontID, 'BaseID');
             if ($baseID !== 0 && @IPS_ObjectExists($baseID)) {
-                return $baseID;
+                $rootID = $baseID;
             }
         }
 
-        return $this->ReadPropertyInteger(self::propertyRootCategoryID);
+        $this->WriteAttributeInteger(self::attributeEffectiveRootCategoryID, $rootID);
+
+        return $rootID;
     }
 
     private function ScanRootTree(): void
