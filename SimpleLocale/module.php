@@ -635,11 +635,21 @@ private const LANGUAGE_FLAGS = [
     // Nutzer ohne Simple Locale: siehe README, Abschnitt "Integration für
     // Modulentwickler".
     //
+    // $SourceLanguage ist optional (Default '') - wird sie weggelassen, greift die in
+    // dieser Instanz konfigurierte Basissprache (propertySourceLanguage). Deckt den
+    // Regelfall ab, dass das aufrufende Fremdmodul seinen Text ohnehin in genau dieser
+    // Basissprache verfasst - eine eigene Sprachangabe bleibt für den selteneren Fall
+    // nötig, dass der Fremdtext in einer ANDEREN Sprache vorliegt.
+    //
     // Leerer Text, Quellsprache == aktive Sprache, oder eine durch abgelaufene
     // Testphase gerade nicht kostenfreie Sprache liefern den Text unverändert zurück -
     // bewusst nie ein Fehler/Absturz für den aufrufenden Fremdcode.
-    public function TranslateExternalText(string $Text, string $SourceLanguage): string
+    public function TranslateExternalText(string $Text, string $SourceLanguage = ''): string
     {
+        if ($SourceLanguage === '') {
+            $SourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
+        }
+
         $currentLanguage = $this->ResolveDisplayLanguageCode($this->ReadPropertyString(self::propertyCurrentLanguage));
 
         if ($Text === '' || $SourceLanguage === $currentLanguage) {
