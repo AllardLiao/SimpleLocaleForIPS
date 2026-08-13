@@ -2234,29 +2234,40 @@ private const LANGUAGE_FLAGS = [
     // Text, keine echte Variable) - beide Modi sind nie gleichzeitig aktiv.
     private function ScanGreetingVariableOutsideRootTree(array $ScannedTexts): array
     {
+        // TEMPORÄR zur Fehlersuche - wird nach Klärung wieder entfernt.
         $webFrontID = $this->ReadPropertyInteger(self::propertyWebFrontVisuInstanceID);
+        $this->SendDebug('IPSSL_Debug', 'ScanGreetingVariableOutsideRootTree: webFrontID=' . $webFrontID, 0);
         if ($webFrontID === 0 || !@IPS_ObjectExists($webFrontID)) {
+            $this->SendDebug('IPSSL_Debug', 'ScanGreetingVariableOutsideRootTree: abort - webFrontID invalid/missing', 0);
             return [];
         }
 
-        if ((int) @IPS_GetProperty($webFrontID, 'ShowGreeting') !== 2) {
+        $showGreeting = (int) @IPS_GetProperty($webFrontID, 'ShowGreeting');
+        if ($showGreeting !== 2) {
+            $this->SendDebug('IPSSL_Debug', 'ScanGreetingVariableOutsideRootTree: abort - showGreeting=' . $showGreeting . ' (not 2)', 0);
             return [];
         }
 
         $variableID = (int) @IPS_GetProperty($webFrontID, 'GreetingVariableID');
+        $this->SendDebug('IPSSL_Debug', 'ScanGreetingVariableOutsideRootTree: variableID=' . $variableID . ' exists=' . var_export(@IPS_VariableExists($variableID), true), 0);
         if ($variableID === 0 || !@IPS_VariableExists($variableID)) {
             return [];
         }
 
-        if (IPS_GetVariable($variableID)['VariableType'] !== VARIABLETYPE_STRING) {
+        $variableType = IPS_GetVariable($variableID)['VariableType'];
+        $this->SendDebug('IPSSL_Debug', 'ScanGreetingVariableOutsideRootTree: variableType=' . $variableType . ' (STRING=' . VARIABLETYPE_STRING . ')', 0);
+        if ($variableType !== VARIABLETYPE_STRING) {
             return [];
         }
 
         foreach ($ScannedTexts as $row) {
             if ((int) ($row['ValueObjectID'] ?? 0) === $variableID) {
+                $this->SendDebug('IPSSL_Debug', 'ScanGreetingVariableOutsideRootTree: already covered by ValueObjectID=' . $variableID . ' in root tree scan', 0);
                 return [];
             }
         }
+
+        $this->SendDebug('IPSSL_Debug', 'ScanGreetingVariableOutsideRootTree: adding variableID=' . $variableID . ' as extra row', 0);
 
         return [
             $variableID => [
