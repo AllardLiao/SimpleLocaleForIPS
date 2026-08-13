@@ -17,9 +17,9 @@ Beschreibung des Moduls.
 ### 1. Funktionsumfang
 
 * Übersetzt live die Namen aller Objekte (Kategorien, Variablen, Kacheln, Links)
-  innerhalb einer frei wählbaren Root-Kategorie, per `IPS_SetName`.
-* Übersetzt zusätzlich den Wert aller String-Variablen innerhalb dieser
-  Root-Kategorie (z. B. Hinweis-/Popup-Texte, auch komplette HTMLBox-Widgets),
+  innerhalb des Root der Visualisierung, per `IPS_SetName`.
+* Übersetzt zusätzlich den Wert aller String-Variablen innerhalb dieses
+  Root der Visualisierung (z. B. Hinweis-/Popup-Texte, auch komplette HTMLBox-Widgets),
   per `SetValueString`. `<style>`- und `<script>`-Blöcke innerhalb solcher
   Werte werden dabei nie an Google geschickt und bleiben beim Übersetzen
   unverändert (verhindert kaputtes CSS/JS durch mitübersetzte Eigenschaften).
@@ -75,8 +75,8 @@ Beschreibung des Moduls.
   Zwei Anwender, die gleichzeitig dieselbe Visualisierung öffnen, sehen daher
   immer dieselbe Sprache - es gibt keine getrennte Sprache je Person. Werden
   wirklich gleichzeitig unterschiedliche Sprachen für unterschiedliche
-  Zielgruppen benötigt, braucht es mehrere Instanzen mit jeweils eigener
-  Root-Kategorie/Kachel.
+  Zielgruppen benötigt, braucht es mehrere Instanzen mit jeweils eigenem
+  Root der Visualisierung/eigener Kachel.
 * **Dynamisch aktualisierte Inhalte werden automatisch nachübersetzt -
   vorausgesetzt, sie werden in der konfigurierten Basissprache geschrieben.**
   Schreibt ein *anderes* Modul oder Skript den Wert einer verfolgten
@@ -111,8 +111,8 @@ Beschreibung des Moduls.
   Objekt ohne Namen findet (leerer Name, oder von Symcon selbst vergebener
   Platzhalter wie "Unnamed Object (ID: ...)"/"Unbenanntes Objekt (ID: ...)").
   Die betroffenen Objekt-IDs samt Pfad erscheinen dann als Liste im
-  Konfigurationsformular - erst benennen, dann erneut "Baum neu einlesen"
-  klicken.
+  Konfigurationsformular - erst benennen, dann erneut "Visualisierung neu
+  einlesen" klicken.
 * **Bei großen Bäumen und/oder vielen Zielsprachen: "Could not load
   configuration form" / "Output-Buffer exceeds Limit (... bytes)".** Das
   Konfigurationsformular überträgt "Objektnamen", "Eigene Texte" und
@@ -183,6 +183,29 @@ Beschreibung des Moduls.
     Farbwerte, Schwellwerte) zu unterscheiden - lieber eine unbekannte
     Beschriftung übersehen als versehentlich einen Icon-Bezeichner
     kaputtübersetzen und damit ein Icon zum Verschwinden bringen.
+* **Fest in die Symcon-Konsole/Kachel-Visualisierung eingebaute Elemente
+  werden nicht übersetzt.** Simple Locale übersetzt ausschließlich Inhalte
+  aus dem konfigurierten Root-Baum (Objektnamen, Eigene Texte,
+  Beschriftungen) sowie die Automations/Favoriten der Kachel-Visualisierung
+  (siehe [Abschnitt 7](#7-visualisierung)) - alles, was Symcon selbst fest
+  in seine Oberfläche eingebaut hat, bleibt in der Sprache der Symcon-
+  Konsole/App und ist für ein Modul grundsätzlich nicht erreichbar. Dazu
+  gehören u. a.: das "Search"-Suchfeld, Hover-Popups/Tooltips auf den
+  Symbolen (z. B. zeigt das Glocken-Symbol beim Überfahren "Notifications"),
+  das Format von Uhrzeit/Datum, sowie die Beschriftung der
+  "Favorites"-Schaltfläche selbst (nicht zu verwechseln mit den darunter
+  angezeigten Objektnamen der einzelnen Favoriten, die sehr wohl übersetzt
+  werden, siehe [Abschnitt 7](#7-visualisierung)). Ein Sonderfall ist die
+  tageszeitabhängige Anrede ("Good Morning"/"Good Evening" etc.) im
+  Begrüßungsmodus "Automatic" (siehe [Abschnitt 7](#7-visualisierung)) - die
+  folgt laut Test **nicht** der Symcon-Konsolensprache, sondern rein
+  clientseitig der Spracheinstellung des jeweiligen **Besucher-Browsers**,
+  unabhängig von der in Simple Locale aktiven Sprache. Wählt ein Gast über
+  die Sprachauswahl-Kachel z. B. Deutsch, sein Browser ist aber auf Englisch
+  eingestellt, bleibt diese Anrede englisch - technisch nicht anders lösbar,
+  da Simple Locale keinen Einfluss auf diesen clientseitigen Symcon-
+  Mechanismus hat. Das Feld "Name" direkt danach (Property `GreetingName`)
+  wird davon nicht berührt und ganz normal übersetzt.
 
 ### 3. Voraussetzungen
 
@@ -191,9 +214,9 @@ Beschreibung des Moduls.
   8.0 (Variable Presentations). Auf älteren Versionen bleibt dieser
   Teilbereich einfach komplett inaktiv (kein Fehler) - Objektnamen und
   Eigene Texte funktionieren unabhängig davon bereits ab 7.1.
-- Alle Objekte innerhalb der konfigurierten Root-Kategorie müssen einen
-  echten Namen haben (kein leerer Name, kein von Symcon selbst vergebener
-  Platzhalter wie "Unnamed Object (ID: ...)") - siehe
+- Alle Objekte innerhalb des konfigurierten Root der Visualisierung müssen
+  einen echten Namen haben (kein leerer Name, kein von Symcon selbst
+  vergebener Platzhalter wie "Unnamed Object (ID: ...)") - siehe
   [Abschnitt 2](#2-bekannte-einschränkungen) für die genaue Prüfung.
 
 ### 4. Software-Installation
@@ -224,14 +247,14 @@ Felder auf einmal überfrachten:
 
 Name                            | Beschreibung
 -------------------------------- | ------------------
-Kachel-Visualisierung           | Instanz der eingebauten Kachel-Visualisierung (WebFront-Kernmodul, nicht Teil von Simple Locale). **Pflichtfeld** - ihre eigene "Startkategorie" wird automatisch als Root-Kategorie übernommen (Kategorie im Objektbaum, deren Inhalt - Namen + Werte von String-Variablen - übersetzt wird; sollte nur die Sichtbereich-Kacheln enthalten, nicht die Admin-Oberfläche) und sie liefert zusätzlich die Automations/Favoriten-Übersetzung, siehe eigenen Absatz unten. Ohne Auswahl (oder ohne gültige Startkategorie) bleibt die Instanz im Status "Root-Kategorie fehlt".
+Kachel-Visualisierung           | Instanz der eingebauten Kachel-Visualisierung (WebFront-Kernmodul, nicht Teil von Simple Locale). **Pflichtfeld** - ihre eigene "Startkategorie" wird automatisch als Root der Visualisierung übernommen (Kategorie im Objektbaum, deren Inhalt - Namen + Werte von String-Variablen - übersetzt wird; sollte nur die Sichtbereich-Kacheln enthalten, nicht die Admin-Oberfläche) und sie liefert zusätzlich die Automations/Favoriten-Übersetzung, siehe eigenen Absatz unten. Ohne Auswahl (oder ohne gültige Startkategorie) bleibt die Instanz im Status "Root der Visualisierung fehlt".
 Basissprache                    | Sprache, in der die Objektnamen/-werte ursprünglich gepflegt sind. Dient Google Translate als feste Quellsprache für alle Zielsprachen-Übersetzungen; die Basissprache selbst hat keine eigene Übersetzungsspalte, siehe [Abschnitt 7](#7-visualisierung).
 Aktuell aktive Sprache          | Welche Sprache gerade angezeigt wird - normalerweise über die Kachel vom Anwender selbst gesteuert (siehe Abschnitt 7), lässt sich hier aber auch manuell zu Testzwecken umschalten.
 Weltkugel-Symbol in der Kachel anzeigen | Blendet das 🌐-Symbol links neben dem Dropdown aus, falls nicht gewünscht (z. B. bei eigenem Kachel-Design). Standardmäßig an.
 Info-Symbol in der Kachel anzeigen | Blendet das ⓘ-Symbol (Erklärung der Einschränkungen, siehe Abschnitt 2) aus. Standardmäßig an.
 Eigene Sprachauswahl-Kachel verwenden | Unterdrückt die eingebaute Dropdown-Kachel zugunsten einer selbstgebauten (siehe Abschnitt 7). **Pro-Feature** (`custom_tile`, siehe [Abschnitt 8](#8-lizenz-und-testversion)) - ohne dieses Feature bleibt das Feld ausgegraut und die eingebaute Kachel aktiv.
 Übersetzungsanbieter (Panel)    | Siehe eigenen Abschnitt unten ("Übersetzungsanbieter: Google/DeepL/kostenfrei") - funktioniert ab Werk ohne jede Eingabe.
-Automatischer Rescan (Minuten)  | Intervall für automatisches Neu-Einlesen des Baums, 0 = nur manuell über den Button "Baum neu einlesen" (siehe unten). **Pro-Feature** (`auto_rescan`, siehe [Abschnitt 8](#8-lizenz-und-testversion)) - ohne dieses Feature bleibt das Feld ausgegraut und der Timer aus, der manuelle Rescan-Button bleibt aber in jeder Edition nutzbar.
+Automatischer Rescan (Minuten)  | Intervall für automatisches Neu-Einlesen der Visualisierung, 0 = nur manuell über den Button "Visualisierung neu einlesen" (siehe unten). **Pro-Feature** (`auto_rescan`, siehe [Abschnitt 8](#8-lizenz-und-testversion)) - ohne dieses Feature bleibt das Feld ausgegraut und der Timer aus, der manuelle Rescan-Button bleibt aber in jeder Edition nutzbar.
 
 **Übersetzungsanbieter: Google/DeepL/kostenfrei**
 
@@ -253,6 +276,7 @@ Name                            | Beschreibung
 Zielsprachen                    | Sprachen, in die übersetzt werden soll. Auswahl-Optionen kommen ab Werk aus der eingebauten Liste, mit konfiguriertem Google-/DeepL-Key aus deren dynamisch geladener Liste (siehe oben). Ausgegraut, wenn ein bezahlter Anbieter konfiguriert ist, aber noch keine Liste laden konnte, oder wenn das Sprachlimit einer "Spezialversion"-Lizenz erreicht ist (siehe Abschnitt 8). Wichtig: Nach dem Klick auf "Sprachliste aktualisieren" die Instanzkonfiguration einmal schließen und neu öffnen, bevor Häkchen gesetzt werden - sonst kann die Konsole falsche Sprachen speichern.
 Objektnamen / Eigene Texte / Beschriftungen | Listen der gefundenen Objekte mit Quelltext und je einer Spalte pro Zielsprache. Übersetzungen sind hier direkt editierbar; leere Zellen werden beim nächsten Rescan automatisch übersetzt. "Beschriftungen" siehe [Abschnitt 2](#2-bekannte-einschränkungen) (Fork-Mechanismus).
 Automations                     | Liste der gefundenen Automation-Einträge der oben unter "Kachel-Visualisierung" gewählten Instanz mit Quelltext und je einer Spalte pro Zielsprache - funktioniert genauso wie Objektnamen.
+Begrüßung                       | Übersetzt den Begrüßungstext der Kachel-Visualisierung ("Show Greeting" = "Automatic" oder "Static" in deren Instanzkonfiguration, Feld "Name"/Property `GreetingName`) - siehe eigenen Absatz unten. Bei "Show Greeting" = "Variable" oder "None" bleibt diese Liste leer (nichts zu übersetzen bzw. bereits über Objektnamen/Eigene Texte abgedeckt).
 
 **Wann sollte ein Rescan ausgeführt werden?**
 
@@ -262,7 +286,7 @@ Objektnamen        | Nur per Rescan (manuell/Timer) erkannt. | Ändert sich ein 
 Eigene Texte (Werte) | Nur per Rescan erkannt. | Automatisch (siehe Abschnitt 1, `VM_UPDATE`) - **kein** Rescan nötig, solange die Basissprache stimmt.
 Beschriftungen      | Nur per Rescan erkannt. | **Kein** automatisches Erkennen von Änderungen am zugrunde liegenden Profil/Template - Symcon liefert dafür keine Update-Benachrichtigung. Ändert ein anderes Modul/der Admin die Beschriftungen eines Profils, das eine bereits geforkte Variable nutzt, wird das erst nach manuellem Löschen der betroffenen Original-Import-Zelle + Rescan übernommen.
 
-**Kachel-Visualisierung: Root-Kategorie, Automations und Favoriten**
+**Kachel-Visualisierung: Root der Visualisierung, Automations und Favoriten**
 
 Die eingebaute Kachel-Visualisierung (WebFront-Kernmodul von IP-Symcon, unabhängig
 von Simple Locale) hat selbst eine "Startkategorie" (intern `BaseID`) sowie zwei
@@ -270,14 +294,14 @@ besondere Bereiche, die sich als eigene Kacheln ein-/ausblenden lassen
 (Instanzkonfiguration der Kachel-Visualisierung selbst, Abschnitte
 "Automations"/"Favorites").
 
-Die unter "Kachel-Visualisierung" ausgewählte Instanz ist die EINZIGE Quelle der
-Root-Kategorie - Simple Locale übernimmt deren "Startkategorie" automatisch, es
-gibt kein eigenes, manuell wählbares Root-Kategorie-Feld mehr (bis Build 23 gab
-es zusätzlich ein solches Feld als Rückfall). Das verhindert strukturell, dass
-versehentlich ein anderer Baum konfiguriert wird als der, den die Visualisierung
-tatsächlich anzeigt. Ohne ausgewählte Instanz (oder falls deren Startkategorie
-leer ist) bleibt die Instanz im Status "Root-Kategorie fehlt" und übersetzt
-nichts.
+Die unter "Kachel-Visualisierung" ausgewählte Instanz ist die EINZIGE Quelle des
+Root der Visualisierung - Simple Locale übernimmt deren "Startkategorie"
+automatisch, es gibt kein eigenes, manuell wählbares Root-Feld mehr (bis
+Build 23 gab es zusätzlich ein solches Feld als Rückfall). Das verhindert
+strukturell, dass versehentlich ein anderer Baum konfiguriert wird als der, den
+die Visualisierung tatsächlich anzeigt. Ohne ausgewählte Instanz (oder falls
+deren Startkategorie leer ist) bleibt die Instanz im Status "Root der
+Visualisierung fehlt" und übersetzt nichts.
 
 - **Automations**: jede Zeile verknüpft ein Skript/Ereignis mit einem frei
   vergebenen Anzeigenamen (z. B. "Gehen", "Kommen", "Schlafen") und einem Icon -
@@ -287,13 +311,39 @@ nichts.
   `Automations`-Property ein und schreibt beim Sprachwechsel die übersetzten
   Namen dort zurück (Icon und Verknüpfung bleiben dabei unangetastet).
 - **Favoriten**: zeigen ausschließlich den echten Namen des verlinkten Objekts an,
-  keine eigene Namens-Überschreibung. Liegt das favorisierte Objekt innerhalb der
-  automatisch übernommenen Root-Kategorie, wird es also ohnehin bereits
+  keine eigene Namens-Überschreibung. Liegt das favorisierte Objekt innerhalb des
+  automatisch übernommenen Root der Visualisierung, wird es also ohnehin bereits
   automatisch mitübersetzt - keine zusätzliche Konfiguration nötig. Liegt es
   außerhalb (kommt vor, ist aber nicht garantiert), wird es zusätzlich erfasst,
   sofern oben dieselbe Instanz ausgewählt ist: der Rescan-Button liest dann
   zusätzlich deren `Favorites`-Property ein und ergänzt jedes noch nicht erfasste
   Objekt als eigene Zeile in "Objektnamen" (Pfad "Favoriten").
+- **Begrüßung**: die Kachel-Visualisierung kann optional links oben einen
+  Begrüßungstext anzeigen ("Show Greeting" in deren Instanzkonfiguration, vier
+  Modi):
+  - **None**: kein Begrüßungstext - nichts zu tun.
+  - **Automatic**: zeigt eine tageszeitabhängige Anrede ("Good Morning"/"Good
+    Afternoon"/"Good Evening" etc.) VOR dem Feld "Name" (Property
+    `GreetingName`). Die Anrede selbst wird laut Test rein clientseitig anhand
+    der Spracheinstellung des jeweiligen **Besucher-Browsers** erzeugt - völlig
+    unabhängig von der in Simple Locale aktiven Sprache - und lässt sich daher
+    grundsätzlich nicht beeinflussen, siehe
+    [Abschnitt 2](#2-bekannte-einschränkungen). Das Feld "Name" selbst wird
+    aber wie unten beschrieben übersetzt.
+  - **Static**: zeigt ausschließlich das Feld "Name" (`GreetingName`), keine
+    Anrede davor.
+  - **Variable**: zeigt den Live-Wert einer echten String-Variable (Property
+    `GreetingVariableID`) - genau wie bei Favoriten oben bereits automatisch
+    mitübersetzt, sofern die Variable innerhalb des Root der Visualisierung
+    liegt; liegt sie außerhalb, wird sie beim Rescan zusätzlich als eigene
+    Zeile in "Eigene Texte" ergänzt (Pfad "Begrüßung").
+
+  Für die Modi **Automatic** und **Static** trägt `GreetingName` einen frei
+  vergebenen Text, der komplett unabhängig vom Root-Baum lebt - genau wie bei
+  Automations. Simple Locale übersetzt ihn, wenn die Instanz oben ausgewählt
+  ist: der Rescan-Button liest dann zusätzlich diese Property ein (Liste
+  "Begrüßung") und schreibt beim Sprachwechsel den übersetzten Text dort
+  zurück.
 
 **Lizenz:**
 
@@ -586,9 +636,9 @@ Beispiel:
 `IPSSL_TranslateText(12345, 67890);`
 
 `void IPSSL_Rescan(integer $InstanzID);`
-Liest die konfigurierte Root-Kategorie neu ein und übersetzt neu gefundene
-oder noch unübersetzte Einträge. Entspricht dem Button "Baum jetzt neu
-einlesen" im Modul-Formular.
+Liest den konfigurierten Root der Visualisierung neu ein und übersetzt neu
+gefundene oder noch unübersetzte Einträge. Entspricht dem Button
+"Visualisierung neu einlesen" im Modul-Formular.
 
 Beispiel:
 `IPSSL_Rescan(12345);`
