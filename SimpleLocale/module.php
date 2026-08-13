@@ -1667,6 +1667,15 @@ private const LANGUAGE_FLAGS = [
         $visitedIDs = [$rootID => true];
         $this->WalkTree($rootID, $scannedNames, $scannedTexts, $scannedOptions, $visitedIDs, []);
 
+        // Favoriten der Kachel-Visualisierung (siehe propertyWebFrontVisuInstanceID)
+        // zeigen nur den echten Objektnamen an, keine eigene Namens-Überschreibung -
+        // liegt das favorisierte Objekt bereits im Root-Baum oben, ist es also schon
+        // durch WalkTree erfasst. Nur Favoriten AUSSERHALB des Root-Baums (kommt vor,
+        // ist aber nicht garantiert) werden hier zusätzlich als eigene Objektnamen-
+        // Zeile ergänzt (Path = "Favoriten" statt eines echten Kategorie-Pfads, damit
+        // im Formular klar bleibt, woher die Zeile kommt).
+        $scannedNames += $this->ScanFavoriteObjectsOutsideRootTree($scannedNames);
+
         // Vorab-Check, bevor überhaupt übersetzt wird: ein Objekt ohne echten Namen
         // lässt sich nicht sinnvoll übersetzen und würde als Platzhalter-Text in der
         // Gäste-Visualisierung landen. Bricht den kompletten Rescan ab (kein Merge,
@@ -2041,6 +2050,45 @@ private const LANGUAGE_FLAGS = [
         }
 
         return $Node;
+    }
+
+    // Favoriten der Kachel-Visualisierung (Property "Favorites", je Eintrag nur
+    // {"ObjectID": N}) tragen KEINE eigene Namens-Überschreibung - sie zeigen immer
+    // den echten, aktuellen Namen des verlinkten Objekts an. Liegt dieses Objekt
+    // bereits im gewählten Root-Baum, übersetzt WalkTree es ohnehin schon; diese
+    // Funktion ergänzt nur die Fälle, in denen ein Favorit auf ein Objekt AUSSERHALB
+    // des Root-Baums zeigt (kommt vor, ist aber nicht garantiert) - dafür wird
+    // dieselbe Kachel-Visualisierungs-Instanz wie bei den Automations verwendet
+    // (siehe propertyWebFrontVisuInstanceID), keine eigene Property nötig. $ScannedNames
+    // ist die bereits vom Root-Baum-Scan erfasste Menge (Schlüssel = ObjectID) - nur
+    // Favoriten, die dort NICHT schon vorkommen, werden zurückgegeben. [] bei
+    // deaktiviertem Feature, fehlender Instanz oder leerer/ungültiger Property.
+    private function ScanFavoriteObjectsOutsideRootTree(array $ScannedNames): array
+    {
+        $webFrontID = $this->ReadPropertyInteger(self::propertyWebFrontVisuInstanceID);
+        if ($webFrontID === 0 || !@IPS_ObjectExists($webFrontID)) {
+            return [];
+        }
+
+        $favorites = json_decode((string) @IPS_GetProperty($webFrontID, 'Favorites'), true);
+        if (!is_array($favorites)) {
+            return [];
+        }
+
+        $extra = [];
+        foreach ($favorites as $entry) {
+            $objectID = (int) ($entry['ObjectID'] ?? 0);
+            if ($objectID === 0 || isset($ScannedNames[$objectID]) || !@IPS_ObjectExists($objectID)) {
+                continue;
+            }
+            $extra[$objectID] = [
+                'ObjectID'                => $objectID,
+                'Path'                    => $this->Translate('Favoriten'),
+                self::langOriginalImport  => IPS_GetName($objectID),
+            ];
+        }
+
+        return $extra;
     }
 
     // Liest die "Automations"-Property der ausgewählten Kachel-Visualisierungs-Instanz
