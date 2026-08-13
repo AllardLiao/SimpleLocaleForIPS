@@ -583,8 +583,8 @@ ein echtes serverseitiges Sperren würde diese Offline-Fähigkeit aufgeben) -
 stattdessen merkt sich der Shop serverseitig, dass der alte Schlüssel
 bereits eingetauscht wurde.
 
-Dieser Zustand wird dem Modul NICHT laufend, sondern nur **einmalig beim
-Aktivieren** eines Schlüssels mitgeteilt: die ohnehin schon an
+Dieser Zustand wird dem Modul NICHT laufend, sondern nur **beim tatsächlichen
+Ändern** des eingetragenen Schlüssels mitgeteilt: die ohnehin schon an
 `LICENSE_ACTIVATION_REPORT_URL` gemeldete Aktivierung (siehe oben) bekommt
 dabei als Antwort `{"blocked": true}`, falls genau dieser Schlüssel bereits
 upgegradet wurde. Ein nicht erreichbarer Meldeserver blockiert dabei nie
@@ -593,8 +593,14 @@ Klick auf "Lizenz aktivieren" fragt für einen bereits als geblockt
 bekannten Schlüssel jedes Mal erneut online nach (z. B. um ein
 serverseitiges Entsperren zu bemerken, siehe Synergetix-Website-Repo,
 `shop/admin/activations.php`) - alle anderen Aktivierungspfade (z. B.
-"Übernehmen" mit unverändertem Schlüssel) fragen dagegen nur einmal pro
-Schlüssel+Licensee-Kombination nach, wie beim normalen Melden auch.
+"Übernehmen" mit unverändertem Schlüssel) fragen dagegen nur an, wenn sich
+der eingetragene Schlüssel seit der letzten Prüfung geändert hat (Vergleich
+gegen `attributeLastCheckedLicenseKeyHash`, NICHT gegen den kompletten
+Aktivierungsverlauf) - das schließt insbesondere die Lücke, dass sich ein
+bereits einmal aktivierter, inzwischen z. B. per Upgrade verbrauchter
+Schlüssel durch simples Zurückwechseln beliebig oft wieder eintragen ließe,
+ohne dass der Server je erneut gefragt würde, ob er inzwischen geblockt
+wurde.
 
 Ist ein Schlüssel als geblockt bekannt, wird er **nicht hart abgelehnt**,
 sondern wie ein fehlender Lizenzschlüssel behandelt: die Testphase dieser
