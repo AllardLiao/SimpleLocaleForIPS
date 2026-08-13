@@ -298,6 +298,11 @@
                     ]
                 },
                 {
+                    "type": "Label",
+                    "name": "GreetingModeHint",
+                    "caption": "Begrüßung: keine Kachel-Visualisierungs-Instanz ausgewählt (siehe Feld \"Kachel-Visualisierung\" oben)."
+                },
+                {
                     "type": "List",
                     "name": "ObjectGreeting",
                     "caption": "Begrüßung",

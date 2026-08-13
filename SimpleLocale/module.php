@@ -517,6 +517,12 @@ private const LANGUAGE_FLAGS = [
                     $element['values'] = $this->DecodeRows(self::propertyObjectGreeting);
                     break;
 
+                // Erklaert an genau der Stelle, wo Nutzer intuitiv suchen ("Begrüßung"),
+                // welcher Modus gerade aktiv ist - siehe ScanGreetingText.
+                case 'GreetingModeHint':
+                    $element['caption'] = $this->BuildGreetingModeHint();
+                    break;
+
                 case self::propertyCurrentLanguage:
                     $element['options'] = $this->BuildCurrentLanguageOptions();
                     break;
@@ -1415,30 +1421,40 @@ private const LANGUAGE_FLAGS = [
         }
     }
 
-    // Schreibt den übersetzten Begrüßungstext in die LIVE "GreetingName"-Property der
-    // Kachel-Visualisierungs-Instanz zurück (Modi "Automatic"/"Static", siehe
-    // propertyObjectGreeting) - exakt dasselbe Muster wie ApplyAutomationsLanguage,
+    // Schreibt den übersetzten Begrüßungstext zurück - Ziel hängt vom "Show
+    // Greeting"-Modus zum Zeitpunkt des letzten Rescans ab (siehe ScanGreetingText):
+    // Modus "Variable" (ValueObjectID in der Zeile gesetzt) schreibt live per
+    // SetValueString auf die verlinkte Variable, exakt wie bei "Eigene Texte"
+    // (WriteTrackedValueString inkl. Selbstschreib-Schutz gegen Übersetzungs-
+    // Endlosschleifen). Modi "Automatic"/"Static" schreiben stattdessen wie bisher
+    // in die LIVE "GreetingName"-Property der Kachel-Visualisierungs-Instanz zurück,
     // inkl. Nur-bei-tatsächlicher-Änderung-Schreiben (verhindert unnötige
     // IPS_ApplyChanges-Aufrufe auf die Visu-Instanz, die sonst bei JEDEM
     // Sprachwechsel-Request - auch beim erneuten Wählen derselben Sprache - einen
     // Reload aller verbundenen Kachel-Visualisierungs-Clients auslösen würden). Kein
-    // Fehler, wenn das Feature nicht genutzt wird, die Instanz fehlt, oder die Zeile
-    // (noch) nicht existiert. Modus "Variable" braucht hier nichts: dessen Variable
-    // wird ganz normal über die bestehende "Eigene Texte"-Anwendung (SetValueString)
-    // bedient, siehe ScanGreetingVariableOutsideRootTree.
+    // Fehler, wenn das Feature nicht genutzt wird oder die Zeile (noch) nicht
+    // existiert.
     private function ApplyGreetingLanguage(string $Language, string $SourceLanguage): void
     {
-        $webFrontID = $this->ReadPropertyInteger(self::propertyWebFrontVisuInstanceID);
-        if ($webFrontID === 0 || !@IPS_ObjectExists($webFrontID)) {
-            return;
-        }
-
         $rows = $this->DecodeRows(self::propertyObjectGreeting);
         if ($rows === []) {
             return;
         }
 
         $resolvedName = $this->ResolveRowValue($rows[0], $Language, $Language, $SourceLanguage, self::langOriginalImport);
+
+        $valueObjectID = (int) ($rows[0]['ValueObjectID'] ?? 0);
+        if ($valueObjectID !== 0 && @IPS_ObjectExists($valueObjectID)) {
+            $this->WriteTrackedValueString($valueObjectID, $resolvedName);
+
+            return;
+        }
+
+        $webFrontID = $this->ReadPropertyInteger(self::propertyWebFrontVisuInstanceID);
+        if ($webFrontID === 0 || !@IPS_ObjectExists($webFrontID)) {
+            return;
+        }
+
         $currentName = (string) @IPS_GetProperty($webFrontID, 'GreetingName');
         if ($currentName === $resolvedName) {
             return;
@@ -1621,18 +1637,28 @@ private const LANGUAGE_FLAGS = [
             }
         }
 
+        // "Begrüßung" im Modus "Variable" trägt eine ValueObjectID genau wie
+        // "Eigene Texte" (siehe ScanGreetingText) - dieselbe Live-Verfolgung gilt
+        // hier also gleichermaßen.
+        foreach ($this->DecodeRows(self::propertyObjectGreeting) as $row) {
+            $valueObjectID = (int) ($row['ValueObjectID'] ?? 0);
+            if ($valueObjectID !== 0 && @IPS_ObjectExists($valueObjectID)) {
+                $this->RegisterMessage($valueObjectID, VM_UPDATE);
+                $currentIDs[] = $valueObjectID;
+            }
+        }
+
         $this->WriteAttributeString(self::attributeRegisteredValueObjectIDs, json_encode($currentIDs));
     }
 
-    // Reagiert auf eine VM_UPDATE-Nachricht einer verfolgten "Eigene Texte"-Variable.
-    // Fragt bewusst GetValueString() frisch ab, statt das $Data-Array von MessageSink
-    // zu interpretieren - dessen Inhalt ist laut offizieller Symcon-Dokumentation
-    // "je nach Nachrichtentyp" und "noch undokumentiert" (siehe auch das offizielle
-    // Watchdog-Modul, das aus demselben Grund genauso vorgeht). Der neue Wert wird als
-    // frischer Rohtext in der Basissprache übernommen (Annahme: Fremdmodule schreiben
-    // wie der ursprüngliche Scan in der konfigurierten Basissprache) und sofort live in
-    // die aktuell aktive Gast-Sprache nachübersetzt - kein Zutun des fremden
-    // Modulentwicklers nötig.
+    // Reagiert auf eine VM_UPDATE-Nachricht einer verfolgten Variable - "Eigene
+    // Texte" oder, seit ScanGreetingText(), auch die im Modus "Variable" verlinkte
+    // Begrüßungs-Variable (siehe SyncValueUpdateRegistrations, die beide Properties
+    // gleichermaßen registriert). Fragt bewusst GetValueString() frisch ab, statt das
+    // $Data-Array von MessageSink zu interpretieren - dessen Inhalt ist laut
+    // offizieller Symcon-Dokumentation "je nach Nachrichtentyp" und "noch
+    // undokumentiert" (siehe auch das offizielle Watchdog-Modul, das aus demselben
+    // Grund genauso vorgeht).
     private function HandleTrackedVariableUpdate(int $ValueObjectID): void
     {
         if (!@IPS_ObjectExists($ValueObjectID)) {
@@ -1647,56 +1673,90 @@ private const LANGUAGE_FLAGS = [
         }
         if (($lastSelfWritten[(string) $ValueObjectID] ?? null) === $newValue) {
             // Eigener Schreibvorgang von weiter unten in dieser Methode oder aus
-            // ApplyLanguage() - sonst würde sich die Instanz selbst in eine
-            // Endlosschleife übersetzen.
+            // ApplyLanguage()/ApplyGreetingLanguage() - sonst würde sich die Instanz
+            // selbst in eine Endlosschleife übersetzen.
             return;
         }
 
-        $rows = $this->DecodeRows(self::propertyObjectTexts);
-        $rowIndex = null;
-        foreach ($rows as $i => $row) {
+        $textRows = $this->DecodeRows(self::propertyObjectTexts);
+        foreach ($textRows as $i => $row) {
             $valueObjectID = (int) ($row['ValueObjectID'] ?? $row['ObjectID'] ?? 0);
             if ($valueObjectID === $ValueObjectID) {
-                $rowIndex = $i;
-                break;
+                $this->ApplyTrackedVariableUpdate(
+                    self::propertyObjectTexts,
+                    $textRows,
+                    $i,
+                    self::langOriginalImportText,
+                    self::fieldTextPrefix,
+                    $ValueObjectID,
+                    $newValue
+                );
+
+                return;
             }
         }
-        if ($rowIndex === null) {
-            // Nicht (mehr) getrackt - z.B. Nachricht kam noch kurz nach dem Löschen
-            // der Zeile rein, bevor SyncValueUpdateRegistrations() das nachziehen konnte.
+
+        $greetingRows = $this->DecodeRows(self::propertyObjectGreeting);
+        if ($greetingRows !== [] && (int) ($greetingRows[0]['ValueObjectID'] ?? 0) === $ValueObjectID) {
+            $this->ApplyTrackedVariableUpdate(
+                self::propertyObjectGreeting,
+                $greetingRows,
+                0,
+                self::langOriginalImport,
+                '',
+                $ValueObjectID,
+                $newValue
+            );
+
             return;
         }
 
-        // Neuer externer Wert wird als frischer Rohtext übernommen - bestehende
-        // Übersetzungen sind jetzt veraltet und werden verworfen, genau wie beim
-        // manuellen Leeren einer Zelle vor einem Rescan (regenerieren sich lazy, sobald
-        // die jeweilige Sprache das nächste Mal aktiv wird).
-        $rows[$rowIndex][self::langOriginalImportText] = $newValue;
-        foreach (array_keys($rows[$rowIndex]) as $key) {
-            if (str_starts_with($key, self::fieldTextPrefix)) {
-                $rows[$rowIndex][$key] = '';
-            }
+        // Nicht (mehr) getrackt - z.B. Nachricht kam noch kurz nach dem Löschen der
+        // Zeile rein, bevor SyncValueUpdateRegistrations() das nachziehen konnte.
+    }
+
+    // Gemeinsame Schreib-/Nachübersetzungs-Logik für HandleTrackedVariableUpdate,
+    // parametrisiert über die Zeilenform der jeweiligen Property: $RawField ist der
+    // Schlüssel für den unübersetzten Rohtext (langOriginalImportText bei "Eigene
+    // Texte", langOriginalImport bei "Begrüßung"), $TranslatedPrefix der
+    // Spaltenpräfix je Zielsprache (fieldTextPrefix bzw. kein Präfix). Neuer externer
+    // Wert wird als frischer Rohtext übernommen - bestehende Übersetzungen sind jetzt
+    // veraltet und werden verworfen, genau wie beim manuellen Leeren einer Zelle vor
+    // einem Rescan (regenerieren sich lazy, sobald die jeweilige Sprache das nächste
+    // Mal aktiv wird) - nur die aktuell aktive Sprache wird sofort nachübersetzt.
+    private function ApplyTrackedVariableUpdate(
+        string $Property,
+        array $Rows,
+        int $RowIndex,
+        string $RawField,
+        string $TranslatedPrefix,
+        int $ValueObjectID,
+        string $NewValue
+    ): void {
+        $Rows[$RowIndex][$RawField] = $NewValue;
+        foreach ($this->GetSelectedTargetLanguages() as $lang) {
+            $Rows[$RowIndex][$TranslatedPrefix . $lang] = '';
         }
 
         $currentLanguage = $this->ReadPropertyString(self::propertyCurrentLanguage);
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
-        $displayText = $newValue;
+        $displayText = $NewValue;
 
         if ($currentLanguage !== self::langOriginalImport && $currentLanguage !== $sourceLanguage) {
-            $translated = $this->TranslateBatch([$newValue], $sourceLanguage, $currentLanguage);
+            $translated = $this->TranslateBatch([$NewValue], $sourceLanguage, $currentLanguage);
             // TranslateBatch liefert bei einem fehlgeschlagenen Google-Aufruf einen
             // Leerstring zurück (nicht null) - ein reines "??" würde diesen Fehlerfall
             // nicht abfangen und eine leere Beschriftung in der Kachel hinterlassen.
             if (($translated[0] ?? '') !== '') {
                 $displayText = $translated[0];
-                $rows[$rowIndex][self::fieldTextPrefix . $currentLanguage] = $displayText;
+                $Rows[$RowIndex][$TranslatedPrefix . $currentLanguage] = $displayText;
             }
         }
 
-        IPS_SetProperty($this->InstanceID, self::propertyObjectTexts, json_encode($rows));
+        IPS_SetProperty($this->InstanceID, $Property, json_encode($Rows));
         IPS_ApplyChanges($this->InstanceID);
 
-        if ($displayText !== $newValue) {
+        if ($displayText !== $NewValue) {
             $this->WriteTrackedValueString($ValueObjectID, $displayText);
         }
     }
@@ -1784,12 +1844,6 @@ private const LANGUAGE_FLAGS = [
         // im Formular klar bleibt, woher die Zeile kommt).
         $scannedNames += $this->ScanFavoriteObjectsOutsideRootTree($scannedNames);
 
-        // Begrüßungstext im Modus "Variable" (siehe propertyObjectGreeting) - analog
-        // zu den Favoriten oben, nur für "Eigene Texte" statt "Objektnamen" (die
-        // Begrüßungs-Variable trägt selbst keinen eigenen, separat zu pflegenden
-        // Namen, nur ihren Live-Wert).
-        $scannedTexts += $this->ScanGreetingVariableOutsideRootTree($scannedTexts);
-
         // Vorab-Check, bevor überhaupt übersetzt wird: ein Objekt ohne echten Namen
         // lässt sich nicht sinnvoll übersetzen und würde als Platzhalter-Text in der
         // Gäste-Visualisierung landen. Bricht den kompletten Rescan ab (kein Merge,
@@ -1830,10 +1884,12 @@ private const LANGUAGE_FLAGS = [
             $this->ScanAutomationsByID()
         );
 
-        // Begrüßungstext (Modi "Automatic"/"Static") - ebenfalls unabhängig vom
-        // Root-Baum, siehe ScanGreetingText/MergeGreetingRows.
+        // Begrüßungstext, alle drei Modi (siehe ScanGreetingText) - ebenfalls
+        // unabhängig vom Root-Baum, außer für den Sonderfall, dass die im Modus
+        // "Variable" verlinkte Variable zufällig selbst im Root-Baum liegt (dann hat
+        // der normale Baum-Scan Vorrang, siehe ScanGreetingText).
         $existingGreeting = $this->DecodeRows(self::propertyObjectGreeting);
-        $scannedGreeting = $this->ScanGreetingText();
+        $scannedGreeting = $this->ScanGreetingText($scannedTexts);
         $this->SendDebug('IPSSL_Debug', 'ScanRootTree: existingGreeting=' . json_encode($existingGreeting) . ' scannedGreeting=' . json_encode($scannedGreeting), 0);
         $objectGreeting = $this->MergeGreetingRows($existingGreeting, $scannedGreeting);
         $this->SendDebug('IPSSL_Debug', 'ScanRootTree: mergedGreeting=' . json_encode($objectGreeting), 0);
@@ -2222,112 +2278,102 @@ private const LANGUAGE_FLAGS = [
         return $extra;
     }
 
-    // Begrüßungstext im Modus "Variable" (ShowGreeting=2, siehe propertyObjectGreeting)
-    // zeigt den Live-Wert einer echten String-Variable (Property "GreetingVariableID")
-    // an - liegt diese Variable bereits im Root der Visualisierung, übersetzt WalkTree
-    // sie ganz normal als "Eigene Texte" mit (Prüfung über ValueObjectID, damit auch
-    // über einen Link erfasste Variablen erkannt werden). Nur wenn sie AUSSERHALB
-    // liegt (kommt vor, ist aber nicht garantiert - analog zu
-    // ScanFavoriteObjectsOutsideRootTree), wird sie hier zusätzlich als eigene
-    // "Eigene Texte"-Zeile ergänzt (Path = "Begrüßung"), damit sie trotzdem übersetzt
-    // wird. Modi "Automatic"/"Static" nutzen stattdessen ScanGreetingText() (freier
-    // Text, keine echte Variable) - beide Modi sind nie gleichzeitig aktiv.
-    private function ScanGreetingVariableOutsideRootTree(array $ScannedTexts): array
+    // Erklärender Hinweistext über der "Begrüßung"-Liste im Formular - macht auf
+    // einen Blick klar, welcher Modus gerade aktiv ist und was die eine Zeile
+    // darunter bedeutet (ohne Instanz/deaktiviert bleibt die Liste leer, das sollte
+    // nicht wie ein Fehler wirken).
+    private function BuildGreetingModeHint(): string
     {
-        // TEMPORÄR zur Fehlersuche - wird nach Klärung wieder entfernt.
         $webFrontID = $this->ReadPropertyInteger(self::propertyWebFrontVisuInstanceID);
-        $this->SendDebug('IPSSL_Debug', 'ScanGreetingVariableOutsideRootTree: webFrontID=' . $webFrontID, 0);
         if ($webFrontID === 0 || !@IPS_ObjectExists($webFrontID)) {
-            $this->SendDebug('IPSSL_Debug', 'ScanGreetingVariableOutsideRootTree: abort - webFrontID invalid/missing', 0);
+            return $this->Translate('Begrüßung: keine Kachel-Visualisierungs-Instanz ausgewählt (siehe Feld "Kachel-Visualisierung" oben).');
+        }
+
+        $showGreeting = (int) @IPS_GetProperty($webFrontID, 'ShowGreeting');
+
+        switch ($showGreeting) {
+            case 1:
+            case 3:
+                return $this->Translate('Modus "Automatic"/"Static" aktiv - der Begrüßungstext (Feld "Name") wird unten übersetzt.');
+
+            case 2:
+                return $this->Translate('Modus "Variable" aktiv - der aktuelle Wert der verknüpften Variable wird unten übersetzt und bei jeder Änderung der Variable automatisch neu übernommen.');
+
+            default:
+                return $this->Translate('Begrüßung ist deaktiviert ("Show Greeting" = "None" in der Kachel-Visualisierung).');
+        }
+    }
+
+    // Begrüßungstext - Quelle hängt vom "Show Greeting"-Modus der Kachel-
+    // Visualisierung ab (siehe propertyWebFrontVisuInstanceID):
+    // - Modi "Automatic"/"Static" (1/3): freier Text aus der Property "GreetingName",
+    //   komplett unabhängig vom Root-Baum, exakt wie bei Automations. "Automatic"
+    //   stellt zusätzlich clientseitig eine tageszeitabhängige Anrede ("Good
+    //   Morning"/"Good Evening" etc.) VOR diesen Text - die folgt laut Test
+    //   ausschließlich der Spracheinstellung des Besucher-Browsers, nicht der in
+    //   Simple Locale aktiven Sprache, und ist daher nicht beeinflussbar (siehe
+    //   README Abschnitt 2).
+    // - Modus "Variable" (2): der aktuelle Wert der in "GreetingVariableID"
+    //   verlinkten String-Variable - landet HIER (statt in "Eigene Texte"), damit
+    //   jeder Nutzer sie im selben Abschnitt "Begrüßung" findet, unabhängig vom
+    //   gewählten Modus (frühere Version legte hierfür eine Zusatzzeile in "Eigene
+    //   Texte" an - live als verwirrend empfunden). Liegt die Variable zufällig
+    //   selbst im Root-Baum (eigener Ident dort), hat der normale Baum-Scan
+    //   ($ScannedTexts) Vorrang - sonst gäbe
+    //   es zwei unabhängige, live schreibende Übersetzungs-Zeilen für dieselbe
+    //   Variable.
+    private function ScanGreetingText(array $ScannedTexts): array
+    {
+        $webFrontID = $this->ReadPropertyInteger(self::propertyWebFrontVisuInstanceID);
+        if ($webFrontID === 0 || !@IPS_ObjectExists($webFrontID)) {
             return [];
         }
 
         $showGreeting = (int) @IPS_GetProperty($webFrontID, 'ShowGreeting');
-        if ($showGreeting !== 2) {
-            $this->SendDebug('IPSSL_Debug', 'ScanGreetingVariableOutsideRootTree: abort - showGreeting=' . $showGreeting . ' (not 2)', 0);
-            return [];
-        }
 
-        $variableID = (int) @IPS_GetProperty($webFrontID, 'GreetingVariableID');
-        $this->SendDebug('IPSSL_Debug', 'ScanGreetingVariableOutsideRootTree: variableID=' . $variableID . ' exists=' . var_export(@IPS_VariableExists($variableID), true), 0);
-        if ($variableID === 0 || !@IPS_VariableExists($variableID)) {
-            return [];
-        }
-
-        $variableType = IPS_GetVariable($variableID)['VariableType'];
-        $this->SendDebug('IPSSL_Debug', 'ScanGreetingVariableOutsideRootTree: variableType=' . $variableType . ' (STRING=' . VARIABLETYPE_STRING . ')', 0);
-        if ($variableType !== VARIABLETYPE_STRING) {
-            return [];
-        }
-
-        foreach ($ScannedTexts as $row) {
-            if ((int) ($row['ValueObjectID'] ?? 0) === $variableID) {
-                $this->SendDebug('IPSSL_Debug', 'ScanGreetingVariableOutsideRootTree: already covered by ValueObjectID=' . $variableID . ' in root tree scan', 0);
+        if ($showGreeting === 1 || $showGreeting === 3) {
+            $name = (string) @IPS_GetProperty($webFrontID, 'GreetingName');
+            if ($name === '') {
                 return [];
             }
+
+            return [[self::langOriginalImport => $name]];
         }
 
-        $this->SendDebug('IPSSL_Debug', 'ScanGreetingVariableOutsideRootTree: adding variableID=' . $variableID . ' as extra row', 0);
+        if ($showGreeting === 2) {
+            $variableID = (int) @IPS_GetProperty($webFrontID, 'GreetingVariableID');
+            if ($variableID === 0 || !@IPS_VariableExists($variableID)) {
+                return [];
+            }
 
-        return [
-            $variableID => [
-                'ObjectID'                       => $variableID,
-                'ValueObjectID'                  => $variableID,
-                'Path'                           => $this->Translate('Begrüßung'),
-                self::fieldOriginalImportName    => $this->Translate('Begrüßung'),
-                self::langOriginalImportText     => GetValueString($variableID),
-            ],
-        ];
-    }
+            $variable = @IPS_GetVariable($variableID);
+            if (!is_array($variable) || $variable['VariableType'] !== VARIABLETYPE_STRING) {
+                return [];
+            }
 
-    // Begrüßungstext in den Modi "Automatic"/"Static" (ShowGreeting=1 bzw. 3, siehe
-    // propertyObjectGreeting) - Property "GreetingName" traegt einen frei vergebenen
-    // Text, der komplett unabhaengig vom Root-Baum lebt, exakt wie bei Automations.
-    // "Automatic" stellt zusaetzlich clientseitig eine tageszeitabhaengige Anrede
-    // ("Good Morning"/"Good Evening" etc.) VOR diesen Text - die folgt laut Test
-    // ausschliesslich der Spracheinstellung des Besucher-Browsers, nicht der in
-    // Simple Locale aktiven Sprache, und ist daher nicht beeinflussbar (siehe README
-    // Abschnitt 2). Modus "Variable" (2) nutzt stattdessen
-    // ScanGreetingVariableOutsideRootTree() (echte Variable statt freiem Text).
-    private function ScanGreetingText(): array
-    {
-        $webFrontID = $this->ReadPropertyInteger(self::propertyWebFrontVisuInstanceID);
-        // TEMPORÄR zur Fehlersuche (leere ObjectGreeting-Property trotz korrekt
-        // gesetztem ShowGreeting/GreetingName) - wird nach Klärung wieder entfernt.
-        $this->SendDebug('IPSSL_Debug', 'ScanGreetingText: webFrontID=' . $webFrontID, 0);
-        if ($webFrontID === 0 || !@IPS_ObjectExists($webFrontID)) {
-            $this->SendDebug('IPSSL_Debug', 'ScanGreetingText: abort - webFrontID invalid/missing', 0);
-            return [];
+            foreach ($ScannedTexts as $row) {
+                if ((int) ($row['ValueObjectID'] ?? 0) === $variableID) {
+                    return [];
+                }
+            }
+
+            return [[
+                self::langOriginalImport => GetValueString($variableID),
+                'ValueObjectID'          => $variableID,
+            ]];
         }
 
-        $rawShowGreeting = @IPS_GetProperty($webFrontID, 'ShowGreeting');
-        $showGreeting = (int) $rawShowGreeting;
-        $this->SendDebug('IPSSL_Debug', 'ScanGreetingText: rawShowGreeting=' . var_export($rawShowGreeting, true) . ' castTo=' . $showGreeting, 0);
-        if ($showGreeting !== 1 && $showGreeting !== 3) {
-            $this->SendDebug('IPSSL_Debug', 'ScanGreetingText: abort - showGreeting not 1/3', 0);
-            return [];
-        }
-
-        $rawName = @IPS_GetProperty($webFrontID, 'GreetingName');
-        $name = (string) $rawName;
-        $this->SendDebug('IPSSL_Debug', 'ScanGreetingText: rawName=' . var_export($rawName, true) . ' castTo="' . $name . '"', 0);
-        if ($name === '') {
-            $this->SendDebug('IPSSL_Debug', 'ScanGreetingText: abort - name empty', 0);
-            return [];
-        }
-
-        $result = [[self::langOriginalImport => $name]];
-        $this->SendDebug('IPSSL_Debug', 'ScanGreetingText: returning ' . json_encode($result), 0);
-
-        return $result;
+        return [];
     }
 
     // "Begrüßung" hat immer höchstens eine Zeile - kein ID-Abgleich wie bei
-    // MergeAutomationRows nötig, nur der Quelltext wird bei Änderung aktualisiert
-    // (vorhandene, ggf. manuell korrigierte Übersetzungen bleiben unangetastet).
-    // Liefert $ExistingRows unverändert zurück, wenn der Modus gerade nicht
-    // "Automatic"/"Static" ist (kein Datenverlust bei vorübergehendem Moduswechsel,
-    // gleiches Prinzip wie überall sonst in diesem Modul).
+    // MergeAutomationRows nötig, nur der Quelltext (und ggf. ValueObjectID bei einem
+    // Wechsel zu/von Modus "Variable") wird bei Änderung aktualisiert (vorhandene,
+    // ggf. manuell korrigierte Übersetzungen bleiben unangetastet, auch über einen
+    // Moduswechsel hinweg - gleiches Prinzip wie überall sonst in diesem Modul: keine
+    // automatische Neu-Übersetzung bei geändertem Quelltext). Liefert $ExistingRows
+    // unverändert zurück, wenn "Show Greeting" gerade "None" ist (kein Datenverlust
+    // bei vorübergehendem Moduswechsel).
     private function MergeGreetingRows(array $ExistingRows, array $ScannedRows): array
     {
         if ($ScannedRows === []) {
@@ -2340,6 +2386,12 @@ private const LANGUAGE_FLAGS = [
 
         $row = $ExistingRows[0];
         $row[self::langOriginalImport] = $ScannedRows[0][self::langOriginalImport];
+
+        if (isset($ScannedRows[0]['ValueObjectID'])) {
+            $row['ValueObjectID'] = $ScannedRows[0]['ValueObjectID'];
+        } else {
+            unset($row['ValueObjectID']);
+        }
 
         return [$row];
     }
@@ -3510,14 +3562,24 @@ private const LANGUAGE_FLAGS = [
         }
 
         // "Begrüßung" hat immer höchstens eine Zeile (siehe ScanGreetingText/
-        // MergeGreetingRows) - kein eigenes ID-Feld nötig, exakt dieselbe Spalten-
-        // Struktur wie Automations sonst.
+        // MergeGreetingRows) - ansonsten dieselbe Spalten-Struktur wie Automations.
+        // "Wert-Objekt-ID" ist im Modus "Variable" gesetzt (siehe ScanGreetingText) -
+        // muss als eigene, deklarierte Spalte mitlaufen (wie bei "texts"), sonst
+        // würde ein manuelles Bearbeiten/Speichern der Liste in der Konsole dieses
+        // Feld aus der JSON-Zeile entfernen und die Live-Verfolgung der Variable
+        // kappen (siehe SyncValueUpdateRegistrations/HandleTrackedVariableUpdate).
         if ($Kind === 'greeting') {
             $columns = [
                 [
                     'caption' => $this->Translate('Original-Import'),
                     'name'    => self::langOriginalImport,
                     'width'   => '250px',
+                    'save'    => true,
+                ],
+                [
+                    'caption' => 'Wert-Objekt-ID',
+                    'name'    => 'ValueObjectID',
+                    'width'   => '90px',
                     'save'    => true,
                 ],
             ];
