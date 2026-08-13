@@ -352,9 +352,13 @@ Name                            | Beschreibung
 Lizenzschlüssel                 | Nur in der Testversion sichtbar/relevant, siehe [Abschnitt 8](#8-lizenz-und-testversion). Nach Eingabe über den Button "Lizenz aktivieren" (siehe unten) prüfen lassen.
 
 Unterhalb der drei Bereiche liegen die Aktions-Buttons "Lizenz aktivieren" und
-"Baum neu einlesen und fehlende Übersetzungen ergänzen" sowie, ganz unten,
-der aufklappbare Bereich "Produktinformationen" mit einem Link zum
-GitHub-Repository und kurzen Lizenzhinweisen.
+"Visualisierung neu einlesen und fehlende Übersetzungen ergänzen" sowie, ganz
+unten, zwei aufklappbare Bereiche: "Produktinformationen" (Logos, Link zum
+GitHub-Repository, kurze Lizenzhinweise) und "Nutzungsbedingungen" (Verweis auf
+die vollständigen Nutzungs-/Lizenzbedingungen im Shop - ein Klick auf "Lizenz
+aktivieren" gilt als Bestätigung, dass diese gelesen und akzeptiert wurden;
+beim Kauf im Shop selbst werden sie zusätzlich per Checkbox vor
+Zahlungsabschluss abgefragt, siehe [Abschnitt 8](#8-lizenz-und-testversion)).
 
 ### 6. Statusvariablen und Profile
 
