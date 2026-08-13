@@ -13,7 +13,7 @@
                 },
                 {
                     "type": "Label",
-                    "caption": "Wähle hier deine Kachel-Visualisierungs-Instanz: ihre eigene Startkategorie wird automatisch als Root-Kategorie übernommen - Namen und Texte innerhalb dieser Kategorie werden übersetzt (siehe Abschnitt \"Übersetzung\" unten). Zusätzlich werden dort frei vergebene Automation-Namen (z.B. \"Gehen\", \"Kommen\") übersetzt und Favoriten erfasst, deren Objekte außerhalb dieser Kategorie liegen. Ohne ausgewählte Instanz bleibt die Übersetzung inaktiv."
+                    "caption": "Wähle hier deine Kachel-Visualisierungs-Instanz: ihre eigene Startkategorie wird automatisch als Root der Visualisierung übernommen - Namen und Texte innerhalb dieser Kategorie werden übersetzt (siehe Abschnitt \"Übersetzung\" unten). Zusätzlich werden dort frei vergebene Automation-Namen (z.B. \"Gehen\", \"Kommen\") übersetzt und Favoriten erfasst, deren Objekte außerhalb dieser Kategorie liegen. Ohne ausgewählte Instanz bleibt die Übersetzung inaktiv."
                 },
                 {
                     "type": "Select",
@@ -296,6 +296,22 @@
                             "save": true
                         }
                     ]
+                },
+                {
+                    "type": "List",
+                    "name": "ObjectGreeting",
+                    "caption": "Begrüßung",
+                    "add": false,
+                    "delete": true,
+                    "rowCount": 2,
+                    "columns": [
+                        {
+                            "caption": "Original-Import",
+                            "name": "ORIGINAL_IMPORT",
+                            "width": "250px",
+                            "save": true
+                        }
+                    ]
                 }
             ]
         },
@@ -339,12 +355,12 @@
         },
         {
             "type": "Button",
-            "caption": "Baum neu einlesen und fehlende Übersetzungen ergänzen",
+            "caption": "Visualisierung neu einlesen und fehlende Übersetzungen ergänzen",
             "onClick": "IPS_RequestAction($id, 'Rescan', true);"
         },
         {
             "type": "Label",
-            "caption": "Durchsucht die Root-Kategorie erneut nach neuen/verschobenen Objekten und übersetzt nur noch leere Zellen in Objektnamen, Eigene Texte und Beschriftungen. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben."
+            "caption": "Durchsucht den Root der Visualisierung erneut nach neuen/verschobenen Objekten und übersetzt nur noch leere Zellen in Objektnamen, Eigene Texte und Beschriftungen. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben."
         },
         {
             "type": "ExpansionPanel",
@@ -465,7 +481,7 @@
         {
             "code": 201,
             "icon": "error",
-            "caption": "Root-Kategorie nicht gesetzt"
+            "caption": "Root der Visualisierung nicht gesetzt"
         },
         {
             "code": 202,

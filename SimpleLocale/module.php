@@ -238,6 +238,7 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterPropertyString(self::propertyEnumerationOptions, '[]');
         $this->RegisterPropertyInteger(self::propertyWebFrontVisuInstanceID, 0);
         $this->RegisterPropertyString(self::propertyObjectAutomations, '[]');
+        $this->RegisterPropertyString(self::propertyObjectGreeting, '[]');
 
         // Bewusst eine Property statt Variable/Profil für die aktive Sprache: Profile
         // sind in Symcon immer global, nicht instanzgebunden - bei mehreren Instanzen
@@ -468,10 +469,24 @@ private const LANGUAGE_FLAGS = [
 
                     if (!$hasUsableLanguageList) {
                         $element['enabled'] = false;
-                        $element['caption'] .= ' (' . $this->Translate('bitte zuerst gültigen API-Key speichern und Formular neu öffnen') . ')';
+                        // Statischer, fest formulierter String statt Laufzeit-Konkatenation:
+                        // die Konsole übersetzt Beschriftungen aus GetConfigurationForm() per
+                        // exaktem Text-Abgleich gegen locale.json (siehe Kommentar bei
+                        // propertyUseCustomTile/propertyAutoRescanInterval unten) - ein zur
+                        // Laufzeit zusammengesetzter String passt nie zu einem Eintrag und
+                        // bleibt daher unübersetzt (unabhängig von der Konsolensprache).
+                        $element['caption'] = 'Zielsprachen (bitte zuerst gültigen API-Key speichern und Formular neu öffnen)';
                     } elseif ($limitReached) {
                         $element['enabled'] = false;
-                        $element['caption'] .= ' (' . $this->Translate('Sprachlimit dieser Lizenz erreicht, max.') . " $languageLimit)";
+                        // Enthält $languageLimit als Variable - kann NICHT als fester String
+                        // vorregistriert werden (unendlich viele mögliche Werte). Einzige
+                        // praktikable Lösung: beide Teile serverseitig per Translate()
+                        // übersetzen, damit wenigstens ein in sich konsistenter (wenn auch an
+                        // die Symcon-Systemsprache statt an die individuelle Konsolensprache
+                        // des Betrachters gebundener) Text entsteht - exakt dieselbe,
+                        // dokumentierte Einschränkung wie bei BuildTrialInfoText/
+                        // BuildLicenseInfoText (siehe README Abschnitt 8).
+                        $element['caption'] = $this->Translate('Zielsprachen') . ' (' . $this->Translate('Sprachlimit dieser Lizenz erreicht, max.') . " $languageLimit)";
                     } else {
                         $element['enabled'] = true;
                     }
@@ -497,6 +512,11 @@ private const LANGUAGE_FLAGS = [
                     $element['values'] = $this->DecodeRows(self::propertyObjectAutomations);
                     break;
 
+                case self::propertyObjectGreeting:
+                    $element['columns'] = $this->BuildListColumns($sourceLanguage, $targetLanguages, 'greeting');
+                    $element['values'] = $this->DecodeRows(self::propertyObjectGreeting);
+                    break;
+
                 case self::propertyCurrentLanguage:
                     $element['options'] = $this->BuildCurrentLanguageOptions();
                     break;
@@ -506,20 +526,35 @@ private const LANGUAGE_FLAGS = [
                 // sichtbar, aber ausgegraut, statt es zu verstecken (macht auf einen
                 // Blick klar, dass hier ein Upgrade nötig ist). Der manuelle Rescan-
                 // Button bleibt davon unberührt.
+                //
+                // WICHTIG: statischer, fest formulierter deutscher String statt
+                // Laufzeit-Konkatenation (frühere Version: ".= ' (' . Translate(...) . ')'")
+                // - die Konsole übersetzt jede Beschriftung aus GetConfigurationForm() per
+                // EXAKTEM Textabgleich gegen die deutschen Quelltexte in locale.json. Eine
+                // zur Laufzeit zusammengesetzte Zeichenkette passt zu KEINEM Eintrag mehr
+                // (locale.json kennt nur die reine Basis-Caption ODER exakt diesen
+                // vorregistrierten Gesamttext) und blieb dadurch komplett unübersetzt -
+                // sichtbar u.a. daran, dass sogar der sonst korrekt übersetzte Basisteil
+                // ("Automatischer Rescan...") auf Deutsch stehen blieb, sobald der Suffix
+                // dazukam. Mit einem einzigen, festen Gesamttext kann die Konsole wieder
+                // exakt matchen und in die tatsächliche Konsolensprache des Betrachters
+                // übersetzen (nicht nur die Symcon-Systemsprache wie bei Translate()).
                 case self::propertyAutoRescanInterval:
                     if (!$this->HasLicenseFeature('auto_rescan')) {
                         $element['enabled'] = false;
-                        $element['caption'] .= ' (' . $this->Translate('Pro Edition erforderlich') . ')';
+                        $element['caption'] = 'Automatischer Rescan (Minuten, 0 = aus) (Pro Edition erforderlich)';
                     }
                     break;
 
                 // Eigene Sprachauswahl-Kachel ist ebenfalls ein Pro-Feature
                 // (siehe "custom_tile" in GetVisualizationTile) - gleiches
-                // Ausgrauen-statt-Verstecken-Muster wie AutoRescanInterval.
+                // Ausgrauen-statt-Verstecken-Muster wie AutoRescanInterval, inkl.
+                // desselben statischen-String-statt-Konkatenation-Fixes (siehe
+                // ausführlicher Kommentar dort).
                 case self::propertyUseCustomTile:
                     if (!$this->HasLicenseFeature('custom_tile')) {
                         $element['enabled'] = false;
-                        $element['caption'] .= ' (' . $this->Translate('Pro Edition erforderlich') . ')';
+                        $element['caption'] = 'Eigene Sprachauswahl-Kachel verwenden (Pro Edition erforderlich)';
                     }
                     break;
 
@@ -1316,6 +1351,7 @@ private const LANGUAGE_FLAGS = [
         }
 
         $this->ApplyAutomationsLanguage($Language, $sourceLanguage);
+        $this->ApplyGreetingLanguage($Language, $sourceLanguage);
     }
 
     // Schreibt übersetzte Automation-Namen in die LIVE "Automations"-Property der
@@ -1367,6 +1403,39 @@ private const LANGUAGE_FLAGS = [
             @IPS_SetProperty($webFrontID, 'Automations', json_encode($liveAutomations));
             @IPS_ApplyChanges($webFrontID);
         }
+    }
+
+    // Schreibt den übersetzten Begrüßungstext in die LIVE "GreetingName"-Property der
+    // Kachel-Visualisierungs-Instanz zurück (Modi "Automatic"/"Static", siehe
+    // propertyObjectGreeting) - exakt dasselbe Muster wie ApplyAutomationsLanguage,
+    // inkl. Nur-bei-tatsächlicher-Änderung-Schreiben (verhindert unnötige
+    // IPS_ApplyChanges-Aufrufe auf die Visu-Instanz, die sonst bei JEDEM
+    // Sprachwechsel-Request - auch beim erneuten Wählen derselben Sprache - einen
+    // Reload aller verbundenen Kachel-Visualisierungs-Clients auslösen würden). Kein
+    // Fehler, wenn das Feature nicht genutzt wird, die Instanz fehlt, oder die Zeile
+    // (noch) nicht existiert. Modus "Variable" braucht hier nichts: dessen Variable
+    // wird ganz normal über die bestehende "Eigene Texte"-Anwendung (SetValueString)
+    // bedient, siehe ScanGreetingVariableOutsideRootTree.
+    private function ApplyGreetingLanguage(string $Language, string $SourceLanguage): void
+    {
+        $webFrontID = $this->ReadPropertyInteger(self::propertyWebFrontVisuInstanceID);
+        if ($webFrontID === 0 || !@IPS_ObjectExists($webFrontID)) {
+            return;
+        }
+
+        $rows = $this->DecodeRows(self::propertyObjectGreeting);
+        if ($rows === []) {
+            return;
+        }
+
+        $resolvedName = $this->ResolveRowValue($rows[0], $Language, $Language, $SourceLanguage, self::langOriginalImport);
+        $currentName = (string) @IPS_GetProperty($webFrontID, 'GreetingName');
+        if ($currentName === $resolvedName) {
+            return;
+        }
+
+        @IPS_SetProperty($webFrontID, 'GreetingName', $resolvedName);
+        @IPS_ApplyChanges($webFrontID);
     }
 
     // Schreibt die (ggf. übersetzten) Beschriftungen als eigene Custom Presentation NUR
@@ -1645,7 +1714,9 @@ private const LANGUAGE_FLAGS = [
         return $Row[$RawField] ?? '';
     }
 
-    // Einzige Quelle der Root-Kategorie: die "BaseID"-Property (dort als
+    // Einzige Quelle des Root der Visualisierung (bewusst NICHT "Root-Kategorie"
+    // genannt - dieser Begriff bezeichnet in Symcon selbst die echte Wurzel des
+    // gesamten Objektbaums, Objekt-ID 0): die "BaseID"-Property (dort als
     // "Startkategorie" bezeichnet) der gewählten Kachel-Visualisierungs-Instanz
     // (propertyWebFrontVisuInstanceID) - kein manuelles Rückfall-Feld mehr, damit
     // nie versehentlich ein anderer Baum konfiguriert werden kann als der, den die
@@ -1703,6 +1774,12 @@ private const LANGUAGE_FLAGS = [
         // im Formular klar bleibt, woher die Zeile kommt).
         $scannedNames += $this->ScanFavoriteObjectsOutsideRootTree($scannedNames);
 
+        // Begrüßungstext im Modus "Variable" (siehe propertyObjectGreeting) - analog
+        // zu den Favoriten oben, nur für "Eigene Texte" statt "Objektnamen" (die
+        // Begrüßungs-Variable trägt selbst keinen eigenen, separat zu pflegenden
+        // Namen, nur ihren Live-Wert).
+        $scannedTexts += $this->ScanGreetingVariableOutsideRootTree($scannedTexts);
+
         // Vorab-Check, bevor überhaupt übersetzt wird: ein Objekt ohne echten Namen
         // lässt sich nicht sinnvoll übersetzen und würde als Platzhalter-Text in der
         // Gäste-Visualisierung landen. Bricht den kompletten Rescan ab (kein Merge,
@@ -1741,6 +1818,13 @@ private const LANGUAGE_FLAGS = [
             $this->ScanAutomationsByID()
         );
 
+        // Begrüßungstext (Modi "Automatic"/"Static") - ebenfalls unabhängig vom
+        // Root-Baum, siehe ScanGreetingText/MergeGreetingRows.
+        $objectGreeting = $this->MergeGreetingRows(
+            $this->DecodeRows(self::propertyObjectGreeting),
+            $this->ScanGreetingText()
+        );
+
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
         $targetLanguages = $this->GetSelectedTargetLanguages();
 
@@ -1765,10 +1849,15 @@ private const LANGUAGE_FLAGS = [
             ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],
         ], $sourceLanguage, $targetLanguages);
 
+        $objectGreeting = $this->FillMissingTranslations($objectGreeting, [
+            ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],
+        ], $sourceLanguage, $targetLanguages);
+
         IPS_SetProperty($this->InstanceID, self::propertyObjectNames, json_encode(array_values($objectNames)));
         IPS_SetProperty($this->InstanceID, self::propertyObjectTexts, json_encode(array_values($objectTexts)));
         IPS_SetProperty($this->InstanceID, self::propertyEnumerationOptions, json_encode(array_values($objectOptions)));
         IPS_SetProperty($this->InstanceID, self::propertyObjectAutomations, json_encode(array_values($objectAutomations)));
+        IPS_SetProperty($this->InstanceID, self::propertyObjectGreeting, json_encode(array_values($objectGreeting)));
         IPS_ApplyChanges($this->InstanceID);
 
         // Kompletter Formular-Neuaufbau statt UpdateFormField: ein offenes Formular hat
@@ -1790,9 +1879,9 @@ private const LANGUAGE_FLAGS = [
         return $Name === '' || preg_match('/\(ID:\s*' . $ObjectID . '\)\s*$/', $Name) === 1;
     }
 
-    // $ParentPath enthält die Namen der Vorfahren ab der Root-Kategorie (ohne den
-    // Namen des Objekts selbst), damit gleichnamige Texte an unterschiedlichen
-    // Stellen im Baum unterscheidbar bleiben.
+    // $ParentPath enthält die Namen der Vorfahren ab dem Root der Visualisierung
+    // (ohne den Namen des Objekts selbst), damit gleichnamige Texte an
+    // unterschiedlichen Stellen im Baum unterscheidbar bleiben.
     private function WalkTree(int $ID, array &$ScannedNames, array &$ScannedTexts, array &$ScannedOptions, array &$VisitedIDs, array $ParentPath): void
     {
         foreach (IPS_GetChildrenIDs($ID) as $childID) {
@@ -2116,6 +2205,104 @@ private const LANGUAGE_FLAGS = [
         }
 
         return $extra;
+    }
+
+    // Begrüßungstext im Modus "Variable" (ShowGreeting=2, siehe propertyObjectGreeting)
+    // zeigt den Live-Wert einer echten String-Variable (Property "GreetingVariableID")
+    // an - liegt diese Variable bereits im Root der Visualisierung, übersetzt WalkTree
+    // sie ganz normal als "Eigene Texte" mit (Prüfung über ValueObjectID, damit auch
+    // über einen Link erfasste Variablen erkannt werden). Nur wenn sie AUSSERHALB
+    // liegt (kommt vor, ist aber nicht garantiert - analog zu
+    // ScanFavoriteObjectsOutsideRootTree), wird sie hier zusätzlich als eigene
+    // "Eigene Texte"-Zeile ergänzt (Path = "Begrüßung"), damit sie trotzdem übersetzt
+    // wird. Modi "Automatic"/"Static" nutzen stattdessen ScanGreetingText() (freier
+    // Text, keine echte Variable) - beide Modi sind nie gleichzeitig aktiv.
+    private function ScanGreetingVariableOutsideRootTree(array $ScannedTexts): array
+    {
+        $webFrontID = $this->ReadPropertyInteger(self::propertyWebFrontVisuInstanceID);
+        if ($webFrontID === 0 || !@IPS_ObjectExists($webFrontID)) {
+            return [];
+        }
+
+        if ((int) @IPS_GetProperty($webFrontID, 'ShowGreeting') !== 2) {
+            return [];
+        }
+
+        $variableID = (int) @IPS_GetProperty($webFrontID, 'GreetingVariableID');
+        if ($variableID === 0 || !@IPS_VariableExists($variableID)) {
+            return [];
+        }
+
+        if (IPS_GetVariable($variableID)['VariableType'] !== VARIABLETYPE_STRING) {
+            return [];
+        }
+
+        foreach ($ScannedTexts as $row) {
+            if ((int) ($row['ValueObjectID'] ?? 0) === $variableID) {
+                return [];
+            }
+        }
+
+        return [
+            $variableID => [
+                'ObjectID'                       => $variableID,
+                'ValueObjectID'                  => $variableID,
+                'Path'                           => $this->Translate('Begrüßung'),
+                self::fieldOriginalImportName    => $this->Translate('Begrüßung'),
+                self::langOriginalImportText     => GetValueString($variableID),
+            ],
+        ];
+    }
+
+    // Begrüßungstext in den Modi "Automatic"/"Static" (ShowGreeting=1 bzw. 3, siehe
+    // propertyObjectGreeting) - Property "GreetingName" traegt einen frei vergebenen
+    // Text, der komplett unabhaengig vom Root-Baum lebt, exakt wie bei Automations.
+    // "Automatic" stellt zusaetzlich clientseitig eine tageszeitabhaengige Anrede
+    // ("Good Morning"/"Good Evening" etc.) VOR diesen Text - die folgt laut Test
+    // ausschliesslich der Spracheinstellung des Besucher-Browsers, nicht der in
+    // Simple Locale aktiven Sprache, und ist daher nicht beeinflussbar (siehe README
+    // Abschnitt 2). Modus "Variable" (2) nutzt stattdessen
+    // ScanGreetingVariableOutsideRootTree() (echte Variable statt freiem Text).
+    private function ScanGreetingText(): array
+    {
+        $webFrontID = $this->ReadPropertyInteger(self::propertyWebFrontVisuInstanceID);
+        if ($webFrontID === 0 || !@IPS_ObjectExists($webFrontID)) {
+            return [];
+        }
+
+        $showGreeting = (int) @IPS_GetProperty($webFrontID, 'ShowGreeting');
+        if ($showGreeting !== 1 && $showGreeting !== 3) {
+            return [];
+        }
+
+        $name = (string) @IPS_GetProperty($webFrontID, 'GreetingName');
+        if ($name === '') {
+            return [];
+        }
+
+        return [[self::langOriginalImport => $name]];
+    }
+
+    // "Begrüßung" hat immer höchstens eine Zeile - kein ID-Abgleich wie bei
+    // MergeAutomationRows nötig, nur der Quelltext wird bei Änderung aktualisiert
+    // (vorhandene, ggf. manuell korrigierte Übersetzungen bleiben unangetastet).
+    // Liefert $ExistingRows unverändert zurück, wenn der Modus gerade nicht
+    // "Automatic"/"Static" ist (kein Datenverlust bei vorübergehendem Moduswechsel,
+    // gleiches Prinzip wie überall sonst in diesem Modul).
+    private function MergeGreetingRows(array $ExistingRows, array $ScannedRows): array
+    {
+        if ($ScannedRows === []) {
+            return $ExistingRows;
+        }
+
+        if ($ExistingRows === []) {
+            return $ScannedRows;
+        }
+
+        $row = $ExistingRows[0];
+        $row[self::langOriginalImport] = $ScannedRows[0][self::langOriginalImport];
+
+        return [$row];
     }
 
     // Liest die "Automations"-Property der ausgewählten Kachel-Visualisierungs-Instanz
@@ -3278,6 +3465,22 @@ private const LANGUAGE_FLAGS = [
                 'name'    => self::langOriginalImport,
                 'width'   => '250px',
                 'save'    => true,
+            ];
+
+            return array_merge($columns, $this->BuildLanguageColumnSet('', '', $SourceLanguage, $TargetLanguages));
+        }
+
+        // "Begrüßung" hat immer höchstens eine Zeile (siehe ScanGreetingText/
+        // MergeGreetingRows) - kein eigenes ID-Feld nötig, exakt dieselbe Spalten-
+        // Struktur wie Automations sonst.
+        if ($Kind === 'greeting') {
+            $columns = [
+                [
+                    'caption' => $this->Translate('Original-Import'),
+                    'name'    => self::langOriginalImport,
+                    'width'   => '250px',
+                    'save'    => true,
+                ],
             ];
 
             return array_merge($columns, $this->BuildLanguageColumnSet('', '', $SourceLanguage, $TargetLanguages));

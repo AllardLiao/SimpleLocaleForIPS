@@ -8,7 +8,7 @@ Visualisierungen (Admin, eigene Steuerung) unverändert bleiben.
 
 ## Funktionsweise
 
-Eine konfigurierte Root-Kategorie (der Sichtbereich) wird eingelesen und liefert
+Ein konfigurierter Root der Visualisierung (der Sichtbereich) wird eingelesen und liefert
 zwei Textarten, die beide automatisch via Google Cloud Translate übersetzt und
 persistent im Modul-Formular gecacht werden:
 
@@ -22,8 +22,8 @@ nicht immer perfekt); ein Rescan (manuell oder per Timer) übersetzt nur neue od
 leere Einträge nach, bestehende Werte bleiben unangetastet. Die Modul-Instanz
 selbst liefert eine eigene, schlanke Dropdown-Kachel für die Zielvisualisierung
 (Sprachnamen live in die aktive Sprache übersetzt, keine zusätzliche Variable
-nötig); alle Umbenennungen/Wertänderungen bleiben auf die konfigurierte
-Root-Kategorie beschränkt.
+nötig); alle Umbenennungen/Wertänderungen bleiben auf den konfigurierten
+Root der Visualisierung beschränkt.
 
 ## Installation
 
@@ -38,8 +38,10 @@ Folgende Module beinhaltet das Simple Locale for IP Symcon Repository:
 ## Konfiguration
 
 Siehe [Konfigurationsseite in der Moduldokumentation](SimpleLocale/README.md#5-einrichten-der-instanzen-in-symcon)
-für die Übersicht aller Formularfelder. Kurzfassung: Root-Kategorie, Basis-/Zielsprachen
-und Google-Translate-API-Key setzen, "Übernehmen", dann "Baum neu einlesen und fehlende Übersetzungen ergänzen" klicken.
+für die Übersicht aller Formularfelder. Kurzfassung: Kachel-Visualisierungs-Instanz
+(liefert automatisch den Root der Visualisierung), Basis-/Zielsprachen und
+Google-Translate-API-Key setzen, "Übernehmen", dann "Visualisierung neu einlesen und
+fehlende Übersetzungen ergänzen" klicken.
 
 ## Entwicklung
 
