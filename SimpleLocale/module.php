@@ -881,6 +881,15 @@ private const LANGUAGE_FLAGS = [
             ? array_values(array_filter($payload['features'], 'is_string'))
             : [];
 
+        // '' = kein Editionsname im Payload - trifft auf alle vor Einfuehrung
+        // dieses Felds ausgestellten Schluessel zu (aeltere Keys funktionieren
+        // weiter, BuildLicenseInfoText laesst die Zeile dann einfach weg statt
+        // "Edition: " leer anzuzeigen). Bewusst ein fester, vom Shop gelieferter
+        // Anzeigename (z.B. "Pro") statt hier aus type/languageLimit/features
+        // zu raten - das waere dieselbe fehleranfaellige Heuristik wie
+        // slips_guess_edition_label() auf der Website-Seite.
+        $payload['edition'] = is_string($payload['edition'] ?? null) ? $payload['edition'] : '';
+
         return $payload;
     }
 
@@ -906,6 +915,7 @@ private const LANGUAGE_FLAGS = [
             'languageLimit'    => $payload['languageLimit'],
             'allowedLanguages' => $payload['allowedLanguages'],
             'features'         => $payload['features'],
+            'edition'          => $payload['edition'],
         ];
         if ($expiresAt !== 0 && $expiresAt < time()) {
             return ['valid' => false, 'expired' => true] + $common;
@@ -1204,7 +1214,16 @@ private const LANGUAGE_FLAGS = [
             ...$features,
         ];
 
-        return implode("\n", array_map(fn (string $line): string => "✓ $line", $lines));
+        $checklist = implode("\n", array_map(fn (string $line): string => "✓ $line", $lines));
+
+        // Editionsname (z.B. "Pro") als Überschrift über der Checkliste, ohne
+        // Haken davor - kein Feature, sondern die Einordnung, zu der die
+        // Features gehören. '' bei Schlüsseln von vor Einführung dieses
+        // Payload-Felds (siehe ValidateLicenseKey) - Checkliste bleibt dann
+        // wie zuvor ohne Überschrift.
+        $edition = trim((string) ($info['edition'] ?? ''));
+
+        return $edition === '' ? $checklist : $edition . "\n" . $checklist;
     }
 
     private function ApplyLanguage(string $Language): void
