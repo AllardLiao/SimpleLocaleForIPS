@@ -35,6 +35,16 @@ trait SimpleLocaleConstants
     // zufällig dasselbe Profil/Template nutzen, bleiben unangetastet.
     private const propertyEnumerationOptions = 'EnumerationOptions';
 
+    // Automations der eingebauten Kachel-Visualisierung (WebFront-Kernmodul, nicht
+    // Teil von Simple Locale) - deren Property "Automations" traegt neben der
+    // Automation-Referenz einen frei vergebenen Anzeigetext ("Name"), der komplett
+    // unabhaengig vom Root-Baum lebt (aehnlich einer Verknuepfung mit eigenem
+    // Namensfeld) und daher separat gescannt/uebersetzt werden muss - siehe
+    // ScanAutomations/ApplyAutomationsLanguage. 0 = Feature deaktiviert (keine
+    // Kachel-Visualisierungs-Instanz ausgewaehlt).
+    private const propertyWebFrontVisuInstanceID = 'WebFrontVisuInstanceID';
+    private const propertyObjectAutomations = 'ObjectAutomations';
+
     // Feldnamen, die IPS_GetVariablePresentation()/IPS_GetTemplate() für
     // menschenlesbaren Anzeigetext verwendet (siehe IsTranslatableFieldName) -
     // Groß-/Kleinschreibung wird beim Vergleich ignoriert. Symcon ist hier leider

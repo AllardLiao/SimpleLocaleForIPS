@@ -270,6 +270,37 @@
                             "save": true
                         }
                     ]
+                },
+                {
+                    "type": "SelectInstance",
+                    "name": "WebFrontVisuInstanceID",
+                    "caption": "Kachel-Visualisierung (für Automations)"
+                },
+                {
+                    "type": "Label",
+                    "caption": "Optional: wähle hier deine Kachel-Visualisierungs-Instanz, damit auch die dort frei vergebenen Automation-Namen (z.B. \"Gehen\", \"Kommen\") übersetzt werden. Leer lassen, wenn nicht benötigt - Favoriten brauchen das nicht, deren Objektnamen werden bereits automatisch mitübersetzt, sofern sie im Root-Baum oben liegen."
+                },
+                {
+                    "type": "List",
+                    "name": "ObjectAutomations",
+                    "caption": "Automations",
+                    "add": false,
+                    "delete": true,
+                    "rowCount": 10,
+                    "columns": [
+                        {
+                            "caption": "AutomationID",
+                            "name": "AutomationID",
+                            "width": "100px",
+                            "save": true
+                        },
+                        {
+                            "caption": "Original-Import",
+                            "name": "ORIGINAL_IMPORT",
+                            "width": "250px",
+                            "save": true
+                        }
+                    ]
                 }
             ]
         },

@@ -237,6 +237,8 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterPropertyString(self::propertyObjectNames, '[]');
         $this->RegisterPropertyString(self::propertyObjectTexts, '[]');
         $this->RegisterPropertyString(self::propertyEnumerationOptions, '[]');
+        $this->RegisterPropertyInteger(self::propertyWebFrontVisuInstanceID, 0);
+        $this->RegisterPropertyString(self::propertyObjectAutomations, '[]');
 
         // Bewusst eine Property statt Variable/Profil für die aktive Sprache: Profile
         // sind in Symcon immer global, nicht instanzgebunden - bei mehreren Instanzen
@@ -488,6 +490,11 @@ private const LANGUAGE_FLAGS = [
                 case self::propertyEnumerationOptions:
                     $element['columns'] = $this->BuildListColumns($sourceLanguage, $targetLanguages, 'options');
                     $element['values'] = $this->DecodeRows(self::propertyEnumerationOptions);
+                    break;
+
+                case self::propertyObjectAutomations:
+                    $element['columns'] = $this->BuildListColumns($sourceLanguage, $targetLanguages, 'automations');
+                    $element['values'] = $this->DecodeRows(self::propertyObjectAutomations);
                     break;
 
                 case self::propertyCurrentLanguage:
@@ -1307,6 +1314,56 @@ private const LANGUAGE_FLAGS = [
                 $this->ApplyEnumerationOptionsToVariable($valueObjectID, $rowsByFieldPath, $Language, $sourceLanguage);
             }
         }
+
+        $this->ApplyAutomationsLanguage($Language, $sourceLanguage);
+    }
+
+    // Schreibt übersetzte Automation-Namen in die LIVE "Automations"-Property der
+    // Kachel-Visualisierungs-Instanz zurück (siehe propertyWebFrontVisuInstanceID) - bewusst
+    // frisch gelesen statt vom letzten Rescan übernommen, damit ein Icon-Wechsel oder eine
+    // neu verknüpfte Automation, die der Admin seither direkt in der Kachel-Visu gemacht
+    // hat, nicht überschrieben wird. Nur das Feld "Name" wird ersetzt, alles andere je
+    // Eintrag bleibt unangetastet. Kein Fehler, wenn das Feature nicht aktiviert ist, die
+    // Instanz fehlt, oder die Property (noch) leer/ungültig ist.
+    private function ApplyAutomationsLanguage(string $Language, string $SourceLanguage): void
+    {
+        $webFrontID = $this->ReadPropertyInteger(self::propertyWebFrontVisuInstanceID);
+        if ($webFrontID === 0 || !@IPS_ObjectExists($webFrontID)) {
+            return;
+        }
+
+        $liveAutomations = json_decode((string) @IPS_GetProperty($webFrontID, 'Automations'), true);
+        if (!is_array($liveAutomations)) {
+            return;
+        }
+
+        $rowsByID = [];
+        foreach ($this->DecodeRows(self::propertyObjectAutomations) as $row) {
+            $automationID = (int) ($row['AutomationID'] ?? 0);
+            if ($automationID !== 0) {
+                $rowsByID[$automationID] = $row;
+            }
+        }
+        if ($rowsByID === []) {
+            return;
+        }
+
+        $changed = false;
+        foreach ($liveAutomations as &$entry) {
+            $automationID = (int) ($entry['AutomationID'] ?? 0);
+            $row = $rowsByID[$automationID] ?? null;
+            if ($row === null) {
+                continue;
+            }
+            $entry['Name'] = $this->ResolveRowValue($row, $Language, $Language, $SourceLanguage, self::langOriginalImport);
+            $changed = true;
+        }
+        unset($entry);
+
+        if ($changed) {
+            @IPS_SetProperty($webFrontID, 'Automations', json_encode($liveAutomations));
+            @IPS_ApplyChanges($webFrontID);
+        }
     }
 
     // Schreibt die (ggf. übersetzten) Beschriftungen als eigene Custom Presentation NUR
@@ -1639,6 +1696,15 @@ private const LANGUAGE_FLAGS = [
         }
         $objectOptions = $this->MergeEnumerationOptions($existingOptions, $scannedOptions);
 
+        // Automations leben nicht im Root-Baum, sondern als eigene Liste in einer
+        // separaten Kachel-Visualisierungs-Instanz (siehe propertyWebFrontVisuInstanceID) -
+        // eigener Scan, eigener Merge (Schlüssel AutomationID statt ObjectID/Ident),
+        // aber derselbe Rescan-Button/Übersetzungslauf wie alles andere.
+        $objectAutomations = $this->MergeAutomationRows(
+            $this->DecodeRows(self::propertyObjectAutomations),
+            $this->ScanAutomationsByID()
+        );
+
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
         $targetLanguages = $this->GetSelectedTargetLanguages();
 
@@ -1659,9 +1725,14 @@ private const LANGUAGE_FLAGS = [
             ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => false],
         ], $sourceLanguage, $targetLanguages);
 
+        $objectAutomations = $this->FillMissingTranslations($objectAutomations, [
+            ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],
+        ], $sourceLanguage, $targetLanguages);
+
         IPS_SetProperty($this->InstanceID, self::propertyObjectNames, json_encode(array_values($objectNames)));
         IPS_SetProperty($this->InstanceID, self::propertyObjectTexts, json_encode(array_values($objectTexts)));
         IPS_SetProperty($this->InstanceID, self::propertyEnumerationOptions, json_encode(array_values($objectOptions)));
+        IPS_SetProperty($this->InstanceID, self::propertyObjectAutomations, json_encode(array_values($objectAutomations)));
         IPS_ApplyChanges($this->InstanceID);
 
         // Kompletter Formular-Neuaufbau statt UpdateFormField: ein offenes Formular hat
@@ -1970,6 +2041,63 @@ private const LANGUAGE_FLAGS = [
         }
 
         return $Node;
+    }
+
+    // Liest die "Automations"-Property der ausgewählten Kachel-Visualisierungs-Instanz
+    // (siehe propertyWebFrontVisuInstanceID) - komplett unabhängig vom Root-Baum, da die
+    // Kachel-Visualisierung ein eigenes, separates Kernmodul ist. AutomationID ist der
+    // stabile Schlüssel dieser Liste (bleibt gleich, auch wenn Icon oder das dahinter
+    // liegende Skript/Ereignis sich ändert). [] bei deaktiviertem Feature (Instanz-ID 0),
+    // fehlender/gelöschter Instanz oder ungültiger/leerer Property - kein Fehler, das
+    // Feature bleibt rein optional.
+    private function ScanAutomationsByID(): array
+    {
+        $webFrontID = $this->ReadPropertyInteger(self::propertyWebFrontVisuInstanceID);
+        if ($webFrontID === 0 || !@IPS_ObjectExists($webFrontID)) {
+            return [];
+        }
+
+        $automations = json_decode((string) @IPS_GetProperty($webFrontID, 'Automations'), true);
+        if (!is_array($automations)) {
+            return [];
+        }
+
+        $scannedByID = [];
+        foreach ($automations as $entry) {
+            $automationID = (int) ($entry['AutomationID'] ?? 0);
+            $name = (string) ($entry['Name'] ?? '');
+            if ($automationID === 0 || $name === '') {
+                continue;
+            }
+            $scannedByID[$automationID] = [
+                'AutomationID'            => $automationID,
+                self::langOriginalImport  => $name,
+            ];
+        }
+
+        return $scannedByID;
+    }
+
+    // Wie MergeRows, aber Schlüssel ist AutomationID statt ObjectID - Automations
+    // existieren nicht als Objekte im Root-Baum, sondern nur als Zeilen in der
+    // "Automations"-Property der Kachel-Visualisierungs-Instanz (siehe
+    // ScanAutomationsByID). Eine AutomationID, die dort nicht mehr auftaucht (z.B. vom
+    // Admin direkt in der Kachel-Visu gelöscht), wird bewusst NICHT automatisch entfernt -
+    // dieselbe Datenverlust-Vorsicht wie bei MergeRows.
+    private function MergeAutomationRows(array $ExistingRows, array $ScannedByID): array
+    {
+        $result = [];
+        foreach ($ExistingRows as $row) {
+            $automationID = (int) ($row['AutomationID'] ?? 0);
+            unset($ScannedByID[$automationID]);
+            $result[] = $row;
+        }
+
+        foreach ($ScannedByID as $newRow) {
+            $result[] = $newRow;
+        }
+
+        return $result;
     }
 
     // Merged bereits gespeicherte Zeilen mit frisch gescannten Objekt-IDs. ORIGINAL_IMPORT
@@ -3066,6 +3194,20 @@ private const LANGUAGE_FLAGS = [
     // wären ObjectID/Path/Original-Import bei jedem Übernehmen verloren.
     private function BuildListColumns(string $SourceLanguage, array $TargetLanguages, string $Kind): array
     {
+        if ($Kind === 'automations') {
+            $columns = [
+                ['caption' => 'AutomationID', 'name' => 'AutomationID', 'width' => '100px', 'save' => true],
+            ];
+            $columns[] = [
+                'caption' => $this->Translate('Original-Import'),
+                'name'    => self::langOriginalImport,
+                'width'   => '250px',
+                'save'    => true,
+            ];
+
+            return array_merge($columns, $this->BuildLanguageColumnSet('', '', $SourceLanguage, $TargetLanguages));
+        }
+
         $columns = $Kind === 'options'
             ? [
                 [

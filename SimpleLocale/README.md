@@ -252,6 +252,8 @@ Name                            | Beschreibung
 -------------------------------- | ------------------
 Zielsprachen                    | Sprachen, in die übersetzt werden soll. Auswahl-Optionen kommen ab Werk aus der eingebauten Liste, mit konfiguriertem Google-/DeepL-Key aus deren dynamisch geladener Liste (siehe oben). Ausgegraut, wenn ein bezahlter Anbieter konfiguriert ist, aber noch keine Liste laden konnte, oder wenn das Sprachlimit einer "Spezialversion"-Lizenz erreicht ist (siehe Abschnitt 8). Wichtig: Nach dem Klick auf "Sprachliste aktualisieren" die Instanzkonfiguration einmal schließen und neu öffnen, bevor Häkchen gesetzt werden - sonst kann die Konsole falsche Sprachen speichern.
 Objektnamen / Eigene Texte / Beschriftungen | Listen der gefundenen Objekte mit Quelltext und je einer Spalte pro Zielsprache. Übersetzungen sind hier direkt editierbar; leere Zellen werden beim nächsten Rescan automatisch übersetzt. "Beschriftungen" siehe [Abschnitt 2](#2-bekannte-einschränkungen) (Fork-Mechanismus).
+Kachel-Visualisierung (für Automations) | Optional: Instanz der eingebauten Kachel-Visualisierung (WebFront-Kernmodul, nicht Teil von Simple Locale), deren frei vergebene "Automations"-Namen (z. B. "Gehen", "Kommen") ebenfalls übersetzt werden sollen - siehe eigenen Absatz unten. Leer lassen, wenn nicht benötigt.
+Automations                     | Liste der gefundenen Automation-Einträge (nur wenn oben eine Kachel-Visualisierungs-Instanz gewählt ist) mit Quelltext und je einer Spalte pro Zielsprache - funktioniert genauso wie Objektnamen.
 
 **Wann sollte ein Rescan ausgeführt werden?**
 
@@ -260,6 +262,27 @@ Inhaltstyp        | Neue/verschobene Objekte | Inhaltliche Änderungen
 Objektnamen        | Nur per Rescan (manuell/Timer) erkannt. | Ändert sich ein Name selten spontan; falls doch, Zelle im Formular leeren + Rescan.
 Eigene Texte (Werte) | Nur per Rescan erkannt. | Automatisch (siehe Abschnitt 1, `VM_UPDATE`) - **kein** Rescan nötig, solange die Basissprache stimmt.
 Beschriftungen      | Nur per Rescan erkannt. | **Kein** automatisches Erkennen von Änderungen am zugrunde liegenden Profil/Template - Symcon liefert dafür keine Update-Benachrichtigung. Ändert ein anderes Modul/der Admin die Beschriftungen eines Profils, das eine bereits geforkte Variable nutzt, wird das erst nach manuellem Löschen der betroffenen Original-Import-Zelle + Rescan übernommen.
+
+**Kachel-Visualisierung: Automations und Favoriten**
+
+Die eingebaute Kachel-Visualisierung (WebFront-Kernmodul von IP-Symcon, unabhängig
+von Simple Locale) bietet zwei besondere Bereiche, die sich als eigene Kacheln
+ein-/ausblenden lassen (Instanzkonfiguration der Kachel-Visualisierung selbst,
+Abschnitte "Automations"/"Favorites"):
+
+- **Automations**: jede Zeile verknüpft ein Skript/Ereignis mit einem frei
+  vergebenen Anzeigenamen (z. B. "Gehen", "Kommen", "Schlafen") und einem Icon -
+  dieser Name lebt komplett unabhängig vom Root-Baum, ähnlich einer Verknüpfung
+  mit eigenem Namensfeld. Simple Locale übersetzt ihn, wenn oben unter
+  "Kachel-Visualisierung (für Automations)" die entsprechende Instanz ausgewählt
+  ist - der Rescan-Button liest dann zusätzlich deren `Automations`-Property ein
+  und schreibt beim Sprachwechsel die übersetzten Namen dort zurück (Icon und
+  Verknüpfung bleiben dabei unangetastet).
+- **Favoriten**: zeigen ausschließlich den echten Namen des verlinkten Objekts an,
+  keine eigene Namens-Überschreibung. Liegt das favorisierte Objekt innerhalb der
+  oben gewählten Root-Kategorie, wird es also bereits automatisch mitübersetzt -
+  keine zusätzliche Konfiguration nötig. Liegt es außerhalb, gilt dieselbe
+  Einschränkung wie für jedes andere Objekt außerhalb des Root-Baums.
 
 **Lizenz:**
 
