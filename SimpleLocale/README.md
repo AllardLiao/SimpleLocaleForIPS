@@ -263,30 +263,37 @@ Objektnamen        | Nur per Rescan (manuell/Timer) erkannt. | Ändert sich ein 
 Eigene Texte (Werte) | Nur per Rescan erkannt. | Automatisch (siehe Abschnitt 1, `VM_UPDATE`) - **kein** Rescan nötig, solange die Basissprache stimmt.
 Beschriftungen      | Nur per Rescan erkannt. | **Kein** automatisches Erkennen von Änderungen am zugrunde liegenden Profil/Template - Symcon liefert dafür keine Update-Benachrichtigung. Ändert ein anderes Modul/der Admin die Beschriftungen eines Profils, das eine bereits geforkte Variable nutzt, wird das erst nach manuellem Löschen der betroffenen Original-Import-Zelle + Rescan übernommen.
 
-**Kachel-Visualisierung: Automations und Favoriten**
+**Kachel-Visualisierung: Root-Kategorie, Automations und Favoriten**
 
 Die eingebaute Kachel-Visualisierung (WebFront-Kernmodul von IP-Symcon, unabhängig
-von Simple Locale) bietet zwei besondere Bereiche, die sich als eigene Kacheln
-ein-/ausblenden lassen (Instanzkonfiguration der Kachel-Visualisierung selbst,
-Abschnitte "Automations"/"Favorites"):
+von Simple Locale) hat selbst eine "Startkategorie" (intern `BaseID`) sowie zwei
+besondere Bereiche, die sich als eigene Kacheln ein-/ausblenden lassen
+(Instanzkonfiguration der Kachel-Visualisierung selbst, Abschnitte
+"Automations"/"Favorites").
+
+Wird oben unter "Kachel-Visualisierung" die entsprechende Instanz ausgewählt,
+übernimmt Simple Locale deren "Startkategorie" automatisch als eigene
+Root-Kategorie (das Feld "Root-Kategorie der Visualisierung" wird dann ausgegraut
+und zeigt den übernommenen Wert nur noch informativ an) - so lässt sich nicht mehr
+versehentlich ein anderer Baum konfigurieren als der, den die Visualisierung
+tatsächlich anzeigt. Ohne ausgewählte Instanz (oder falls deren Startkategorie
+leer ist) bleibt die manuelle Auswahl oben wie gewohnt maßgeblich.
 
 - **Automations**: jede Zeile verknüpft ein Skript/Ereignis mit einem frei
   vergebenen Anzeigenamen (z. B. "Gehen", "Kommen", "Schlafen") und einem Icon -
   dieser Name lebt komplett unabhängig vom Root-Baum, ähnlich einer Verknüpfung
-  mit eigenem Namensfeld. Simple Locale übersetzt ihn, wenn oben unter
-  "Kachel-Visualisierung (für Automations)" die entsprechende Instanz ausgewählt
-  ist - der Rescan-Button liest dann zusätzlich deren `Automations`-Property ein
-  und schreibt beim Sprachwechsel die übersetzten Namen dort zurück (Icon und
-  Verknüpfung bleiben dabei unangetastet).
+  mit eigenem Namensfeld. Simple Locale übersetzt ihn, wenn die Instanz oben
+  ausgewählt ist - der Rescan-Button liest dann zusätzlich deren
+  `Automations`-Property ein und schreibt beim Sprachwechsel die übersetzten
+  Namen dort zurück (Icon und Verknüpfung bleiben dabei unangetastet).
 - **Favoriten**: zeigen ausschließlich den echten Namen des verlinkten Objekts an,
   keine eigene Namens-Überschreibung. Liegt das favorisierte Objekt innerhalb der
-  oben gewählten Root-Kategorie, wird es also ohnehin bereits automatisch
-  mitübersetzt - keine zusätzliche Konfiguration nötig. Liegt es außerhalb (kommt
-  vor, ist aber nicht garantiert), wird es zusätzlich erfasst, sofern oben unter
-  "Kachel-Visualisierung (für Automations)" dieselbe Instanz ausgewählt ist: der
-  Rescan-Button liest dann zusätzlich deren `Favorites`-Property ein und ergänzt
-  jedes noch nicht erfasste Objekt als eigene Zeile in "Objektnamen" (Pfad
-  "Favoriten").
+  (ggf. automatisch übernommenen) Root-Kategorie, wird es also ohnehin bereits
+  automatisch mitübersetzt - keine zusätzliche Konfiguration nötig. Liegt es
+  außerhalb (kommt vor, ist aber nicht garantiert), wird es zusätzlich erfasst,
+  sofern oben dieselbe Instanz ausgewählt ist: der Rescan-Button liest dann
+  zusätzlich deren `Favorites`-Property ein und ergänzt jedes noch nicht erfasste
+  Objekt als eigene Zeile in "Objektnamen" (Pfad "Favoriten").
 
 **Lizenz:**
 

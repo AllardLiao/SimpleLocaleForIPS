@@ -274,11 +274,11 @@
                 {
                     "type": "SelectInstance",
                     "name": "WebFrontVisuInstanceID",
-                    "caption": "Kachel-Visualisierung (für Automations)"
+                    "caption": "Kachel-Visualisierung"
                 },
                 {
                     "type": "Label",
-                    "caption": "Optional: wähle hier deine Kachel-Visualisierungs-Instanz, damit auch die dort frei vergebenen Automation-Namen (z.B. \"Gehen\", \"Kommen\") übersetzt werden - und damit auch Favoriten erfasst werden, deren Objekte außerhalb des Root-Baums liegen. Favoriten innerhalb des Root-Baums werden ohnehin automatisch mitübersetzt. Leer lassen, wenn weder Automations noch außerhalb liegende Favoriten benötigt werden."
+                    "caption": "Wähle hier deine Kachel-Visualisierungs-Instanz: ihre eigene Startkategorie wird automatisch als Root-Kategorie übernommen (Feld oben wird dann nur noch informativ angezeigt) - zusätzlich werden dort frei vergebene Automation-Namen (z.B. \"Gehen\", \"Kommen\") übersetzt und Favoriten erfasst, deren Objekte außerhalb dieser Kategorie liegen. Leer lassen, um die Root-Kategorie stattdessen weiterhin manuell oben auszuwählen."
                 },
                 {
                     "type": "List",
