@@ -7,9 +7,13 @@
             "expanded": true,
             "items": [
                 {
-                    "type": "SelectCategory",
-                    "name": "RootCategoryID",
-                    "caption": "Root-Kategorie der Visualisierung"
+                    "type": "SelectInstance",
+                    "name": "WebFrontVisuInstanceID",
+                    "caption": "Kachel-Visualisierung"
+                },
+                {
+                    "type": "Label",
+                    "caption": "Wähle hier deine Kachel-Visualisierungs-Instanz: ihre eigene Startkategorie wird automatisch als Root-Kategorie übernommen - Namen und Texte innerhalb dieser Kategorie werden übersetzt (siehe Abschnitt \"Übersetzung\" unten). Zusätzlich werden dort frei vergebene Automation-Namen (z.B. \"Gehen\", \"Kommen\") übersetzt und Favoriten erfasst, deren Objekte außerhalb dieser Kategorie liegen. Ohne ausgewählte Instanz bleibt die Übersetzung inaktiv."
                 },
                 {
                     "type": "Select",
@@ -270,15 +274,6 @@
                             "save": true
                         }
                     ]
-                },
-                {
-                    "type": "SelectInstance",
-                    "name": "WebFrontVisuInstanceID",
-                    "caption": "Kachel-Visualisierung"
-                },
-                {
-                    "type": "Label",
-                    "caption": "Wähle hier deine Kachel-Visualisierungs-Instanz: ihre eigene Startkategorie wird automatisch als Root-Kategorie übernommen (Feld oben wird dann nur noch informativ angezeigt) - zusätzlich werden dort frei vergebene Automation-Namen (z.B. \"Gehen\", \"Kommen\") übersetzt und Favoriten erfasst, deren Objekte außerhalb dieser Kategorie liegen. Leer lassen, um die Root-Kategorie stattdessen weiterhin manuell oben auszuwählen."
                 },
                 {
                     "type": "List",

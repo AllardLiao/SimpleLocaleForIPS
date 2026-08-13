@@ -224,7 +224,7 @@ Felder auf einmal überfrachten:
 
 Name                            | Beschreibung
 -------------------------------- | ------------------
-Root-Kategorie                  | Kategorie im Objektbaum, deren Inhalt (Namen + Werte von String-Variablen) übersetzt wird. Sollte nur die Sichtbereich-Kacheln enthalten, nicht die Admin-Oberfläche.
+Kachel-Visualisierung           | Instanz der eingebauten Kachel-Visualisierung (WebFront-Kernmodul, nicht Teil von Simple Locale). **Pflichtfeld** - ihre eigene "Startkategorie" wird automatisch als Root-Kategorie übernommen (Kategorie im Objektbaum, deren Inhalt - Namen + Werte von String-Variablen - übersetzt wird; sollte nur die Sichtbereich-Kacheln enthalten, nicht die Admin-Oberfläche) und sie liefert zusätzlich die Automations/Favoriten-Übersetzung, siehe eigenen Absatz unten. Ohne Auswahl (oder ohne gültige Startkategorie) bleibt die Instanz im Status "Root-Kategorie fehlt".
 Basissprache                    | Sprache, in der die Objektnamen/-werte ursprünglich gepflegt sind. Dient Google Translate als feste Quellsprache für alle Zielsprachen-Übersetzungen; die Basissprache selbst hat keine eigene Übersetzungsspalte, siehe [Abschnitt 7](#7-visualisierung).
 Aktuell aktive Sprache          | Welche Sprache gerade angezeigt wird - normalerweise über die Kachel vom Anwender selbst gesteuert (siehe Abschnitt 7), lässt sich hier aber auch manuell zu Testzwecken umschalten.
 Weltkugel-Symbol in der Kachel anzeigen | Blendet das 🌐-Symbol links neben dem Dropdown aus, falls nicht gewünscht (z. B. bei eigenem Kachel-Design). Standardmäßig an.
@@ -252,8 +252,7 @@ Name                            | Beschreibung
 -------------------------------- | ------------------
 Zielsprachen                    | Sprachen, in die übersetzt werden soll. Auswahl-Optionen kommen ab Werk aus der eingebauten Liste, mit konfiguriertem Google-/DeepL-Key aus deren dynamisch geladener Liste (siehe oben). Ausgegraut, wenn ein bezahlter Anbieter konfiguriert ist, aber noch keine Liste laden konnte, oder wenn das Sprachlimit einer "Spezialversion"-Lizenz erreicht ist (siehe Abschnitt 8). Wichtig: Nach dem Klick auf "Sprachliste aktualisieren" die Instanzkonfiguration einmal schließen und neu öffnen, bevor Häkchen gesetzt werden - sonst kann die Konsole falsche Sprachen speichern.
 Objektnamen / Eigene Texte / Beschriftungen | Listen der gefundenen Objekte mit Quelltext und je einer Spalte pro Zielsprache. Übersetzungen sind hier direkt editierbar; leere Zellen werden beim nächsten Rescan automatisch übersetzt. "Beschriftungen" siehe [Abschnitt 2](#2-bekannte-einschränkungen) (Fork-Mechanismus).
-Kachel-Visualisierung (für Automations) | Optional: Instanz der eingebauten Kachel-Visualisierung (WebFront-Kernmodul, nicht Teil von Simple Locale), deren frei vergebene "Automations"-Namen (z. B. "Gehen", "Kommen") ebenfalls übersetzt werden sollen - siehe eigenen Absatz unten. Leer lassen, wenn nicht benötigt.
-Automations                     | Liste der gefundenen Automation-Einträge (nur wenn oben eine Kachel-Visualisierungs-Instanz gewählt ist) mit Quelltext und je einer Spalte pro Zielsprache - funktioniert genauso wie Objektnamen.
+Automations                     | Liste der gefundenen Automation-Einträge der oben unter "Kachel-Visualisierung" gewählten Instanz mit Quelltext und je einer Spalte pro Zielsprache - funktioniert genauso wie Objektnamen.
 
 **Wann sollte ein Rescan ausgeführt werden?**
 
@@ -271,13 +270,14 @@ besondere Bereiche, die sich als eigene Kacheln ein-/ausblenden lassen
 (Instanzkonfiguration der Kachel-Visualisierung selbst, Abschnitte
 "Automations"/"Favorites").
 
-Wird oben unter "Kachel-Visualisierung" die entsprechende Instanz ausgewählt,
-übernimmt Simple Locale deren "Startkategorie" automatisch als eigene
-Root-Kategorie (das Feld "Root-Kategorie der Visualisierung" wird dann ausgegraut
-und zeigt den übernommenen Wert nur noch informativ an) - so lässt sich nicht mehr
-versehentlich ein anderer Baum konfigurieren als der, den die Visualisierung
+Die unter "Kachel-Visualisierung" ausgewählte Instanz ist die EINZIGE Quelle der
+Root-Kategorie - Simple Locale übernimmt deren "Startkategorie" automatisch, es
+gibt kein eigenes, manuell wählbares Root-Kategorie-Feld mehr (bis Build 23 gab
+es zusätzlich ein solches Feld als Rückfall). Das verhindert strukturell, dass
+versehentlich ein anderer Baum konfiguriert wird als der, den die Visualisierung
 tatsächlich anzeigt. Ohne ausgewählte Instanz (oder falls deren Startkategorie
-leer ist) bleibt die manuelle Auswahl oben wie gewohnt maßgeblich.
+leer ist) bleibt die Instanz im Status "Root-Kategorie fehlt" und übersetzt
+nichts.
 
 - **Automations**: jede Zeile verknüpft ein Skript/Ereignis mit einem frei
   vergebenen Anzeigenamen (z. B. "Gehen", "Kommen", "Schlafen") und einem Icon -
@@ -288,7 +288,7 @@ leer ist) bleibt die manuelle Auswahl oben wie gewohnt maßgeblich.
   Namen dort zurück (Icon und Verknüpfung bleiben dabei unangetastet).
 - **Favoriten**: zeigen ausschließlich den echten Namen des verlinkten Objekts an,
   keine eigene Namens-Überschreibung. Liegt das favorisierte Objekt innerhalb der
-  (ggf. automatisch übernommenen) Root-Kategorie, wird es also ohnehin bereits
+  automatisch übernommenen Root-Kategorie, wird es also ohnehin bereits
   automatisch mitübersetzt - keine zusätzliche Konfiguration nötig. Liegt es
   außerhalb (kommt vor, ist aber nicht garantiert), wird es zusätzlich erfasst,
   sofern oben dieselbe Instanz ausgewählt ist: der Rescan-Button liest dann
