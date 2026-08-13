@@ -278,7 +278,7 @@
                 },
                 {
                     "type": "Label",
-                    "caption": "Optional: wähle hier deine Kachel-Visualisierungs-Instanz, damit auch die dort frei vergebenen Automation-Namen (z.B. \"Gehen\", \"Kommen\") übersetzt werden. Leer lassen, wenn nicht benötigt - Favoriten brauchen das nicht, deren Objektnamen werden bereits automatisch mitübersetzt, sofern sie im Root-Baum oben liegen."
+                    "caption": "Optional: wähle hier deine Kachel-Visualisierungs-Instanz, damit auch die dort frei vergebenen Automation-Namen (z.B. \"Gehen\", \"Kommen\") übersetzt werden - und damit auch Favoriten erfasst werden, deren Objekte außerhalb des Root-Baums liegen. Favoriten innerhalb des Root-Baums werden ohnehin automatisch mitübersetzt. Leer lassen, wenn weder Automations noch außerhalb liegende Favoriten benötigt werden."
                 },
                 {
                     "type": "List",

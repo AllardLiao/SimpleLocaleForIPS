@@ -280,9 +280,13 @@ Abschnitte "Automations"/"Favorites"):
   Verknüpfung bleiben dabei unangetastet).
 - **Favoriten**: zeigen ausschließlich den echten Namen des verlinkten Objekts an,
   keine eigene Namens-Überschreibung. Liegt das favorisierte Objekt innerhalb der
-  oben gewählten Root-Kategorie, wird es also bereits automatisch mitübersetzt -
-  keine zusätzliche Konfiguration nötig. Liegt es außerhalb, gilt dieselbe
-  Einschränkung wie für jedes andere Objekt außerhalb des Root-Baums.
+  oben gewählten Root-Kategorie, wird es also ohnehin bereits automatisch
+  mitübersetzt - keine zusätzliche Konfiguration nötig. Liegt es außerhalb (kommt
+  vor, ist aber nicht garantiert), wird es zusätzlich erfasst, sofern oben unter
+  "Kachel-Visualisierung (für Automations)" dieselbe Instanz ausgewählt ist: der
+  Rescan-Button liest dann zusätzlich deren `Favorites`-Property ein und ergänzt
+  jedes noch nicht erfasste Objekt als eigene Zeile in "Objektnamen" (Pfad
+  "Favoriten").
 
 **Lizenz:**
 
