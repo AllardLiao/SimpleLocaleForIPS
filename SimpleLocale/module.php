@@ -276,6 +276,7 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterAttributeInteger(self::attributeTrialStartedAt, 0);
         $this->RegisterAttributeString(self::attributeActivationLog, '[]');
         $this->RegisterAttributeString(self::attributeBlockedLicenseKeyHash, '');
+        $this->RegisterAttributeString(self::attributeLastCheckedLicenseKeyHash, '');
         $this->RegisterAttributeInteger(self::attributeLastLanguageSwitchAt, 0);
         $this->RegisterAttributeString(self::attributeRegisteredValueObjectIDs, '[]');
         $this->RegisterAttributeString(self::attributeLastSelfWrittenValues, '{}');
@@ -763,16 +764,28 @@ private const LANGUAGE_FLAGS = [
     // und über "Übernehmen" gespeichert wurde, ohne extra auf "Lizenz aktivieren" zu
     // klicken (die Lizenz wirkt bereits ab dem Speichern, siehe GetLicenseInfo/
     // HasFullLicense) - sonst ließe sich die Protokollierung fürs Erkennen von
-    // Weiterverkauf/Weitergabe einfach umgehen. Loggt/meldet nur beim ERSTEN Erkennen
-    // einer neuen Schlüssel+Licensee-Kombination (Vergleich gegen
-    // attributeActivationLog) - AUSSER $AllowRecheck ist true UND der Schlüssel ist
-    // gerade als geblockt bekannt: dann wird trotz vorhandenem Log-Eintrag erneut
+    // Weiterverkauf/Weitergabe einfach umgehen. Meldet nur, wenn sich der AKTUELL
+    // eingetragene Schlüssel seit der letzten Meldung geändert hat (Vergleich gegen
+    // attributeLastCheckedLicenseKeyHash) - verhindert Report-Spam bei jedem
+    // "Übernehmen" eines völlig unabhängigen Formularfelds, während trotzdem JEDE
+    // tatsächliche Schlüssel-Änderung erneut geprüft wird. WICHTIG: bewusst NICHT
+    // gegen attributeActivationLog (Verlauf) geprüft - sonst ließe sich ein bereits
+    // einmal aktivierter, inzwischen z.B. per Upgrade verbrauchter/geblockter
+    // Schlüssel beliebig oft wieder eintragen, ohne dass der Server je erneut
+    // gefragt würde, ob er inzwischen geblockt ist (der alte Log-Eintrag brach die
+    // Prüfung sonst sofort ab). AUSSER $AllowRecheck ist true UND der Schlüssel ist
+    // gerade als geblockt bekannt: dann wird auch bei unverändertem Schlüssel erneut
     // online nachgefragt (siehe ActivateLicense), ohne das würde ein serverseitiges
     // Entsperren (siehe shop/admin) auf dieser Instanz nie ankommen.
     private function TrackLicenseActivationIfNew(bool $AllowRecheck = false): void
     {
         $info = $this->GetLicenseInfo();
         if (!($info['valid'] ?? false) && !($info['blocked'] ?? false)) {
+            // Kein (mehr) gültiger/geblockter Schlüssel aktiv - eine später erneut
+            // eingetragene Lizenz (auch falls es zufällig wieder derselbe Schlüssel
+            // wie vorher ist) soll auf jeden Fall wieder frisch geprüft werden.
+            $this->WriteAttributeString(self::attributeLastCheckedLicenseKeyHash, '');
+
             return;
         }
 
@@ -780,17 +793,15 @@ private const LANGUAGE_FLAGS = [
         $licensee = $this->GetLicenseeIdentifier();
         $recheckBlocked = $AllowRecheck && $this->ReadAttributeString(self::attributeBlockedLicenseKeyHash) === $keyHash;
 
+        if (!$recheckBlocked && $this->ReadAttributeString(self::attributeLastCheckedLicenseKeyHash) === $keyHash) {
+            return;
+        }
+
+        $this->WriteAttributeString(self::attributeLastCheckedLicenseKeyHash, $keyHash);
+
         $log = json_decode($this->ReadAttributeString(self::attributeActivationLog), true);
         if (!is_array($log)) {
             $log = [];
-        }
-
-        if (!$recheckBlocked) {
-            foreach ($log as $entry) {
-                if (($entry['licenseKeyHash'] ?? '') === $keyHash && ($entry['licensee'] ?? '') === $licensee) {
-                    return;
-                }
-            }
         }
 
         $this->RecordLicenseActivation($keyHash, $licensee, $log);

@@ -142,6 +142,18 @@ trait SimpleLocaleConstants
     // schluesselgenau).
     private const attributeBlockedLicenseKeyHash = 'BlockedLicenseKeyHash';
 
+    // SHA-256-Hash des Schlüssels, der beim letzten TrackLicenseActivationIfNew()-
+    // Durchlauf tatsächlich beim Aktivierungs-Report-Server gemeldet wurde (leer =
+    // noch nie). Entscheidet dort, ob ein erneutes "Übernehmen" den Server erneut
+    // fragen muss: nur wenn der AKTUELL eingetragene Schlüssel von DIESEM Hash
+    // abweicht. Bewusst NICHT mehr über attributeActivationLog (Verlauf der letzten
+    // 20 Aktivierungen) geprüft - sonst ließe sich ein bereits einmal aktivierter,
+    // zwischenzeitlich z.B. per Upgrade verbrauchter/geblockter Schlüssel beliebig
+    // oft wieder eintragen: der Log-Scan fand den alten Eintrag und brach die
+    // Prüfung ab, ohne den Server je erneut zu fragen, ob der Schlüssel inzwischen
+    // geblockt wurde.
+    private const attributeLastCheckedLicenseKeyHash = 'LastCheckedLicenseKeyHash';
+
     // Zeitpunkt (Unix-Timestamp) des letzten TATSAECHLICHEN Sprachwechsels (zu einer
     // anderen als der bis dahin aktiven Sprache) - nur relevant ohne das Feature
     // "unlimited_language_switch" (siehe IsLanguageSwitchRateLimited), z.B. bei der
