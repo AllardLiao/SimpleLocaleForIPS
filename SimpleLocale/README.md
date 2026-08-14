@@ -51,14 +51,31 @@ Beschreibung des Moduls.
   Variablenprofil, das wäre global über alle Instanzen hinweg geteilt) - sie
   ist direkt im Konfigurationsformular sicht- und änderbar.
 * Reagiert live auf Wertänderungen, die *andere* Module/Skripte an den in
-  "Eigene Texte" verfolgten String-Variablen vornehmen (z. B. ein Wetter-
-  oder Messwert-Modul, das seinen Text bei jeder Aktualisierung selbst neu
-  schreibt): der neue Wert wird automatisch als frischer Rohtext übernommen
-  und sofort in die aktuell aktive Sprache nachübersetzt - ganz ohne
-  Zutun des anderen Modulentwicklers. Technisch über Symcons
-  VariableManager-Update-Nachrichten (`VM_UPDATE`), siehe
-  [Abschnitt 2](#2-bekannte-einschränkungen) für die eine Voraussetzung
-  dabei.
+  "Eigene Texte" (und einer im Modus "Variable" verlinkten Begrüßungs-
+  Variable, siehe Abschnitt 7) verfolgten String-Variablen vornehmen (z. B.
+  ein Wetter- oder Messwert-Modul, das seinen Text bei jeder Aktualisierung
+  selbst neu schreibt, oder eine mehrmals täglich zwischen festen Werten
+  wechselnde Begrüßung): der neue Wert wird automatisch als frischer
+  Rohtext übernommen und sofort **in alle konfigurierten Zielsprachen**
+  nachübersetzt (nicht nur die gerade aktive) - schaltet ein Gast danach in
+  eine andere Sprache, bekommt er also ebenfalls sofort die aktuelle
+  Übersetzung zu sehen, nicht den unübersetzten Rohtext oder eine veraltete,
+  vor der Änderung gecachte Fassung. Ganz ohne Zutun des anderen
+  Modulentwicklers. Technisch über Symcons VariableManager-Update-
+  Nachrichten (`VM_UPDATE`), siehe [Abschnitt 2](#2-bekannte-einschränkungen)
+  für die eine Voraussetzung dabei.
+
+  Damit das bei häufigen Änderungen nicht bei jedem Update erneut komplett
+  gegen Google/DeepL/den kostenfreien Anbieter übersetzt werden muss, führt
+  Simple Locale einen internen Übersetzungs-Cache (Schlüssel:
+  Quellsprache + Zielsprache + Text). Kommt exakt derselbe Text in
+  derselben Sprachrichtung erneut vor - z. B. eine Begrüßungs-Variable, die
+  sich mehrmals täglich zwischen einer Handvoll fester Werte ("Guten
+  Morgen"/"Guten Tag"/"Guten Abend"/"Gute Nacht") abwechselt -, wird ab dem
+  zweiten Auftreten die bereits vorhandene Übersetzung wiederverwendet,
+  **ganz ohne erneuten API-Aufruf**. Der Cache ist auf die letzten 500
+  Einträge begrenzt (älteste zuerst raus) und wird auch von normalen
+  Rescans mitgenutzt.
 * Übersetzt zusätzlich die Beschriftungen von Variablen mit einer
   Wert-Aufzählung (z. B. Integer-Variablen mit klassischem Profil oder
   moderner Enumeration-Presentation, etwa "Abwesend/Anwesend" oder
