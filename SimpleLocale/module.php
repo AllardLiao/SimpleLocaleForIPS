@@ -288,6 +288,11 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterAttributeString(self::attributeBlockedLicenseKeyHash, '');
         $this->RegisterAttributeString(self::attributeLastCheckedLicenseKeyHash, '');
         $this->RegisterAttributeInteger(self::attributeLastLanguageSwitchAt, 0);
+        // Default = derselbe Wert wie propertyCurrentLanguage's eigener Default, damit
+        // ApplyChanges() beim allerersten Aufruf (frisch angelegte Instanz, noch keine
+        // Zeilen in ObjectNames/ObjectTexts) keinen unnoetigen ApplyLanguage()-Durchlauf
+        // auf leeren Listen ausloest.
+        $this->RegisterAttributeString(self::attributeLastAppliedLanguage, self::langOriginalImport);
         $this->RegisterAttributeString(self::attributeRegisteredValueObjectIDs, '[]');
         $this->RegisterAttributeString(self::attributeLastSelfWrittenValues, '{}');
         $this->RegisterAttributeString(self::attributeEnumerationPresentationBackup, '{}');
@@ -350,6 +355,23 @@ private const LANGUAGE_FLAGS = [
         $this->SetTimerInterval($this->GetAutoRescanTimerIdent(), $interval > 0 ? $interval * 60 * 1000 : 0);
 
         $this->SyncValueUpdateRegistrations();
+
+        // Holt die eigentlichen Umbenennungen/Wertaenderungen nach, falls
+        // "Aktuell aktive Sprache" direkt im Konfigurationsformular geaendert und
+        // per "Uebernehmen" gespeichert wurde (Select+Property, kein
+        // RequestAction) - dieser Pfad ruft sonst NUR ApplyChanges() auf, das fuer
+        // sich genommen keine Kachel-/Objektnamen/-werte anfasst (das tat bisher
+        // ausschliesslich ApplyLanguage(), erreichbar nur ueber die Kachel selbst
+        // oder IPSSL_SetLanguage()). Vergleich gegen attributeLastAppliedLanguage
+        // statt direkt gegen den vorherigen Property-Wert, weil ApplyLanguage()
+        // selbst per IPS_SetProperty+IPS_ApplyChanges erneut hier hineinlaeuft -
+        // das Attribut wird dabei VOR diesem Reentry gesetzt (siehe dort), sodass
+        // der Vergleich beim erneuten Durchlauf bereits uebereinstimmt und keine
+        // Endlosschleife entsteht.
+        $currentLanguage = $this->ReadPropertyString(self::propertyCurrentLanguage);
+        if ($currentLanguage !== $this->ReadAttributeString(self::attributeLastAppliedLanguage)) {
+            $this->ApplyLanguage($currentLanguage);
+        }
     }
 
     // Reagiert live auf Wertänderungen von *anderen* Modulen/Skripten an den in
@@ -1340,11 +1362,23 @@ private const LANGUAGE_FLAGS = [
 
     private function ApplyLanguage(string $Language): void
     {
+        // VOR einem moeglichen IPS_ApplyChanges()-Reentry unten setzen (siehe
+        // ApplyChanges) - sonst wuerde der dortige Vergleich beim erneuten
+        // Hineinlaufen wieder "ungleich" sehen und in eine Endlosschleife laufen.
+        $this->WriteAttributeString(self::attributeLastAppliedLanguage, $Language);
+
         // Wie Rescan(): direktes IPS_SetProperty + IPS_ApplyChanges, damit die neue
         // Sprache sofort persistiert ist und im Konfigurationsformular korrekt
-        // angezeigt wird, sobald es (neu) geöffnet wird.
-        IPS_SetProperty($this->InstanceID, self::propertyCurrentLanguage, $Language);
-        IPS_ApplyChanges($this->InstanceID);
+        // angezeigt wird, sobald es (neu) geöffnet wird - aber NUR, wenn die
+        // Property das nicht ohnehin schon ist: kommt dieser Aufruf aus
+        // ApplyChanges() selbst (Sprache direkt im Konfigurationsformular
+        // umgestellt, siehe dort), ist sie das bereits, ein erneutes
+        // IPS_ApplyChanges() hier waere nur ein unnoetiger kompletter
+        // ApplyChanges()-Reentry.
+        if ($this->ReadPropertyString(self::propertyCurrentLanguage) !== $Language) {
+            IPS_SetProperty($this->InstanceID, self::propertyCurrentLanguage, $Language);
+            IPS_ApplyChanges($this->InstanceID);
+        }
         $this->PushVisualizationUpdate();
 
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);

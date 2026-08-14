@@ -249,7 +249,7 @@ Name                            | Beschreibung
 -------------------------------- | ------------------
 Kachel-Visualisierung           | Instanz der eingebauten Kachel-Visualisierung (WebFront-Kernmodul, nicht Teil von Simple Locale). **Pflichtfeld** - ihre eigene "Startkategorie" wird automatisch als Root der Visualisierung übernommen (Kategorie im Objektbaum, deren Inhalt - Namen + Werte von String-Variablen - übersetzt wird; sollte nur die Sichtbereich-Kacheln enthalten, nicht die Admin-Oberfläche) und sie liefert zusätzlich die Automations/Favoriten-Übersetzung, siehe eigenen Absatz unten. Ohne Auswahl (oder ohne gültige Startkategorie) bleibt die Instanz im Status "Root der Visualisierung fehlt".
 Basissprache                    | Sprache, in der die Objektnamen/-werte ursprünglich gepflegt sind. Dient Google Translate als feste Quellsprache für alle Zielsprachen-Übersetzungen; die Basissprache selbst hat keine eigene Übersetzungsspalte, siehe [Abschnitt 7](#7-visualisierung).
-Aktuell aktive Sprache          | Welche Sprache gerade angezeigt wird - normalerweise über die Kachel vom Anwender selbst gesteuert (siehe Abschnitt 7), lässt sich hier aber auch manuell zu Testzwecken umschalten.
+Aktuell aktive Sprache          | Welche Sprache gerade angezeigt wird - normalerweise über die Kachel vom Anwender selbst gesteuert (siehe Abschnitt 7), lässt sich hier aber auch manuell umschalten (inkl. aller sonst nur bei einem Kachel-Wechsel ausgelösten Umbenennungen/Wertänderungen - identisches Verhalten zur Kachel selbst). **Wichtig für die eigene Weiterentwicklung der Visualisierung, siehe Warnung unten.**
 Weltkugel-Symbol in der Kachel anzeigen | Blendet das 🌐-Symbol links neben dem Dropdown aus, falls nicht gewünscht (z. B. bei eigenem Kachel-Design). Standardmäßig an.
 Info-Symbol in der Kachel anzeigen | Blendet das ⓘ-Symbol (Erklärung der Einschränkungen, siehe Abschnitt 2) aus. Standardmäßig an.
 Eigene Sprachauswahl-Kachel verwenden | Unterdrückt die eingebaute Dropdown-Kachel zugunsten einer selbstgebauten (siehe Abschnitt 7). **Pro-Feature** (`custom_tile`, siehe [Abschnitt 8](#8-lizenz-und-testversion)) - ohne dieses Feature bleibt das Feld ausgegraut und die eingebaute Kachel aktiv.
@@ -286,6 +286,24 @@ Objektnamen        | Nur per Rescan (manuell/Timer) erkannt. | Ändert sich ein 
 Eigene Texte (Werte) | Nur per Rescan erkannt. | Automatisch (siehe Abschnitt 1, `VM_UPDATE`) - **kein** Rescan nötig, solange die Basissprache stimmt.
 Begrüßung           | Nur per Rescan erkannt (auch ein Moduswechsel zwischen "Automatic"/"Static"/"Variable"). | Modus "Variable": automatisch, genau wie Eigene Texte (Werte). Modi "Automatic"/"Static" (freier Text im Feld "Name"): nur per Rescan.
 Beschriftungen      | Nur per Rescan erkannt. | **Kein** automatisches Erkennen von Änderungen am zugrunde liegenden Profil/Template - Symcon liefert dafür keine Update-Benachrichtigung. Ändert ein anderes Modul/der Admin die Beschriftungen eines Profils, das eine bereits geforkte Variable nutzt, wird das erst nach manuellem Löschen der betroffenen Original-Import-Zelle + Rescan übernommen.
+
+> **Wichtig beim Weiterentwickeln der Visualisierung: immer mit "Aktuell aktive
+> Sprache" = Basissprache (bzw. "Original") arbeiten, solange neue Objekte
+> hinzugefügt werden.** Ein Rescan übernimmt für ein NEUES Objekt immer dessen
+> gerade live vorhandenen Namen als "Original-Import" - er kann nicht wissen,
+> ob dieser Name vom Admin frisch in der Basissprache getippt wurde, oder ob
+> er nur deshalb so aussieht, weil zuvor auf eine andere aktive Sprache
+> umgeschaltet war (jeder Sprachwechsel - auch der manuelle über das
+> Auswahlfeld oben - benennt alle bereits erfassten Objekte tatsächlich live
+> um, siehe `ApplyLanguage()`). Wird also ein neues Objekt angelegt, während
+> z. B. gerade Englisch aktiv ist, hält der Admin dessen Namen zwangsläufig
+> auf Englisch - der nächste Rescan verbucht diesen Namen aber als Basissprache
+> und übersetzt ihn entsprechend falsch (u. a. auch zurück ins vermeintliche
+> Original). Vor dem Anlegen neuer Objekte also immer erst über "Aktuell
+> aktive Sprache" zurück auf die Basissprache wechseln (oder gleich durchgehend
+> in dieser Ansicht entwickeln) - bereits erfasste, bestehende Objekte sind
+> davon nicht betroffen (deren Original-Import bleibt beim ersten Fund
+> eingefroren, siehe oben), das betrifft ausschließlich neu hinzukommende.
 
 **Kachel-Visualisierung: Root der Visualisierung, Automations und Favoriten**
 
