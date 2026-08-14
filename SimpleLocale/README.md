@@ -426,9 +426,12 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
 
 1. **Eigener HTML-Code für die eingebaute Kachel (empfohlen für die meisten
    Fälle).** Aktiviere dazu "Eigene Sprachauswahl-Kachel verwenden" im
-   Konfigurationsformular - darunter erscheint ein Textfeld "Eigener
-   Kachel-HTML-Code", vorbefüllt mit einer 1:1-Kopie der eingebauten
-   `module.html`. **Diese Instanz liefert die Kachel weiterhin selbst aus**
+   Konfigurationsformular - darunter erscheint der Button "Eigenen
+   Kachel-HTML-Code bearbeiten" (nur sichtbar, solange die Checkbox aktiv
+   ist, damit das Formular sonst nicht unnötig überladen wirkt). Der Button
+   öffnet ein Bearbeiten-Fenster mit dem HTML-Code, vorbefüllt mit einer
+   1:1-Kopie der eingebauten `module.html`. **Diese Instanz liefert die
+   Kachel weiterhin selbst aus**
    (`GetVisualizationTile()`) - nur eben mit dem editierten HTML/CSS/JS statt
    der eingebauten Optik. Der Code muss zwei Platzhalter enthalten, die bei
    jedem Laden der Kachel automatisch ersetzt werden:
@@ -456,9 +459,9 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
    `{"action":"ALERT", ...}` für den Testphase-abgelaufen-Hinweis). Wird diese
    Funktion entfernt oder umbenannt, funktioniert die Kachel beim ersten Laden
    weiterhin normal - nur diese beiden Live-Aktualisierungen bleiben dann
-   stumm, ohne Fehlermeldung. Wird das Textfeld komplett geleert, greift
-   automatisch derselbe eingebaute HTML-Code wie ohne aktiviertes Feature
-   (kein Absturz, keine leere Kachel).
+   stumm, ohne Fehlermeldung. Wird das Feld im Bearbeiten-Fenster komplett
+   geleert, greift automatisch derselbe eingebaute HTML-Code wie ohne
+   aktiviertes Feature (kein Absturz, keine leere Kachel).
 
 2. **Komplett eigenständige, separat gebaute Kachel** (z. B. eine eigene
    HTMLBox-Instanz, die gar nicht über `GetVisualizationTile()` dieser
@@ -583,13 +586,14 @@ Standard-Tier) schaltet zusätzliche Fähigkeiten frei - aktuell:
 - `custom_tile`: schaltet beide Wege zur Anpassung der Sprachauswahl-Kachel
   frei (siehe [Abschnitt 7](#7-visualisierung)) - den editierbaren
   Kachel-HTML-Code (Property "Eigene Sprachauswahl-Kachel verwenden" +
-  "Eigener Kachel-HTML-Code") UND die Befehle
+  Button "Eigenen Kachel-HTML-Code bearbeiten") UND die Befehle
   `IPSSL_GetAvailableLanguages`/`IPSSL_SetLanguage` in
   [Abschnitt 9](#9-php-befehlsreferenz) für eine komplett eigenständige
-  Kachel. Ohne dieses Flag bleiben die Formularfelder ausgegraut, die
-  eingebaute Kachel bleibt immer aktiv, und die beiden Befehle werfen bei
-  jedem Aufruf eine Exception (hart durchgesetzt, nicht nur ausgegraut -
-  sonst ließe sich die Sperre per eigenem Skript komplett umgehen).
+  Kachel. Ohne dieses Flag bleibt der Button ausgegraut (samt Hinweis "Pro
+  Edition erforderlich"), die eingebaute Kachel bleibt immer aktiv, und die
+  beiden Befehle werfen bei jedem Aufruf eine Exception (hart durchgesetzt,
+  nicht nur ausgegraut - sonst ließe sich die Sperre per eigenem Skript
+  komplett umgehen).
 
 Während der Testphase selbst bleiben alle Features bewusst immer erlaubt,
 damit der komplette Mechanismus vor dem Kauf ausprobierbar ist - die Sperre
@@ -737,8 +741,8 @@ bleiben: liefert die aktuell wählbaren Sprachen als JSON-Array
 und alphabetisch sortiert - für eine komplett eigenständige, selbstgebaute
 Sprachauswahl-Kachel (siehe [Abschnitt 7](#7-visualisierung); für die
 naheliegendere Variante, nur das HTML/CSS der eingebauten Kachel
-anzupassen, siehe dort das Feld "Eigener Kachel-HTML-Code" - das braucht
-diesen Befehl nicht).
+anzupassen, siehe dort den Button "Eigenen Kachel-HTML-Code bearbeiten" -
+das braucht diesen Befehl nicht).
 
 Beispiel:
 `IPSSL_GetAvailableLanguages(12345);`

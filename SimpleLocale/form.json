@@ -54,14 +54,24 @@
                 },
                 {
                     "type": "Label",
-                    "caption": "Aktiviert: diese Instanz liefert statt der eingebauten Optik den HTML-Code aus dem Feld unten aus (Platzhalter werden automatisch gefüllt) - die Instanz bleibt dabei weiterhin selbst als Kachel in der Visualisierung platziert. Siehe Dokumentation Abschnitt 7 für die Platzhalter/Vorgaben."
+                    "caption": "Aktiviert: diese Instanz liefert statt der eingebauten Optik den HTML-Code aus dem Bearbeiten-Dialog unten aus (Platzhalter werden automatisch gefüllt) - die Instanz bleibt dabei weiterhin selbst als Kachel in der Visualisierung platziert. Siehe Dokumentation Abschnitt 7 für die Platzhalter/Vorgaben."
                 },
                 {
-                    "type": "ValidationTextBox",
-                    "name": "CustomTileHtml",
-                    "caption": "Eigener Kachel-HTML-Code",
-                    "multiline": true,
-                    "width": "100%"
+                    "type": "PopupButton",
+                    "name": "CustomTileHtmlButton",
+                    "caption": "Eigenen Kachel-HTML-Code bearbeiten",
+                    "popup": {
+                        "caption": "Eigener Kachel-HTML-Code",
+                        "items": [
+                            {
+                                "type": "ValidationTextBox",
+                                "name": "CustomTileHtml",
+                                "caption": "HTML-Code",
+                                "multiline": true,
+                                "width": "100%"
+                            }
+                        ]
+                    }
                 },
                 {
                     "type": "Label",

@@ -571,12 +571,21 @@ private const LANGUAGE_FLAGS = [
                     }
                     break;
 
-                // Dasselbe Ausgrauen-statt-Verstecken-Muster wie UseCustomTile direkt
-                // darüber - beide gehören zusammen zum selben Pro-Feature.
-                case self::propertyCustomTileHtml:
+                // Der HTML-Editor sitzt in einem PopupButton statt direkt im Formular
+                // (siehe form.json) - das eigentliche Eingabefeld "CustomTileHtml" liegt
+                // dabei unter "popup"."items", NICHT unter "items" wie bei
+                // ExpansionPanel/RowLayout - PopulateFormElements() steigt dort bewusst
+                // NICHT rekursiv hinab (siehe Rekursionsbedingung oben), daher wird hier
+                // stattdessen der Button selbst behandelt: "visible" folgt direkt der
+                // Checkbox UseCustomTile (nur relevant, wenn das Feature überhaupt aktiv
+                // ist - sonst nimmt der HTML-Editor unnötig Platz im Formular weg), das
+                // übliche Ausgrauen-statt-Verstecken-Muster (Lizenz) bleibt separat davon
+                // über "enabled" bestehen, exakt wie bei UseCustomTile direkt darüber.
+                case 'CustomTileHtmlButton':
+                    $element['visible'] = $this->ReadPropertyBoolean(self::propertyUseCustomTile);
                     if (!$this->HasLicenseFeature('custom_tile')) {
                         $element['enabled'] = false;
-                        $element['caption'] = 'Eigener Kachel-HTML-Code (Pro Edition erforderlich)';
+                        $element['caption'] = 'Eigenen Kachel-HTML-Code bearbeiten (Pro Edition erforderlich)';
                     }
                     break;
 
