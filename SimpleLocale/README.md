@@ -428,8 +428,12 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
    Fälle).** Aktiviere dazu "Eigene Sprachauswahl-Kachel verwenden" im
    Konfigurationsformular - darunter erscheint der Button "Eigenen
    Kachel-HTML-Code bearbeiten" (nur sichtbar, solange die Checkbox aktiv
-   ist, damit das Formular sonst nicht unnötig überladen wirkt). Der Button
-   öffnet ein Bearbeiten-Fenster mit dem HTML-Code, vorbefüllt mit einer
+   ist, damit das Formular sonst nicht unnötig überladen wirkt). Er
+   erscheint nicht sofort beim Setzen des Häkchens, sondern erst nach einem
+   Klick auf "Übernehmen" (die Konsole baut das Formular dabei live neu auf -
+   ein Schließen/Neuöffnen der Instanzkonfiguration ist hierfür anders als
+   beim Sprachlisten-Hinweis weiter oben nicht nötig). Der Button öffnet ein
+   Bearbeiten-Fenster mit dem HTML-Code, vorbefüllt mit einer
    1:1-Kopie der eingebauten `module.html`. **Diese Instanz liefert die
    Kachel weiterhin selbst aus**
    (`GetVisualizationTile()`) - nur eben mit dem editierten HTML/CSS/JS statt
