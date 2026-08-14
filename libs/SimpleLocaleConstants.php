@@ -244,6 +244,15 @@ trait SimpleLocaleConstants
     // getrennt vom AvailableLanguagesCache oben, der an der Admin-Konsolensprache haengt.
     private const attributeGuestLanguageNamesCache = 'GuestLanguageNamesCache';
 
+    // Uebersetzungs-Cache (JSON-Map "Quellsprache|Zielsprache|SHA-256(Text)" =>
+    // uebersetzter Text), siehe TranslateBatch/GetCachedTranslation/
+    // StoreCachedTranslation - vermeidet wiederholte, identische API-Aufruf bei
+    // Texten, die sich wiederholen (z.B. eine tageszeitabhaengige
+    // Begruessungsvariable mit nur einer Handvoll fester Werte). Auf die letzten
+    // TRANSLATION_CACHE_MAX_ENTRIES Eintraege begrenzt, analog zu
+    // attributeActivationLog.
+    private const attributeTranslationCache = 'TranslationCache';
+
     // Idents (RequestAction) - kein zugehöriges Variablen-/Profilobjekt mehr, siehe
     // propertyCurrentLanguage oben. "Language" bleibt nur noch als reiner Aktions-Ident.
     private const identLanguage = 'Language';

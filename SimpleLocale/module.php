@@ -281,6 +281,7 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterAttributeString(self::attributeAvailableLanguagesCache, '[]');
         $this->RegisterAttributeInteger(self::attributeAvailableLanguagesFetchedAt, 0);
         $this->RegisterAttributeString(self::attributeGuestLanguageNamesCache, '{}');
+        $this->RegisterAttributeString(self::attributeTranslationCache, '{}');
         $this->RegisterAttributeString(self::attributeUnnamedObjects, '[]');
         $this->RegisterAttributeString(self::attributeLicenseInfo, '{}');
         $this->RegisterAttributeInteger(self::attributeTrialStartedAt, 0);
@@ -1826,22 +1827,33 @@ private const LANGUAGE_FLAGS = [
         string $NewValue
     ): void {
         $Rows[$RowIndex][$RawField] = $NewValue;
-        foreach ($this->GetSelectedTargetLanguages() as $lang) {
-            $Rows[$RowIndex][$TranslatedPrefix . $lang] = '';
-        }
 
         $currentLanguage = $this->ReadPropertyString(self::propertyCurrentLanguage);
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
         $displayText = $NewValue;
 
-        if ($currentLanguage !== self::langOriginalImport && $currentLanguage !== $sourceLanguage) {
-            $translated = $this->TranslateBatch([$NewValue], $sourceLanguage, $currentLanguage);
+        // ALLE konfigurierten Zielsprachen sofort neu uebersetzen, nicht nur die
+        // gerade aktive - dank Uebersetzungs-Cache (siehe TranslateBatch) meist
+        // ohne echten API-Aufruf, sobald derselbe Rohtext schon einmal vorkam.
+        // Fruehere Version leerte hier nur alle Zielsprachen-Zellen und uebersetzte
+        // ausschliesslich die gerade aktive neu ("lazy", regenerieren sich
+        // eigentlich erst beim naechsten Rescan oder Sprachwechsel) - das hatte
+        // einen echten Nebeneffekt: schaltete ein Gast danach in eine ANDERE
+        // Sprache, lieferte ResolveRowValue() fuer die (noch leere) Zielspalte
+        // schlicht den rohen Quelltext zurueck (kein Absturz, aber auch keine
+        // Uebersetzung) - fuer eine Begruessungsvariable, die sich mehrmals
+        // taeglich zwischen wenigen festen Werten abwechselt, heisst das:
+        // Sprachwechsel praktisch immer unuebersetzt, ausser die zufaellig gerade
+        // aktive Sprache war beim letzten externen Schreibvorgang bereits aktiv.
+        foreach ($this->GetSelectedTargetLanguages() as $lang) {
+            $translated = $this->TranslateBatch([$NewValue], $sourceLanguage, $lang);
             // TranslateBatch liefert bei einem fehlgeschlagenen Google-Aufruf einen
             // Leerstring zurück (nicht null) - ein reines "??" würde diesen Fehlerfall
             // nicht abfangen und eine leere Beschriftung in der Kachel hinterlassen.
-            if (($translated[0] ?? '') !== '') {
-                $displayText = $translated[0];
-                $Rows[$RowIndex][$TranslatedPrefix . $currentLanguage] = $displayText;
+            $translatedText = $translated[0] ?? '';
+            $Rows[$RowIndex][$TranslatedPrefix . $lang] = $translatedText;
+            if ($lang === $currentLanguage && $translatedText !== '') {
+                $displayText = $translatedText;
             }
         }
 
@@ -2797,7 +2809,101 @@ private const LANGUAGE_FLAGS = [
     // dieselbe Chunk-Groesse ist trotzdem eine vernuenftige Obergrenze pro Request.
     private const translateMaxTextsPerRequest = 128;
 
+    // Auf die letzten N Eintraege begrenzt (aeltere zuerst raus), analog zu
+    // attributeActivationLog - verhindert unbegrenztes Wachstum bei Instanzen mit
+    // sehr vielen unterschiedlichen, sich staendig aendernden Texten. Fuer den
+    // eigentlichen Zweck (wiederkehrende Werte wie eine tageszeitabhaengige
+    // Begruessungsvariable mit einer Handvoll fester Varianten) reicht das bei
+    // weitem.
+    private const TRANSLATION_CACHE_MAX_ENTRIES = 500;
+
+    // Uebersetzt (Quelle, Ziel, Text) IMMER zuerst gegen den lokalen Cache
+    // (attributeTranslationCache, siehe GetCachedTranslation/StoreCachedTranslation)
+    // - identischer Text + identisches Sprachpaar liefert deterministisch dasselbe
+    // Ergebnis, ein erneuter API-Aufruf waere reine Verschwendung. Besonders wirksam
+    // bei Texten, die sich zyklisch wiederholen (z.B. eine tageszeitabhaengige
+    // Begruessungsvariable mit nur 3-4 moeglichen Werten, siehe
+    // ApplyTrackedVariableUpdate) - nach dem allerersten Durchlauf durch alle
+    // Varianten entfaellt jeder weitere API-Aufruf fuer diesen Text komplett. Nur
+    // TATSAECHLICH uebersetzte (nicht-leere) Ergebnisse werden gecacht - ein leeres
+    // Ergebnis bedeutet Anbieter-Fehlschlag (siehe TranslateChunk) und soll beim
+    // naechsten Versuch erneut versucht werden, nicht dauerhaft als "leer" gelten.
     private function TranslateBatch(array $Texts, string $Source, string $Target, string $DebugContext = ''): array
+    {
+        if ($Texts === [] || $Source === $Target) {
+            // Source===Target: siehe TranslateBatchUncached fuer die Begruendung
+            // (Google lehnt identische Quell-/Zielsprache ohnehin komplett ab).
+            return $Texts;
+        }
+
+        $results = [];
+        $freshIndexes = [];
+        $freshTexts = [];
+        foreach ($Texts as $i => $text) {
+            $cached = $this->GetCachedTranslation($Source, $Target, $text);
+            if ($cached !== null) {
+                $results[$i] = $cached;
+            } else {
+                $freshIndexes[] = $i;
+                $freshTexts[] = $text;
+            }
+        }
+
+        if ($freshTexts !== []) {
+            $freshlyTranslated = $this->TranslateBatchUncached($freshTexts, $Source, $Target, $DebugContext);
+            foreach ($freshIndexes as $position => $originalIndex) {
+                $translated = $freshlyTranslated[$position] ?? '';
+                $results[$originalIndex] = $translated;
+                if ($translated !== '') {
+                    $this->StoreCachedTranslation($Source, $Target, $freshTexts[$position], $translated);
+                }
+            }
+        }
+
+        ksort($results);
+
+        return array_values($results);
+    }
+
+    private function GetCachedTranslation(string $SourceLanguage, string $TargetLanguage, string $SourceText): ?string
+    {
+        $cache = json_decode($this->ReadAttributeString(self::attributeTranslationCache), true);
+        if (!is_array($cache)) {
+            return null;
+        }
+
+        return $cache[$this->BuildTranslationCacheKey($SourceLanguage, $TargetLanguage, $SourceText)] ?? null;
+    }
+
+    private function StoreCachedTranslation(string $SourceLanguage, string $TargetLanguage, string $SourceText, string $TranslatedText): void
+    {
+        $cache = json_decode($this->ReadAttributeString(self::attributeTranslationCache), true);
+        if (!is_array($cache)) {
+            $cache = [];
+        }
+
+        $cache[$this->BuildTranslationCacheKey($SourceLanguage, $TargetLanguage, $SourceText)] = $TranslatedText;
+        if (count($cache) > self::TRANSLATION_CACHE_MAX_ENTRIES) {
+            $cache = array_slice($cache, -self::TRANSLATION_CACHE_MAX_ENTRIES, null, true);
+        }
+
+        $this->WriteAttributeString(self::attributeTranslationCache, json_encode($cache));
+    }
+
+    // Hash statt Klartext als Schluessel - Texte koennen beliebig lang sein (z.B.
+    // vollstaendige HTMLBox-Widgets als "Eigene Texte"), unhandliche/übergroße
+    // JSON-Schluessel werden so vermieden. Kollisionen praktisch ausgeschlossen
+    // (SHA-256), und selbst im theoretischen Fall waere die Folge nur eine falsch
+    // gecachte statt einer falsch berechneten Übersetzung - kein Sicherheitsrisiko.
+    private function BuildTranslationCacheKey(string $SourceLanguage, string $TargetLanguage, string $SourceText): string
+    {
+        return $SourceLanguage . '|' . $TargetLanguage . '|' . hash('sha256', $SourceText);
+    }
+
+    // Der eigentliche, cache-lose Uebersetzungsvorgang (frueherer Inhalt von
+    // TranslateBatch) - nur noch ueber den Cache-Wrapper TranslateBatch() selbst
+    // aufgerufen.
+    private function TranslateBatchUncached(array $Texts, string $Source, string $Target, string $DebugContext = ''): array
     {
         if ($Texts === []) {
             return [];
