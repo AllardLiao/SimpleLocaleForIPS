@@ -365,21 +365,125 @@
                     "visible": false
                 },
                 {
+                    "type": "PasswordTextBox",
+                    "name": "LicenseKey",
+                    "caption": "Lizenzschlüssel",
+                    "width": "400px"
+                },
+                {
+                    "type": "Label",
+                    "name": "LicenseInfoEditionLabel",
+                    "caption": "",
+                    "bold": true,
+                    "visible": false
+                },
+                {
                     "type": "RowLayout",
+                    "name": "LicenseInfoTypeRow",
+                    "visible": false,
                     "items": [
                         {
-                            "type": "PasswordTextBox",
-                            "name": "LicenseKey",
-                            "caption": "Lizenzschlüssel",
-                            "width": "400px"
+                            "type": "Label",
+                            "caption": "Typ",
+                            "width": "140px"
                         },
                         {
                             "type": "Label",
-                            "name": "LicenseInfoLabel",
-                            "caption": "",
-                            "visible": false
+                            "name": "LicenseInfoTypeValueLabel",
+                            "caption": ""
                         }
                     ]
+                },
+                {
+                    "type": "RowLayout",
+                    "name": "LicenseInfoExpiryRow",
+                    "visible": false,
+                    "items": [
+                        {
+                            "type": "Label",
+                            "caption": "Ablauf",
+                            "width": "140px"
+                        },
+                        {
+                            "type": "Label",
+                            "name": "LicenseInfoExpiryConnectorLabel",
+                            "caption": ""
+                        },
+                        {
+                            "type": "Label",
+                            "name": "LicenseInfoExpiryDateLabel",
+                            "caption": ""
+                        }
+                    ]
+                },
+                {
+                    "type": "RowLayout",
+                    "name": "LicenseInfoLanguageLimitRow",
+                    "visible": false,
+                    "items": [
+                        {
+                            "type": "Label",
+                            "caption": "Sprachlimit",
+                            "width": "140px"
+                        },
+                        {
+                            "type": "Label",
+                            "name": "LicenseInfoLanguageLimitConnectorLabel",
+                            "caption": ""
+                        },
+                        {
+                            "type": "Label",
+                            "name": "LicenseInfoLanguageLimitNumberLabel",
+                            "caption": ""
+                        }
+                    ]
+                },
+                {
+                    "type": "RowLayout",
+                    "name": "LicenseInfoAllowedLanguagesRow",
+                    "visible": false,
+                    "items": [
+                        {
+                            "type": "Label",
+                            "caption": "Erlaubte Sprachen",
+                            "width": "140px"
+                        },
+                        {
+                            "type": "Label",
+                            "name": "LicenseInfoAllowedLanguagesValueLabel",
+                            "caption": ""
+                        }
+                    ]
+                },
+                {
+                    "type": "Label",
+                    "name": "LicenseInfoFeatureEditTranslations",
+                    "caption": "✓ Manuelles Editieren von Übersetzungen",
+                    "visible": false
+                },
+                {
+                    "type": "Label",
+                    "name": "LicenseInfoFeatureAutoRescan",
+                    "caption": "✓ Automatischer Rescan nach Zeitplan",
+                    "visible": false
+                },
+                {
+                    "type": "Label",
+                    "name": "LicenseInfoFeaturePaidProviders",
+                    "caption": "✓ Google/DeepL als Übersetzungsanbieter",
+                    "visible": false
+                },
+                {
+                    "type": "Label",
+                    "name": "LicenseInfoFeatureUnlimitedLanguageSwitch",
+                    "caption": "✓ Unbegrenzter Sprachwechsel",
+                    "visible": false
+                },
+                {
+                    "type": "Label",
+                    "name": "LicenseInfoFeatureCustomTile",
+                    "caption": "✓ Eigene Sprachauswahl-Kachel",
+                    "visible": false
                 }
             ]
         }

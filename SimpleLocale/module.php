@@ -471,6 +471,8 @@ private const LANGUAGE_FLAGS = [
         if (!is_array($unnamedObjects)) {
             $unnamedObjects = [];
         }
+        $licenseInfo = $this->GetLicenseInfo();
+        $licenseValid = $licenseInfo['valid'] ?? false;
 
         foreach ($Elements as &$element) {
             if (isset($element['items']) && is_array($element['items'])) {
@@ -511,14 +513,17 @@ private const LANGUAGE_FLAGS = [
                         $element['caption'] = 'Zielsprachen (bitte zuerst gültigen API-Key speichern und Formular neu öffnen)';
                     } elseif ($limitReached) {
                         $element['enabled'] = false;
-                        // Enthält $languageLimit als Variable - kann NICHT als fester String
-                        // vorregistriert werden (unendlich viele mögliche Werte). Einzige
-                        // praktikable Lösung: beide Teile serverseitig per Translate()
-                        // übersetzen, damit wenigstens ein in sich konsistenter (wenn auch an
-                        // die Symcon-Systemsprache statt an die individuelle Konsolensprache
-                        // des Betrachters gebundener) Text entsteht - exakt dieselbe,
-                        // dokumentierte Einschränkung wie bei BuildTrialInfoText/
-                        // BuildLicenseInfoText (siehe README Abschnitt 8).
+                        // Enthält $languageLimit als Variable in EINER Caption, gemeinsam mit
+                        // dem umgebenden Satz - anders als beim Lizenz-Infobereich (siehe
+                        // "LicenseInfoLanguageLimitNumberLabel" unten, dort in ein eigenes,
+                        // rein numerisches Element ohne Text ausgelagert) lohnt sich diese
+                        // Aufspaltung hier nicht extra fürs Ausgrauen-Popup eines einzelnen
+                        // Listenfelds. Praktikabler Kompromiss: beide Teile serverseitig per
+                        // Translate() übersetzen, damit wenigstens ein in sich konsistenter
+                        // (wenn auch an die Symcon-Systemsprache statt an die individuelle
+                        // Konsolensprache des Betrachters gebundener) Text entsteht - exakt
+                        // dieselbe, dokumentierte Einschränkung wie bei BuildTrialInfoText
+                        // (siehe README Abschnitt 8).
                         $element['caption'] = $this->Translate('Zielsprachen') . ' (' . $this->Translate('Sprachlimit dieser Lizenz erreicht, max.') . " $languageLimit)";
                     } else {
                         $element['enabled'] = true;
@@ -644,15 +649,78 @@ private const LANGUAGE_FLAGS = [
                     $element['expanded'] = $this->IsTrialLocked() || $this->ReadPropertyString(self::propertyLicenseKey) !== '';
                     break;
 
-                // Zeigt die Details des aktiven Lizenzschlüssels (Typ, Ablauf,
-                // Sprachlimit, erlaubte Sprachen, Zusatzfunktionen) an, sobald ein
-                // gültiger Schlüssel eingetragen ist - siehe BuildLicenseInfoText.
-                case 'LicenseInfoLabel':
-                    $licenseInfoText = $this->BuildLicenseInfoText();
-                    $element['visible'] = $licenseInfoText !== '';
-                    if ($licenseInfoText !== '') {
-                        $element['caption'] = $licenseInfoText;
-                    }
+                // Zeigt die Details des aktiven Lizenzschlüssels an (Edition, Typ,
+                // Ablauf, Sprachlimit, erlaubte Sprachen, Zusatzfunktionen), sobald ein
+                // gültiger Schlüssel eingetragen ist. Bewusst als viele einzelne
+                // Formularelemente statt einem zusammengesetzten Fließtext (frühere
+                // Version, BuildLicenseInfoText) - eine zur Laufzeit aus mehreren
+                // übersetzten Fragmenten zusammengebaute Zeichenkette matcht NIE einen
+                // locale.json-Eintrag (siehe Kommentar bei propertyAutoRescanInterval
+                // oben) und blieb dadurch immer in der System-Sprache stehen,
+                // unabhängig von der tatsächlichen Konsolensprache der Admin-Session -
+                // und wird mit variableren, zukünftigen Spezial-Lizenzen nur schlimmer.
+                // Jedes Element hier traegt entweder eine feste, vorregistrierte
+                // deutsche Zeichenkette (übersetzbar) oder einen rohen, nicht zu
+                // übersetzenden Wert (Datum/Zahl/Sprachcode-Liste) - nie beides
+                // zusammengesetzt in einer Caption.
+                case 'LicenseInfoEditionLabel':
+                    $edition = trim((string) ($licenseInfo['edition'] ?? ''));
+                    $element['visible'] = $licenseValid && $edition !== '';
+                    $element['caption'] = $edition;
+                    break;
+
+                case 'LicenseInfoTypeRow':
+                case 'LicenseInfoExpiryRow':
+                case 'LicenseInfoLanguageLimitRow':
+                case 'LicenseInfoAllowedLanguagesRow':
+                    $element['visible'] = $licenseValid;
+                    break;
+
+                case 'LicenseInfoTypeValueLabel':
+                    $element['caption'] = ($licenseInfo['type'] ?? '') === 'subscription' ? 'Abo' : 'Einmalkauf';
+                    break;
+
+                case 'LicenseInfoExpiryConnectorLabel':
+                    $element['caption'] = (int) ($licenseInfo['expiresAt'] ?? 0) === 0 ? 'läuft nie ab' : 'gültig bis';
+                    break;
+
+                case 'LicenseInfoExpiryDateLabel':
+                    $expiresAt = (int) ($licenseInfo['expiresAt'] ?? 0);
+                    $element['caption'] = $expiresAt === 0 ? '' : date('d.m.Y', $expiresAt);
+                    break;
+
+                case 'LicenseInfoLanguageLimitConnectorLabel':
+                    $element['caption'] = (int) ($licenseInfo['languageLimit'] ?? 0) === 0 ? 'unbegrenzt' : 'max.';
+                    break;
+
+                case 'LicenseInfoLanguageLimitNumberLabel':
+                    $languageLimit = (int) ($licenseInfo['languageLimit'] ?? 0);
+                    $element['caption'] = $languageLimit === 0 ? '' : (string) $languageLimit;
+                    break;
+
+                case 'LicenseInfoAllowedLanguagesValueLabel':
+                    $allowedLanguages = $licenseInfo['allowedLanguages'] ?? [];
+                    $element['caption'] = $allowedLanguages === [] ? 'alle' : implode(', ', $allowedLanguages);
+                    break;
+
+                case 'LicenseInfoFeatureEditTranslations':
+                    $element['visible'] = $licenseValid && in_array('edit_translations', $licenseInfo['features'] ?? [], true);
+                    break;
+
+                case 'LicenseInfoFeatureAutoRescan':
+                    $element['visible'] = $licenseValid && in_array('auto_rescan', $licenseInfo['features'] ?? [], true);
+                    break;
+
+                case 'LicenseInfoFeaturePaidProviders':
+                    $element['visible'] = $licenseValid && in_array('paid_providers', $licenseInfo['features'] ?? [], true);
+                    break;
+
+                case 'LicenseInfoFeatureUnlimitedLanguageSwitch':
+                    $element['visible'] = $licenseValid && in_array('unlimited_language_switch', $licenseInfo['features'] ?? [], true);
+                    break;
+
+                case 'LicenseInfoFeatureCustomTile':
+                    $element['visible'] = $licenseValid && in_array('custom_tile', $licenseInfo['features'] ?? [], true);
                     break;
             }
         }
@@ -1015,8 +1083,9 @@ private const LANGUAGE_FLAGS = [
 
         // '' = kein Editionsname im Payload - trifft auf alle vor Einfuehrung
         // dieses Felds ausgestellten Schluessel zu (aeltere Keys funktionieren
-        // weiter, BuildLicenseInfoText laesst die Zeile dann einfach weg statt
-        // "Edition: " leer anzuzeigen). Bewusst ein fester, vom Shop gelieferter
+        // weiter, "LicenseInfoEditionLabel" in PopulateFormElements() bleibt dann
+        // einfach unsichtbar statt eine leere Ueberschrift anzuzeigen). Bewusst
+        // ein fester, vom Shop gelieferter
         // Anzeigename (z.B. "Pro") statt hier aus type/languageLimit/features
         // zu raten - das waere dieselbe fehleranfaellige Heuristik wie
         // slips_guess_edition_label() auf der Website-Seite.
@@ -1293,71 +1362,6 @@ private const LANGUAGE_FLAGS = [
         return $this->Translate('Testversion abgelaufen am') . " $dateText. "
             . $this->Translate('Die Kachel zeigt Anwendern ab jetzt wieder den unbearbeiteten Original-Text, ein weiterer Rescan ist blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.')
             . ' ' . $this->Translate('Lizenz erwerben:') . ' ' . self::LICENSE_PURCHASE_URL;
-    }
-
-    // Zeigt den entschlüsselten Inhalt des aktuell aktiven Lizenzschlüssels an
-    // (siehe GetLicenseInfo/ValidateLicenseKey) - macht auf einen Blick sichtbar,
-    // was genau freigeschaltet ist, ohne den Payload selbst dekodieren zu müssen.
-    // Leerer String (Label bleibt unsichtbar, siehe PopulateFormElements), solange
-    // kein gültiger Schlüssel eingetragen ist.
-    private function BuildLicenseInfoText(): string
-    {
-        $info = $this->GetLicenseInfo();
-        if (!($info['valid'] ?? false)) {
-            return '';
-        }
-
-        $typeText = $info['type'] === 'subscription'
-            ? $this->Translate('Abo')
-            : $this->Translate('Einmalkauf');
-
-        $expiresAt = (int) $info['expiresAt'];
-        $expiryText = $expiresAt === 0
-            ? $this->Translate('läuft nie ab')
-            : $this->Translate('gültig bis') . ' ' . date('d.m.Y', $expiresAt);
-
-        $languageLimit = (int) $info['languageLimit'];
-        $limitText = $languageLimit === 0
-            ? $this->Translate('unbegrenzt')
-            : $this->Translate('max.') . " $languageLimit";
-
-        $allowedLanguages = $info['allowedLanguages'] ?? [];
-        $allowedText = $allowedLanguages === []
-            ? $this->Translate('alle')
-            : implode(', ', $allowedLanguages);
-
-        $featureLabels = [
-            'edit_translations'         => $this->Translate('Manuelles Editieren von Übersetzungen'),
-            'auto_rescan'                => $this->Translate('Automatischer Rescan nach Zeitplan'),
-            'paid_providers'             => $this->Translate('Google/DeepL als Übersetzungsanbieter'),
-            'unlimited_language_switch'  => $this->Translate('Unbegrenzter Sprachwechsel'),
-            'custom_tile'                => $this->Translate('Eigene Sprachauswahl-Kachel'),
-        ];
-        $features = array_values(array_intersect_key($featureLabels, array_flip($info['features'] ?? [])));
-
-        // Checkliste statt Fließtext (Vorbild: die Feature-Haken auf der
-        // Preisseite) - jede Zeile eine abgeschlossene Aussage, keine
-        // "Label: Wert"-Aufzählung mehr. Eine leere Zusatzfunktionen-Liste
-        // (z.B. Light-Edition) erzeugt bewusst keine "✓ keine"-Zeile, das
-        // wäre ein Widerspruch in sich - die Zeile entfällt dann einfach.
-        $lines = [
-            $this->Translate('Typ') . ': ' . $typeText,
-            $this->Translate('Ablauf') . ': ' . $expiryText,
-            $this->Translate('Sprachlimit') . ': ' . $limitText,
-            $this->Translate('Erlaubte Sprachen') . ': ' . $allowedText,
-            ...$features,
-        ];
-
-        $checklist = implode("\n", array_map(fn (string $line): string => "✓ $line", $lines));
-
-        // Editionsname (z.B. "Pro") als Überschrift über der Checkliste, ohne
-        // Haken davor - kein Feature, sondern die Einordnung, zu der die
-        // Features gehören. '' bei Schlüsseln von vor Einführung dieses
-        // Payload-Felds (siehe ValidateLicenseKey) - Checkliste bleibt dann
-        // wie zuvor ohne Überschrift.
-        $edition = trim((string) ($info['edition'] ?? ''));
-
-        return $edition === '' ? $checklist : $edition . "\n" . $checklist;
     }
 
     private function ApplyLanguage(string $Language): void
