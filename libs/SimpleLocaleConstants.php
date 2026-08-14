@@ -111,6 +111,26 @@ trait SimpleLocaleConstants
     // liefert weiterhin diese Instanz selbst die Kachel aus.
     private const propertyCustomTileHtml = 'CustomTileHtml';
 
+    // Optionaler, vom Nutzer editierbarer HTML-Code, der <!--LANGUAGE_SELECT--> in
+    // propertyCustomTileHtml ersetzt (siehe ResolveLanguageSelectHtml). Default
+    // ist EIN FUNKTIONIERENDES BEISPIEL (siehe GetDefaultCustomLanguageSelectHtml,
+    // zwei Flaggen statt Dropdown) statt einer Kopie der eingebauten <select>-
+    // Zeile - damit nach dem Umschalten auf "Eigene Sprachauswahl-Kachel" sofort
+    // etwas Sichtbares/Funktionierendes im Bearbeiten-Fenster steht, an dem sich
+    // der Nutzer orientieren kann. Leeres Feld (bewusst geleert) = stattdessen
+    // die automatisch generierte eingebaute Sprachauswahl wird verwendet
+    // (BuildLanguageSelectHtml, live aus der aktuellen Sprachliste/Auswahl
+    // berechnet - anders als module.html KEIN statisches Template, eine Kopie
+    // waere sofort veraltet). Nicht-leeres Feld = wird UNVERAENDERT verwendet,
+    // sowohl beim ersten Laden der Kachel als auch bei jeder Live-Aktualisierung
+    // (siehe PushVisualizationUpdate) - bewusst KEIN Platzhalter-Mechanismus fuer
+    // einzelne Sprachen darin (z.B. "eine Zeile pro Sprache"): der Nutzer traegt
+    // die gewuenschten Sprachcodes selbst fest ein und muss sein HTML selbst
+    // anpassen, falls sich die konfigurierten Zielsprachen spaeter aendern -
+    // bewusste Vereinfachung statt einer generischen Wiederholungs-Vorlage,
+    // siehe README Abschnitt 7.
+    private const propertyCustomLanguageSelectHtml = 'CustomLanguageSelectHtml';
+
     // Lizenzschlüssel (deckt sowohl Einmalkauf als auch Abo ab, siehe
     // ValidateLicenseKey) - eingetragen, aber erst nach Klick auf "Lizenz
     // aktivieren" tatsächlich geprüft/übernommen.
