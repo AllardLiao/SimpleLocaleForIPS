@@ -424,6 +424,11 @@ unabhängige Wege, das Aussehen der Sprachauswahl anzupassen - beide
 benötigen dasselbe Pro-Feature `custom_tile` und sind ohne Lizenz **hart
 gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
 
+> Weg 1 unten richtet sich an Personen mit HTML-Kenntnissen und einem
+> Grundverständnis der IP-Symcon-Kachel-Mechanik (`requestAction()`,
+> `handleMessage()`) - er ist bewusst kein reiner Klick-Editor, sondern
+> echter, selbst zu pflegender HTML-Code.
+
 1. **Eigener HTML-Code für die eingebaute Kachel (empfohlen für die meisten
    Fälle).** Aktiviere dazu "Eigene Sprachauswahl-Kachel verwenden" im
    Konfigurationsformular - darunter erscheint der Button "Eigenen
@@ -432,40 +437,83 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
    erscheint nicht sofort beim Setzen des Häkchens, sondern erst nach einem
    Klick auf "Übernehmen" (die Konsole baut das Formular dabei live neu auf -
    ein Schließen/Neuöffnen der Instanzkonfiguration ist hierfür anders als
-   beim Sprachlisten-Hinweis weiter oben nicht nötig). Der Button öffnet ein
-   Bearbeiten-Fenster mit dem HTML-Code, vorbefüllt mit einer
-   1:1-Kopie der eingebauten `module.html`. **Diese Instanz liefert die
-   Kachel weiterhin selbst aus**
-   (`GetVisualizationTile()`) - nur eben mit dem editierten HTML/CSS/JS statt
-   der eingebauten Optik. Der Code muss zwei Platzhalter enthalten, die bei
-   jedem Laden der Kachel automatisch ersetzt werden:
-   - `<!--WRAPPER_ID-->` - eine pro Instanz eindeutige DOM-ID, verhindert
-     ID-Kollisionen, falls mehrere Kacheln im selben DOM landen. Kommt in der
-     Standardvorlage **zweimal** vor (als `id`-Attribut des Wrapper-`<div>`
-     UND im `getElementById(...)`-Aufruf im `<script>`) - beide Stellen
-     müssen exakt gleich bleiben (einfach den Platzhalter selbst nicht
-     anfassen, dann passt das automatisch).
-   - `<!--LANGUAGE_SELECT-->` - wird durch den fertig gerenderten
-     Dropdown-Block ersetzt (Weltkugel-/Info-Symbol je nach Einstellung, das
-     `<select>` mit allen wählbaren Sprachen, Testphase-Hinweis) - exakt
-     derselbe Inhalt wie in der eingebauten Kachel. Wer nur das Aussehen
-     (CSS) ändern will, lässt diesen Platzhalter unangetastet; wer eine
-     komplett andere Bedienung bauen will (z. B. Buttons statt Dropdown),
-     ersetzt ihn durch eigenes Markup - dieses muss dann selbst
-     `requestAction('Language', '<Sprachcode>')` aufrufen (die von Symcon in
-     jede Kachel injizierte JS-Funktion), um einen Sprachwechsel auszulösen.
+   beim Sprachlisten-Hinweis weiter oben nicht nötig). **Diese Instanz
+   liefert die Kachel weiterhin selbst aus** (`GetVisualizationTile()`) -
+   nur eben mit dem editierten HTML/CSS/JS statt der eingebauten Optik.
+
+   Das Bearbeiten-Fenster enthält zwei getrennte Felder:
+
+   - **"HTML-Code"** - der äußere Rahmen (Layout/CSS), vorbefüllt mit einer
+     1:1-Kopie der eingebauten `module.html`. Muss zwei Platzhalter
+     enthalten, die bei jedem Laden der Kachel automatisch ersetzt werden:
+     - `<!--WRAPPER_ID-->` - eine pro Instanz eindeutige DOM-ID, verhindert
+       ID-Kollisionen, falls mehrere Kacheln im selben DOM landen. Kommt in
+       der Standardvorlage **zweimal** vor (als `id`-Attribut des
+       Wrapper-`<div>` UND im `getElementById(...)`-Aufruf im `<script>`) -
+       beide Stellen müssen exakt gleich bleiben (einfach den Platzhalter
+       selbst nicht anfassen, dann passt das automatisch).
+     - `<!--LANGUAGE_SELECT-->` - wird durch den Inhalt des zweiten Felds
+       (siehe unten) ersetzt.
+
+     Beispiel, wie `<!--LANGUAGE_SELECT-->` standardmäßig gefüllt wird (rein
+     zur Orientierung - dieser Block wird automatisch erzeugt, siehe
+     `BuildLanguageSelectHtml()`, solange das zweite Feld unten leer bleibt):
+     ```html
+     <div class="ipssl-select-row">
+       <span class="ipssl-globe" aria-hidden="true">🌐</span>
+       <select onchange="requestAction('Language', this.value);">
+         <option value="ORIGINAL_IMPORT">Deutsch</option>
+         <option value="en" selected>English</option>
+       </select>
+       <span class="ipssl-info-icon" aria-hidden="true" onclick="alert('...');">ⓘ</span>
+     </div>
+     <!-- + roter Testphase-Hinweis, nur solange ungelizenziert und Testphase läuft -->
+     ```
+
+   - **"Sprachauswahl-HTML-Code"** - ersetzt `<!--LANGUAGE_SELECT-->`.
+     Standardmäßig **vorbefüllt mit einem funktionierenden Beispiel** (zwei
+     Flaggen statt Dropdown für Deutsch/Englisch), damit direkt nach dem
+     Aktivieren etwas Sichtbares/Funktionierendes in der Kachel steht:
+     ```html
+     <div style="display:flex; align-items:center; gap:10px;">
+         <span onclick="requestAction('Language', 'ORIGINAL_IMPORT');" style="cursor:pointer; font-size:24px;" title="Deutsch">🇩🇪</span>
+         <span onclick="requestAction('Language', 'en');" style="cursor:pointer; font-size:24px;" title="English">🇬🇧</span>
+     </div>
+     ```
+     `requestAction('Language', '<Code>')` ist der eigentliche Mechanismus -
+     die von Symcon in jede Kachel injizierte JS-Funktion, die einen
+     Sprachwechsel auslöst; sie ist an keine bestimmte HTML-Struktur
+     gebunden (kein `<select>` nötig - jedes klickbare Element reicht).
+     `<Code>` ist entweder ein echter, konfigurierter Zielsprachcode (z. B.
+     `en`, `fr`) oder die interne Pseudo-Sprache `ORIGINAL_IMPORT`
+     (unbearbeiteter Rohtext in der Basissprache).
+
+     **Bewusst einfach gehalten, keine Sprachenliste/Wiederholungs-Vorlage:**
+     dieses Feld wird 1:1 verwendet, ohne Kenntnis der tatsächlich
+     konfigurierten Zielsprachen. Kommen später weitere Zielsprachen dazu
+     oder fallen welche weg, bleibt dieser Code unverändert - er muss dann
+     manuell angepasst werden (weitere `<span>`s ergänzen/entfernen). Wird
+     das Feld komplett geleert, greift stattdessen wieder automatisch die
+     eingebaute, live aus den tatsächlich konfigurierten Zielsprachen
+     erzeugte Dropdown-Sprachauswahl (siehe Beispiel oben) - für beliebig
+     viele Sprachen ohne Pflegeaufwand, nur eben ohne Flaggen-Optik.
 
    Zusätzlich ruft Symcon bei jeder `UpdateVisualizationValue()`-Aktualisierung
    (siehe `PushVisualizationUpdate()`/`PushTrialExpiredAlert()`) eine globale
    JS-Funktion `handleMessage(data)` in der Kachel auf - die Standardvorlage
-   definiert sie bereits (verarbeitet `{"action":"REFRESH", ...}` fürs
-   Live-Nachziehen eines Sprachwechsels in anderen offenen Tabs/Geräten sowie
-   `{"action":"ALERT", ...}` für den Testphase-abgelaufen-Hinweis). Wird diese
-   Funktion entfernt oder umbenannt, funktioniert die Kachel beim ersten Laden
-   weiterhin normal - nur diese beiden Live-Aktualisierungen bleiben dann
-   stumm, ohne Fehlermeldung. Wird das Feld im Bearbeiten-Fenster komplett
-   geleert, greift automatisch derselbe eingebaute HTML-Code wie ohne
-   aktiviertes Feature (kein Absturz, keine leere Kachel).
+   im "HTML-Code"-Feld definiert sie bereits (verarbeitet
+   `{"action":"REFRESH", ...}` fürs Live-Nachziehen eines Sprachwechsels in
+   anderen offenen Tabs/Geräten sowie `{"action":"ALERT", ...}` für den
+   Testphase-abgelaufen-Hinweis). Der `REFRESH`-Payload enthält dabei IMMER
+   den aktuellen Inhalt des Felds "Sprachauswahl-HTML-Code" (bzw. die
+   automatisch erzeugte Dropdown-Auswahl, falls dieses Feld leer ist) -
+   niemals mehr fest die eingebaute `<select>`-Zeile, egal was im
+   "HTML-Code"-Feld steht. Wird `handleMessage()` entfernt oder umbenannt,
+   funktioniert die Kachel beim ersten Laden weiterhin normal - nur diese
+   beiden Live-Aktualisierungen bleiben dann stumm, ohne Fehlermeldung. Wird
+   das Feld "HTML-Code" komplett geleert, greift automatisch derselbe
+   eingebaute HTML-Code wie ohne aktiviertes Feature (kein Absturz, keine
+   leere Kachel).
 
 2. **Komplett eigenständige, separat gebaute Kachel** (z. B. eine eigene
    HTMLBox-Instanz, die gar nicht über `GetVisualizationTile()` dieser

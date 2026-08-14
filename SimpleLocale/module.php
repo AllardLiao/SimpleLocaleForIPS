@@ -271,6 +271,10 @@ private const LANGUAGE_FLAGS = [
         // bestehende Instanzen bewusst nicht rückwirkend aus (der Nutzer hat den
         // Code ja ggf. schon angepasst).
         $this->RegisterPropertyString(self::propertyCustomTileHtml, $this->GetDefaultCustomTileHtml());
+        // Default = Flaggen-Beispiel (siehe GetDefaultCustomLanguageSelectHtml),
+        // NICHT eine Kopie der eingebauten <select>-Sprachauswahl - siehe
+        // Kommentar bei der Konstante selbst (SimpleLocaleConstants.php).
+        $this->RegisterPropertyString(self::propertyCustomLanguageSelectHtml, $this->GetDefaultCustomLanguageSelectHtml());
 
         $this->RegisterPropertyString(self::propertyLicenseKey, '');
 
@@ -3283,7 +3287,28 @@ private const LANGUAGE_FLAGS = [
         // eine ID-Kollision zwischen den Kacheln verschiedener Instanzen.
         $html = str_replace('<!--WRAPPER_ID-->', 'ipssl-select-wrapper-' . $this->InstanceID, $Html);
 
-        return str_replace('<!--LANGUAGE_SELECT-->', $this->BuildLanguageSelectHtml(), $html);
+        return str_replace('<!--LANGUAGE_SELECT-->', $this->ResolveLanguageSelectHtml(), $html);
+    }
+
+    // Liefert entweder die vom Nutzer fest eingetragene Sprachauswahl (Pro-
+    // Feature "custom_tile", propertyCustomLanguageSelectHtml, siehe dortigen
+    // Kommentar in SimpleLocaleConstants.php) oder, im Normalfall, die live
+    // generierte eingebaute Sprachauswahl (BuildLanguageSelectHtml). Wird an
+    // GENAU dieser einen Stelle aufgerufen (ApplyTilePlaceholders fürs erste
+    // Laden UND PushVisualizationUpdate für Live-Aktualisierungen) - dadurch
+    // bekommen andere offene Tabs/Geräte bei einem Sprachwechsel exakt denselben
+    // eigenen Code zu sehen wie beim ersten Laden, statt dass eine Aktualisierung
+    // ihn stillschweigend wieder durch die eingebaute Sprachauswahl ersetzt.
+    private function ResolveLanguageSelectHtml(): string
+    {
+        if ($this->ReadPropertyBoolean(self::propertyUseCustomTile) && $this->HasLicenseFeature('custom_tile')) {
+            $custom = $this->ReadPropertyString(self::propertyCustomLanguageSelectHtml);
+            if (trim($custom) !== '') {
+                return $custom;
+            }
+        }
+
+        return $this->BuildLanguageSelectHtml();
     }
 
     // Liefert den Inhalt von module.html - sowohl als Startwert fürs editierbare
@@ -3296,12 +3321,38 @@ private const LANGUAGE_FLAGS = [
         return (string) @file_get_contents(__DIR__ . '/module.html');
     }
 
+    // Startwert fürs editierbare propertyCustomLanguageSelectHtml-Feld (siehe
+    // Create()) - zwei Flaggen statt Dropdown, damit nach dem Umschalten auf
+    // "Eigene Sprachauswahl-Kachel" sofort etwas Funktionierendes zu sehen ist,
+    // statt eines leeren/unveränderten Felds. Geht von Deutsch als Basissprache
+    // (ORIGINAL_IMPORT, siehe propertySourceLanguage-Default) und "en" als einer
+    // konfigurierten Zielsprache aus - beides beim jeweiligen Kunden ggf.
+    // anders, der Code muss dann entsprechend angepasst werden (siehe README
+    // Abschnitt 7, bewusst keine automatische Anpassung an die tatsächlich
+    // gewählten Zielsprachen).
+    private function GetDefaultCustomLanguageSelectHtml(): string
+    {
+        return <<<'HTML'
+<!-- Beispiel: zwei Flaggen statt Dropdown, fest eingetragene Sprachcodes.
+     Bei Bedarf (weitere/andere Zielsprachen) hier direkt anpassen - siehe
+     README Abschnitt 7 für die Erklärung des Mechanismus. -->
+<div style="display:flex; align-items:center; gap:10px;">
+    <span onclick="requestAction('Language', 'ORIGINAL_IMPORT');" style="cursor:pointer; font-size:24px;" title="Deutsch">🇩🇪</span>
+    <span onclick="requestAction('Language', 'en');" style="cursor:pointer; font-size:24px;" title="English">🇬🇧</span>
+</div>
+HTML;
+    }
+
     // Schickt bereits geöffneten Kacheln (z.B. andere Browser-Tabs/Geräte) die
     // neu aufgebaute Sprachauswahl - die Kachel selbst, die den Wechsel ausgelöst
     // hat, kennt ihre neue Auswahl bereits durch die native <select>-Interaktion.
+    // ResolveLanguageSelectHtml() statt direkt BuildLanguageSelectHtml(): sonst
+    // würde eine Aktualisierung eine vom Nutzer eingetragene eigene Sprachauswahl
+    // (siehe propertyCustomLanguageSelectHtml) in JEDER anderen offenen Kachel
+    // stillschweigend wieder durch die eingebaute <select>-Zeile ersetzen.
     private function PushVisualizationUpdate(): void
     {
-        $payload = json_encode(['action' => 'REFRESH', 'payload' => ['html' => $this->BuildLanguageSelectHtml()]]);
+        $payload = json_encode(['action' => 'REFRESH', 'payload' => ['html' => $this->ResolveLanguageSelectHtml()]]);
         $this->UpdateVisualizationValue($payload);
     }
 

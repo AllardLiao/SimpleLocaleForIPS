@@ -69,6 +69,17 @@
                                 "caption": "HTML-Code",
                                 "multiline": true,
                                 "width": "100%"
+                            },
+                            {
+                                "type": "Label",
+                                "caption": "Sprachauswahl (ersetzt den Platzhalter <!--LANGUAGE_SELECT--> oben): unten vorbefüllt mit einem funktionierenden Beispiel (zwei Flaggen statt Dropdown, feste Sprachcodes) - direkt anpassbar. Feld leeren, um stattdessen wieder die automatisch generierte Dropdown-Sprachauswahl zu verwenden."
+                            },
+                            {
+                                "type": "ValidationTextBox",
+                                "name": "CustomLanguageSelectHtml",
+                                "caption": "Sprachauswahl-HTML-Code",
+                                "multiline": true,
+                                "width": "100%"
                             }
                         ]
                     }
