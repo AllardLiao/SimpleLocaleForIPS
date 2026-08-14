@@ -194,6 +194,19 @@ trait SimpleLocaleConstants
     // Fenster begrenzt. 0 = noch nie gewechselt.
     private const attributeLastLanguageSwitchAt = 'LastLanguageSwitchAt';
 
+    // Sprachcode, fuer den ApplyLanguage() zuletzt TATSAECHLICH die Umbenennungen/
+    // Wertaenderungen durchgefuehrt hat (siehe ApplyChanges) - NICHT dasselbe wie
+    // propertyCurrentLanguage: die Property allein aendert sich auch, wenn der Admin
+    // im Konfigurationsformular nur das Auswahlfeld "Aktuell aktive Sprache" umstellt
+    // und "Uebernehmen" klickt (ein reines ApplyChanges liest/speichert Properties,
+    // loest aber fuer sich genommen keine Umbenennungen aus - das tat bisher nur der
+    // RequestAction-Pfad ueber die Kachel/IPSSL_SetLanguage). ApplyChanges vergleicht
+    // beide Werte und holt die Umbenennung ueber ApplyLanguage() nach, falls sie noch
+    // aussteht - ohne dieses Attribut wuerde der Vergleich sonst immer "gleich" sehen,
+    // sobald ApplyLanguage() selbst per IPS_SetProperty+IPS_ApplyChanges erneut in
+    // ApplyChanges() hineinlaeuft.
+    private const attributeLastAppliedLanguage = 'LastAppliedLanguage';
+
     // ValueObjectIDs (JSON-Array), für die aktuell VM_UPDATE-Nachrichten registriert
     // sind (siehe SyncValueUpdateRegistrations) - nötig, um bei jedem ApplyChanges
     // sauber ab-/neu zu registrieren, wenn sich "Eigene Texte" ändert (neue/gelöschte
