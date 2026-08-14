@@ -265,6 +265,12 @@ private const LANGUAGE_FLAGS = [
         // ohne Lizenz gespeichert, greift aber erst mit dem Feature-Flag
         // (GetVisualizationTile), analog zu AutoRescanInterval/"auto_rescan".
         $this->RegisterPropertyBoolean(self::propertyUseCustomTile, false);
+        // Default = 1:1-Kopie von module.html (siehe GetDefaultCustomTileHtml) -
+        // wird nur beim ALLERERSTEN Anlegen der Instanz als Startwert übernommen,
+        // spätere Änderungen an module.html selbst wirken sich auf bereits
+        // bestehende Instanzen bewusst nicht rückwirkend aus (der Nutzer hat den
+        // Code ja ggf. schon angepasst).
+        $this->RegisterPropertyString(self::propertyCustomTileHtml, $this->GetDefaultCustomTileHtml());
 
         $this->RegisterPropertyString(self::propertyLicenseKey, '');
 
@@ -565,6 +571,15 @@ private const LANGUAGE_FLAGS = [
                     }
                     break;
 
+                // Dasselbe Ausgrauen-statt-Verstecken-Muster wie UseCustomTile direkt
+                // darüber - beide gehören zusammen zum selben Pro-Feature.
+                case self::propertyCustomTileHtml:
+                    if (!$this->HasLicenseFeature('custom_tile')) {
+                        $element['enabled'] = false;
+                        $element['caption'] = 'Eigener Kachel-HTML-Code (Pro Edition erforderlich)';
+                    }
+                    break;
+
                 case 'UnnamedObjectsLabel':
                 case 'UnnamedObjects':
                     $element['visible'] = $unnamedObjects !== [];
@@ -683,15 +698,23 @@ private const LANGUAGE_FLAGS = [
     }
 
     // Fuer eine selbstgebaute Sprachauswahl-Kachel (Pro-Feature "custom_tile",
-    // siehe UseCustomTile/GetVisualizationTile): liefert dieselben wählbaren
-    // Sprachen wie die eingebaute Dropdown-Kachel, als JSON-Array
-    // [{code, name, current}, ...] - live in die aktuell aktive Gast-Sprache
-    // übersetzt und alphabetisch sortiert, identischer Aufbau wie
-    // BuildLanguageSelectHtml. "code" ist entweder ein echter Sprachcode oder
-    // die interne Pseudo-Sprache "ORIGINAL_IMPORT" (unbearbeiteter Rohtext) -
-    // beim Aufbau der eigenen UI ggf. gesondert behandeln/beschriften.
+    // siehe UseCustomTile/GetVisualizationTile) - HART durchgesetzt (Exception),
+    // nicht nur ausgegraut wie die Formularfelder: ohne diese Sperre liesse sich
+    // die eingebaute Kachel per eigenem Skript/eigener HTMLBox komplett umgehen,
+    // ohne je fuer "custom_tile" zu bezahlen (das Pro-Feature waere damit
+    // wertlos). Liefert dieselben wählbaren Sprachen wie die eingebaute
+    // Dropdown-Kachel, als JSON-Array [{code, name, current}, ...] - live in die
+    // aktuell aktive Gast-Sprache übersetzt und alphabetisch sortiert,
+    // identischer Aufbau wie BuildLanguageSelectHtml. "code" ist entweder ein
+    // echter Sprachcode oder die interne Pseudo-Sprache "ORIGINAL_IMPORT"
+    // (unbearbeiteter Rohtext) - beim Aufbau der eigenen UI ggf. gesondert
+    // behandeln/beschriften.
     public function GetAvailableLanguages(): string
     {
+        if (!$this->HasLicenseFeature('custom_tile')) {
+            throw new Exception('IPSSL_GetAvailableLanguages benoetigt die Pro Edition (Feature "custom_tile").');
+        }
+
         $currentLanguage = $this->ReadPropertyString(self::propertyCurrentLanguage);
         $guestCache = $this->EnsureGuestLanguageNamesFresh();
 
@@ -714,13 +737,18 @@ private const LANGUAGE_FLAGS = [
         return json_encode($result);
     }
 
-    // Fuer eine selbstgebaute Sprachauswahl-Kachel: setzt die aktuell aktive
-    // Sprache von außen, exakt dieselbe Logik wie ein Klick im eingebauten
-    // Dropdown (Testphase-/Rate-Limit-Prüfung inklusive) - durchläuft dafür
-    // dieselbe RequestAction wie die eingebaute Kachel selbst, nur eben von
-    // extern ausgelöst statt durch deren eigenes <select onchange>.
+    // Fuer eine selbstgebaute Sprachauswahl-Kachel (Pro-Feature "custom_tile",
+    // siehe GetAvailableLanguages fuer die Begruendung der harten Sperre):
+    // setzt die aktuell aktive Sprache von außen, exakt dieselbe Logik wie ein
+    // Klick im eingebauten Dropdown (Testphase-/Rate-Limit-Prüfung inklusive) -
+    // durchläuft dafür dieselbe RequestAction wie die eingebaute Kachel selbst,
+    // nur eben von extern ausgelöst statt durch deren eigenes <select onchange>.
     public function SetLanguage(string $LanguageCode): void
     {
+        if (!$this->HasLicenseFeature('custom_tile')) {
+            throw new Exception('IPSSL_SetLanguage benoetigt die Pro Edition (Feature "custom_tile").');
+        }
+
         $this->RequestAction(self::identLanguage, $LanguageCode);
     }
 
@@ -1063,9 +1091,11 @@ private const LANGUAGE_FLAGS = [
     //     eingetragen sind.
     //   - "unlimited_language_switch" hebt das Ein-Wechsel-pro-24h-Limit auf, siehe
     //     IsLanguageSwitchRateLimited.
-    //   - "custom_tile" erlaubt, die eingebaute Dropdown-Kachel zugunsten einer
-    //     selbstgebauten zu unterdrücken (Property UseCustomTile), siehe
-    //     GetVisualizationTile/IPSSL_GetAvailableLanguages/IPSSL_SetLanguage.
+    //   - "custom_tile" schaltet den editierbaren Kachel-HTML-Code frei (Property
+    //     UseCustomTile/CustomTileHtml, siehe GetVisualizationTile) UND die
+    //     öffentlichen Funktionen IPSSL_GetAvailableLanguages/IPSSL_SetLanguage
+    //     für eine komplett eigenständige, separat gebaute Kachel - beide Wege
+    //     werfen ohne dieses Feature eine Exception bzw. bleiben wirkungslos.
     // Fehlt das Feature-Array (z.B. "Light"-Edition ohne Zusatz-Features), gelten
     // alle Features als NICHT freigeschaltet - konservativer Default, siehe README
     // Abschnitt 8. Während der Testphase selbst (keine/noch keine Lizenz) bleiben
@@ -3208,42 +3238,53 @@ private const LANGUAGE_FLAGS = [
     // Visualisierung gezogen wird (aktiviert per SetVisualizationType in Create()).
     // Wird nur einmal beim Laden der Kachel aufgerufen - Aktualisierungen (z.B. nach
     // einem Sprachwechsel) laufen über UpdateVisualizationValue()/PushVisualizationUpdate().
-    // HTML-Gerüst liegt in module.html (Standard-Symcon-Vorgehen, siehe HTML-SDK) -
-    // hier wird nur der dynamische Teil per Platzhalter eingesetzt.
+    // HTML-Gerüst liegt standardmäßig in module.html (Standard-Symcon-Vorgehen,
+    // siehe HTML-SDK) - Pro-Feature "custom_tile": liefert stattdessen den vom
+    // Nutzer editierten HTML-Code aus propertyCustomTileHtml aus (Startwert ist
+    // eine 1:1-Kopie von module.html, siehe RegisterProperty in Create()) - die
+    // Instanz bleibt also weiterhin die Quelle der Kachel, nur eben mit
+    // angepasstem HTML/CSS statt der eingebauten Optik. Ohne das Feature-Flag
+    // bleibt das gespeicherte Property zwar erhalten, wirkt sich aber nie aus
+    // (defense in depth, exakt wie AutoRescanInterval/"auto_rescan" in
+    // ApplyChanges). In beiden Fällen wird nur der dynamische Teil per
+    // Platzhalter eingesetzt, siehe ApplyTilePlaceholders/README Abschnitt 7.
     public function GetVisualizationTile(): string
     {
-        // Pro-Feature "custom_tile": unterdrueckt die eingebaute Dropdown-Kachel
-        // zugunsten einer selbstgebauten (siehe IPSSL_GetAvailableLanguages/
-        // IPSSL_SetLanguage) - ohne das Feature-Flag bleibt das gespeicherte
-        // Property zwar erhalten, wirkt sich aber nie aus (defense in depth,
-        // exakt wie AutoRescanInterval/"auto_rescan" in ApplyChanges).
+        $html = '';
         if ($this->ReadPropertyBoolean(self::propertyUseCustomTile) && $this->HasLicenseFeature('custom_tile')) {
-            return $this->BuildCustomTilePlaceholderHtml();
+            $html = $this->ReadPropertyString(self::propertyCustomTileHtml);
         }
 
-        $html = file_get_contents(__DIR__ . '/module.html');
+        if (trim($html) === '') {
+            // Kein Custom-Tile-Modus aktiv, oder Feld vom Nutzer versehentlich
+            // geleert - sicherer Fallback statt einer leeren Kachel.
+            $html = $this->GetDefaultCustomTileHtml();
+        }
+
+        return $this->ApplyTilePlaceholders($html);
+    }
+
+    // Ersetzt die beiden dynamischen Platzhalter in einer Kachel-HTML-Vorlage
+    // (eingebaut oder vom Nutzer editiert, siehe GetVisualizationTile) -
+    // gemeinsame Stelle, damit beide Pfade garantiert identisch behandelt werden.
+    private function ApplyTilePlaceholders(string $Html): string
+    {
         // Instanz-eigene ID (nicht nur eine Klasse) - falls mehrere Instanzen jemals
         // im selben DOM landen sollten (statt jeweils eigenem iframe), verhindert das
         // eine ID-Kollision zwischen den Kacheln verschiedener Instanzen.
-        $html = str_replace('<!--WRAPPER_ID-->', 'ipssl-select-wrapper-' . $this->InstanceID, $html);
+        $html = str_replace('<!--WRAPPER_ID-->', 'ipssl-select-wrapper-' . $this->InstanceID, $Html);
 
         return str_replace('<!--LANGUAGE_SELECT-->', $this->BuildLanguageSelectHtml(), $html);
     }
 
-    // Kleiner Hinweistext statt der eingebauten Dropdown-Kachel, falls diese
-    // Instanz trotz aktivierter "eigener Kachel" (siehe oben) dennoch selbst als
-    // Kachel in eine Visualisierung gezogen wird - macht auf einen Blick klar,
-    // dass hier keine eigene Kachel dieser Instanz noetig ist, sondern die
-    // Sprachauswahl in einer separaten, selbstgebauten HTMLBox-Kachel erfolgt.
-    private function BuildCustomTilePlaceholderHtml(): string
+    // Liefert den Inhalt von module.html - sowohl als Startwert fürs editierbare
+    // propertyCustomTileHtml-Feld (siehe Create()) als auch als Fallback, falls
+    // dieses Feld leer ist (siehe GetVisualizationTile). @: module.html liegt
+    // zwar immer neben module.php, defensiv trotzdem kein Fatal Error, falls die
+    // Datei doch einmal fehlt.
+    private function GetDefaultCustomTileHtml(): string
     {
-        $text = htmlspecialchars(
-            $this->Translate('Eigene Sprachauswahl-Kachel aktiv - diese Instanz muss dafür nicht selbst als Kachel platziert werden, siehe IPSSL_GetAvailableLanguages()/IPSSL_SetLanguage().'),
-            ENT_QUOTES,
-            'UTF-8'
-        );
-
-        return '<div style="padding:8px; font:12px sans-serif; color:#888;">' . $text . '</div>';
+        return (string) @file_get_contents(__DIR__ . '/module.html');
     }
 
     // Schickt bereits geöffneten Kacheln (z.B. andere Browser-Tabs/Geräte) die

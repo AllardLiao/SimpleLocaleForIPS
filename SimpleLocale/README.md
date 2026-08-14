@@ -419,28 +419,65 @@ Für eigene HTMLBox-Popups oder Hinweise außerhalb der live umbenannten
 Objekte liefert `IPSSL_TranslateText()` den Text in der aktuell aktiven
 Sprache.
 
-**Eigene Sprachauswahl-Kachel (Pro-Feature `custom_tile`):** Wer statt des
-eingebauten `<select>`-Dropdowns eine eigene, frei gestaltbare Kachel bauen
-möchte (z. B. Buttons statt Dropdown, eigenes Design, Integration in eine
-größere selbstgebaute Kachel), aktiviert dazu die Option "Eigene
-Sprachauswahl-Kachel verwenden" im Konfigurationsformular - die eingebaute
-Dropdown-Kachel wird dadurch unterdrückt (zeigt nur noch einen kurzen
-Hinweistext, falls diese Instanz trotzdem als Kachel platziert wird). Die
-eigene Kachel (typischerweise eine separate HTMLBox-Instanz) nutzt zwei
-neue Befehle:
+**Eigene Sprachauswahl-Kachel (Pro-Feature `custom_tile`):** Es gibt zwei
+unabhängige Wege, das Aussehen der Sprachauswahl anzupassen - beide
+benötigen dasselbe Pro-Feature `custom_tile` und sind ohne Lizenz **hart
+gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
 
-- `IPSSL_GetAvailableLanguages(int $InstanzID): string` - liefert die
-  wählbaren Sprachen als JSON-Array `[{code, name, current}, ...]`, live in
-  die aktuell aktive Sprache übersetzt und alphabetisch sortiert - exakt
-  dieselbe Liste wie im eingebauten Dropdown. `code` ist entweder ein
-  echter Sprachcode oder die interne Pseudo-Sprache `ORIGINAL_IMPORT`
-  (unbearbeiteter Rohtext, siehe oben).
-- `IPSSL_SetLanguage(int $InstanzID, string $Sprachcode): void` - wechselt
-  die aktive Sprache, mit derselben Logik wie ein Klick im eingebauten
-  Dropdown (Testphase-/Rate-Limit-Prüfung inklusive).
+1. **Eigener HTML-Code für die eingebaute Kachel (empfohlen für die meisten
+   Fälle).** Aktiviere dazu "Eigene Sprachauswahl-Kachel verwenden" im
+   Konfigurationsformular - darunter erscheint ein Textfeld "Eigener
+   Kachel-HTML-Code", vorbefüllt mit einer 1:1-Kopie der eingebauten
+   `module.html`. **Diese Instanz liefert die Kachel weiterhin selbst aus**
+   (`GetVisualizationTile()`) - nur eben mit dem editierten HTML/CSS/JS statt
+   der eingebauten Optik. Der Code muss zwei Platzhalter enthalten, die bei
+   jedem Laden der Kachel automatisch ersetzt werden:
+   - `<!--WRAPPER_ID-->` - eine pro Instanz eindeutige DOM-ID, verhindert
+     ID-Kollisionen, falls mehrere Kacheln im selben DOM landen. Kommt in der
+     Standardvorlage **zweimal** vor (als `id`-Attribut des Wrapper-`<div>`
+     UND im `getElementById(...)`-Aufruf im `<script>`) - beide Stellen
+     müssen exakt gleich bleiben (einfach den Platzhalter selbst nicht
+     anfassen, dann passt das automatisch).
+   - `<!--LANGUAGE_SELECT-->` - wird durch den fertig gerenderten
+     Dropdown-Block ersetzt (Weltkugel-/Info-Symbol je nach Einstellung, das
+     `<select>` mit allen wählbaren Sprachen, Testphase-Hinweis) - exakt
+     derselbe Inhalt wie in der eingebauten Kachel. Wer nur das Aussehen
+     (CSS) ändern will, lässt diesen Platzhalter unangetastet; wer eine
+     komplett andere Bedienung bauen will (z. B. Buttons statt Dropdown),
+     ersetzt ihn durch eigenes Markup - dieses muss dann selbst
+     `requestAction('Language', '<Sprachcode>')` aufrufen (die von Symcon in
+     jede Kachel injizierte JS-Funktion), um einen Sprachwechsel auszulösen.
 
-Ohne das Feature `custom_tile` bleibt die Option ausgegraut und die
-eingebaute Kachel aktiv, unabhängig vom gespeicherten Wert - siehe
+   Zusätzlich ruft Symcon bei jeder `UpdateVisualizationValue()`-Aktualisierung
+   (siehe `PushVisualizationUpdate()`/`PushTrialExpiredAlert()`) eine globale
+   JS-Funktion `handleMessage(data)` in der Kachel auf - die Standardvorlage
+   definiert sie bereits (verarbeitet `{"action":"REFRESH", ...}` fürs
+   Live-Nachziehen eines Sprachwechsels in anderen offenen Tabs/Geräten sowie
+   `{"action":"ALERT", ...}` für den Testphase-abgelaufen-Hinweis). Wird diese
+   Funktion entfernt oder umbenannt, funktioniert die Kachel beim ersten Laden
+   weiterhin normal - nur diese beiden Live-Aktualisierungen bleiben dann
+   stumm, ohne Fehlermeldung. Wird das Textfeld komplett geleert, greift
+   automatisch derselbe eingebaute HTML-Code wie ohne aktiviertes Feature
+   (kein Absturz, keine leere Kachel).
+
+2. **Komplett eigenständige, separat gebaute Kachel** (z. B. eine eigene
+   HTMLBox-Instanz, die gar nicht über `GetVisualizationTile()` dieser
+   Instanz läuft) - dafür zwei Befehle:
+   - `IPSSL_GetAvailableLanguages(int $InstanzID): string` - liefert die
+     wählbaren Sprachen als JSON-Array `[{code, name, current}, ...]`, live
+     in die aktuell aktive Sprache übersetzt und alphabetisch sortiert -
+     exakt dieselbe Liste wie im eingebauten Dropdown. `code` ist entweder
+     ein echter Sprachcode oder die interne Pseudo-Sprache
+     `ORIGINAL_IMPORT` (unbearbeiteter Rohtext, siehe oben).
+   - `IPSSL_SetLanguage(int $InstanzID, string $Sprachcode): void` -
+     wechselt die aktive Sprache, mit derselben Logik wie ein Klick im
+     eingebauten Dropdown (Testphase-/Rate-Limit-Prüfung inklusive).
+
+Ohne das Feature `custom_tile` bleiben die Formularfelder aus Weg 1
+ausgegraut UND die eingebaute Kachel aktiv (unabhängig vom gespeicherten
+Wert), UND die beiden Befehle aus Weg 2 werfen bei jedem Aufruf eine
+Exception, statt einfach nichts zu tun - eine selbstgebaute Kachel ließe
+sich sonst komplett kostenlos an der Lizenzprüfung vorbei realisieren, siehe
 [Abschnitt 8](#8-lizenz-und-testversion).
 
 ### 8. Lizenz und Testversion
@@ -543,12 +580,16 @@ Standard-Tier) schaltet zusätzliche Fähigkeiten frei - aktuell:
   als Wechsel und ist immer erlaubt, auch ohne dieses Flag - nur ein
   tatsächlicher Wechsel zu einer neuen Sprache innerhalb von 24h nach dem
   letzten wird per Hinweis-Popup verweigert.
-- `custom_tile`: erlaubt, die eingebaute Dropdown-Kachel zugunsten einer
-  selbstgebauten zu unterdrücken (siehe [Abschnitt 7](#7-visualisierung),
-  Property "Eigene Sprachauswahl-Kachel verwenden" sowie die Befehle
+- `custom_tile`: schaltet beide Wege zur Anpassung der Sprachauswahl-Kachel
+  frei (siehe [Abschnitt 7](#7-visualisierung)) - den editierbaren
+  Kachel-HTML-Code (Property "Eigene Sprachauswahl-Kachel verwenden" +
+  "Eigener Kachel-HTML-Code") UND die Befehle
   `IPSSL_GetAvailableLanguages`/`IPSSL_SetLanguage` in
-  [Abschnitt 9](#9-php-befehlsreferenz)). Ohne dieses Flag bleibt die Option
-  ausgegraut und die eingebaute Kachel immer aktiv.
+  [Abschnitt 9](#9-php-befehlsreferenz) für eine komplett eigenständige
+  Kachel. Ohne dieses Flag bleiben die Formularfelder ausgegraut, die
+  eingebaute Kachel bleibt immer aktiv, und die beiden Befehle werfen bei
+  jedem Aufruf eine Exception (hart durchgesetzt, nicht nur ausgegraut -
+  sonst ließe sich die Sperre per eigenem Skript komplett umgehen).
 
 Während der Testphase selbst bleiben alle Features bewusst immer erlaubt,
 damit der komplette Mechanismus vor dem Kauf ausprobierbar ist - die Sperre
@@ -689,19 +730,24 @@ Beispiel:
 `IPSSL_GetCurrentLanguageCode(12345);`
 
 `string IPSSL_GetAvailableLanguages(integer $InstanzID);`
-Pro-Feature `custom_tile` (siehe [Abschnitt 8](#8-lizenz-und-testversion)):
-liefert die aktuell wählbaren Sprachen als JSON-Array
+Pro-Feature `custom_tile` (siehe [Abschnitt 8](#8-lizenz-und-testversion)) -
+**wirft eine Exception ohne dieses Feature**, statt nur leer/wirkungslos zu
+bleiben: liefert die aktuell wählbaren Sprachen als JSON-Array
 `[{code, name, current}, ...]`, live in die aktuell aktive Sprache übersetzt
-und alphabetisch sortiert - für eine selbstgebaute Sprachauswahl-Kachel
-(siehe [Abschnitt 7](#7-visualisierung)).
+und alphabetisch sortiert - für eine komplett eigenständige, selbstgebaute
+Sprachauswahl-Kachel (siehe [Abschnitt 7](#7-visualisierung); für die
+naheliegendere Variante, nur das HTML/CSS der eingebauten Kachel
+anzupassen, siehe dort das Feld "Eigener Kachel-HTML-Code" - das braucht
+diesen Befehl nicht).
 
 Beispiel:
 `IPSSL_GetAvailableLanguages(12345);`
 
 `void IPSSL_SetLanguage(integer $InstanzID, string $Sprachcode);`
-Pro-Feature `custom_tile`: wechselt die aktive Sprache von außen, mit
-derselben Logik wie ein Klick im eingebauten Dropdown (Testphase-/
-Rate-Limit-Prüfung inklusive) - für eine selbstgebaute Sprachauswahl-Kachel.
+Pro-Feature `custom_tile` - **wirft eine Exception ohne dieses Feature**:
+wechselt die aktive Sprache von außen, mit derselben Logik wie ein Klick im
+eingebauten Dropdown (Testphase-/Rate-Limit-Prüfung inklusive) - für eine
+komplett eigenständige, selbstgebaute Sprachauswahl-Kachel.
 
 Beispiel:
 `IPSSL_SetLanguage(12345, 'en');`

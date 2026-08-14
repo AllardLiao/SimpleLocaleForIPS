@@ -91,12 +91,25 @@ trait SimpleLocaleConstants
     private const propertyShowGlobeIcon = 'ShowGlobeIcon';
     private const propertyShowInfoIcon = 'ShowInfoIcon';
 
-    // Pro-Feature "custom_tile": unterdrückt die eingebaute <select>-Dropdown-
-    // Kachel (siehe GetVisualizationTile) zugunsten einer selbstgebauten Kachel,
-    // die stattdessen IPSSL_GetAvailableLanguages()/IPSSL_SetLanguage() nutzt.
-    // Nur wirksam mit dem Feature-Flag - siehe HasLicenseFeature in GetVisualizationTile,
-    // exakt analog zu propertyAutoRescanInterval/"auto_rescan".
+    // Pro-Feature "custom_tile": schaltet die eingebaute <select>-Dropdown-
+    // Kachel (siehe GetVisualizationTile) auf den vom Nutzer editierbaren
+    // HTML-Code aus propertyCustomTileHtml um - die Instanz liefert also
+    // weiterhin SELBST die Kachel aus, nur eben mit angepasstem HTML/CSS statt
+    // der eingebauten Optik. Nur wirksam mit dem Feature-Flag - siehe
+    // HasLicenseFeature in GetVisualizationTile, exakt analog zu
+    // propertyAutoRescanInterval/"auto_rescan".
     private const propertyUseCustomTile = 'UseCustomTile';
+
+    // Editierbarer HTML-Code fuer die Kachel im Modus "Eigene Sprachauswahl-
+    // Kachel" (siehe propertyUseCustomTile) - Standardwert ist eine 1:1-Kopie
+    // von module.html (siehe GetDefaultCustomTileHtml), damit der Nutzer eine
+    // funktionierende Vorlage zum Anpassen hat statt bei Null anzufangen. Die
+    // Platzhalter <!--WRAPPER_ID--> und <!--LANGUAGE_SELECT--> sowie die JS-
+    // Funktion handleMessage() muessen dabei erhalten bleiben, siehe README
+    // Abschnitt 7. Bewusst NICHT dasselbe wie eine komplett eigenstaendige,
+    // separat gebaute Kachel (siehe GetAvailableLanguages/SetLanguage) - hier
+    // liefert weiterhin diese Instanz selbst die Kachel aus.
+    private const propertyCustomTileHtml = 'CustomTileHtml';
 
     // Lizenzschlüssel (deckt sowohl Einmalkauf als auch Abo ab, siehe
     // ValidateLicenseKey) - eingetragen, aber erst nach Klick auf "Lizenz
