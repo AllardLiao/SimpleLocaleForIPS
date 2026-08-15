@@ -136,6 +136,20 @@ Beschreibung des Moduls.
   (siehe Abschnitt 5). Soll eine bereits gefüllte Zelle stattdessen neu von
   Google übersetzt werden: Zelleninhalt löschen, "Übernehmen" klicken, dann
   erneut Rescan ausführen - nur leere Zellen werden dabei (neu) übersetzt.
+  Für die per VM_UPDATE live nachübersetzten "Eigene Texte" (siehe oben)
+  greift diese manuelle Korrektur allerdings nicht dauerhaft: eine erneute
+  Wertänderung überschreibt die Übersetzung sofort wieder frisch - eine
+  Ausnahme sind die deutschen Wochentags-Kürzel Mo/Di/Mi/Do/Fr/Sa/So
+  (häufig in Wetter-Widgets), die für Englisch/Spanisch/Französisch/
+  Italienisch/Niederländisch/Portugiesisch als Zielsprache fest und
+  garantiert korrekt hinterlegt sind, statt der oft unzuverlässigen
+  automatischen Übersetzung zu überlassen (isoliert ohne Kontext ist z. B.
+  "So" genauso das deutsche Wort "so" wie die Abkürzung für "Sonntag").
+  Greift nur, wenn mindestens 4 dieser Kürzel unmittelbar hintereinander im
+  selben Text vorkommen (wie bei einer echten Wochentagsliste) - ein
+  einzelnes, isoliertes Kürzel (z. B. eine Windrichtungsangabe "SO" für
+  Süd-Ost) bleibt davon unberührt und läuft weiterhin ganz normal durch
+  die konfigurierte Übersetzungskette.
 * **Alle Objekte im Root-Baum brauchen einen echten Namen.** Ein Rescan
   bricht komplett ab (keine Übersetzung, kein Speichern), sobald er ein
   Objekt ohne Namen findet (leerer Name, oder von Symcon selbst vergebener

@@ -3094,6 +3094,79 @@ private const LANGUAGE_FLAGS = [
     // Der eigentliche, cache-lose Uebersetzungsvorgang (frueherer Inhalt von
     // TranslateBatch) - nur noch ueber den Cache-Wrapper TranslateBatch() selbst
     // aufgerufen.
+    // Feste, garantiert korrekte Uebersetzungen fuer die deutschen Wochentags-
+    // Kuerzel (Mo/Di/Mi/Do/Fr/Sa/So) - kommen live in Widgets wie Wetter-Skripten
+    // (z.B. Wilkware) haeufig vor. Isoliert, ohne Kontext, sind diese Kuerzel fuer
+    // eine generische Uebersetzungs-API kaum zuverlaessig aufloesbar ("SO" ist
+    // genauso das gaengige deutsche Wort "so" wie die Abkuerzung fuer "Sonntag") -
+    // live beobachtet: Google/DeepL/MyMemory uebersetzen inkonsistent, manche
+    // Kuerzel bleiben unveraendert stehen. NUR fuer die hier hinterlegten
+    // Zielsprachen - alle anderen Zielsprachen fallen weiterhin auf die normale
+    // API-Uebersetzung zurueck (unveraendertes Verhalten).
+    private const GERMAN_WEEKDAY_ABBREVIATIONS = ['MO', 'DI', 'MI', 'DO', 'FR', 'SA', 'SO'];
+    private const GERMAN_WEEKDAY_ABBREVIATION_OVERRIDES = [
+        'en' => ['MO' => 'Mon', 'DI' => 'Tue', 'MI' => 'Wed', 'DO' => 'Thu', 'FR' => 'Fri', 'SA' => 'Sat', 'SO' => 'Sun'],
+        'es' => ['MO' => 'lun', 'DI' => 'mar', 'MI' => 'mié', 'DO' => 'jue', 'FR' => 'vie', 'SA' => 'sáb', 'SO' => 'dom'],
+        'fr' => ['MO' => 'lun', 'DI' => 'mar', 'MI' => 'mer', 'DO' => 'jeu', 'FR' => 'ven', 'SA' => 'sam', 'SO' => 'dim'],
+        'it' => ['MO' => 'lun', 'DI' => 'mar', 'MI' => 'mer', 'DO' => 'gio', 'FR' => 'ven', 'SA' => 'sab', 'SO' => 'dom'],
+        'nl' => ['MO' => 'ma', 'DI' => 'di', 'MI' => 'wo', 'DO' => 'do', 'FR' => 'vr', 'SA' => 'za', 'SO' => 'zo'],
+        'pt' => ['MO' => 'seg', 'DI' => 'ter', 'MI' => 'qua', 'DO' => 'qui', 'FR' => 'sex', 'SA' => 'sáb', 'SO' => 'dom'],
+    ];
+
+    // Sucht in $Nodes (Text-Knoten EINES HTML-Segments, siehe SplitHtmlIntoTextNodes,
+    // in Dokumentreihenfolge) nach einer UNMITTELBAR aufeinanderfolgenden Kette von
+    // mindestens 4 PAARWEISE VERSCHIEDENEN deutschen Wochentags-Kuerzeln - erst DAS
+    // strukturelle Muster "mehrere Kuerzel direkt hintereinander" macht die
+    // Uebersetzung sicher: ein EINZELNES, isoliertes "SO" (z.B. bei einer
+    // Windrichtung "Süd-Ost" im selben Widget) bekommt absichtlich KEINE
+    // Sonderbehandlung und geht unveraendert durch die normale API-Uebersetzung -
+    // nur eine zusammenhaengende Kette aus mehreren TEILEN einer echten
+    // Wochentagsliste ist eindeutig genug. Liefert [Knotenindex => uebersetzter
+    // Wert] fuer alle so bestaetigten Knoten, sonst ein leeres Array.
+    private const GERMAN_WEEKDAY_RUN_MIN_LENGTH = 4;
+
+    private function DetectWeekdayAbbreviationOverrides(array $Nodes, string $Source, string $Target): array
+    {
+        // Anbieter liefern Sprachcodes in unterschiedlicher Schreibweise (Google:
+        // klein "de"/"en", DeepL: groß "DE"/"EN-GB") - auf die ersten zwei
+        // Buchstaben normalisieren, damit der Vergleich in jedem Fall greift.
+        $normalizedSource = strtolower(substr($Source, 0, 2));
+        $normalizedTarget = strtolower(substr($Target, 0, 2));
+
+        if ($normalizedSource !== 'de' || !isset(self::GERMAN_WEEKDAY_ABBREVIATION_OVERRIDES[$normalizedTarget])) {
+            return [];
+        }
+
+        $overrideTable = self::GERMAN_WEEKDAY_ABBREVIATION_OVERRIDES[$normalizedTarget];
+        $overrides = [];
+        $runIndexes = [];
+
+        $flushRun = function () use (&$runIndexes, &$overrides, $overrideTable, $Nodes) {
+            if (count($runIndexes) >= self::GERMAN_WEEKDAY_RUN_MIN_LENGTH) {
+                foreach ($runIndexes as $index) {
+                    $code = mb_strtoupper(trim($Nodes[$index]), 'UTF-8');
+                    $overrides[$index] = $overrideTable[$code];
+                }
+            }
+            $runIndexes = [];
+        };
+
+        $runCodes = [];
+        foreach ($Nodes as $index => $node) {
+            $code = mb_strtoupper(trim($node), 'UTF-8');
+            if (in_array($code, self::GERMAN_WEEKDAY_ABBREVIATIONS, true) && !in_array($code, $runCodes, true)) {
+                $runIndexes[] = $index;
+                $runCodes[] = $code;
+            } else {
+                $flushRun();
+                $runCodes = [];
+            }
+        }
+        $flushRun();
+
+        return $overrides;
+    }
+
     private function TranslateBatchUncached(array $Texts, string $Source, string $Target, string $DebugContext = '', bool $IsHtml = false): array
     {
         if ($Texts === []) {
@@ -3156,6 +3229,10 @@ private const LANGUAGE_FLAGS = [
                     'protected'  => false,
                     'nodes'      => $split['nodes'],
                     'reassemble' => $split['reassemble'],
+                    // Knotenindex => bereits feststehender Wert (siehe
+                    // DetectWeekdayAbbreviationOverrides) - diese Knoten werden
+                    // unten NICHT an die API geschickt, sondern direkt eingesetzt.
+                    'overrides'  => $this->DetectWeekdayAbbreviationOverrides($split['nodes'], $Source, $Target),
                 ];
             }
             $segmentsPerText[] = $tokenizedSegments;
@@ -3168,7 +3245,10 @@ private const LANGUAGE_FLAGS = [
                     continue;
                 }
                 if ($IsHtml) {
-                    foreach ($segment['nodes'] as $node) {
+                    foreach ($segment['nodes'] as $index => $node) {
+                        if (isset($segment['overrides'][$index])) {
+                            continue;
+                        }
                         $translatable[] = $node;
                     }
                 } else {
@@ -3192,9 +3272,22 @@ private const LANGUAGE_FLAGS = [
                     continue;
                 }
                 if ($IsHtml) {
-                    $count = count($segment['nodes']);
-                    $translatedNodes = array_slice($translatedFlat, $cursor, $count);
-                    $cursor += $count;
+                    $overrides = $segment['overrides'];
+                    $apiCount = count($segment['nodes']) - count($overrides);
+                    $apiSlice = array_slice($translatedFlat, $cursor, $apiCount);
+                    $cursor += $apiCount;
+
+                    $translatedNodes = [];
+                    $apiPosition = 0;
+                    foreach (array_keys($segment['nodes']) as $index) {
+                        if (isset($overrides[$index])) {
+                            $translatedNodes[] = $overrides[$index];
+                        } else {
+                            $translatedNodes[] = $apiSlice[$apiPosition] ?? '';
+                            $apiPosition++;
+                        }
+                    }
+
                     $rebuilt .= ($segment['reassemble'])($translatedNodes);
                 } else {
                     $rebuilt .= $translatedFlat[$cursor++] ?? '';
