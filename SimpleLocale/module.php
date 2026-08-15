@@ -3164,89 +3164,66 @@ private const LANGUAGE_FLAGS = [
         return $result;
     }
 
-    // Zerlegt ein HTML-Fragment (kein vollständiges Dokument - wird intern in
-    // einen Wurzelknoten eingebettet) in seine einzelnen Text-Knoten. Liefert
-    // 'nodes' (die Rohtexte, in Dokumentreihenfolge) und 'reassemble' (eine
-    // Closure, die dieselbe Anzahl - ggf. übersetzter - Texte wieder an exakt
-    // denselben Knoten im DOM einsetzt und das Fragment neu serialisiert). Über
-    // Objektidentität statt Zeichenposition adressiert, siehe
-    // TranslateBatchUncached für den Grund. Bewusst konservativ: bei einem
-    // Parse-Fehler (z.B. kein gültiges HTML) wird der Text unangetastet als
-    // EIN einzelner "Knoten" behandelt (Fallback auf das alte Verhalten), nie
-    // ein Fataler Fehler.
+    // Zerlegt ein HTML-Fragment in abwechselnde Tag-/Text-Tokens (per Regex,
+    // BEWUSST ohne DOMDocument/ext-dom: eine erste Fassung nutzte DOMDocument,
+    // fiel aber auf einer Installation, deren PHP-Build 'dom' nicht enthielt,
+    // still und unbemerkt auf das alte Ein-Block-Verhalten zurück - die
+    // Uebersetzung blieb dadurch weiterhin fehlerhaft, ohne dass irgendwo ein
+    // Fehler sichtbar wurde. Ein reiner String-/Regex-Ansatz braucht keine
+    // optionale Extension und verhaelt sich auf jedem Symcon-PHP identisch).
+    // Liefert 'nodes' (die Rohtexte NUR der Text-Tokens, in Dokumentreihenfolge)
+    // und 'reassemble' (eine Closure, die dieselbe Anzahl - ggf. übersetzter -
+    // Texte wieder an exakt denselben Token-Positionen einsetzt und das
+    // Fragment neu zusammenfügt, alle Tag-Tokens unveraendert). Über die
+    // Token-Position statt eine Zeichenposition im GESAMTtext adressiert,
+    // siehe TranslateBatchUncached für den Grund (verhindert das Verschieben
+    // von Textteilen über Tag-Grenzen hinweg). Rein whitespace-Text-Tokens
+    // (z.B. Einrückung zwischen Tags) werden nie als eigene Übersetzungs-
+    // einheit gezählt, bleiben aber unverändert im Ergebnis erhalten.
     //
-    // Bekannte, harmlose Nebenwirkung: DOMDocument normalisiert beim erneuten
-    // Serialisieren einzelne Schreibweisen (z.B. "&nbsp;" wird zum
-    // gleichbedeutenden Zeichen U+00A0, "<img ... />" verliert den
-    // schließenden Schrägstrich zu "<img ...>") - beides stellt sich im
-    // Browser identisch dar, verändert also nichts Sichtbares.
+    // Bekannte, bewusst in Kauf genommene Einschränkung: ein "<" oder ">"
+    // als woertliches Zeichen INNERHALB eines Attributwerts (z.B.
+    // <div data-x="a>b">) wuerde die Tag-Grenze falsch erkennen - in der
+    // Praxis bei Symcon-HTMLBox-Widgets nicht relevant (dieselbe Annahme
+    // macht bereits SplitProtectedSegments fuer <style>/<script>-Bloecke).
     private function SplitHtmlIntoTextNodes(string $Html): array
     {
         $fallback = ['nodes' => [$Html], 'reassemble' => function (array $translated) use ($Html) {
             return $translated[0] ?? $Html;
         }];
 
-        if (trim($Html) === '' || !class_exists('DOMDocument')) {
+        if (trim($Html) === '') {
             return $fallback;
         }
 
-        $doc = new DOMDocument('1.0', 'UTF-8');
-        $prevErrors = libxml_use_internal_errors(true);
-        $wrapped = '<?xml encoding="UTF-8"><ipssl-root>' . $Html . '</ipssl-root>';
-        $loaded = @$doc->loadHTML($wrapped, LIBXML_NOERROR | LIBXML_NOWARNING | LIBXML_HTML_NODEFDTD | LIBXML_HTML_NOIMPLIED);
-        libxml_clear_errors();
-        libxml_use_internal_errors($prevErrors);
-
-        if (!$loaded) {
+        $tokens = preg_split('/(<[^>]*>)/s', $Html, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+        if ($tokens === false || $tokens === []) {
             return $fallback;
         }
 
-        $root = $doc->getElementsByTagName('ipssl-root')->item(0);
-        if ($root === null) {
-            return $fallback;
-        }
-
-        $textNodes = [];
-        $walk = function (DOMNode $node) use (&$walk, &$textNodes) {
-            foreach (iterator_to_array($node->childNodes) as $child) {
-                if ($child instanceof DOMText) {
-                    if (trim($child->nodeValue) !== '') {
-                        $textNodes[] = $child;
-                    }
-                } elseif ($child instanceof DOMElement) {
-                    $walk($child);
-                }
+        $nodes = [];
+        $textTokenIndexes = [];
+        foreach ($tokens as $tokenIndex => $token) {
+            if ($token[0] === '<' || trim($token) === '') {
+                continue;
             }
-        };
-        $walk($root);
+            $nodes[] = $token;
+            $textTokenIndexes[] = $tokenIndex;
+        }
 
-        if ($textNodes === []) {
+        if ($nodes === []) {
             return $fallback;
         }
 
-        $originalTexts = array_map(function (DOMText $n) {
-            return $n->nodeValue;
-        }, $textNodes);
-
-        $reassemble = function (array $translatedTexts) use ($doc, $root, $textNodes, $Html) {
-            foreach ($textNodes as $i => $node) {
-                $node->nodeValue = $translatedTexts[$i] ?? $node->nodeValue;
-            }
-            $inner = '';
-            foreach (iterator_to_array($root->childNodes) as $child) {
-                $serialized = $doc->saveHTML($child);
-                if ($serialized === false) {
-                    // Serialisierung ausnahmsweise fehlgeschlagen - lieber der
-                    // unveränderte Originaltext als ein kaputtes Fragment.
-                    return $Html;
-                }
-                $inner .= $serialized;
+        $reassemble = function (array $translatedTexts) use ($tokens, $textTokenIndexes) {
+            foreach ($textTokenIndexes as $position => $tokenIndex) {
+                $tokens[$tokenIndex] = $translatedTexts[$position] ?? $tokens[$tokenIndex];
             }
 
-            return $inner;
+            return implode('', $tokens);
         };
 
-        return ['nodes' => $originalTexts, 'reassemble' => $reassemble];
+        return ['nodes' => $nodes, 'reassemble' => $reassemble];
     }
 
     // Probiert die Anbieter-Kette der Reihe nach durch (siehe GetProviderChain) -
