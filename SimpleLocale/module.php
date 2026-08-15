@@ -2489,7 +2489,30 @@ private const LANGUAGE_FLAGS = [
         }
 
         $row = $ExistingRows[0];
-        $row[self::langOriginalImport] = $ScannedRows[0][self::langOriginalImport];
+        $newRawText = $ScannedRows[0][self::langOriginalImport];
+
+        // Anders als MergeRows fuer "Eigene Texte" wird der Rohtext hier NICHT
+        // eingefroren: eine Begruessung wechselt bewusst regelmaessig zwischen
+        // wenigen festen Werten (Tageszeit), siehe ApplyTrackedVariableUpdate.
+        // Vor diesem Fix wurde zwar ORIGINAL_IMPORT bei jedem Rescan aktuell
+        // gehalten, die Sprachspalten aber NICHT geleert - FillMissingTranslations()
+        // (direkt im Anschluss in ScanRootTree) uebersetzt nur leere Zellen, liess
+        // die alten Uebersetzungen also unangetastet stehen. Ergebnis: nach einem
+        // Rescan (manuell oder Pro-Auto-Timer) zeigte ORIGINAL_IMPORT den frischen
+        // Text, jede Zielsprache aber weiterhin die Uebersetzung des VORHERIGEN
+        // Textes - sichtbar u.a. nach einem Sprachwechsel, der genau diese veraltete
+        // Zelle ausliest (siehe ResolveRowValue). Wenn sich der Rohtext seit dem
+        // letzten Scan geaendert hat, werden die Sprachspalten deshalb jetzt mit
+        // geleert, genau wie beim manuellen Leeren einer Zelle vor einem Rescan.
+        if ($row[self::langOriginalImport] !== $newRawText) {
+            foreach (array_keys($row) as $field) {
+                if (!in_array($field, [self::langOriginalImport, 'ValueObjectID'], true)) {
+                    $row[$field] = '';
+                }
+            }
+        }
+
+        $row[self::langOriginalImport] = $newRawText;
 
         if (isset($ScannedRows[0]['ValueObjectID'])) {
             $row['ValueObjectID'] = $ScannedRows[0]['ValueObjectID'];
