@@ -75,7 +75,13 @@ Beschreibung des Moduls.
   zweiten Auftreten die bereits vorhandene Übersetzung wiederverwendet,
   **ganz ohne erneuten API-Aufruf**. Der Cache ist auf die letzten 500
   Einträge begrenzt (älteste zuerst raus) und wird auch von normalen
-  Rescans mitgenutzt.
+  Rescans mitgenutzt. Zeigt ein Text weiterhin hartnäckig eine
+  veraltete/falsche Übersetzung, hilft der Button "Übersetzungs-Cache
+  leeren" im Formular - er löscht nur diesen internen Zwischenspeicher,
+  nicht die bereits in Objektnamen/Eigenen Texten/Beschriftungen
+  gespeicherten Übersetzungen selbst (die müssen bei Bedarf weiterhin
+  einzeln im jeweiligen Feld geleert werden, damit sie beim nächsten
+  Rescan/Sprachwechsel neu übersetzt werden).
 * Übersetzt zusätzlich die Beschriftungen von Variablen mit einer
   Wert-Aufzählung (z. B. Integer-Variablen mit klassischem Profil oder
   moderner Enumeration-Presentation, etwa "Abwesend/Anwesend" oder

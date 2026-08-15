@@ -504,6 +504,15 @@
             "caption": "Durchsucht den Root der Visualisierung erneut nach neuen/verschobenen Objekten und übersetzt nur noch leere Zellen in Objektnamen, Eigene Texte und Beschriftungen. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben."
         },
         {
+            "type": "Button",
+            "caption": "Übersetzungs-Cache leeren",
+            "onClick": "IPS_RequestAction($id, 'ClearTranslationCache', true);"
+        },
+        {
+            "type": "Label",
+            "caption": "Löscht nur den internen Zwischenspeicher für wiederkehrende Übersetzungen (spart normalerweise API-Aufrufe für Texte, die schon einmal übersetzt wurden) - nützlich, falls ein Text weiterhin eine veraltete/falsche Übersetzung zeigt. Bereits gespeicherte Übersetzungen in Objektnamen, Eigenen Texten und Beschriftungen bleiben davon unberührt und müssen bei Bedarf weiterhin einzeln im jeweiligen Feld geleert werden, damit sie beim nächsten Rescan/Sprachwechsel neu übersetzt werden."
+        },
+        {
             "type": "ExpansionPanel",
             "caption": "Produktinformationen",
             "expanded": false,

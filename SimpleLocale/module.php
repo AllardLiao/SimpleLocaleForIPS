@@ -425,6 +425,10 @@ private const LANGUAGE_FLAGS = [
                 $this->Rescan();
                 break;
 
+            case self::identClearTranslationCache:
+                $this->ClearTranslationCache();
+                break;
+
             case self::identActivateLicense:
                 $this->ActivateLicense();
                 break;
@@ -859,6 +863,22 @@ private const LANGUAGE_FLAGS = [
     public function Rescan(): void
     {
         $this->ScanRootTree();
+    }
+
+    // Manueller Reset des Uebersetzungs-Caches (attributeTranslationCache,
+    // siehe GetCachedTranslation/StoreCachedTranslation/
+    // TRANSLATION_CACHE_SCHEMA_VERSION) - Sicherheitsventil fuer den Fall,
+    // dass ein Rohtext weiterhin eine falsche/veraltete Uebersetzung zeigt,
+    // ohne auf ein neues Modul-Build (mit automatischer Versions-basierter
+    // Invalidierung) warten zu muessen. Loescht NUR den Cache, nicht die
+    // bereits in Objektnamen/Eigenen Texten/Beschriftungen gespeicherten
+    // Uebersetzungen selbst - die bleiben unangetastet und muessen bei Bedarf
+    // weiterhin einzeln im Formular geleert werden (siehe Rescan-Hinweis),
+    // damit sie beim naechsten Rescan/Sprachwechsel neu uebersetzt werden.
+    private function ClearTranslationCache(): void
+    {
+        $this->WriteAttributeString(self::attributeTranslationCache, '{}');
+        $this->SendDebug('IPSSL_Debug', 'ClearTranslationCache: Cache geleert', 0);
     }
 
     // Prüft/übernimmt den in propertyLicenseKey eingetragenen Schlüssel per
