@@ -1400,6 +1400,14 @@ private const LANGUAGE_FLAGS = [
             @IPS_SetName($objectID, $this->ResolveRowValue($row, $Language, $Language, $sourceLanguage, self::langOriginalImport));
         }
 
+        // Schutz gegen zwei Zeilen, die (z.B. durch zwei unterschiedliche
+        // Verknüpfungen an verschiedenen Stellen im Baum) dieselbe
+        // ValueObjectID teilen (siehe DeduplicateTextRowsByValueObjectID,
+        // greift regulär erst beim nächsten Rescan) - ohne diese Sperre würde
+        // die zweite Zeile hier den Schreibvorgang der ersten sofort wieder
+        // überschreiben, mit potenziell längst veraltetem eigenem Inhalt.
+        $writtenValueObjectIDs = [];
+
         foreach ($this->DecodeRows(self::propertyObjectTexts) as $row) {
             $objectID = (int) ($row['ObjectID'] ?? 0);
             if ($objectID !== 0 && @IPS_ObjectExists($objectID)) {
@@ -1415,9 +1423,10 @@ private const LANGUAGE_FLAGS = [
             // Bei Links auf eine String-Variable ist ValueObjectID die Zielvariable,
             // die den eigentlichen Wert hält - sonst identisch mit ObjectID.
             $valueObjectID = (int) ($row['ValueObjectID'] ?? $objectID);
-            if ($valueObjectID === 0 || !@IPS_ObjectExists($valueObjectID)) {
+            if ($valueObjectID === 0 || !@IPS_ObjectExists($valueObjectID) || isset($writtenValueObjectIDs[$valueObjectID])) {
                 continue;
             }
+            $writtenValueObjectIDs[$valueObjectID] = true;
 
             $this->WriteTrackedValueString($valueObjectID, $this->ResolveRowValue(
                 $row,
@@ -1971,7 +1980,9 @@ private const LANGUAGE_FLAGS = [
         $this->SendDebug('IPSSL_Debug', 'ScanRootTree: no unnamed objects, continuing to merges', 0);
 
         $objectNames = $this->MergeRows($this->DecodeRows(self::propertyObjectNames), $scannedNames);
-        $objectTexts = $this->MergeRows($this->DecodeRows(self::propertyObjectTexts), $scannedTexts);
+        $objectTexts = $this->DeduplicateTextRowsByValueObjectID(
+            $this->MergeRows($this->DecodeRows(self::propertyObjectTexts), $scannedTexts)
+        );
 
         $existingOptions = [];
         foreach ($this->DecodeRows(self::propertyEnumerationOptions) as $row) {
@@ -2603,6 +2614,52 @@ private const LANGUAGE_FLAGS = [
         // verbleibende, bisher unbekannte Objekt-IDs neu anhängen
         foreach ($ScannedByObjectID as $newRow) {
             $result[] = $newRow;
+        }
+
+        return $result;
+    }
+
+    // Schützt vor zwei "Eigene Texte"-Zeilen, die (über zwei unterschiedliche
+    // Verknüpfungen an verschiedenen Stellen im Baum, z.B. eine im Root-Baum
+    // UND eine tiefer verschachtelte) auf dieselbe String-Variable zeigen
+    // (gleiche ValueObjectID) - anders als bei geteilten Enum-Profilen (siehe
+    // MergeEnumerationOptions) gab es dafür bislang KEINEN Schutz: WalkTree()
+    // legt für jedes gefundene Verknüpfungs-Objekt eine eigene Zeile an, auch
+    // wenn das Ziel bereits durch eine andere Zeile abgedeckt ist. Da MergeRows
+    // den Rohtext/die Übersetzungen bestehender Zeilen für immer einfriert
+    // (siehe dort), driften zwei solche Zeilen über die Zeit auseinander -
+    // Live-Updates (HandleTrackedVariableUpdate) treffen wegen ihres
+    // "erste passende Zeile"-Verhaltens ohnehin nur EINE der beiden, ein
+    // Sprachwechsel (ApplyLanguage) schreibt dagegen BEIDE nacheinander auf
+    // dieselbe Zielvariable zurück - je nach Zeilenreihenfolge gewinnt die
+    // andere und überschreibt die frische Übersetzung mit ihrem eigenen,
+    // möglicherweise uralten/nie aktualisierten Inhalt (live beobachtet: eine
+    // niemals mehr aktualisierte Zweitzeile enthielt noch rohen HTML/CSS-Code
+    // aus einer früheren Verwendung derselben Variable). Behält die ZUERST
+    // gefundene Zeile je ValueObjectID (deckt sich mit dem "erste Zeile
+    // gewinnt"-Verhalten von HandleTrackedVariableUpdate, betrifft also
+    // typischerweise ohnehin die zuletzt aktiv gepflegte Zeile) und verwirft
+    // die restlichen - wer die "falsche" Zeile überleben sieht, kann die
+    // überlebende Zeile im Formular manuell korrigieren.
+    private function DeduplicateTextRowsByValueObjectID(array $Rows): array
+    {
+        $result = [];
+        $seenValueObjectIDs = [];
+        foreach ($Rows as $row) {
+            $valueObjectID = (int) ($row['ValueObjectID'] ?? $row['ObjectID'] ?? 0);
+            if ($valueObjectID !== 0) {
+                if (isset($seenValueObjectIDs[$valueObjectID])) {
+                    $this->SendDebug(
+                        'IPSSL_Debug',
+                        'DeduplicateTextRowsByValueObjectID: dropping duplicate row for ValueObjectID=' . $valueObjectID
+                            . ' (ObjectID=' . ($row['ObjectID'] ?? '?') . '), already covered by an earlier row',
+                        0
+                    );
+                    continue;
+                }
+                $seenValueObjectIDs[$valueObjectID] = true;
+            }
+            $result[] = $row;
         }
 
         return $result;
