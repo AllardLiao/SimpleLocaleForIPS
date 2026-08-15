@@ -878,6 +878,7 @@ private const LANGUAGE_FLAGS = [
     private function ClearTranslationCache(): void
     {
         $this->WriteAttributeString(self::attributeTranslationCache, '{}');
+        $this->UpdateFormField('CacheClearedPopup', 'visible', true);
         $this->SendDebug('IPSSL_Debug', 'ClearTranslationCache: Cache geleert', 0);
     }
 

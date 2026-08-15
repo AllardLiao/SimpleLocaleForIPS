@@ -669,6 +669,21 @@
                     }
                 ]
             }
+        },
+        {
+            "name": "CacheClearedPopup",
+            "type": "PopupAlert",
+            "visible": false,
+            "popup": {
+                "caption": "Cache geleert",
+                "closeCaption": "OK",
+                "items": [
+                    {
+                        "type": "Label",
+                        "caption": "Der Übersetzungs-Cache wurde geleert. Bereits gespeicherte Übersetzungen in Objektnamen, Eigenen Texten und Beschriftungen sind davon nicht betroffen."
+                    }
+                ]
+            }
         }
     ],
     "status": [
