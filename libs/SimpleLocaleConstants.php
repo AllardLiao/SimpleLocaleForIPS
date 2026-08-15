@@ -263,6 +263,7 @@ trait SimpleLocaleConstants
     private const identRescan = 'Rescan';
     private const identShowApiKeyWarning = 'ShowApiKeyWarning';
     private const identActivateLicense = 'ActivateLicense';
+    private const identClearTranslationCache = 'ClearTranslationCache';
 
     // Reservierter Pseudo-Sprachcode für den unangetasteten Rohtext beim ersten Scan
     // (Tippfehler inklusive). Nicht vom Gast über die Sprachauswahl erreichbar.
