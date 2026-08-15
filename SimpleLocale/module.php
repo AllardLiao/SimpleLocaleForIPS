@@ -1469,7 +1469,7 @@ private const LANGUAGE_FLAGS = [
         }
 
         $this->ApplyAutomationsLanguage($Language, $sourceLanguage);
-        $this->ApplyGreetingLanguage($Language, $sourceLanguage);
+        $this->ApplyGreetingLanguage($Language, $sourceLanguage, $writtenValueObjectIDs);
     }
 
     // Schreibt übersetzte Automation-Namen in die LIVE "Automations"-Property der
@@ -1536,7 +1536,7 @@ private const LANGUAGE_FLAGS = [
     // Reload aller verbundenen Kachel-Visualisierungs-Clients auslösen würden). Kein
     // Fehler, wenn das Feature nicht genutzt wird oder die Zeile (noch) nicht
     // existiert.
-    private function ApplyGreetingLanguage(string $Language, string $SourceLanguage): void
+    private function ApplyGreetingLanguage(string $Language, string $SourceLanguage, array $WrittenValueObjectIDs = []): void
     {
         $rows = $this->DecodeRows(self::propertyObjectGreeting);
         if ($rows === []) {
@@ -1547,7 +1547,19 @@ private const LANGUAGE_FLAGS = [
 
         $valueObjectID = (int) ($rows[0]['ValueObjectID'] ?? 0);
         if ($valueObjectID !== 0 && @IPS_ObjectExists($valueObjectID)) {
-            $this->WriteTrackedValueString($valueObjectID, $resolvedName);
+            // Absicherung fuer die Uebergangszeit bis zum naechsten Rescan: vor
+            // ExcludeGreetingVariableFromTextRows() konnte dieselbe Variable
+            // GLEICHZEITIG als "Eigene Texte"-Zeile UND als Begruessungszeile
+            // gefuehrt worden sein (siehe ScanGreetingText). Eine bereits
+            // bestehende Installation traegt diese doppelte Zeile so lange mit
+            // sich, bis der naechste Rescan sie aufraeumt - bis dahin wuerde
+            // diese Begruessungszeile hier ihren eigenen, nie aktualisierten
+            // Inhalt ueber die gerade frisch geschriebene "Eigene Texte"-
+            // Uebersetzung schreiben (exakt dasselbe Muster wie bei zwei
+            // "Eigene Texte"-Zeilen, siehe ApplyLanguage()).
+            if (!isset($WrittenValueObjectIDs[$valueObjectID])) {
+                $this->WriteTrackedValueString($valueObjectID, $resolvedName);
+            }
 
             return;
         }
@@ -1791,7 +1803,8 @@ private const LANGUAGE_FLAGS = [
                     self::langOriginalImportText,
                     self::fieldTextPrefix,
                     $ValueObjectID,
-                    $newValue
+                    $newValue,
+                    true
                 );
 
                 return;
@@ -1807,7 +1820,8 @@ private const LANGUAGE_FLAGS = [
                 self::langOriginalImport,
                 '',
                 $ValueObjectID,
-                $newValue
+                $newValue,
+                false
             );
 
             return;
@@ -1833,7 +1847,8 @@ private const LANGUAGE_FLAGS = [
         string $RawField,
         string $TranslatedPrefix,
         int $ValueObjectID,
-        string $NewValue
+        string $NewValue,
+        bool $IsHtml = false
     ): void {
         $Rows[$RowIndex][$RawField] = $NewValue;
 
@@ -1855,7 +1870,7 @@ private const LANGUAGE_FLAGS = [
         // Sprachwechsel praktisch immer unuebersetzt, ausser die zufaellig gerade
         // aktive Sprache war beim letzten externen Schreibvorgang bereits aktiv.
         foreach ($this->GetSelectedTargetLanguages() as $lang) {
-            $translated = $this->TranslateBatch([$NewValue], $sourceLanguage, $lang);
+            $translated = $this->TranslateBatch([$NewValue], $sourceLanguage, $lang, '', $IsHtml);
             // TranslateBatch liefert bei einem fehlgeschlagenen Google-Aufruf einen
             // Leerstring zurück (nicht null) - ein reines "??" würde diesen Fehlerfall
             // nicht abfangen und eine leere Beschriftung in der Kachel hinterlassen.
@@ -1980,8 +1995,10 @@ private const LANGUAGE_FLAGS = [
         $this->SendDebug('IPSSL_Debug', 'ScanRootTree: no unnamed objects, continuing to merges', 0);
 
         $objectNames = $this->MergeRows($this->DecodeRows(self::propertyObjectNames), $scannedNames);
-        $objectTexts = $this->DeduplicateTextRowsByValueObjectID(
-            $this->MergeRows($this->DecodeRows(self::propertyObjectTexts), $scannedTexts)
+        $objectTexts = $this->ExcludeGreetingVariableFromTextRows(
+            $this->DeduplicateTextRowsByValueObjectID(
+                $this->MergeRows($this->DecodeRows(self::propertyObjectTexts), $scannedTexts)
+            )
         );
 
         $existingOptions = [];
@@ -2000,11 +2017,12 @@ private const LANGUAGE_FLAGS = [
         );
 
         // Begrüßungstext, alle drei Modi (siehe ScanGreetingText) - ebenfalls
-        // unabhängig vom Root-Baum, außer für den Sonderfall, dass die im Modus
-        // "Variable" verlinkte Variable zufällig selbst im Root-Baum liegt (dann hat
-        // der normale Baum-Scan Vorrang, siehe ScanGreetingText).
+        // unabhängig vom Root-Baum. Im Modus "Variable" hat "Begrüßung" IMMER
+        // Vorrang, auch wenn die verlinkte Variable zufällig selbst im
+        // Root-Baum liegt - eine daraus entstehende Zeile in "Eigene Texte"
+        // wird oben bereits per ExcludeGreetingVariableFromTextRows() entfernt.
         $existingGreeting = $this->DecodeRows(self::propertyObjectGreeting);
-        $scannedGreeting = $this->ScanGreetingText($scannedTexts);
+        $scannedGreeting = $this->ScanGreetingText();
         $this->SendDebug('IPSSL_Debug', 'ScanRootTree: existingGreeting=' . json_encode($existingGreeting) . ' scannedGreeting=' . json_encode($scannedGreeting), 0);
         $objectGreeting = $this->MergeGreetingRows($existingGreeting, $scannedGreeting);
         $this->SendDebug('IPSSL_Debug', 'ScanRootTree: mergedGreeting=' . json_encode($objectGreeting), 0);
@@ -2432,12 +2450,19 @@ private const LANGUAGE_FLAGS = [
     //   verlinkten String-Variable - landet HIER (statt in "Eigene Texte"), damit
     //   jeder Nutzer sie im selben Abschnitt "Begrüßung" findet, unabhängig vom
     //   gewählten Modus (frühere Version legte hierfür eine Zusatzzeile in "Eigene
-    //   Texte" an - live als verwirrend empfunden). Liegt die Variable zufällig
-    //   selbst im Root-Baum (eigener Ident dort), hat der normale Baum-Scan
-    //   ($ScannedTexts) Vorrang - sonst gäbe
-    //   es zwei unabhängige, live schreibende Übersetzungs-Zeilen für dieselbe
-    //   Variable.
-    private function ScanGreetingText(array $ScannedTexts): array
+    //   Texte" an - live als verwirrend empfunden). "Begrüßung" hat hier IMMER
+    //   Vorrang, auch wenn dieselbe Variable zufällig auch im Root-Baum liegt
+    //   (eigener Ident dort) - ScanRootTree() entfernt eine solche Zeile
+    //   deshalb explizit wieder aus "Eigene Texte" (siehe
+    //   ExcludeGreetingVariableFromTextRows), statt hier die Begrüßungszeile
+    //   zu unterdrücken: eine frühere Version machte es umgekehrt (Baum-Scan
+    //   gewinnt), was dazu führte, dass die Begrüßung dauerhaft aus dem
+    //   Formularabschnitt "Begrüßung" verschwand, sobald ihre Variable auch
+    //   im Baum auftauchte - dort gehört sie inhaltlich aber nicht hin, und
+    //   zwei konkurrierende Zeilen für dieselbe Variable (eine live gepflegt,
+    //   eine eingefroren) führten außerdem dazu, dass bei jedem
+    //   Sprachwechsel eine der beiden Übersetzungen die andere überschrieb.
+    private function ScanGreetingText(): array
     {
         $webFrontID = $this->ReadPropertyInteger(self::propertyWebFrontVisuInstanceID);
         if ($webFrontID === 0 || !@IPS_ObjectExists($webFrontID)) {
@@ -2456,20 +2481,9 @@ private const LANGUAGE_FLAGS = [
         }
 
         if ($showGreeting === 2) {
-            $variableID = (int) @IPS_GetProperty($webFrontID, 'GreetingVariableID');
-            if ($variableID === 0 || !@IPS_VariableExists($variableID)) {
+            $variableID = $this->GetConfiguredGreetingVariableID();
+            if ($variableID === 0) {
                 return [];
-            }
-
-            $variable = @IPS_GetVariable($variableID);
-            if (!is_array($variable) || $variable['VariableType'] !== VARIABLETYPE_STRING) {
-                return [];
-            }
-
-            foreach ($ScannedTexts as $row) {
-                if ((int) ($row['ValueObjectID'] ?? 0) === $variableID) {
-                    return [];
-                }
             }
 
             return [[
@@ -2479,6 +2493,61 @@ private const LANGUAGE_FLAGS = [
         }
 
         return [];
+    }
+
+    // Liest die im Modus "Variable" (ShowGreeting=2) konfigurierte
+    // Begrüßungs-Variable, sofern sie existiert und eine echte String-Variable
+    // ist - gemeinsame Stelle für ScanGreetingText() und
+    // ExcludeGreetingVariableFromTextRows(), damit beide garantiert dieselbe
+    // ID sehen. 0 in jedem anderen Fall (kein Modus "Variable", keine Instanz
+    // gewählt, keine/ungültige Variable).
+    private function GetConfiguredGreetingVariableID(): int
+    {
+        $webFrontID = $this->ReadPropertyInteger(self::propertyWebFrontVisuInstanceID);
+        if ($webFrontID === 0 || !@IPS_ObjectExists($webFrontID)) {
+            return 0;
+        }
+
+        if ((int) @IPS_GetProperty($webFrontID, 'ShowGreeting') !== 2) {
+            return 0;
+        }
+
+        $variableID = (int) @IPS_GetProperty($webFrontID, 'GreetingVariableID');
+        if ($variableID === 0 || !@IPS_VariableExists($variableID)) {
+            return 0;
+        }
+
+        $variable = @IPS_GetVariable($variableID);
+        if (!is_array($variable) || $variable['VariableType'] !== VARIABLETYPE_STRING) {
+            return 0;
+        }
+
+        return $variableID;
+    }
+
+    // Gegenstück zur "Begrüßung hat Vorrang"-Regel in ScanGreetingText(): eine
+    // Zeile in "Eigene Texte", deren ValueObjectID mit der aktuell
+    // konfigurierten Begrüßungs-Variable übereinstimmt, wird entfernt - sowohl
+    // eine frisch im aktuellen Baum-Scan gefundene als auch eine ältere, aus
+    // einem früheren Rescan stammende Zeile (z.B. von vor dieser Änderung,
+    // oder falls die Verknüpfung im Root-Baum erst später als
+    // Begrüßungs-Variable konfiguriert wurde). Ohne dieses Aufräumen bliebe
+    // eine solche Altzeile für immer eingefroren (siehe MergeRows) und
+    // "Eigene Texte" hätte weiterhin Vorrang bei Live-Updates (siehe
+    // HandleTrackedVariableUpdate, prüft "Eigene Texte" zuerst), sodass die
+    // Begrüßungszeile trotz Vorrang-Regel nie aktualisiert würde.
+    private function ExcludeGreetingVariableFromTextRows(array $Rows): array
+    {
+        $greetingVariableID = $this->GetConfiguredGreetingVariableID();
+        if ($greetingVariableID === 0) {
+            return $Rows;
+        }
+
+        return array_values(array_filter($Rows, function ($row) use ($greetingVariableID) {
+            $valueObjectID = (int) ($row['ValueObjectID'] ?? $row['ObjectID'] ?? 0);
+
+            return $valueObjectID !== $greetingVariableID;
+        }));
     }
 
     // "Begrüßung" hat immer höchstens eine Zeile - kein ID-Abgleich wie bei
@@ -2785,7 +2854,7 @@ private const LANGUAGE_FLAGS = [
         }
         $this->SendDebug('GoogleTranslate_Mapping', $debugContext . "\n" . implode("\n", $debugMapping), 0);
 
-        $translated = $this->TranslateBatch(array_values($pending), $ForceSource, $TargetLanguageCode, $debugContext);
+        $translated = $this->TranslateBatch(array_values($pending), $ForceSource, $TargetLanguageCode, $debugContext, $IsHtml);
 
         $i = 0;
         foreach (array_keys($pending) as $index) {
@@ -2908,7 +2977,7 @@ private const LANGUAGE_FLAGS = [
     // TATSAECHLICH uebersetzte (nicht-leere) Ergebnisse werden gecacht - ein leeres
     // Ergebnis bedeutet Anbieter-Fehlschlag (siehe TranslateChunk) und soll beim
     // naechsten Versuch erneut versucht werden, nicht dauerhaft als "leer" gelten.
-    private function TranslateBatch(array $Texts, string $Source, string $Target, string $DebugContext = ''): array
+    private function TranslateBatch(array $Texts, string $Source, string $Target, string $DebugContext = '', bool $IsHtml = false): array
     {
         if ($Texts === [] || $Source === $Target) {
             // Source===Target: siehe TranslateBatchUncached fuer die Begruendung
@@ -2930,7 +2999,7 @@ private const LANGUAGE_FLAGS = [
         }
 
         if ($freshTexts !== []) {
-            $freshlyTranslated = $this->TranslateBatchUncached($freshTexts, $Source, $Target, $DebugContext);
+            $freshlyTranslated = $this->TranslateBatchUncached($freshTexts, $Source, $Target, $DebugContext, $IsHtml);
             foreach ($freshIndexes as $position => $originalIndex) {
                 $translated = $freshlyTranslated[$position] ?? '';
                 $results[$originalIndex] = $translated;
@@ -2983,7 +3052,7 @@ private const LANGUAGE_FLAGS = [
     // Der eigentliche, cache-lose Uebersetzungsvorgang (frueherer Inhalt von
     // TranslateBatch) - nur noch ueber den Cache-Wrapper TranslateBatch() selbst
     // aufgerufen.
-    private function TranslateBatchUncached(array $Texts, string $Source, string $Target, string $DebugContext = ''): array
+    private function TranslateBatchUncached(array $Texts, string $Source, string $Target, string $DebugContext = '', bool $IsHtml = false): array
     {
         if ($Texts === []) {
             return [];
@@ -3003,16 +3072,64 @@ private const LANGUAGE_FLAGS = [
 
         // Jeder Text wird in abwechselnd übersetzbare/geschützte Segmente zerlegt -
         // nur die übersetzbaren Segmente werden überhaupt an Google geschickt (siehe
-        // SplitProtectedSegments). Die Chunk-Grenze von 128 muss daher auf der
-        // flachen Segmentliste liegen, nicht auf den ursprünglichen Zeilen-Texten,
-        // sonst könnte ein einzelner Text mit mehreren Segmenten die Google-Grenze
-        // pro Aufruf ("Too many text segments") trotzdem reißen.
-        $segmentsPerText = array_map([$this, 'SplitProtectedSegments'], $Texts);
+        // SplitProtectedSegments). Bei $IsHtml wird jedes übersetzbare Segment
+        // zusätzlich in einzelne Text-Knoten zerlegt (siehe SplitHtmlIntoTextNodes)
+        // und JEDER Knoten als eigene, unabhängige Übersetzungseinheit verschickt,
+        // statt das gesamte Segment als einen zusammenhängenden HTML-Block zu
+        // übersetzen - Google/DeepL übersetzen im HTML-Modus zwar nur Text
+        // zwischen Tags, können bei mehreren UNMITTELBAR benachbarten Inline-
+        // Elementen (kein Leerraum dazwischen, z.B. "<span>A</span><span>B</span>")
+        // aber Textteile ÜBER die Tag-Grenze hinweg verschieben, wenn die
+        // Zielsprache die Wortstellung anders aufbaut - live gefunden bei einem
+        // Wetter-Widget: "0 % Regen" + "78 % Luftfeuchte" (zwei direkt
+        // benachbarte <span>s) wurden zu "0% " + "chance of rain, 78% humidity,".
+        // Mit eigenständigen Übersetzungseinheiten pro Text-Knoten ist das
+        // strukturell unmöglich - jeder Knoten wird über seine Objektidentität im
+        // DOM zurückgeschrieben, nie über eine Zeichenposition im Gesamttext. Bei
+        // NICHT-HTML-Feldern (Objektnamen, Enum-Beschriftungen, Begrüßung im
+        // Namens-Modus, ...) bleibt jedes Segment unverändert EIN Stück - ein
+        // Objektname mit einem wörtlichen "&"/"<" darf niemals durch einen
+        // HTML-Parser laufen.
+        //
+        // Die Chunk-Grenze von 128 muss auf der flachen Text-Knoten-/Segmentliste
+        // liegen, nicht auf den ursprünglichen Zeilen-Texten, sonst könnte ein
+        // einzelner Text mit mehreren Segmenten/Knoten die Google-Grenze pro
+        // Aufruf ("Too many text segments") trotzdem reißen.
+        $segmentsPerText = [];
+        foreach ($Texts as $text) {
+            $rawSegments = $this->SplitProtectedSegments($text);
+            if (!$IsHtml) {
+                $segmentsPerText[] = $rawSegments;
+                continue;
+            }
+
+            $tokenizedSegments = [];
+            foreach ($rawSegments as $segment) {
+                if ($segment['protected']) {
+                    $tokenizedSegments[] = $segment;
+                    continue;
+                }
+                $split = $this->SplitHtmlIntoTextNodes($segment['text']);
+                $tokenizedSegments[] = [
+                    'protected'  => false,
+                    'nodes'      => $split['nodes'],
+                    'reassemble' => $split['reassemble'],
+                ];
+            }
+            $segmentsPerText[] = $tokenizedSegments;
+        }
 
         $translatable = [];
         foreach ($segmentsPerText as $segments) {
             foreach ($segments as $segment) {
-                if (!$segment['protected']) {
+                if ($segment['protected']) {
+                    continue;
+                }
+                if ($IsHtml) {
+                    foreach ($segment['nodes'] as $node) {
+                        $translatable[] = $node;
+                    }
+                } else {
                     $translatable[] = $segment['text'];
                 }
             }
@@ -3028,12 +3145,108 @@ private const LANGUAGE_FLAGS = [
         foreach ($segmentsPerText as $segments) {
             $rebuilt = '';
             foreach ($segments as $segment) {
-                $rebuilt .= $segment['protected'] ? $segment['text'] : ($translatedFlat[$cursor++] ?? '');
+                if ($segment['protected']) {
+                    $rebuilt .= $segment['text'];
+                    continue;
+                }
+                if ($IsHtml) {
+                    $count = count($segment['nodes']);
+                    $translatedNodes = array_slice($translatedFlat, $cursor, $count);
+                    $cursor += $count;
+                    $rebuilt .= ($segment['reassemble'])($translatedNodes);
+                } else {
+                    $rebuilt .= $translatedFlat[$cursor++] ?? '';
+                }
             }
             $result[] = $rebuilt;
         }
 
         return $result;
+    }
+
+    // Zerlegt ein HTML-Fragment (kein vollständiges Dokument - wird intern in
+    // einen Wurzelknoten eingebettet) in seine einzelnen Text-Knoten. Liefert
+    // 'nodes' (die Rohtexte, in Dokumentreihenfolge) und 'reassemble' (eine
+    // Closure, die dieselbe Anzahl - ggf. übersetzter - Texte wieder an exakt
+    // denselben Knoten im DOM einsetzt und das Fragment neu serialisiert). Über
+    // Objektidentität statt Zeichenposition adressiert, siehe
+    // TranslateBatchUncached für den Grund. Bewusst konservativ: bei einem
+    // Parse-Fehler (z.B. kein gültiges HTML) wird der Text unangetastet als
+    // EIN einzelner "Knoten" behandelt (Fallback auf das alte Verhalten), nie
+    // ein Fataler Fehler.
+    //
+    // Bekannte, harmlose Nebenwirkung: DOMDocument normalisiert beim erneuten
+    // Serialisieren einzelne Schreibweisen (z.B. "&nbsp;" wird zum
+    // gleichbedeutenden Zeichen U+00A0, "<img ... />" verliert den
+    // schließenden Schrägstrich zu "<img ...>") - beides stellt sich im
+    // Browser identisch dar, verändert also nichts Sichtbares.
+    private function SplitHtmlIntoTextNodes(string $Html): array
+    {
+        $fallback = ['nodes' => [$Html], 'reassemble' => function (array $translated) use ($Html) {
+            return $translated[0] ?? $Html;
+        }];
+
+        if (trim($Html) === '' || !class_exists('DOMDocument')) {
+            return $fallback;
+        }
+
+        $doc = new DOMDocument('1.0', 'UTF-8');
+        $prevErrors = libxml_use_internal_errors(true);
+        $wrapped = '<?xml encoding="UTF-8"><ipssl-root>' . $Html . '</ipssl-root>';
+        $loaded = @$doc->loadHTML($wrapped, LIBXML_NOERROR | LIBXML_NOWARNING | LIBXML_HTML_NODEFDTD | LIBXML_HTML_NOIMPLIED);
+        libxml_clear_errors();
+        libxml_use_internal_errors($prevErrors);
+
+        if (!$loaded) {
+            return $fallback;
+        }
+
+        $root = $doc->getElementsByTagName('ipssl-root')->item(0);
+        if ($root === null) {
+            return $fallback;
+        }
+
+        $textNodes = [];
+        $walk = function (DOMNode $node) use (&$walk, &$textNodes) {
+            foreach (iterator_to_array($node->childNodes) as $child) {
+                if ($child instanceof DOMText) {
+                    if (trim($child->nodeValue) !== '') {
+                        $textNodes[] = $child;
+                    }
+                } elseif ($child instanceof DOMElement) {
+                    $walk($child);
+                }
+            }
+        };
+        $walk($root);
+
+        if ($textNodes === []) {
+            return $fallback;
+        }
+
+        $originalTexts = array_map(function (DOMText $n) {
+            return $n->nodeValue;
+        }, $textNodes);
+
+        $reassemble = function (array $translatedTexts) use ($doc, $root, $textNodes, $Html) {
+            foreach ($textNodes as $i => $node) {
+                $node->nodeValue = $translatedTexts[$i] ?? $node->nodeValue;
+            }
+            $inner = '';
+            foreach (iterator_to_array($root->childNodes) as $child) {
+                $serialized = $doc->saveHTML($child);
+                if ($serialized === false) {
+                    // Serialisierung ausnahmsweise fehlgeschlagen - lieber der
+                    // unveränderte Originaltext als ein kaputtes Fragment.
+                    return $Html;
+                }
+                $inner .= $serialized;
+            }
+
+            return $inner;
+        };
+
+        return ['nodes' => $originalTexts, 'reassemble' => $reassemble];
     }
 
     // Probiert die Anbieter-Kette der Reihe nach durch (siehe GetProviderChain) -
