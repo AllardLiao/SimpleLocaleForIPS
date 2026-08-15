@@ -2966,6 +2966,27 @@ private const LANGUAGE_FLAGS = [
     // weitem.
     private const TRANSLATION_CACHE_MAX_ENTRIES = 500;
 
+    // Teil des Cache-Schluessels (siehe BuildTranslationCacheKey) - wird
+    // erhoeht, wann immer sich die eigentliche Uebersetzungs-LOGIK aendert
+    // (nicht nur Anbieter/Sprachlisten), damit ein unter einer AELTEREN
+    // Version berechnetes (und ggf. fehlerhaftes) Cache-Ergebnis nie unter
+    // der neuen Logik weiterverwendet wird - es wird schlicht nicht mehr
+    // gefunden (Cache-Miss) und frisch neu uebersetzt. Aktueller Stand (2):
+    // die HTML-Text-Knoten-Zerlegung (siehe SplitHtmlIntoTextNodes) aenderte,
+    // WIE ein isHtml=true-Text tatsaechlich uebersetzt wird. Der Cache
+    // arbeitet auf der Ebene von TranslateBatch() (VOR der Zerlegung in
+    // einzelne Knoten), speichert also weiterhin das REASSEMBLIERTE
+    // Gesamtergebnis unter einem Hash des vollstaendigen Rohtexts - ohne
+    // diese Versionierung waeren vor diesem Fix gecachte (fehlerhaft
+    // zusammengewuerfelte) HTML-Uebersetzungen unter der neuen Logik
+    // weiterhin ausgeliefert worden, sobald derselbe Rohtext erneut auftrat
+    // (z.B. ein Wetter-Widget mit zwischen zwei Aktualisierungen
+    // unveraendertem Inhalt) - live beobachtet als scheinbar "zufaellig"
+    // auftretende Korruption (mal korrekt frisch uebersetzt, mal wieder der
+    // alte fehlerhafte Cache-Treffer, je nachdem ob genau dieser Rohtext
+    // schon einmal VOR diesem Fix uebersetzt und gecacht worden war).
+    private const TRANSLATION_CACHE_SCHEMA_VERSION = 2;
+
     // Uebersetzt (Quelle, Ziel, Text) IMMER zuerst gegen den lokalen Cache
     // (attributeTranslationCache, siehe GetCachedTranslation/StoreCachedTranslation)
     // - identischer Text + identisches Sprachpaar liefert deterministisch dasselbe
@@ -3046,7 +3067,7 @@ private const LANGUAGE_FLAGS = [
     // gecachte statt einer falsch berechneten Übersetzung - kein Sicherheitsrisiko.
     private function BuildTranslationCacheKey(string $SourceLanguage, string $TargetLanguage, string $SourceText): string
     {
-        return $SourceLanguage . '|' . $TargetLanguage . '|' . hash('sha256', $SourceText);
+        return self::TRANSLATION_CACHE_SCHEMA_VERSION . '|' . $SourceLanguage . '|' . $TargetLanguage . '|' . hash('sha256', $SourceText);
     }
 
     // Der eigentliche, cache-lose Uebersetzungsvorgang (frueherer Inhalt von
