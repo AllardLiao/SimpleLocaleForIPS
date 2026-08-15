@@ -75,7 +75,14 @@ Beschreibung des Moduls.
   zweiten Auftreten die bereits vorhandene Übersetzung wiederverwendet,
   **ganz ohne erneuten API-Aufruf**. Der Cache ist auf die letzten 500
   Einträge begrenzt (älteste zuerst raus) und wird auch von normalen
-  Rescans mitgenutzt. Zeigt ein Text weiterhin hartnäckig eine
+  Rescans mitgenutzt. Besonders spürbar bei einer per VM_UPDATE verfolgten
+  Kachel wie einem Wetter-Widget: bei ca. 20 einzelnen Textbausteinen
+  (Wochentage, Vorhersage, Sonnenauf-/-untergang, aktuelle Messwerte) und
+  einem Update alle 10 Minuten wären das ohne Cache über 2.700
+  Übersetzungsaufrufe pro Tag und Zielsprache - mit Cache nur noch die
+  paar Werte, die sich tatsächlich bei jedem Update ändern (z. B.
+  Temperatur, Wetterlage, Luftfeuchte), grob geschätzt 70-75 % weniger.
+  Zeigt ein Text weiterhin hartnäckig eine
   veraltete/falsche Übersetzung, hilft der Button "Übersetzungs-Cache
   leeren" im Formular - er löscht nur diesen internen Zwischenspeicher,
   nicht die bereits in Objektnamen/Eigenen Texten/Beschriftungen
