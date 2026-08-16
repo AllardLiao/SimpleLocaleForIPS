@@ -279,6 +279,20 @@ trait SimpleLocaleConstants
     private const fieldNamePrefix = 'Name_';
     private const fieldTextPrefix = 'Text_';
 
+    // Quellsprache PRO ZEILE (nicht mehr nur instanzweit über propertySourceLanguage,
+    // die jetzt "Scan-Sprache" heißt und nur noch den Startwert fürs Erfassen NEUER
+    // Zeilen liefert) - macht gemischtsprachige Installationen sicher möglich (z.B.
+    // ein Fremdmodul, das Objektnamen/-werte auf Englisch schreibt, während der Rest
+    // der Visualisierung Deutsch ist) und schützt bestehende Zeilen davor, bei einer
+    // späteren Änderung der Scan-Sprache falsch neu interpretiert zu werden. Editierbar
+    // im Formular (siehe BuildListColumns). fieldTranslatedAgainstSourceLanguage ist
+    // NICHT im Formular sichtbar - reines internes Bookkeeping, welche Sprache beim
+    // letzten Mal tatsächlich für die Übersetzung dieser Zeile verwendet wurde, um eine
+    // Änderung von fieldRowSourceLanguage zu erkennen (siehe
+    // ReconcileRowSourceLanguageChanges).
+    private const fieldRowSourceLanguage = 'Quellsprache';
+    private const fieldTranslatedAgainstSourceLanguage = 'UebersetztGegen';
+
     // Timer: Präfix als Salt auf den Namen, falls im jeweiligen IPS-System
     // bereits ein Timer/Objekt mit demselben Basisnamen existieren sollte.
     private const timerPrefix = 'IPSSL_TIMER_';

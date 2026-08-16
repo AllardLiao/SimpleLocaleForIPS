@@ -108,15 +108,15 @@ Beschreibung des Moduls.
   Zielgruppen benötigt, braucht es mehrere Instanzen mit jeweils eigenem
   Root der Visualisierung/eigener Kachel.
 * **Dynamisch aktualisierte Inhalte werden automatisch nachübersetzt -
-  vorausgesetzt, sie werden in der konfigurierten Basissprache geschrieben.**
+  vorausgesetzt, sie werden in der konfigurierten Scan-Sprache geschrieben.**
   Schreibt ein *anderes* Modul oder Skript den Wert einer verfolgten
   String-Variable neu (z. B. ein Wetter-Skript bei seinem nächsten
   Aktualisierungsintervall), übersetzt Simple Locale live nach (siehe
   [Abschnitt 1](#1-funktionsumfang)) - dabei wird angenommen, dass der neue
-  Wert in der Basissprache verfasst ist, genau wie beim ursprünglichen Scan.
+  Wert in der Scan-Sprache verfasst ist, genau wie beim ursprünglichen Scan.
   Schreibt das fremde Modul tatsächlich in einer anderen Sprache, fällt die
   automatische Übersetzung entsprechend falsch aus (wie bei jeder
-  automatischen Übersetzung, siehe unten) - Basissprache in der
+  automatischen Übersetzung, siehe unten) - Scan-Sprache in der
   Modul-Konfiguration also passend zur tatsächlich verwendeten Sprache des
   überwachten Moduls wählen. Beobachtet werden ausschließlich die Variablen
   unter "Eigene Texte" - Objektnamen ändern sich durch Fremdzugriffe
@@ -127,8 +127,8 @@ Beschreibung des Moduls.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
-  kurzen Basissprachen-Bereinigung ohne feste Quellsprache "Haus" fälschlich
-  als Hmong und lieferte "Trinken" - deshalb wird die Quellsprache inzwischen
+  kurzen Übersetzung ohne fest vorgegebene Scan-Sprache "Haus" fälschlich
+  als Hmong und lieferte "Trinken" - deshalb wird die Scan-Sprache inzwischen
   immer fest vorgegeben, siehe [Abschnitt 7](#7-visualisierung).) **Alle
   Übersetzungen in "Objektnamen" und "Eigene Texte" daher nach dem ersten
   Rescan einmal durchsehen** und falsch übersetzte Zellen manuell
@@ -194,7 +194,7 @@ Beschreibung des Moduls.
   Liste "Beschriftungen" wirkt dann automatisch auf alle Variablen, die
   dieses Profil/Template nutzen (jede bekommt beim Sprachwechsel trotzdem
   ihren eigenen, unabhängigen Fork geschrieben - nur die Übersetzung dahinter
-  ist geteilt). Beim Zurückwechseln auf die Basissprache wird der Fork **pro
+  ist geteilt). Beim Zurückwechseln auf die Scan-Sprache wird der Fork **pro
   Variable** wieder vollständig aufgehoben (der exakte Zustand vor dem ersten
   Fork wird dafür je Variable gesichert), sie liest ihre Beschriftungen dann
   wieder live vom ursprünglichen, nie veränderten Profil/Template.
@@ -292,13 +292,38 @@ Felder auf einmal überfrachten:
 Name                            | Beschreibung
 -------------------------------- | ------------------
 Kachel-Visualisierung           | Instanz der eingebauten Kachel-Visualisierung (WebFront-Kernmodul, nicht Teil von Simple Locale). **Pflichtfeld** - ihre eigene "Startkategorie" wird automatisch als Root der Visualisierung übernommen (Kategorie im Objektbaum, deren Inhalt - Namen + Werte von String-Variablen - übersetzt wird; sollte nur die Sichtbereich-Kacheln enthalten, nicht die Admin-Oberfläche) und sie liefert zusätzlich die Automations/Favoriten-Übersetzung, siehe eigenen Absatz unten. Ohne Auswahl (oder ohne gültige Startkategorie) bleibt die Instanz im Status "Root der Visualisierung fehlt".
-Basissprache                    | Sprache, in der die Objektnamen/-werte ursprünglich gepflegt sind. Dient Google Translate als feste Quellsprache für alle Zielsprachen-Übersetzungen; die Basissprache selbst hat keine eigene Übersetzungsspalte, siehe [Abschnitt 7](#7-visualisierung).
+Scan-Sprache                    | Sprache, in der die Objektnamen/-werte ursprünglich gepflegt sind. Dient Google Translate als feste Quellsprache für alle Zielsprachen-Übersetzungen; die Scan-Sprache selbst hat keine eigene Übersetzungsspalte, siehe [Abschnitt 7](#7-visualisierung).
 Aktuell aktive Sprache          | Welche Sprache gerade angezeigt wird - normalerweise über die Kachel vom Anwender selbst gesteuert (siehe Abschnitt 7), lässt sich hier aber auch manuell umschalten (inkl. aller sonst nur bei einem Kachel-Wechsel ausgelösten Umbenennungen/Wertänderungen - identisches Verhalten zur Kachel selbst). **Wichtig für die eigene Weiterentwicklung der Visualisierung, siehe Warnung unten.**
 Weltkugel-Symbol in der Kachel anzeigen | Blendet das 🌐-Symbol links neben dem Dropdown aus, falls nicht gewünscht (z. B. bei eigenem Kachel-Design). Standardmäßig an.
 Info-Symbol in der Kachel anzeigen | Blendet das ⓘ-Symbol (Erklärung der Einschränkungen, siehe Abschnitt 2) aus. Standardmäßig an.
 Eigene Sprachauswahl-Kachel verwenden | Unterdrückt die eingebaute Dropdown-Kachel zugunsten einer selbstgebauten (siehe Abschnitt 7). **Pro-Feature** (`custom_tile`, siehe [Abschnitt 8](#8-lizenz-und-testversion)) - ohne dieses Feature bleibt das Feld ausgegraut und die eingebaute Kachel aktiv.
 Übersetzungsanbieter (Panel)    | Siehe eigenen Abschnitt unten ("Übersetzungsanbieter: Google/DeepL/kostenfrei") - funktioniert ab Werk ohne jede Eingabe.
 Automatischer Rescan (Minuten)  | Intervall für automatisches Neu-Einlesen der Visualisierung, 0 = nur manuell über den Button "Visualisierung neu einlesen" (siehe unten). **Pro-Feature** (`auto_rescan`, siehe [Abschnitt 8](#8-lizenz-und-testversion)) - ohne dieses Feature bleibt das Feld ausgegraut und der Timer aus, der manuelle Rescan-Button bleibt aber in jeder Edition nutzbar.
+
+**Quellsprache: pro Zeile individuell änderbar**
+
+Die "Scan-Sprache" oben ist nur die VOREINSTELLUNG, die eine neu gefundene Zeile
+beim ersten Scan erhält - jede Zeile in "Objektnamen", "Eigene Texte",
+"Beschriftungen", "Automations" und "Begrüßung" trägt zusätzlich eine eigene,
+editierbare Spalte **"Quellsprache"** (Pro-Feature `edit_translations`, ohne
+dieses Feature nur informativ sichtbar). Das macht auch gemischtsprachige
+Installationen sauber abbildbar - z. B. ein Fremdmodul, das seine eigenen
+Objektnamen/-werte dauerhaft auf Englisch liefert, während der Rest der
+Installation auf Deutsch gescannt wird: die betroffenen Zeilen bekommen einfach
+"en" als eigene Quellsprache, unabhängig von der instanzweiten Scan-Sprache.
+
+Wichtiger noch: das beantwortet die Frage "was passiert, wenn sich die
+Scan-Sprache zwischen zwei Scans ändert?" Vor dieser Funktion (Build 51 und
+früher) galt dafür ausschließlich die Warnung im nächsten Abschnitt (neue
+Objekte immer nur bei aktiver Scan-Sprache anlegen) - eine bereits bestehende,
+korrekt übersetzte Zeile ließ sich nicht sauber auf eine andere Quellsprache
+umstellen. Jetzt genügt es, die "Quellsprache" EINER Zeile im Formular zu
+ändern und auf "Übernehmen" zu klicken: alle Übersetzungsspalten dieser Zeile
+werden automatisch geleert und **sofort** neu gegen die neue Quellsprache
+übersetzt (kein Warten auf den nächsten Rescan/Sprachwechsel nötig) - ist die
+gerade aktive Sprache betroffen, wird der neue Wert außerdem direkt live in
+die Kachel geschrieben. Rohtext, Objekt-/Wert-Objekt-ID und Pfad bleiben dabei
+unangetastet, nur die Übersetzungen selbst und die Quellsprache ändern sich.
 
 **Übersetzungsanbieter: Google/DeepL/kostenfrei**
 
@@ -327,37 +352,46 @@ Begrüßung                       | Übersetzt den Begrüßungstext der Kachel-V
 Inhaltstyp        | Neue/verschobene Objekte | Inhaltliche Änderungen
 ------------------ | ------------------------- | ------------------------
 Objektnamen        | Nur per Rescan (manuell/Timer) erkannt. | Ändert sich ein Name selten spontan; falls doch, Zelle im Formular leeren + Rescan.
-Eigene Texte (Werte) | Nur per Rescan erkannt. | Automatisch (siehe Abschnitt 1, `VM_UPDATE`) - **kein** Rescan nötig, solange die Basissprache stimmt.
+Eigene Texte (Werte) | Nur per Rescan erkannt. | Automatisch (siehe Abschnitt 1, `VM_UPDATE`) - **kein** Rescan nötig, solange die Scan-Sprache stimmt.
 Begrüßung           | Nur per Rescan erkannt (auch ein Moduswechsel zwischen "Automatic"/"Static"/"Variable"). | Modus "Variable": automatisch, genau wie Eigene Texte (Werte). Modi "Automatic"/"Static" (freier Text im Feld "Name"): nur per Rescan.
 Beschriftungen      | Nur per Rescan erkannt. | **Kein** automatisches Erkennen von Änderungen am zugrunde liegenden Profil/Template - Symcon liefert dafür keine Update-Benachrichtigung. Ändert ein anderes Modul/der Admin die Beschriftungen eines Profils, das eine bereits geforkte Variable nutzt, wird das erst nach manuellem Löschen der betroffenen Original-Import-Zelle + Rescan übernommen.
 
 > **Wichtig beim Weiterentwickeln der Visualisierung: immer mit "Aktuell aktive
-> Sprache" = Basissprache (bzw. "Original") arbeiten, solange neue Objekte
+> Sprache" = Scan-Sprache (bzw. "Original") arbeiten, solange neue Objekte
 > hinzugefügt werden.** Ein Rescan übernimmt für ein NEUES Objekt immer dessen
 > gerade live vorhandenen Namen als "Original-Import" - er kann nicht wissen,
-> ob dieser Name vom Admin frisch in der Basissprache getippt wurde, oder ob
+> ob dieser Name vom Admin frisch in der Scan-Sprache getippt wurde, oder ob
 > er nur deshalb so aussieht, weil zuvor auf eine andere aktive Sprache
 > umgeschaltet war (jeder Sprachwechsel - auch der manuelle über das
 > Auswahlfeld oben - benennt alle bereits erfassten Objekte tatsächlich live
 > um, siehe `ApplyLanguage()`). Wird also ein neues Objekt angelegt, während
 > z. B. gerade Englisch aktiv ist, hält der Admin dessen Namen zwangsläufig
-> auf Englisch - der nächste Rescan verbucht diesen Namen aber als Basissprache
+> auf Englisch - der nächste Rescan verbucht diesen Namen aber als Scan-Sprache
 > und übersetzt ihn entsprechend falsch (u. a. auch zurück ins vermeintliche
 > Original). Vor dem Anlegen neuer Objekte also immer erst über "Aktuell
-> aktive Sprache" zurück auf die Basissprache wechseln (oder gleich durchgehend
+> aktive Sprache" zurück auf die Scan-Sprache wechseln (oder gleich durchgehend
 > in dieser Ansicht entwickeln) - bereits erfasste, bestehende Objekte sind
 > davon nicht betroffen (deren Original-Import bleibt beim ersten Fund
 > eingefroren, siehe oben), das betrifft ausschließlich neu hinzukommende.
 >
 > Für die **Begrüßung** (Modus "Variable") ist dasselbe Risiko inzwischen
 > abgesichert: ein Rescan aktualisiert deren Original-Import nur noch dann,
-> wenn dabei zuverlässig die Basissprache aktiv ist - ist gerade eine
+> wenn dabei zuverlässig die Scan-Sprache aktiv ist - ist gerade eine
 > Zielsprache aktiv, bleibt die Zeile unverändert stehen, statt die gerade
 > live angezeigte Übersetzung fälschlich als neuen Rohtext zu übernehmen
 > (auch für die bereits bekannte Zeile, die sonst nicht betroffen wäre). Der
 > ohnehin bereits sichere Live-Pfad (`VM_UPDATE`, siehe oben) holt die
 > Aktualisierung in diesem Fall automatisch nach, sobald die überwachte
 > Variable das nächste Mal tatsächlich extern geschrieben wird.
+>
+> Diese ganze Warnung betrifft ausschließlich NEU hinzukommende Objekte - für
+> bereits erfasste, bestehende Zeilen lässt sich die Quellsprache seit der
+> pro-Zeile editierbaren "Quellsprache"-Spalte (siehe oben) jederzeit sauber
+> nachträglich ändern, ohne dieses Risiko: eine Änderung der instanzweiten
+> Scan-Sprache selbst wirkt sich auf bereits bekannte Zeilen gar nicht erst
+> aus (deren eigene Quellsprache bleibt eingefroren, siehe oben) - erst eine
+> gezielte, manuelle Änderung der "Quellsprache"-Zelle einer konkreten Zeile
+> löst die automatische Neuübersetzung aus.
 
 **Kachel-Visualisierung: Root der Visualisierung, Automations und Favoriten**
 
@@ -460,17 +494,17 @@ aktuell aktive Sprache wird als Instanz-Property gespeichert (kein
 Symcon-Variablenprofil - das wäre global über alle Instanzen der Installation
 hinweg geteilt und würde sich bei mehreren Instanzen gegenseitig überschreiben).
 
-Das Dropdown bietet immer folgende Sprachen zur Auswahl: die Basissprache und
+Das Dropdown bietet immer folgende Sprachen zur Auswahl: die Scan-Sprache und
 alle konfigurierten Zielsprachen (Flagge, live übersetzter Name, Google-Code,
 z. B. "🇬🇧 English - en"). Intern gibt es zusätzlich die Pseudo-Sprache
 "Original" (liefert den rohen, unangetasteten Text, exakt so wie er im
 Objektbaum vorgefunden wurde, Tippfehler inklusive) - im Dropdown erscheint
 dafür aber **kein separater Eintrag** "Original (unbearbeitet)": Google Cloud
 Translate lehnt eine Übersetzung von einer Sprache in sich selbst ohnehin ab
-(HTTP 400 "Bad language pair"), es gibt für die Basissprache also gar keine
+(HTTP 400 "Bad language pair"), es gibt für die Scan-Sprache also gar keine
 eigene, separat übersetzte Spalte - ihr Inhalt ist identisch mit dem
-Rohtext. Der Basissprache-Eintrag im Dropdown liefert deshalb technisch
-"Original", zeigt aber ganz normal die Basissprache selbst an (z. B.
+Rohtext. Der Scan-Sprache-Eintrag im Dropdown liefert deshalb technisch
+"Original", zeigt aber ganz normal die Scan-Sprache selbst an (z. B.
 "🇩🇪 Deutsch - de") statt einer eigenen "Original"-Beschriftung.
 
 Die Einträge sind alphabetisch nach dem angezeigten Namen sortiert (nicht
@@ -558,7 +592,7 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
      gebunden (kein `<select>` nötig - jedes klickbare Element reicht).
      `<Code>` ist entweder ein echter, konfigurierter Zielsprachcode (z. B.
      `en`, `fr`) oder die interne Pseudo-Sprache `ORIGINAL_IMPORT`
-     (unbearbeiteter Rohtext in der Basissprache).
+     (unbearbeiteter Rohtext in der Scan-Sprache).
 
      **Bewusst einfach gehalten, keine Sprachenliste/Wiederholungs-Vorlage:**
      dieses Feld wird 1:1 verwendet, ohne Kenntnis der tatsächlich
@@ -703,7 +737,7 @@ Standard-Tier) schaltet zusätzliche Fähigkeiten frei - aktuell:
   müsste.
 - `unlimited_language_switch`: hebt ein sonst geltendes Limit von einem
   Sprachwechsel pro rollierendem 24h-Fenster auf. Ein wiederholter Wechsel
-  zur bereits aktiven Sprache oder zurück zur Basissprache/Original zählt nie
+  zur bereits aktiven Sprache oder zurück zur Scan-Sprache/Original zählt nie
   als Wechsel und ist immer erlaubt, auch ohne dieses Flag - nur ein
   tatsächlicher Wechsel zu einer neuen Sprache innerhalb von 24h nach dem
   letzten wird per Hinweis-Popup verweigert.
@@ -838,12 +872,12 @@ ausliefert (`GetVisualizationTile()`) statt Text in einer von Simple Locale
 beobachtbaren Variable zu halten, siehe
 [Abschnitt 10](#10-integration-für-modulentwickler). `$Quellsprache` ist
 optional - weggelassen (oder `""`), greift die in dieser Instanz
-konfigurierte Basissprache; nur bei abweichender Fremdtext-Sprache explizit
+konfigurierte Scan-Sprache; nur bei abweichender Fremdtext-Sprache explizit
 angeben. Leerer Text, Quellsprache = aktive Sprache, oder eine wegen
 abgelaufener Testphase gerade nicht kostenfreie Sprache liefern den Text
 unverändert zurück - nie ein Fehler.
 
-Beispiel (Basissprache dieser Instanz, z. B. Deutsch):
+Beispiel (Scan-Sprache dieser Instanz, z. B. Deutsch):
 `IPSSL_TranslateExternalText(12345, 'Guten Tag');`
 
 Beispiel (abweichende, explizit angegebene Quellsprache):
