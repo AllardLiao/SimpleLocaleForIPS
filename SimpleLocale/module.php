@@ -2045,7 +2045,15 @@ private const LANGUAGE_FLAGS = [
         $existingGreeting = $this->DecodeRows(self::propertyObjectGreeting);
         $scannedGreeting = $this->ScanGreetingText();
         $this->SendDebug('IPSSL_Debug', 'ScanRootTree: existingGreeting=' . json_encode($existingGreeting) . ' scannedGreeting=' . json_encode($scannedGreeting), 0);
-        $objectGreeting = $this->MergeGreetingRows($existingGreeting, $scannedGreeting);
+        // Nur auffrischen, wenn gerade zuverlaessig die Basissprache aktiv ist -
+        // siehe MergeGreetingRows fuer den Grund (sonst wuerde die gerade live
+        // angezeigte UEBERSETZUNG faelschlich als frischer deutscher Rohtext
+        // uebernommen, auch fuer die bereits bekannte Zeile).
+        $currentLanguageForGreetingMerge = $this->ReadPropertyString(self::propertyCurrentLanguage);
+        $sourceLanguageForGreetingMerge = $this->ReadPropertyString(self::propertySourceLanguage);
+        $isSourceLanguageActiveForGreeting = $currentLanguageForGreetingMerge === $sourceLanguageForGreetingMerge
+            || $currentLanguageForGreetingMerge === self::langOriginalImport;
+        $objectGreeting = $this->MergeGreetingRows($existingGreeting, $scannedGreeting, $isSourceLanguageActiveForGreeting);
         $this->SendDebug('IPSSL_Debug', 'ScanRootTree: mergedGreeting=' . json_encode($objectGreeting), 0);
 
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
@@ -2579,7 +2587,7 @@ private const LANGUAGE_FLAGS = [
     // automatische Neu-Übersetzung bei geändertem Quelltext). Liefert $ExistingRows
     // unverändert zurück, wenn "Show Greeting" gerade "None" ist (kein Datenverlust
     // bei vorübergehendem Moduswechsel).
-    private function MergeGreetingRows(array $ExistingRows, array $ScannedRows): array
+    private function MergeGreetingRows(array $ExistingRows, array $ScannedRows, bool $IsSourceLanguageActive): array
     {
         if ($ScannedRows === []) {
             return $ExistingRows;
@@ -2605,15 +2613,28 @@ private const LANGUAGE_FLAGS = [
         // Zelle ausliest (siehe ResolveRowValue). Wenn sich der Rohtext seit dem
         // letzten Scan geaendert hat, werden die Sprachspalten deshalb jetzt mit
         // geleert, genau wie beim manuellen Leeren einer Zelle vor einem Rescan.
-        if ($row[self::langOriginalImport] !== $newRawText) {
+        //
+        // NUR wenn dabei zuverlaessig die Basissprache aktiv ist ($IsSourceLanguageActive,
+        // siehe Aufrufer in ScanRootTree): ist gerade eine ANDERE (Ziel-)Sprache
+        // aktiv, zeigt die verfolgte Variable/das Feld "Name" der Kachel-Visu
+        // gerade eine von ApplyLanguage() live hineingeschriebene UEBERSETZUNG,
+        // keinen deutschen Rohtext - live gemeldeter Bug (Regression durch die
+        // obige Aenderung): die Uebersetzung selbst wurde dabei faelschlich zum
+        // neuen "Original-Import", sogar fuer die bereits bekannte Zeile (anders
+        // als bei "Eigene Texte", wo MergeRows bekannte Zeilen grundsaetzlich nie
+        // anfasst). Ist es unsicher, bleibt die Zeile deshalb komplett
+        // unveraendert stehen - der naechste Rescan bei aktiver Basissprache oder
+        // der ohnehin bereits sichere Live-Pfad (ApplyTrackedVariableUpdate,
+        // erkennt eigene Schreibvorgaenge zuverlaessig ueber
+        // attributeLastSelfWrittenValues) holt die Aktualisierung nach.
+        if ($IsSourceLanguageActive && $row[self::langOriginalImport] !== $newRawText) {
             foreach (array_keys($row) as $field) {
                 if (!in_array($field, [self::langOriginalImport, 'ValueObjectID'], true)) {
                     $row[$field] = '';
                 }
             }
+            $row[self::langOriginalImport] = $newRawText;
         }
-
-        $row[self::langOriginalImport] = $newRawText;
 
         if (isset($ScannedRows[0]['ValueObjectID'])) {
             $row['ValueObjectID'] = $ScannedRows[0]['ValueObjectID'];

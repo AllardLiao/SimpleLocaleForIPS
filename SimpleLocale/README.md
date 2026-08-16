@@ -348,6 +348,16 @@ Beschriftungen      | Nur per Rescan erkannt. | **Kein** automatisches Erkennen 
 > in dieser Ansicht entwickeln) - bereits erfasste, bestehende Objekte sind
 > davon nicht betroffen (deren Original-Import bleibt beim ersten Fund
 > eingefroren, siehe oben), das betrifft ausschließlich neu hinzukommende.
+>
+> Für die **Begrüßung** (Modus "Variable") ist dasselbe Risiko inzwischen
+> abgesichert: ein Rescan aktualisiert deren Original-Import nur noch dann,
+> wenn dabei zuverlässig die Basissprache aktiv ist - ist gerade eine
+> Zielsprache aktiv, bleibt die Zeile unverändert stehen, statt die gerade
+> live angezeigte Übersetzung fälschlich als neuen Rohtext zu übernehmen
+> (auch für die bereits bekannte Zeile, die sonst nicht betroffen wäre). Der
+> ohnehin bereits sichere Live-Pfad (`VM_UPDATE`, siehe oben) holt die
+> Aktualisierung in diesem Fall automatisch nach, sobald die überwachte
+> Variable das nächste Mal tatsächlich extern geschrieben wird.
 
 **Kachel-Visualisierung: Root der Visualisierung, Automations und Favoriten**
 
