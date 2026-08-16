@@ -369,8 +369,16 @@ private const LANGUAGE_FLAGS = [
         // das Attribut wird dabei VOR diesem Reentry gesetzt (siehe dort), sodass
         // der Vergleich beim erneuten Durchlauf bereits uebereinstimmt und keine
         // Endlosschleife entsteht.
+        // Quellsprachen-Wechsel EINZELNER Zeilen (siehe fieldRowSourceLanguage) VOR dem
+        // Sprachwechsel-Check unten reconcilen, damit ApplyLanguage() (falls es gleich
+        // sowieso läuft) bereits die frisch neu übersetzten Spalten sieht - und damit
+        // ein reiner Quellsprachen-Wechsel OHNE gleichzeitigen Sprachwechsel selbst
+        // einen ApplyLanguage()-Lauf erzwingt (sonst bliebe die Live-Anzeige bis zum
+        // nächsten Rescan/Sprachwechsel auf der alten Übersetzung stehen).
+        $rowSourceLanguagesReconciled = $this->ReconcileRowSourceLanguageChanges();
+
         $currentLanguage = $this->ReadPropertyString(self::propertyCurrentLanguage);
-        if ($currentLanguage !== $this->ReadAttributeString(self::attributeLastAppliedLanguage)) {
+        if ($rowSourceLanguagesReconciled || $currentLanguage !== $this->ReadAttributeString(self::attributeLastAppliedLanguage)) {
             $this->ApplyLanguage($currentLanguage);
         }
     }
@@ -1418,7 +1426,7 @@ private const LANGUAGE_FLAGS = [
             // @ wie bei WriteTrackedValueString: gesperrte Objekte lehnen auch das
             // Umbenennen ab (live gefunden), soll aber nicht die ganze
             // Sprachumschaltung abbrechen.
-            @IPS_SetName($objectID, $this->ResolveRowValue($row, $Language, $Language, $sourceLanguage, self::langOriginalImport));
+            @IPS_SetName($objectID, $this->ResolveRowValue($row, $Language, $Language, $this->GetRowSourceLanguage($row, $sourceLanguage), self::langOriginalImport));
         }
 
         // Schutz gegen zwei Zeilen, die (z.B. durch zwei unterschiedliche
@@ -1430,13 +1438,14 @@ private const LANGUAGE_FLAGS = [
         $writtenValueObjectIDs = [];
 
         foreach ($this->DecodeRows(self::propertyObjectTexts) as $row) {
+            $rowSourceLanguage = $this->GetRowSourceLanguage($row, $sourceLanguage);
             $objectID = (int) ($row['ObjectID'] ?? 0);
             if ($objectID !== 0 && @IPS_ObjectExists($objectID)) {
                 @IPS_SetName($objectID, $this->ResolveRowValue(
                     $row,
                     $Language,
                     self::fieldNamePrefix . $Language,
-                    $sourceLanguage,
+                    $rowSourceLanguage,
                     self::fieldOriginalImportName
                 ));
             }
@@ -1453,7 +1462,7 @@ private const LANGUAGE_FLAGS = [
                 $row,
                 $Language,
                 self::fieldTextPrefix . $Language,
-                $sourceLanguage,
+                $rowSourceLanguage,
                 self::langOriginalImportText
             ));
         }
@@ -1530,7 +1539,7 @@ private const LANGUAGE_FLAGS = [
             if ($row === null) {
                 continue;
             }
-            $resolvedName = $this->ResolveRowValue($row, $Language, $Language, $SourceLanguage, self::langOriginalImport);
+            $resolvedName = $this->ResolveRowValue($row, $Language, $Language, $this->GetRowSourceLanguage($row, $SourceLanguage), self::langOriginalImport);
             if (($entry['Name'] ?? null) !== $resolvedName) {
                 $entry['Name'] = $resolvedName;
                 $changed = true;
@@ -1564,7 +1573,7 @@ private const LANGUAGE_FLAGS = [
             return;
         }
 
-        $resolvedName = $this->ResolveRowValue($rows[0], $Language, $Language, $SourceLanguage, self::langOriginalImport);
+        $resolvedName = $this->ResolveRowValue($rows[0], $Language, $Language, $this->GetRowSourceLanguage($rows[0], $SourceLanguage), self::langOriginalImport);
 
         $valueObjectID = (int) ($rows[0]['ValueObjectID'] ?? 0);
         if ($valueObjectID !== 0 && @IPS_ObjectExists($valueObjectID)) {
@@ -1677,10 +1686,12 @@ private const LANGUAGE_FLAGS = [
 
         // Für jede getrackte Zeile dieser Variable die aktuell für $Language
         // aufzulösende Übersetzung bestimmen (Pfad => Text) - nur tatsächlich befüllte
-        // Übersetzungen ersetzen etwas, alles andere bleibt so, wie es live ist.
+        // Übersetzungen ersetzen etwas, alles andere bleibt so, wie es live ist. Jede
+        // Zeile nutzt ihre EIGENE Quellsprache (siehe GetRowSourceLanguage) - $SourceLanguage
+        // dient nur noch als Fallback.
         $replacements = [];
         foreach ($RowsByFieldPath as $fieldPath => $row) {
-            $resolved = $this->ResolveRowValue($row, $Language, $Language, $SourceLanguage, self::langOriginalImport);
+            $resolved = $this->ResolveRowValue($row, $Language, $Language, $this->GetRowSourceLanguage($row, $SourceLanguage), self::langOriginalImport);
             if ($resolved !== '') {
                 $replacements[$fieldPath] = $resolved;
             }
@@ -1874,7 +1885,13 @@ private const LANGUAGE_FLAGS = [
         $Rows[$RowIndex][$RawField] = $NewValue;
 
         $currentLanguage = $this->ReadPropertyString(self::propertyCurrentLanguage);
-        $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
+        // Die Zeile behält ihre EIGENE Quellsprache (siehe GetRowSourceLanguage) - der
+        // frisch von außen geschriebene Rohtext wird als in dieser Sprache verfasst
+        // angenommen, nicht zwingend in der instanzweiten Scan-Sprache (z.B. ein
+        // Fremdmodul, das dauerhaft englischsprachig liefert, während der Rest der
+        // Instanz deutsch scannt).
+        $rowSourceLanguage = $this->GetRowSourceLanguage($Rows[$RowIndex], $this->ReadPropertyString(self::propertySourceLanguage));
+        $sourceLanguage = $rowSourceLanguage;
         $displayText = $NewValue;
 
         // ALLE konfigurierten Zielsprachen sofort neu uebersetzen, nicht nur die
@@ -1901,6 +1918,11 @@ private const LANGUAGE_FLAGS = [
                 $displayText = $translatedText;
             }
         }
+        // Alle Zielsprachen wurden gerade frisch gegen $rowSourceLanguage übersetzt -
+        // Buchführung entsprechend nachziehen (siehe ReconcileRowSourceLanguageChanges),
+        // damit ein nachfolgendes ApplyChanges() hier nicht fälschlich einen
+        // Quellsprachen-Wechsel erkennt und alles ein zweites Mal übersetzt.
+        $Rows[$RowIndex][self::fieldTranslatedAgainstSourceLanguage] = $rowSourceLanguage;
 
         IPS_SetProperty($this->InstanceID, $Property, json_encode($Rows));
         IPS_ApplyChanges($this->InstanceID);
@@ -1920,9 +1942,13 @@ private const LANGUAGE_FLAGS = [
     // genau wie "Original".
     private function ResolveRowValue(array $Row, string $SelectedLanguage, string $LanguageField, string $SourceLanguage, string $RawField): string
     {
-        // "Original" und die Basissprache setzen beide auf den unbearbeiteten Rohtext
-        // zurück (Tippfehler inklusive) - eine Art Werkseinstellung, unabhängig von
-        // allen Übersetzungen.
+        // "Original" und die (Zeilen-)Quellsprache setzen beide auf den unbearbeiteten
+        // Rohtext zurück (Tippfehler inklusive) - eine Art Werkseinstellung, unabhängig
+        // von allen Übersetzungen. $SourceLanguage ist hier bewusst die Quellsprache
+        // DIESER Zeile (siehe GetRowSourceLanguage), nicht mehr zwingend die
+        // instanzweite Scan-Sprache - eine Zeile mit abweichender Quellsprache (z.B.
+        // ein Fremdmodul, das englischsprachig liefert) betrachtet ENGLISCH als ihr
+        // "Original", nicht Deutsch.
         if ($SelectedLanguage === self::langOriginalImport || $SelectedLanguage === $SourceLanguage) {
             return $Row[$RawField] ?? '';
         }
@@ -1931,6 +1957,147 @@ private const LANGUAGE_FLAGS = [
         }
 
         return $Row[$RawField] ?? '';
+    }
+
+    // Liefert die Quellsprache EINER Zeile: das editierbare Feld fieldRowSourceLanguage,
+    // sofern gesetzt, sonst $Fallback (i.d.R. die instanzweite Scan-Sprache
+    // propertySourceLanguage) - greift für Zeilen aus vor Einführung dieses Felds
+    // (Migrations-Fall) sowie für den seltenen Zwischenzustand direkt nach dem
+    // Anlegen einer Zeile von Hand im Formular.
+    private function GetRowSourceLanguage(array $Row, string $Fallback): string
+    {
+        $language = (string) ($Row[self::fieldRowSourceLanguage] ?? '');
+
+        return $language !== '' ? $language : $Fallback;
+    }
+
+    // Migrations-/Vervollständigungs-Helfer für alle Merge*-Funktionen: eine Zeile
+    // ohne eigene Quellsprache (Zeile aus vor Einführung dieses Felds, oder eine ganz
+    // frisch gescannte Zeile, die den Wert noch nicht trägt) bekommt $Fallback einmalig
+    // fest zugewiesen. fieldTranslatedAgainstSourceLanguage (interne Buchführung, siehe
+    // ReconcileRowSourceLanguageChanges) wird beim allerersten Mal auf denselben Wert
+    // gesetzt ("noch nichts zu versöhnen") - eine bereits vorhandene Buchführung (z.B.
+    // weil zwischenzeitlich schon einmal übersetzt wurde) bleibt unangetastet.
+    private function BackfillRowSourceLanguage(array $Row, string $Fallback): array
+    {
+        if (($Row[self::fieldRowSourceLanguage] ?? '') === '') {
+            $Row[self::fieldRowSourceLanguage] = $Fallback;
+        }
+        if (($Row[self::fieldTranslatedAgainstSourceLanguage] ?? '') === '') {
+            $Row[self::fieldTranslatedAgainstSourceLanguage] = $Row[self::fieldRowSourceLanguage];
+        }
+
+        return $Row;
+    }
+
+    // Kern von ReconcileRowSourceLanguageChanges: prüft EINE Zeile auf einen
+    // Quellsprachen-Wechsel (fieldRowSourceLanguage weicht von der Buchführung
+    // fieldTranslatedAgainstSourceLanguage ab - siehe dort) und übersetzt bei
+    // Abweichung SOFORT neu gegen die neue Quellsprache, statt lazy auf den nächsten
+    // Rescan/Sprachwechsel zu warten (FillMissingTranslations/FillLanguageColumn
+    // übersetzen nur leere Zellen - ohne dieses Leeren+Sofort-Neuübersetzen blieben
+    // die alten, gegen die FALSCHE Quellsprache berechneten Übersetzungen stehen).
+    // $FieldGroups wie bei FillMissingTranslations (raw/prefix/capitalizeFirst/isHtml).
+    // $Changed wird per Referenz auf true gesetzt, wenn diese Zeile tatsächlich
+    // reconciled wurde - steuert in ReconcileRowSourceLanguageChanges, ob die Property
+    // überhaupt neu gespeichert werden muss.
+    private function ReconcileRowFields(array $Row, array $FieldGroups, array $TargetLanguages, bool &$Changed): array
+    {
+        $newSourceLanguage = $this->GetRowSourceLanguage($Row, '');
+        $translatedAgainst = (string) ($Row[self::fieldTranslatedAgainstSourceLanguage] ?? '');
+        if ($newSourceLanguage === '' || $newSourceLanguage === $translatedAgainst) {
+            return $Row;
+        }
+
+        foreach ($FieldGroups as $group) {
+            $rawText = (string) ($Row[$group['raw']] ?? '');
+            $isHtml = $group['isHtml'] ?? false;
+            $capitalizeFirst = $group['capitalizeFirst'] ?? false;
+
+            foreach ($TargetLanguages as $language) {
+                if ($language === $newSourceLanguage) {
+                    // Quellsprache selbst braucht keine eigene Spalte - ResolveRowValue
+                    // liefert für SelectedLanguage === SourceLanguage ohnehin immer den
+                    // Rohtext, unabhängig vom Spalteninhalt.
+                    $Row[$group['prefix'] . $language] = '';
+                    continue;
+                }
+                if ($rawText === '') {
+                    $Row[$group['prefix'] . $language] = '';
+                    continue;
+                }
+
+                $translated = $this->TranslateBatch([$rawText], $newSourceLanguage, $language, '', $isHtml);
+                $value = $translated[0] ?? '';
+                if (!$isHtml && $value !== '') {
+                    $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5);
+                }
+                if ($capitalizeFirst && $value !== '') {
+                    $value = $this->CapitalizeFirstLetter($value);
+                }
+                $Row[$group['prefix'] . $language] = $value;
+            }
+        }
+
+        $Row[self::fieldTranslatedAgainstSourceLanguage] = $newSourceLanguage;
+        $Changed = true;
+
+        return $Row;
+    }
+
+    // Läuft über alle fünf Zeilen-haltenden Properties und stößt für jede Zeile mit
+    // geänderter Quellsprache (siehe ReconcileRowFields) eine sofortige Neuübersetzung
+    // an - Gegenstück zum "Quellsprache änderbar"-Wunsch: ändert der Admin die
+    // Quellsprache EINER Zeile im Formular und klickt "Übernehmen", sind die
+    // bisherigen Übersetzungsspalten dieser Zeile ab sofort gegen die FALSCHE Sprache
+    // berechnet - ohne dieses Reconcile blieben sie bis zum nächsten Rescan
+    // fälschlich stehen. Liefert true, wenn irgendetwas geändert wurde - der Aufrufer
+    // (ApplyChanges) nutzt das, um direkt im Anschluss einmalig ApplyLanguage()
+    // aufzurufen (schreibt die evtl. betroffene, gerade aktive Gast-Sprache sofort
+    // live, exakt wie ApplyTrackedVariableUpdate() das für externe Variablenschreib-
+    // vorgänge tut - kein Warten auf den nächsten Sprachwechsel/Rescan nötig).
+    private function ReconcileRowSourceLanguageChanges(): bool
+    {
+        $targetLanguages = $this->GetSelectedTargetLanguages();
+        $anyChanged = false;
+
+        $propertiesAndFieldGroups = [
+            self::propertyObjectNames => [
+                ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],
+            ],
+            self::propertyObjectTexts => [
+                ['raw' => self::fieldOriginalImportName, 'prefix' => self::fieldNamePrefix, 'capitalizeFirst' => true],
+                ['raw' => self::langOriginalImportText, 'prefix' => self::fieldTextPrefix, 'capitalizeFirst' => false, 'isHtml' => true],
+            ],
+            self::propertyEnumerationOptions => [
+                ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => false],
+            ],
+            self::propertyObjectAutomations => [
+                ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],
+            ],
+            self::propertyObjectGreeting => [
+                ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],
+            ],
+        ];
+
+        foreach ($propertiesAndFieldGroups as $property => $fieldGroups) {
+            $rows = $this->DecodeRows($property);
+            if ($rows === []) {
+                continue;
+            }
+
+            $propertyChanged = false;
+            foreach ($rows as $index => $row) {
+                $rows[$index] = $this->ReconcileRowFields($row, $fieldGroups, $targetLanguages, $propertyChanged);
+            }
+
+            if ($propertyChanged) {
+                IPS_SetProperty($this->InstanceID, $property, json_encode(array_values($rows)));
+                $anyChanged = true;
+            }
+        }
+
+        return $anyChanged;
     }
 
     // Einzige Quelle des Root der Visualisierung (bewusst NICHT "Root-Kategorie"
@@ -2117,6 +2284,13 @@ private const LANGUAGE_FLAGS = [
     // unterschiedlichen Stellen im Baum unterscheidbar bleiben.
     private function WalkTree(int $ID, array &$ScannedNames, array &$ScannedTexts, array &$ScannedOptions, array &$VisitedIDs, array $ParentPath): void
     {
+        // Nur relevant für Zeilen, die sich hieraus als NEU herausstellen (siehe
+        // MergeRows/MergeEnumerationOptions) - bereits bekannte Zeilen behalten ihre
+        // eigene, ggf. längst abweichende Quellsprache (siehe
+        // BackfillRowSourceLanguage). Einmal je Aufruf gelesen (nicht je Kindobjekt),
+        // die Rekursion ändert sie nicht.
+        $currentScanSourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
+
         foreach (IPS_GetChildrenIDs($ID) as $childID) {
             $object = IPS_GetObject($childID);
             $name = IPS_GetName($childID);
@@ -2126,9 +2300,11 @@ private const LANGUAGE_FLAGS = [
             // handangelegten Objekten (Kategorien/Variablen über die Konsole) meist gar
             // nicht gesetzt.
             $ScannedNames[$childID] = [
-                'ObjectID'                 => $childID,
-                'Path'                     => $path,
-                self::langOriginalImport   => $name,
+                'ObjectID'                                      => $childID,
+                'Path'                                          => $path,
+                self::langOriginalImport                        => $name,
+                self::fieldRowSourceLanguage                     => $currentScanSourceLanguage,
+                self::fieldTranslatedAgainstSourceLanguage       => $currentScanSourceLanguage,
             ];
 
             // Viele "Hinweis"-Objekte in der Kachel-Visualisierung sind Verknüpfungen
@@ -2146,6 +2322,8 @@ private const LANGUAGE_FLAGS = [
                     // der Inhalt beim ersten Fund eingefroren, nicht die Live-Anzeige.
                     self::fieldOriginalImportName    => $name,
                     self::langOriginalImportText     => GetValueString($stringVariableID),
+                    self::fieldRowSourceLanguage                  => $currentScanSourceLanguage,
+                    self::fieldTranslatedAgainstSourceLanguage    => $currentScanSourceLanguage,
                 ];
             }
 
@@ -2170,6 +2348,8 @@ private const LANGUAGE_FLAGS = [
                                 'FieldPath'               => $fieldPath,
                                 'Path'                    => $path,
                                 self::langOriginalImport  => $text,
+                                self::fieldRowSourceLanguage               => $currentScanSourceLanguage,
+                                self::fieldTranslatedAgainstSourceLanguage => $currentScanSourceLanguage,
                             ];
                         } elseif (!in_array((string) $captionVariableID, explode(',', $ScannedOptions[$key]['ValueObjectIDs']), true)) {
                             $ScannedOptions[$key]['ValueObjectIDs'] .= ',' . $captionVariableID;
@@ -2424,6 +2604,8 @@ private const LANGUAGE_FLAGS = [
             return [];
         }
 
+        $currentScanSourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
+
         $extra = [];
         foreach ($favorites as $entry) {
             $objectID = (int) ($entry['ObjectID'] ?? 0);
@@ -2434,6 +2616,8 @@ private const LANGUAGE_FLAGS = [
                 'ObjectID'                => $objectID,
                 'Path'                    => $this->Translate('Favoriten'),
                 self::langOriginalImport  => IPS_GetName($objectID),
+                self::fieldRowSourceLanguage               => $currentScanSourceLanguage,
+                self::fieldTranslatedAgainstSourceLanguage => $currentScanSourceLanguage,
             ];
         }
 
@@ -2499,6 +2683,7 @@ private const LANGUAGE_FLAGS = [
         }
 
         $showGreeting = (int) @IPS_GetProperty($webFrontID, 'ShowGreeting');
+        $currentScanSourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
 
         if ($showGreeting === 1 || $showGreeting === 3) {
             $name = (string) @IPS_GetProperty($webFrontID, 'GreetingName');
@@ -2506,7 +2691,11 @@ private const LANGUAGE_FLAGS = [
                 return [];
             }
 
-            return [[self::langOriginalImport => $name]];
+            return [[
+                self::langOriginalImport                   => $name,
+                self::fieldRowSourceLanguage                => $currentScanSourceLanguage,
+                self::fieldTranslatedAgainstSourceLanguage  => $currentScanSourceLanguage,
+            ]];
         }
 
         if ($showGreeting === 2) {
@@ -2516,8 +2705,10 @@ private const LANGUAGE_FLAGS = [
             }
 
             return [[
-                self::langOriginalImport => GetValueString($variableID),
-                'ValueObjectID'          => $variableID,
+                self::langOriginalImport                   => GetValueString($variableID),
+                'ValueObjectID'                             => $variableID,
+                self::fieldRowSourceLanguage                => $currentScanSourceLanguage,
+                self::fieldTranslatedAgainstSourceLanguage  => $currentScanSourceLanguage,
             ]];
         }
 
@@ -2597,7 +2788,7 @@ private const LANGUAGE_FLAGS = [
             return $ScannedRows;
         }
 
-        $row = $ExistingRows[0];
+        $row = $this->BackfillRowSourceLanguage($ExistingRows[0], $ScannedRows[0][self::fieldRowSourceLanguage] ?? $this->ReadPropertyString(self::propertySourceLanguage));
         $newRawText = $ScannedRows[0][self::langOriginalImport];
 
         // Anders als MergeRows fuer "Eigene Texte" wird der Rohtext hier NICHT
@@ -2628,12 +2819,20 @@ private const LANGUAGE_FLAGS = [
         // erkennt eigene Schreibvorgaenge zuverlaessig ueber
         // attributeLastSelfWrittenValues) holt die Aktualisierung nach.
         if ($IsSourceLanguageActive && $row[self::langOriginalImport] !== $newRawText) {
+            // Die eigene Quellsprache der Zeile (fieldRowSourceLanguage) bleibt beim
+            // Auffrischen unangetastet - eine vom Admin manuell abweichend gesetzte
+            // Quellsprache (siehe ReconcileRowSourceLanguageChanges) soll nicht durch
+            // einen simplen Rescan wieder zurückspringen. fieldTranslatedAgainstSourceLanguage
+            // wird dagegen mit auf denselben Wert gesetzt - die gerade geleerten
+            // Übersetzungsspalten sind "gegen nichts" übersetzt, ein Abgleich in
+            // ReconcileRowSourceLanguageChanges soll hier nicht unnötig nochmal anspringen.
             foreach (array_keys($row) as $field) {
-                if (!in_array($field, [self::langOriginalImport, 'ValueObjectID'], true)) {
+                if (!in_array($field, [self::langOriginalImport, 'ValueObjectID', self::fieldRowSourceLanguage], true)) {
                     $row[$field] = '';
                 }
             }
             $row[self::langOriginalImport] = $newRawText;
+            $row[self::fieldTranslatedAgainstSourceLanguage] = $row[self::fieldRowSourceLanguage];
         }
 
         if (isset($ScannedRows[0]['ValueObjectID'])) {
@@ -2664,6 +2863,8 @@ private const LANGUAGE_FLAGS = [
             return [];
         }
 
+        $currentScanSourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
+
         $scannedByID = [];
         foreach ($automations as $entry) {
             $automationID = (int) ($entry['AutomationID'] ?? 0);
@@ -2674,6 +2875,8 @@ private const LANGUAGE_FLAGS = [
             $scannedByID[$automationID] = [
                 'AutomationID'            => $automationID,
                 self::langOriginalImport  => $name,
+                self::fieldRowSourceLanguage               => $currentScanSourceLanguage,
+                self::fieldTranslatedAgainstSourceLanguage => $currentScanSourceLanguage,
             ];
         }
 
@@ -2688,9 +2891,13 @@ private const LANGUAGE_FLAGS = [
     // dieselbe Datenverlust-Vorsicht wie bei MergeRows.
     private function MergeAutomationRows(array $ExistingRows, array $ScannedByID): array
     {
+        $instanceSourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
+
         $result = [];
         foreach ($ExistingRows as $row) {
             $automationID = (int) ($row['AutomationID'] ?? 0);
+            $fallback = $ScannedByID[$automationID][self::fieldRowSourceLanguage] ?? $instanceSourceLanguage;
+            $row = $this->BackfillRowSourceLanguage($row, $fallback);
             unset($ScannedByID[$automationID]);
             $result[] = $row;
         }
@@ -2709,9 +2916,13 @@ private const LANGUAGE_FLAGS = [
     // in einer anderen Sprache steht.
     private function MergeRows(array $ExistingRows, array $ScannedByObjectID): array
     {
+        $instanceSourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
+
         $result = [];
         foreach ($ExistingRows as $row) {
             $objectID = $row['ObjectID'] ?? null;
+            $fallback = $ScannedByObjectID[$objectID][self::fieldRowSourceLanguage] ?? $instanceSourceLanguage;
+            $row = $this->BackfillRowSourceLanguage($row, $fallback);
             if ($objectID !== null && isset($ScannedByObjectID[$objectID])) {
                 $row['Path'] = $ScannedByObjectID[$objectID]['Path'];
                 if (isset($ScannedByObjectID[$objectID]['ValueObjectID'])) {
@@ -2793,9 +3004,13 @@ private const LANGUAGE_FLAGS = [
     // übersetzt werden (FillMissingTranslations übersetzt ohnehin nur leere Zellen).
     private function MergeEnumerationOptions(array $ExistingRows, array $ScannedByKey): array
     {
+        $instanceSourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
+
         $result = [];
         foreach ($ExistingRows as $row) {
             $key = isset($row['SourceKey'], $row['FieldPath']) ? $row['SourceKey'] . ':' . $row['FieldPath'] : null;
+            $fallback = ($key !== null ? ($ScannedByKey[$key][self::fieldRowSourceLanguage] ?? null) : null) ?? $instanceSourceLanguage;
+            $row = $this->BackfillRowSourceLanguage($row, $fallback);
             if ($key !== null && isset($ScannedByKey[$key])) {
                 $scanned = $ScannedByKey[$key];
                 $row['Path'] = $scanned['Path'];
@@ -2803,11 +3018,18 @@ private const LANGUAGE_FLAGS = [
 
                 if (($row[self::langOriginalImport] ?? '') === '') {
                     $row[self::langOriginalImport] = $scanned[self::langOriginalImport];
+                    // Wie bei MergeGreetingRows: die Quellsprache selbst wird beim
+                    // Auffrischen NEU aus dem aktuellen Scan übernommen (nicht wie
+                    // sonst "frozen") - ein geleertes Original-Import-Feld ist ein
+                    // bewusster "komplett neu einlesen"-Wunsch des Admins (siehe
+                    // Kommentar oben), da darf auch die Quellsprache mit erneuert werden.
+                    $row[self::fieldRowSourceLanguage] = $scanned[self::fieldRowSourceLanguage] ?? $instanceSourceLanguage;
                     foreach (array_keys($row) as $field) {
-                        if (!in_array($field, ['SourceKey', 'ValueObjectIDs', 'FieldPath', 'Path', self::langOriginalImport], true)) {
+                        if (!in_array($field, ['SourceKey', 'ValueObjectIDs', 'FieldPath', 'Path', self::langOriginalImport, self::fieldRowSourceLanguage], true)) {
                             $row[$field] = '';
                         }
                     }
+                    $row[self::fieldTranslatedAgainstSourceLanguage] = $row[self::fieldRowSourceLanguage];
                 }
 
                 unset($ScannedByKey[$key]);
@@ -2841,16 +3063,32 @@ private const LANGUAGE_FLAGS = [
     // nicht zwangsläufig ein Satzanfang).
     private function FillMissingTranslations(array $Rows, array $FieldGroups, string $SourceLanguage, array $TargetLanguages): array
     {
+        // Zeilen nach ihrer EIGENEN Quellsprache gruppieren (siehe GetRowSourceLanguage) -
+        // seit der pro-Zeile editierbaren Quellsprache (fieldRowSourceLanguage) kann das
+        // innerhalb ein und derselben Liste variieren (z.B. ein Fremdmodul, das
+        // englischsprachig liefert, während der Rest der Instanz auf Deutsch scannt -
+        // siehe fieldRowSourceLanguage). $SourceLanguage (die instanzweite Scan-Sprache)
+        // bleibt nur noch der Fallback für Zeilen ohne eigene Quellsprache (praktisch nur
+        // unmittelbar nach einem Update ohne abgeschlossene Migration, siehe
+        // BackfillRowSourceLanguage). Jede Gruppe wird separat gegen IHRE Quellsprache
+        // übersetzt statt alle Zeilen pauschal gegen eine einzige Instanz-Quellsprache.
+        $indicesByRowSourceLanguage = [];
+        foreach ($Rows as $index => $row) {
+            $indicesByRowSourceLanguage[$this->GetRowSourceLanguage($row, $SourceLanguage)][] = $index;
+        }
+
         foreach ($FieldGroups as $group) {
             $rawField = $group['raw'];
             $capitalizeFirst = $group['capitalizeFirst'] ?? false;
             $isHtml = $group['isHtml'] ?? false;
 
-            foreach ($TargetLanguages as $language) {
-                if ($language === $SourceLanguage) {
-                    continue;
+            foreach ($indicesByRowSourceLanguage as $rowSourceLanguage => $indices) {
+                foreach ($TargetLanguages as $language) {
+                    if ($language === $rowSourceLanguage) {
+                        continue;
+                    }
+                    $Rows = $this->FillLanguageColumn($Rows, $rawField, $group['prefix'] . $language, $rowSourceLanguage, $language, $capitalizeFirst, $isHtml, $indices);
                 }
-                $Rows = $this->FillLanguageColumn($Rows, $rawField, $group['prefix'] . $language, $SourceLanguage, $language, $capitalizeFirst, $isHtml);
             }
         }
 
@@ -2868,10 +3106,21 @@ private const LANGUAGE_FLAGS = [
     // wörtlich sichtbar bliebe (live gefunden: Kachelüberschrift zeigte "&#39;" statt
     // Apostroph). Nur bei echten "Eigene Texte"-Inhalten (können vollständige
     // HTMLBox-Widgets sein) macht das Belassen als HTML weiterhin Sinn.
-    private function FillLanguageColumn(array $Rows, string $FromField, string $ToField, string $ForceSource, string $TargetLanguageCode, bool $CapitalizeFirst, bool $IsHtml = false): array
+    private function FillLanguageColumn(array $Rows, string $FromField, string $ToField, string $ForceSource, string $TargetLanguageCode, bool $CapitalizeFirst, bool $IsHtml = false, ?array $RowIndices = null): array
     {
+        // $RowIndices grenzt (seit der pro-Zeile editierbaren Quellsprache, siehe
+        // FillMissingTranslations) auf genau die Zeilen ein, deren Quellsprache
+        // $ForceSource entspricht - ohne diese Einschränkung würde eine Zeile mit
+        // abweichender eigener Quellsprache hier versehentlich unter der FALSCHEN
+        // Quellsprache an die Übersetzungs-API geschickt. null (Standard) bedeutet
+        // "alle Zeilen" - deckt Aufrufer außerhalb von FillMissingTranslations ab, die
+        // (noch) keine Gruppierung kennen.
         $pending = [];
-        foreach ($Rows as $index => $row) {
+        foreach (($RowIndices ?? array_keys($Rows)) as $index) {
+            if (!isset($Rows[$index])) {
+                continue;
+            }
+            $row = $Rows[$index];
             $fromText = $row[$FromField] ?? '';
             if ($fromText !== '' && ($row[$ToField] ?? '') === '') {
                 $pending[$index] = $fromText;
@@ -4239,6 +4488,7 @@ HTML;
                 'width'   => '250px',
                 'save'    => true,
             ];
+            $columns[] = $this->BuildRowSourceLanguageColumn($SourceLanguage, $TargetLanguages);
 
             return array_merge($columns, $this->BuildLanguageColumnSet('', '', $SourceLanguage, $TargetLanguages));
         }
@@ -4265,6 +4515,7 @@ HTML;
                     'save'    => true,
                 ],
             ];
+            $columns[] = $this->BuildRowSourceLanguageColumn($SourceLanguage, $TargetLanguages);
 
             return array_merge($columns, $this->BuildLanguageColumnSet('', '', $SourceLanguage, $TargetLanguages));
         }
@@ -4283,6 +4534,7 @@ HTML;
                 ['caption' => 'Objekt-ID', 'name' => 'ObjectID', 'width' => '80px', 'save' => true],
                 ['caption' => $this->Translate('Pfad'), 'name' => 'Path', 'width' => '200px', 'save' => true],
             ];
+        $columns[] = $this->BuildRowSourceLanguageColumn($SourceLanguage, $TargetLanguages);
 
         if ($Kind === 'texts') {
             $columns[] = ['caption' => 'Wert-Objekt-ID', 'name' => 'ValueObjectID', 'width' => '90px', 'save' => true];
@@ -4339,6 +4591,53 @@ HTML;
         }
 
         return $columns;
+    }
+
+    // Die editierbare "Quellsprache" jeder einzelnen Zeile (siehe
+    // fieldRowSourceLanguage) - normalerweise identisch zur instanzweiten
+    // Scan-Sprache (propertySourceLanguage, hier als $InstanceSourceLanguage
+    // hereingereicht), kann aber vom Admin abweichend gesetzt werden (z.B. ein
+    // Fremdmodul, das dauerhaft englischsprachig liefert, während der Rest der
+    // Instanz deutsch scannt). Ändert der Admin diesen Wert und klickt
+    // "Übernehmen", übersetzt ReconcileRowSourceLanguageChanges() die Zeile
+    // automatisch und sofort neu (siehe dort) - kein manuelles Leeren der
+    // Übersetzungsspalten nötig. Optionen bewusst auf die bereits konfigurierten
+    // Sprachen (Scan-Sprache + Zielsprachen) beschränkt (siehe
+    // BuildRowSourceLanguageOptions) - nur für die existieren auch tatsächlich
+    // Spalten in dieser Liste. Nur mit "edit_translations" (Pro) editierbar,
+    // sonst rein informativ (wie die 'Pfad'-Spalte).
+    private function BuildRowSourceLanguageColumn(string $InstanceSourceLanguage, array $TargetLanguages): array
+    {
+        $column = [
+            'caption' => $this->Translate('Quellsprache'),
+            'name'    => self::fieldRowSourceLanguage,
+            'width'   => '140px',
+            'add'     => $InstanceSourceLanguage,
+            'save'    => true,
+        ];
+
+        if ($this->HasLicenseFeature('edit_translations')) {
+            $column['edit'] = [
+                'type'    => 'Select',
+                'options' => $this->BuildRowSourceLanguageOptions($InstanceSourceLanguage, $TargetLanguages),
+            ];
+        }
+
+        return $column;
+    }
+
+    private function BuildRowSourceLanguageOptions(string $InstanceSourceLanguage, array $TargetLanguages): array
+    {
+        $configuredCodes = array_unique(array_merge([$InstanceSourceLanguage], $TargetLanguages));
+
+        $options = [];
+        foreach ($this->BuildLanguageOptions() as $option) {
+            if (in_array($option['value'], $configuredCodes, true)) {
+                $options[] = $option;
+            }
+        }
+
+        return $options;
     }
 
     // Baut die Sprachspalten für eine Feldgruppe: eine Spalte je ausgewählter

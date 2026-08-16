@@ -18,7 +18,7 @@
                 {
                     "type": "Select",
                     "name": "SourceLanguage",
-                    "caption": "Basissprache",
+                    "caption": "Scan-Sprache",
                     "options": [
                         {
                             "caption": "Deutsch",
