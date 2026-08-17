@@ -4077,7 +4077,25 @@ private const LANGUAGE_FLAGS = [
     // auftretende Korruption (mal korrekt frisch uebersetzt, mal wieder der
     // alte fehlerhafte Cache-Treffer, je nachdem ob genau dieser Rohtext
     // schon einmal VOR diesem Fix uebersetzt und gecacht worden war).
-    private const TRANSLATION_CACHE_SCHEMA_VERSION = 2;
+    //
+    // Build 66: erneut erhoeht (2 -> 3), aus demselben Grund - Build 65 hat
+    // TranslateBatch() davon abgehalten, KUENFTIGE Fehlschlaege als "echte
+    // Uebersetzung" zu cachen, aber bereits VOR Build 65 unter Version 2
+    // gecachte, auf diese Weise vergiftete Eintraege (unuebersetzter
+    // Rohtext, faelschlich als Ergebnis abgespeichert) blieben dadurch
+    // unveraendert im Cache stehen und wurden weiterhin bedient - live
+    // beobachtet: "Automations" blieb nach Leeren der Zellen + Rescan
+    // weiterhin auf Deutsch eingefroren, weil TranslateBatch() den
+    // vergifteten Cache-Treffer fand, bevor ueberhaupt ein neuer
+    // Uebersetzungsversuch (und damit der Build-65-Schutz) zum Zug kam -
+    // im Debug-Log erkennbar an einem "..._Mapping"-Eintrag ohne
+    // jeden nachfolgenden "..._Request"/"..._Response". Diese Versions-
+    // Erhoehung macht JEDEN vor Build 66 gecachten Eintrag unerreichbar
+    // (der Cache-Schluessel enthaelt die Version, siehe
+    // BuildTranslationCacheKey) - erzwingt dadurch fuer JEDEN Text einmalig
+    // einen frischen Uebersetzungsversuch, der dann korrekt vom
+    // Build-65-Schutz erfasst wird.
+    private const TRANSLATION_CACHE_SCHEMA_VERSION = 3;
 
     // Uebersetzt (Quelle, Ziel, Text) IMMER zuerst gegen den lokalen Cache
     // (attributeTranslationCache, siehe GetCachedTranslation/StoreCachedTranslation)
