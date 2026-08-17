@@ -3889,12 +3889,12 @@ private const LANGUAGE_FLAGS = [
 
         return $this->Translate('Seit Inbetriebnahme am') . ' ' . date('d.m.Y', $stats['since'])
             . ' (' . $daysSince . ' ' . $this->Translate('Tag(e)') . '): '
-            . $this->FormatStatsCount($stats['requestsPerHour']) . ' ' . $this->Translate('Anfragen/h')
+            . $this->FormatStatsCount($stats['requestsPerHour']) . ' ' . $this->Translate('Anfrage(n)/h')
             . ', ' . $this->FormatStatsCount($stats['charsPerHour']) . ' ' . $this->Translate('Zeichen/h')
             . ' (' . $this->Translate('insgesamt') . ': ' . $stats['requestCount'] . ' '
-            . $this->Translate('Anfragen') . ', ' . $stats['characterCount'] . ' ' . $this->Translate('Zeichen') . '). '
+            . $this->Translate('Anfrage(n)') . ', ' . $stats['characterCount'] . ' ' . $this->Translate('Zeichen') . '). '
             . $this->Translate('Durch den Cache eingespart') . ': ' . $stats['cacheSavedRequestCount'] . ' '
-            . $this->Translate('Anfragen') . ', ' . $stats['cacheSavedCharacterCount'] . ' ' . $this->Translate('Zeichen') . '.';
+            . $this->Translate('Anfrage(n)') . ', ' . $stats['cacheSavedCharacterCount'] . ' ' . $this->Translate('Zeichen') . '.';
     }
 
     // Kleiner, neutraler (NICHT roter - kein Warnhinweis, rein informativ) Hinweis

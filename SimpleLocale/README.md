@@ -345,6 +345,25 @@ Beschreibung des Moduls.
   einen bekannten Absturz-Situation (`MessageSink()`/`VM_UPDATE`) greift
   weiterhin die alte, sichere `IPS_LogMessage()`-Variante mit Text-Präfix,
   da dort echte Instabilität nachgewiesen wurde.
+
+  **Build 64 behebt eine fehlende Ein-/Mehrzahl-Behandlung im
+  Nutzungs-Zähler-Satz** (siehe oben, Build 60/61): "Anfragen"/"Zeichen" (und
+  deren Übersetzungen) standen dort bisher IMMER in der Mehrzahl fest
+  codiert, auch wenn der tatsächliche Wert 1 war (z. B. "1 Anfragen" statt
+  korrekt "1 Anfrage", ebenso in den anderen 4 Sprachen). Behoben nach genau
+  demselben, bereits bei der Testphasen-Anzeige bewährten Muster
+  (`BuildTrialInfoText()`, "Tag(e)"/"day(s)"/"día(s)"/"giorno/i"/"jour(s)"):
+  EIN einzelner, nicht konjugierender Anzeige-String pro Sprache, der für
+  jede Anzahl passt - kein Laufzeit-Unterschied zwischen Einzahl/Mehrzahl
+  nötig. Die betroffenen `locale.json`-Schlüssel heißen jetzt "Anfrage(n)"/
+  "Anfrage(n)/h" (vorher "Anfragen"/"Anfragen/h") und liefern in jeder
+  Sprache eine passende Kurzform (z. B. "request(s)/h" statt nur "requests/h";
+  fürs unregelmäßige Spanisch "carácter"/"caracteres" wurde stattdessen
+  bewusst auf das regelmäßig pluralisierende Synonym "signo(s)" ausgewichen,
+  um die im Plural verschwindende Betonungs-Markierung "á" nicht falsch
+  darzustellen; Italienisch nutzt statt eines Suffixes einen Klammer-Wechsel
+  der letzten Buchstaben, z. B. "richiest(a/e)", "caratter(e/i)", passend zum
+  bereits bestehenden "giorno/i").
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
