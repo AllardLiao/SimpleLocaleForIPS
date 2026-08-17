@@ -102,6 +102,15 @@ trait SimpleLocaleConstants
     private const propertyShowGlobeIcon = 'ShowGlobeIcon';
     private const propertyShowInfoIcon = 'ShowInfoIcon';
 
+    // Blendet den kleinen Statistik-Hinweis ("X Übersetzungen/h, Y Zeichen/h", siehe
+    // BuildTranslationStatsNoticeHtml) unter dem Dropdown in der Kachel ein/aus -
+    // rein informativ, standardmäßig aus (die meisten Gäste interessiert das nicht).
+    // Die zugrunde liegende Statistik selbst (siehe attributeStatsSince/
+    // RequestCount/CharacterCount) läuft unabhängig von diesem Schalter immer mit,
+    // auch die beiden Platzhalter <!--COUNT_TRANSLATIONS-->/<!--COUNT_SIGNES--> für
+    // eigene Kacheln (siehe ApplyTilePlaceholders) funktionieren unabhängig davon.
+    private const propertyShowTranslationStats = 'ShowTranslationStats';
+
     // Pro-Feature "custom_tile": schaltet die eingebaute <select>-Dropdown-
     // Kachel (siehe GetVisualizationTile) auf den vom Nutzer editierbaren
     // HTML-Code aus propertyCustomTileHtml um - die Instanz liefert also
@@ -266,6 +275,31 @@ trait SimpleLocaleConstants
     // eingetragenen Zeitpunkte erreicht ist.
     private const attributeProviderPausedUntil = 'ProviderPausedUntil';
 
+    // JSON-Map Anbieter => SHA-256-Hash der zuletzt gesehenen Zugangsdaten (Google-/
+    // DeepL-API-Key bzw. Kontakt-E-Mail beim kostenfreien Anbieter) - reine
+    // Aenderungserkennung (siehe ClearPauseOnCredentialChange), speichert bewusst nur
+    // einen Hash statt der Werte selbst (wie attributeLastCheckedLicenseKeyHash).
+    // Aendert sich der Hash eines Anbieters seit dem letzten ApplyChanges(), wird
+    // dessen laufende Pause (siehe attributeProviderPausedUntil) sofort beendet -
+    // ein neuer/anderer Key bzw. eine andere Kontakt-E-Mail kann die Ursache der
+    // Sperre direkt beheben.
+    private const attributeLastSeenProviderCredentialsHash = 'LastSeenProviderCredentialsHash';
+
+    // Statistik ueber tatsaechliche Uebersetzungs-API-Aufrufe seit Inbetriebnahme
+    // dieser Instanz (siehe RecordTranslationRequestStats/BuildTranslationStatsText) -
+    // attributeStatsSince wird EINMALIG beim allerersten ApplyChanges()-Durchlauf
+    // gesetzt (Zeitpunkt der Inbetriebnahme, nicht der ersten tatsaechlichen
+    // Uebersetzung), attributeStatsRequestCount zaehlt JEDEN einzelnen HTTP-Aufruf an
+    // einen Anbieter (Google/DeepL: ein Aufruf pro Chunk, unabhaengig von der Anzahl
+    // gebuendelter Texte; MyMemory: ein Aufruf PRO TEXT, da kein Batch-Endpoint
+    // existiert - siehe TranslateChunkFree), erfolgreich oder nicht (ein
+    // fehlgeschlagener Versuch verbraucht ebenfalls Kontingent/zaehlt als Last).
+    // attributeStatsCharacterCount summiert die dabei tatsaechlich zur Uebersetzung
+    // eingereichte Zeichenzahl (roh, vor jeder HTML-Text-Knoten-Zerlegung o.ae.).
+    private const attributeStatsSince = 'StatsSince';
+    private const attributeStatsRequestCount = 'StatsRequestCount';
+    private const attributeStatsCharacterCount = 'StatsCharacterCount';
+
     // Uebersetzungs-Cache (JSON-Map "Quellsprache|Zielsprache|SHA-256(Text)" =>
     // uebersetzter Text), siehe TranslateBatch/GetCachedTranslation/
     // StoreCachedTranslation - vermeidet wiederholte, identische API-Aufruf bei
@@ -330,6 +364,7 @@ trait SimpleLocaleConstants
     // bereits ein Timer/Objekt mit demselben Basisnamen existieren sollte.
     private const timerPrefix = 'IPSSL_TIMER_';
     private const timerIdentAutoRescan = 'AutoRescan';
+    private const timerIdentTranslationStats = 'TranslationStats';
 
     // Statuscodes
     private const STATUS_ROOT_CATEGORY_MISSING = 201;

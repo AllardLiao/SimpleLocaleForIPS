@@ -233,6 +233,41 @@ Beschreibung des Moduls.
   `TranslateBatch`: nur tatsächlich übersetzte, nicht-leere Ergebnisse landen
   im Cache), sodass ein erneuter Versuch für denselben Text nie an einem
   fälschlich gecachten leeren Ergebnis scheitert.
+
+  **Build 60** ergänzt drei Wünsche und behebt einen weiteren, unabhängigen
+  Datenverlust-Bug: (1) Ein neuer/geänderter API-Key (Google/DeepL) oder eine
+  geänderte MyMemory-Kontakt-E-Mail beendet die Pause des betroffenen
+  Anbieters jetzt sofort, statt auf den Ablauf der ggf. bereits eskalierten
+  Sperrfrist zu warten - erkannt über einen SHA-256-Hash der zuletzt
+  gesehenen Zugangsdaten (nie der Klartext-Wert selbst); beim allerersten
+  `ApplyChanges()` einer Instanz (noch kein Vergleichswert vorhanden) wird
+  das nie fälschlich als Änderung gewertet. (2) Der rote Testphase-/
+  Pausiert-Hinweis unter dem Dropdown ist jetzt mittig statt linksbündig
+  ausgerichtet. (3) Ein neuer Nutzungs-Zähler zeigt die durchschnittliche
+  Anzahl an Übersetzungsanfragen und übersetzten Zeichen pro Stunde seit der
+  allerersten Einrichtung der Instanz (nicht seit der ersten tatsächlichen
+  Übersetzung) - als Satz direkt unter der Erläuterung des "Aktiv"-Schalters
+  im Konfigurationsformular (nur bei natürlichem Öffnen/Neuaufbau des
+  Formulars berechnet, löst NIE einen erzwungenen Refresh aus - siehe
+  unten), und optional (Checkbox "Übersetzungsstatistik in der Kachel
+  anzeigen", standardmäßig aus) auch als kleiner Hinweistext in der Kachel
+  selbst, dort alle 10 Minuten aktualisiert über `PushVisualizationUpdate()`
+  (nicht über einen Formular-Reload). Für eigene Kacheln stehen dafür zwei
+  Platzhalter bereit, siehe [Abschnitt 7](#7-visualisierung).
+
+  **Zusätzlich behebt Build 60 einen weiteren, unabhängigen und
+  schwerwiegenden Bug:** Der automatische Hintergrund-Rescan (Timer, siehe
+  "Automatischer Rescan (Minuten)") teilte sich bisher denselben internen
+  Code-Pfad wie der manuelle "Baum neu einlesen"-Button - inklusive dessen
+  abschließendem `ReloadForm()`. Das bedeutete: war das
+  Konfigurationsformular gerade geöffnet und wurden dort z. B. Übersetzungen
+  von Hand bearbeitet, konnte der Hintergrund-Timer JEDERZEIT dazwischen-
+  funken und das gesamte Formular neu laden - alle noch nicht mit
+  "Übernehmen" gespeicherten Änderungen gingen dabei kommentarlos verloren.
+  Seit Build 60 lädt ausschließlich der manuelle Button das Formular neu;
+  der automatische Hintergrund-Rescan aktualisiert die Objektliste weiterhin
+  normal im Hintergrund, rührt ein gerade geöffnetes Formular aber nicht
+  mehr an.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
@@ -685,6 +720,23 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
      </div>
      <!-- + roter Testphase-Hinweis, nur solange ungelizenziert und Testphase läuft -->
      ```
+
+     Zusätzlich zu den beiden oben genannten PFLICHT-Platzhaltern gibt es
+     zwei OPTIONALE Platzhalter für die in [Abschnitt 2](#2-bekannte-einschränkungen)
+     beschriebene Nutzungsstatistik: `<!--COUNT_TRANSLATIONS-->` und
+     `<!--COUNT_SIGNES-->` werden, falls im HTML vorhanden, durch die
+     aktuelle durchschnittliche Anzahl an Übersetzungsanfragen bzw.
+     übersetzten Zeichen pro Stunde ersetzt - jeweils als reine gerundete
+     Ganzzahl ohne Einheit (z. B. "30" bzw. "500"); die passende
+     Beschriftung ("Übersetzungen/h", "Zeichen/h" o. ä.) ergänzt man selbst
+     im umgebenden HTML. Beide funktionieren unabhängig vom eingebauten
+     Toggle "Übersetzungsstatistik in der Kachel anzeigen" (der betrifft nur
+     die eingebaute Standard-Kachel) und sowohl im "HTML-Code"-Feld als auch
+     im "Sprachauswahl-HTML-Code"-Feld weiter unten. Kommt keiner der beiden
+     Platzhalter im HTML vor, entsteht kein zusätzlicher Aufwand. Aktualisiert
+     wird alle 10 Minuten über denselben `PushVisualizationUpdate()`-
+     Mechanismus, der auch den `REFRESH`-Payload weiter unten auslöst - nie
+     über einen Formular-Reload.
 
    - **"Sprachauswahl-HTML-Code"** - ersetzt `<!--LANGUAGE_SELECT-->`.
      Standardmäßig **vorbefüllt mit einem funktionierenden Beispiel** (zwei
