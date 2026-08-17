@@ -543,6 +543,31 @@
             "caption": "Löscht nur den internen Zwischenspeicher für wiederkehrende Übersetzungen (spart normalerweise API-Aufrufe für Texte, die schon einmal übersetzt wurden) - nützlich, falls ein Text weiterhin eine veraltete/falsche Übersetzung zeigt. Bereits gespeicherte Übersetzungen in Objektnamen, Eigenen Texten und Beschriftungen bleiben davon unberührt und müssen bei Bedarf weiterhin einzeln im jeweiligen Feld geleert werden, damit sie beim nächsten Rescan/Sprachwechsel neu übersetzt werden."
         },
         {
+            "type": "Button",
+            "caption": "Übersetzungsanbieter prüfen",
+            "onClick": "IPS_RequestAction($id, 'CheckProviders', true);"
+        },
+        {
+            "type": "Label",
+            "caption": "Schickt eine einzelne Testanfrage (\"Testabfrage\" -> Englisch) an jeden eingerichteten Anbieter (Google/DeepL, falls ein API-Key eingetragen ist, sowie immer MyMemory) und meldet direkt zurück, welcher davon gerade tatsächlich funktioniert. Läuft dabei am Cache vorbei (immer eine echte, frische Anfrage) und beendet eine ggf. laufende Pause sofort, sobald ein Anbieter wieder erfolgreich antwortet - nützlich z.B. direkt nach einem Kontingent-/Abo-Upgrade beim Anbieter, ohne auf das automatische Ende der Pause warten zu müssen."
+        },
+        {
+            "name": "ProviderCheckResultPopup",
+            "type": "PopupAlert",
+            "visible": false,
+            "popup": {
+                "caption": "Ergebnis der Anbieter-Prüfung",
+                "closeCaption": "OK",
+                "items": [
+                    {
+                        "type": "Label",
+                        "name": "ProviderCheckResultText",
+                        "caption": ""
+                    }
+                ]
+            }
+        },        
+        {
             "type": "ExpansionPanel",
             "caption": "Produktinformationen",
             "expanded": false,
@@ -711,31 +736,6 @@
                     {
                         "type": "Label",
                         "caption": "Der Übersetzungs-Cache wurde geleert. Bereits gespeicherte Übersetzungen in Objektnamen, Eigenen Texten und Beschriftungen sind davon nicht betroffen."
-                    }
-                ]
-            }
-        },
-        {
-            "type": "Button",
-            "caption": "Übersetzungsanbieter prüfen",
-            "onClick": "IPS_RequestAction($id, 'CheckProviders', true);"
-        },
-        {
-            "type": "Label",
-            "caption": "Schickt eine einzelne Testanfrage (\"Testabfrage\" -> Englisch) an jeden eingerichteten Anbieter (Google/DeepL, falls ein API-Key eingetragen ist, sowie immer MyMemory) und meldet direkt zurück, welcher davon gerade tatsächlich funktioniert. Läuft dabei am Cache vorbei (immer eine echte, frische Anfrage) und beendet eine ggf. laufende Pause sofort, sobald ein Anbieter wieder erfolgreich antwortet - nützlich z.B. direkt nach einem Kontingent-/Abo-Upgrade beim Anbieter, ohne auf das automatische Ende der Pause warten zu müssen."
-        },
-        {
-            "name": "ProviderCheckResultPopup",
-            "type": "PopupAlert",
-            "visible": false,
-            "popup": {
-                "caption": "Ergebnis der Anbieter-Prüfung",
-                "closeCaption": "OK",
-                "items": [
-                    {
-                        "type": "Label",
-                        "name": "ProviderCheckResultText",
-                        "caption": ""
                     }
                 ]
             }
