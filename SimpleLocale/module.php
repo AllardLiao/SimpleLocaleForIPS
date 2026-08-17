@@ -634,6 +634,17 @@ private const LANGUAGE_FLAGS = [
                     $element['caption'] = $this->BuildGreetingModeHint();
                     break;
 
+                // Zeigt genau dort, wo der Admin nach einem Rate-Limit/Tageskontingent
+                // suchen würde (Panel "Übersetzungsanbieter"), welcher Anbieter gerade
+                // pausiert ist und bis wann - siehe DetectRateLimitCooldown/
+                // GetProviderPausedUntilMap. Unsichtbar (kein leerer roter Balken), wenn
+                // aktuell kein einziger Anbieter pausiert ist.
+                case 'ProviderPauseStatusLabel':
+                    $pauseStatusText = $this->BuildProviderPauseStatusText();
+                    $element['caption'] = $pauseStatusText;
+                    $element['visible'] = $pauseStatusText !== '';
+                    break;
+
                 case self::propertyCurrentLanguage:
                     $element['options'] = $this->BuildCurrentLanguageOptions();
                     break;
@@ -3449,6 +3460,46 @@ private const LANGUAGE_FLAGS = [
         return $latestUntil;
     }
 
+    // Baut den Text für "ProviderPauseStatusLabel" im Panel "Übersetzungsanbieter" -
+    // leerer String (Label bleibt unsichtbar, siehe PopulateFormElements), solange
+    // kein einziger Anbieter pausiert ist. Zeigt sonst JEDEN aktuell pausierten
+    // Anbieter einzeln mit Datum/Uhrzeit seines Reset - unabhängig davon, ob
+    // dadurch bereits die GESAMTE Instanz pausiert ist (siehe GetGlobalPauseUntil)
+    // oder nur ein einzelner von mehreren konfigurierten Anbietern.
+    private function BuildProviderPauseStatusText(): string
+    {
+        $paused = $this->GetProviderPausedUntilMap();
+        if ($paused === []) {
+            return '';
+        }
+
+        $providerLabels = [
+            'google' => 'Google Cloud Translate',
+            'deepl'  => 'DeepL',
+            'free'   => 'Kostenfreier Anbieter (MyMemory)',
+        ];
+
+        // Wie BuildTrialInfoText: statische Textbausteine serverseitig per
+        // Translate() übersetzt (an die Symcon-Systemsprache gebunden, nicht die
+        // individuelle Konsolensprache des Betrachters - dieselbe dokumentierte
+        // Einschränkung), die dynamischen Teile (Anbietername, Datum/Uhrzeit)
+        // bleiben unübersetzt angehängt.
+        $lines = [];
+        foreach ($paused as $provider => $until) {
+            $lines[] = '- ' . ($providerLabels[$provider] ?? $provider) . ': '
+                . $this->Translate('pausiert bis') . ' ' . date('d.m. H:i', (int) $until);
+        }
+
+        $globalPauseUntil = $this->GetGlobalPauseUntil();
+        $intro = $globalPauseUntil !== null
+            ? $this->Translate('Alle konfigurierten Anbieter melden aktuell ein Rate-Limit/Tageskontingent - keine neuen Übersetzungsversuche bis spätestens')
+                . ' ' . date('d.m. H:i', $globalPauseUntil) . '. '
+                . $this->Translate('Bereits vorhandene Übersetzungen bleiben nutzbar.')
+            : $this->Translate('Mindestens ein Anbieter meldet aktuell ein Rate-Limit/Tageskontingent (die übrigen werden normal weiterverwendet):');
+
+        return $intro . "\n" . implode("\n", $lines);
+    }
+
     // Google Cloud Translate lehnt Anfragen mit mehr als 128 Texten in einem
     // Aufruf komplett ab ("Too many text segments") - größere Batches werden
     // daher in mehrere Aufrufe aufgeteilt. DeepL dokumentiert kein hartes Limit,
@@ -3879,6 +3930,21 @@ private const LANGUAGE_FLAGS = [
             return [];
         }
 
+        // Zentraler Durchgangspunkt praktisch JEDER Uebersetzungsanfrage (Rescan,
+        // VM_UPDATE-Live-Nachuebersetzung, Reconcile, aber z.B. auch
+        // EnsureGuestLanguageNamesFresh fuers Dropdown selbst oder
+        // PushTrialExpiredAlert) - der Notaus-Schalter (siehe propertyActive) wird
+        // deshalb HIER zusaetzlich zu den bereits gegateten Aufrufstellen
+        // (ScanRootTree/HandleTrackedVariableUpdate/ReconcileRowSourceLanguageChanges)
+        // ein zweites Mal geprueft, als Verteidigungslinie gegen jeden Aufrufpfad,
+        // der (versehentlich oder kuenftig neu hinzugefuegt) noch nicht einzeln
+        // gegated ist - garantiert dadurch strukturell, dass "Aktiv" = false
+        // WIRKLICH jede weitere Uebersetzung stoppt, unabhaengig davon, von wo sie
+        // ausgeloest wurde.
+        if (!$this->ReadPropertyBoolean(self::propertyActive)) {
+            return array_fill(0, count($Texts), '');
+        }
+
         // Verteidigungslinie gegen einen internen Programmierfehler (z.B. eine leere
         // oder anderweitig ungueltige Zeilen-Quellsprache, siehe GetRowSourceLanguage) -
         // ohne diese Pruefung wuerde ein solcher Fehler unbemerkt als generischer
@@ -3899,8 +3965,30 @@ private const LANGUAGE_FLAGS = [
             return array_fill(0, count($Texts), '');
         }
 
+        // Sind WIRKLICH ALLE Anbieter der aktuellen Kette gerade pausiert (siehe
+        // GetGlobalPauseUntil/DetectRateLimitCooldown), lohnt sich kein einziger
+        // weiterer Versuch mehr - jeder von ihnen würde ohnehin sofort wieder
+        // dasselbe Rate-Limit/Tageskontingent melden. Statt trotzdem gegen die
+        // Wand zu laufen (und dabei unnötig weitere Anfragen zu verbrauchen, die
+        // die Sperre eher verlängern als verkürzen), sofort abbrechen und den
+        // milderen STATUS_TRANSLATE_PAUSED setzen statt STATUS_TRANSLATE_ERROR.
+        $globalPauseUntil = $this->GetGlobalPauseUntil();
+        if ($globalPauseUntil !== null) {
+            $this->SetStatus(self::STATUS_TRANSLATE_PAUSED);
+
+            return array_fill(0, count($Texts), '');
+        }
+
         $attempts = [];
         foreach ($this->GetProviderChain() as $provider) {
+            // Dieser EINE Anbieter ist noch pausiert (aber - siehe oben - nicht
+            // ALLE gleichzeitig) - übersprungen, ohne ihn erneut anzufragen, der
+            // nächste in der Kette wird stattdessen normal versucht.
+            if ($this->IsProviderPaused($provider)) {
+                $attempts[] = $provider . ' [pausiert]';
+                continue;
+            }
+
             $result = match ($provider) {
                 'google' => $this->TranslateChunkGoogle($Texts, $Source, $Target, $this->GetApiKeyForProvider('google'), $DebugContext),
                 'deepl'  => $this->TranslateChunkDeepL($Texts, $Source, $Target, $this->GetApiKeyForProvider('deepl'), $DebugContext),
@@ -4167,7 +4255,19 @@ private const LANGUAGE_FLAGS = [
     // zurueck.
     private function FetchLanguageNames(string $Target): ?array
     {
+        // Wie TranslateChunk(): Notaus-Schalter UND ein aktuell pausierter Anbieter
+        // (siehe IsProviderPaused/GetGlobalPauseUntil) werden beide respektiert -
+        // google/deepl sind hier ohnehin die einzigen relevanten Anbieter (der
+        // kostenfreie liefert per Definition immer null, siehe Kommentar oben).
+        if (!$this->ReadPropertyBoolean(self::propertyActive) || $this->GetGlobalPauseUntil() !== null) {
+            return null;
+        }
+
         foreach ($this->GetProviderChain() as $provider) {
+            if ($this->IsProviderPaused($provider)) {
+                continue;
+            }
+
             $names = match ($provider) {
                 'google' => $this->FetchLanguageNamesGoogle($this->GetApiKeyForProvider('google'), $Target),
                 'deepl'  => $this->FetchLanguageNamesDeepL($this->GetApiKeyForProvider('deepl')),
@@ -4605,7 +4705,8 @@ HTML;
             . '</select>'
             . $infoIconHtml
             . '</div>'
-            . $this->BuildTrialNoticeHtml($guestCache);
+            . $this->BuildTrialNoticeHtml($guestCache)
+            . $this->BuildPausedNoticeHtml($guestCache);
     }
 
     // Kleiner roter Hinweis unter dem Dropdown, solange diese Instanz auf einer
@@ -4631,6 +4732,26 @@ HTML;
         $text = htmlspecialchars($prefix . ' ' . date('d.m.Y', $expiresAt), ENT_QUOTES, 'UTF-8');
 
         return '<div class="ipssl-trial-notice" style="font-size:11px; color:#c0392b;">' . $text . '</div>';
+    }
+
+    // Kleiner roter Hinweis unter dem Dropdown, solange ALLE konfigurierten
+    // Übersetzungsanbieter gleichzeitig ein Rate-Limit/Tageskontingent melden (siehe
+    // GetGlobalPauseUntil/DetectRateLimitCooldown) - macht direkt in der Kachel
+    // sichtbar, dass/bis wann gerade nichts Neues übersetzt wird, statt dass Gäste
+    // nur eine leere/unübersetzte Kachel ohne Erklärung sehen. Aufbau bewusst
+    // identisch zu BuildTrialNoticeHtml. Leerer String, solange mindestens ein
+    // Anbieter noch verfügbar ist.
+    private function BuildPausedNoticeHtml(array $GuestCache): string
+    {
+        $pausedUntil = $this->GetGlobalPauseUntil();
+        if ($pausedUntil === null) {
+            return '';
+        }
+
+        $prefix = $GuestCache['pausedNoticePrefix'] ?? self::PAUSED_NOTICE_PREFIX_TEXT;
+        $text = htmlspecialchars($prefix . ' ' . date('H:i', $pausedUntil), ENT_QUOTES, 'UTF-8');
+
+        return '<div class="ipssl-paused-notice" style="font-size:11px; color:#c0392b;">' . $text . '</div>';
     }
 
     // Sortiert $Codes anhand von $Names (ObjectID-Code => angezeigter Name) alphabetisch
@@ -4759,7 +4880,11 @@ HTML;
         // gemeinsamen Aufruf übersetzen (statt je einem eigenen) - alles feste, kurze
         // Texte, die ohnehin nur bei Sprachwechsel/Cache-Ablauf einmal aktualisiert
         // werden.
-        $ownTexts = array_merge([self::INFO_HEADING_TEXT], self::INFO_LIMITATION_TEXTS, [self::TRIAL_NOTICE_PREFIX_TEXT]);
+        $ownTexts = array_merge(
+            [self::INFO_HEADING_TEXT],
+            self::INFO_LIMITATION_TEXTS,
+            [self::TRIAL_NOTICE_PREFIX_TEXT, self::PAUSED_NOTICE_PREFIX_TEXT]
+        );
         if ($language === 'de') {
             $translatedOwnTexts = $ownTexts;
         } else {
@@ -4772,14 +4897,16 @@ HTML;
             $infoTexts[] = $translatedOwnTexts[$i + 1] ?? $originalText;
         }
         $trialNoticePrefix = $translatedOwnTexts[count(self::INFO_LIMITATION_TEXTS) + 1] ?? self::TRIAL_NOTICE_PREFIX_TEXT;
+        $pausedNoticePrefix = $translatedOwnTexts[count(self::INFO_LIMITATION_TEXTS) + 2] ?? self::PAUSED_NOTICE_PREFIX_TEXT;
 
         $cache = [
-            'language'          => $language,
-            'names'             => $names,
-            'infoHeading'       => $infoHeading,
-            'infoTexts'         => $infoTexts,
-            'trialNoticePrefix' => $trialNoticePrefix,
-            'fetchedAt'         => time(),
+            'language'           => $language,
+            'names'              => $names,
+            'infoHeading'        => $infoHeading,
+            'infoTexts'          => $infoTexts,
+            'trialNoticePrefix'  => $trialNoticePrefix,
+            'pausedNoticePrefix' => $pausedNoticePrefix,
+            'fetchedAt'          => time(),
         ];
 
         $this->WriteAttributeString(self::attributeGuestLanguageNamesCache, json_encode($cache));
