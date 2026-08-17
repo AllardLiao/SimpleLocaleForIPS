@@ -364,6 +364,38 @@ Beschreibung des Moduls.
   darzustellen; Italienisch nutzt statt eines Suffixes einen Klammer-Wechsel
   der letzten Buchstaben, z. B. "richiest(a/e)", "caratter(e/i)", passend zum
   bereits bestehenden "giorno/i").
+
+  **Build 65 behebt den bisher schwerwiegendsten Fund dieser gesamten
+  Serie:** Live beobachtet wurden "Automations" und "Begrüßung" nach einem
+  Rescan während einer Anbieter-Pause komplett auf den unübersetzten
+  deutschen Rohtext eingefroren - in JEDER Zielsprachen-Spalte, dauerhaft,
+  auch nachdem die Pause längst vorbei war. Ursache: `TranslateBatchUncached()`
+  fällt bei einem fehlgeschlagenen Übersetzungsversuch bewusst NIE auf einen
+  leeren String zurück, sondern auf den unübersetzten Quelltext (siehe Build
+  58 - richtig für die dortige Wiederzusammensetzung von HTML-Widgets, die
+  sonst mit leeren dynamischen Werten dastünden). Das Problem: `TranslateBatch()`
+  ist der EINE zentrale Durchgangspunkt, über den ALLE anderen Funktionen
+  laufen (`FillLanguageColumn` beim Rescan, `ApplyTrackedVariableUpdate` bei
+  der VM_UPDATE-Live-Nachübersetzung, `ReconcileRowFields` beim
+  Quellsprachen-Abgleich) - und JEDE von ihnen entscheidet ausschließlich
+  anhand eines LEEREN Strings, ob eine Zelle als "fertig übersetzt, nicht
+  erneut versuchen" oder "fehlgeschlagen, bitte später erneut versuchen"
+  gilt. Da dieses leere Signal wegen des Fallbacks nie ankam, wurde JEDE
+  Zelle, deren allererster Übersetzungsversuch während einer Pause
+  stattfand, fälschlich als "erledigt" verbucht - inklusive einer
+  Cache-Vergiftung (der unübersetzte Rohtext wurde als "echte Übersetzung"
+  zwischengespeichert und dadurch nie wieder neu versucht, selbst nach Ende
+  der Pause). Behoben an der EINEN zentralen Stelle (`TranslateBatch()`):
+  ein Ergebnis, das exakt dem unübersetzten Quelltext entspricht, wird dort
+  wieder in einen echten Leerstring zurückverwandelt, bevor es an
+  irgendeinen Aufrufer weitergereicht oder gecacht wird - `TranslateBatchUncached()`
+  selbst (und damit die HTML-Wiederzusammensetzung) bleibt unverändert.
+  **Bereits vorhandene, auf diese Weise eingefrorene Zellen werden davon
+  nicht rückwirkend erkannt** (der gespeicherte deutsche Text ist nicht mehr
+  von einer "zufällig identischen" echten Übersetzung unterscheidbar) -
+  betroffene Zellen müssen einmalig manuell im Formular geleert werden,
+  danach übersetzt sie der nächste Rescan/die nächste Anbieter-Erholung
+  normal nach.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
