@@ -1,6 +1,9 @@
 {
     "translations": {
         "en": {
+            "Aktiv": "Active",
+            "Notaus-Schalter: deaktiviert sofort jeden Rescan (manuell/automatisch), jede Live-Nachübersetzung und jeden Quellsprachen-Abgleich - z.B. um ein aufgebrauchtes Tageskontingent oder ein Rate-Limit sofort zu stoppen. Bereits vorhandene Übersetzungen bleiben nutzbar, die Sprachumschaltung in der Kachel funktioniert weiter.": "Emergency stop: immediately disables every rescan (manual/automatic), every live retranslation, and every source-language reconciliation - e.g. to instantly stop a spent daily quota or a rate limit. Existing translations remain usable, language switching in the tile keeps working.",
+            "Deaktiviert (siehe Haken \"Aktiv\") - kein Rescan, keine Live-Nachübersetzung, kein Quellsprachen-Abgleich": "Disabled (see \"Active\" checkbox) - no rescan, no live retranslation, no source-language reconciliation",
             "Sprache": "Language",
             "Pfad": "Path",
             "Objekt-ID": "Object ID",
@@ -133,6 +136,9 @@
             "Der Übersetzungs-Cache wurde geleert. Bereits gespeicherte Übersetzungen in Objektnamen, Eigenen Texten und Beschriftungen sind davon nicht betroffen.": "The translation cache has been cleared. Translations already stored in Object names, Custom texts and Captions are not affected."
         },
         "es": {
+            "Aktiv": "Activo",
+            "Notaus-Schalter: deaktiviert sofort jeden Rescan (manuell/automatisch), jede Live-Nachübersetzung und jeden Quellsprachen-Abgleich - z.B. um ein aufgebrauchtes Tageskontingent oder ein Rate-Limit sofort zu stoppen. Bereits vorhandene Übersetzungen bleiben nutzbar, die Sprachumschaltung in der Kachel funktioniert weiter.": "Interruptor de emergencia: desactiva inmediatamente cada nuevo escaneo (manual/automático), cada retraducción en vivo y cada reconciliación de idioma de origen - por ejemplo, para detener al instante una cuota diaria agotada o un límite de frecuencia. Las traducciones existentes siguen siendo utilizables, el cambio de idioma en el mosaico sigue funcionando.",
+            "Deaktiviert (siehe Haken \"Aktiv\") - kein Rescan, keine Live-Nachübersetzung, kein Quellsprachen-Abgleich": "Desactivado (ver casilla \"Activo\") - sin nuevo escaneo, sin retraducción en vivo, sin reconciliación de idioma de origen",
             "Sprache": "Idioma",
             "Pfad": "Ruta",
             "Objekt-ID": "ID de objeto",
@@ -265,6 +271,9 @@
             "Der Übersetzungs-Cache wurde geleert. Bereits gespeicherte Übersetzungen in Objektnamen, Eigenen Texten und Beschriftungen sind davon nicht betroffen.": "Se ha vaciado la caché de traducción. Las traducciones ya guardadas en nombres de objetos, textos personalizados y etiquetas no se ven afectadas."
         },
         "it": {
+            "Aktiv": "Attivo",
+            "Notaus-Schalter: deaktiviert sofort jeden Rescan (manuell/automatisch), jede Live-Nachübersetzung und jeden Quellsprachen-Abgleich - z.B. um ein aufgebrauchtes Tageskontingent oder ein Rate-Limit sofort zu stoppen. Bereits vorhandene Übersetzungen bleiben nutzbar, die Sprachumschaltung in der Kachel funktioniert weiter.": "Interruttore di emergenza: disattiva immediatamente ogni nuova scansione (manuale/automatica), ogni ritraduzione live e ogni riconciliazione della lingua di origine - ad es. per fermare subito una quota giornaliera esaurita o un limite di frequenza. Le traduzioni esistenti restano utilizzabili, il cambio lingua nel tile continua a funzionare.",
+            "Deaktiviert (siehe Haken \"Aktiv\") - kein Rescan, keine Live-Nachübersetzung, kein Quellsprachen-Abgleich": "Disattivato (vedi casella \"Attivo\") - nessuna nuova scansione, nessuna ritraduzione live, nessuna riconciliazione della lingua di origine",
             "Sprache": "Lingua",
             "Pfad": "Percorso",
             "Objekt-ID": "ID oggetto",
@@ -397,6 +406,9 @@
             "Der Übersetzungs-Cache wurde geleert. Bereits gespeicherte Übersetzungen in Objektnamen, Eigenen Texten und Beschriftungen sind davon nicht betroffen.": "La cache di traduzione è stata svuotata. Le traduzioni già salvate in Nomi degli oggetti, Testi personalizzati e Etichette non sono interessate."
         },
         "fr": {
+            "Aktiv": "Actif",
+            "Notaus-Schalter: deaktiviert sofort jeden Rescan (manuell/automatisch), jede Live-Nachübersetzung und jeden Quellsprachen-Abgleich - z.B. um ein aufgebrauchtes Tageskontingent oder ein Rate-Limit sofort zu stoppen. Bereits vorhandene Übersetzungen bleiben nutzbar, die Sprachumschaltung in der Kachel funktioniert weiter.": "Interrupteur d'urgence : désactive immédiatement chaque nouvelle analyse (manuelle/automatique), chaque retraduction en direct et chaque réconciliation de langue source - par ex. pour arrêter instantanément un quota quotidien épuisé ou une limite de débit. Les traductions existantes restent utilisables, le changement de langue dans la tuile continue de fonctionner.",
+            "Deaktiviert (siehe Haken \"Aktiv\") - kein Rescan, keine Live-Nachübersetzung, kein Quellsprachen-Abgleich": "Désactivé (voir la case \"Actif\") - pas de nouvelle analyse, pas de retraduction en direct, pas de réconciliation de langue source",
             "Sprache": "Langue",
             "Pfad": "Chemin",
             "Objekt-ID": "ID d'objet",
