@@ -300,6 +300,15 @@ trait SimpleLocaleConstants
     private const attributeStatsRequestCount = 'StatsRequestCount';
     private const attributeStatsCharacterCount = 'StatsCharacterCount';
 
+    // Zaehlt separat, wie viele Uebersetzungsanfragen/Zeichen NICHT an einen
+    // Anbieter geschickt werden mussten, weil ein Cache-Treffer vorlag (siehe
+    // TranslateBatch/RecordCacheSavingsStats) - laeuft parallel zu
+    // attributeStatsRequestCount/attributeStatsCharacterCount oben (die zaehlen
+    // nur TATSAECHLICH gestellte Anfragen), ebenfalls seit attributeStatsSince,
+    // nie zurueckgesetzt.
+    private const attributeStatsCacheSavedRequestCount = 'StatsCacheSavedRequestCount';
+    private const attributeStatsCacheSavedCharacterCount = 'StatsCacheSavedCharacterCount';
+
     // Uebersetzungs-Cache (JSON-Map "Quellsprache|Zielsprache|SHA-256(Text)" =>
     // uebersetzter Text), siehe TranslateBatch/GetCachedTranslation/
     // StoreCachedTranslation - vermeidet wiederholte, identische API-Aufruf bei
@@ -320,6 +329,7 @@ trait SimpleLocaleConstants
     private const identShowApiKeyWarning = 'ShowApiKeyWarning';
     private const identActivateLicense = 'ActivateLicense';
     private const identClearTranslationCache = 'ClearTranslationCache';
+    private const identCheckProviders = 'CheckProviders';
 
     // Reservierter Pseudo-Sprachcode für den unangetasteten Rohtext beim ersten Scan
     // (Tippfehler inklusive). Nicht vom Gast über die Sprachauswahl erreichbar.
