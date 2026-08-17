@@ -169,6 +169,23 @@ Beschreibung des Moduls.
   abgelaufener API-Key oder ein Netzwerkfehler lösen dagegen NIE eine Pause
   aus (die würde sich ja nie von selbst erledigen) - nur ein tatsächlich als
   Rate-Limit/Kontingent erkannter Fehler.
+
+  **Build 57** korrigiert zwei live beobachtete Inkonsistenzen aus Build 55/56:
+  (1) Googles "User Rate Limit Exceeded" enthält keines der Tageskontingent-
+  Schlüsselwörter und bekam daher immer nur die kurze 15-Minuten-Basissperre -
+  blieb der Fehler aber über Stunden bestehen, führte das zu einem
+  "Flackern" (Google fiel nach jeder abgelaufenen Sperre wieder aus der
+  Pause-Übersicht heraus, obwohl der Fehler weiter auftrat). Jeder ERNEUTE
+  Fehlschlag ohne zwischenzeitlichen Erfolg verdoppelt die Sperrdauer jetzt
+  automatisch (15min, 30min, 1h, ... gedeckelt auf 24h) - ein tatsächlich nur
+  kurz blockierter Anbieter erholt sich weiterhin schnell, ein andauernd
+  fehlschlagender wandert automatisch Richtung Tagessperre. (2) Der
+  Instanz-Status "Aktiv, aber pausiert" wurde bisher nur GESETZT, wenn gerade
+  tatsächlich ein Übersetzungsversuch lief - fand seitdem keiner mehr statt,
+  blieb die Statuszeile veraltet stehen, obwohl die Panel-Übersicht (die
+  immer frisch berechnet wird) bereits alle Anbieter als pausiert zeigte.
+  Seit Build 57 wird der Status zusätzlich bei jedem Öffnen des
+  Konfigurationsformulars und bei jedem "Übernehmen" neu bewertet.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der

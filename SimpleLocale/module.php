@@ -388,7 +388,16 @@ private const LANGUAGE_FLAGS = [
             $this->SetStatus(self::STATUS_TRIAL_EXPIRED);
             $this->ResetToOriginalLanguageIfNeeded();
         } else {
-            $this->SetStatus(102);
+            // Live beobachtet (2026-08-18): STATUS_TRANSLATE_PAUSED wurde bisher NUR
+            // reaktiv innerhalb TranslateChunk() gesetzt, wenn GERADE ein
+            // Übersetzungsversuch lief - fand seitdem keiner mehr statt (kein Rescan/
+            // VM_UPDATE), blieb die Statuszeile beim letzten Stand (z.B. "Aktiv")
+            // stehen, obwohl laut Formular-Panel (siehe BuildProviderPauseStatusText,
+            // liest den Pause-Zustand JEDES MAL frisch) bereits alle Anbieter
+            // pausiert waren - sichtbar inkonsistent. Hier zusätzlich bei JEDEM
+            // ApplyChanges() frisch bewertet, unabhängig davon, ob gerade übersetzt
+            // wurde.
+            $this->SetStatus($this->GetGlobalPauseUntil() !== null ? self::STATUS_TRANSLATE_PAUSED : 102);
         }
 
         // Automatischer (Timer-gesteuerter) Rescan ist ein Pro-Feature (siehe
@@ -525,6 +534,13 @@ private const LANGUAGE_FLAGS = [
         // nie mehr angefasst (sie wächst nur noch über den eingebauten "Hinzufügen"-
         // Button, Zeile für Zeile), nur die Dropdown-Optionen für neue Zeilen.
         $this->RefreshAvailableLanguagesIfStale();
+
+        // Deckt den Fall ab, dass sich der Pause-Zustand geändert hat, seit
+        // ApplyChanges() zuletzt lief (kein Rescan/VM_UPDATE/"Übernehmen" seitdem) -
+        // die Statuszeile soll auch beim bloßen Öffnen des Formulars aktuell sein,
+        // nicht erst beim nächsten tatsächlichen Übersetzungsversuch (siehe
+        // RefreshTranslateChainStatus/ApplyChanges).
+        $this->RefreshTranslateChainStatus();
 
         $form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
         $this->PopulateFormElements($form['elements']);
@@ -3391,30 +3407,85 @@ private const LANGUAGE_FLAGS = [
         return $isDailyOrQuota ? self::DAILY_QUOTA_COOLDOWN_SECONDS : self::RATE_LIMIT_COOLDOWN_SECONDS;
     }
 
-    // Trägt einen Anbieter als pausiert ein (siehe attributeProviderPausedUntil) -
-    // verlängert eine bestehende Sperre nie rückwirkend nach unten (ein erneuter
-    // Fehlschlag während einer laufenden Sperre setzt sie höchstens neu/länger,
-    // nie kürzer).
-    private function RecordProviderPaused(string $Provider, int $CooldownSeconds): void
+    // Liest den rohen, ungefilterten Pause-Zustand (inkl. bereits abgelaufener
+    // Sperren - die werden bewusst NICHT sofort entfernt, siehe RecordProviderPaused/
+    // ClearProviderPause: der "streak"-Zähler muss über eine abgelaufene Sperre
+    // hinweg erhalten bleiben, damit die Eskalation weiterzählt, statt bei jedem
+    // neuen Fehlschlag wieder bei der kurzen Basissperre anzufangen).
+    private function GetRawProviderPauseState(): array
     {
-        $paused = $this->GetProviderPausedUntilMap();
-        $paused[$Provider] = max($paused[$Provider] ?? 0, time() + $CooldownSeconds);
-        $this->WriteAttributeString(self::attributeProviderPausedUntil, json_encode($paused));
+        $decoded = json_decode($this->ReadAttributeString(self::attributeProviderPausedUntil), true);
+
+        return is_array($decoded) ? $decoded : [];
     }
 
-    // Räumt beim Lesen gleich abgelaufene Einträge auf (kein separater Cleanup-Job
-    // nötig) - bei der winzigen erwarteten Größe (höchstens 3 Anbieter) völlig
-    // unkritisch, auch bei jedem Aufruf neu zu berechnen.
+    // Trägt einen Anbieter als pausiert ein (siehe attributeProviderPausedUntil) -
+    // mit ESKALIERENDER Sperrdauer: live beobachtet (2026-08-18), dass Googles
+    // "User Rate Limit Exceeded" zwar keines der Tageskontingent-Schlüsselwörter
+    // enthält (siehe DetectRateLimitCooldown), in der Praxis aber trotzdem über
+    // Stunden bestehen blieb - die kurze 15-Minuten-Basissperre führte dadurch zu
+    // einem verwirrenden "Flackern": Google fiel nach jeder abgelaufenen Sperre
+    // aus der Pause-Übersicht wieder heraus, obwohl der zusammenfassende
+    // Instanz-Status ("Aktiv, aber pausiert") vom vorherigen Zyklus stehen blieb.
+    // Jeder ERNEUTE Fehlschlag OHNE zwischenzeitlichen Erfolg (siehe
+    // ClearProviderPause) verdoppelt daher die Sperrdauer (15min, 30min, 1h, 2h,
+    // ... gedeckelt auf DAILY_QUOTA_COOLDOWN_SECONDS) - ein Anbieter, der
+    // tatsächlich nur kurz blockiert, erholt sich weiterhin schnell; einer, der
+    // andauernd fehlschlägt, wandert automatisch Richtung Tagessperre, ganz ohne
+    // auf eine bestimmte Formulierung in seiner Fehlermeldung angewiesen zu sein.
+    // Ein bereits als Tageskontingent erkannter Fehlschlag (siehe
+    // DetectRateLimitCooldown) startet direkt bei der vollen Sperrdauer, keine
+    // weitere Eskalation nötig.
+    private function RecordProviderPaused(string $Provider, int $BaseCooldownSeconds): void
+    {
+        $state = $this->GetRawProviderPauseState();
+        $streak = (int) ($state[$Provider]['streak'] ?? 0) + 1;
+
+        $escalated = $BaseCooldownSeconds >= self::DAILY_QUOTA_COOLDOWN_SECONDS
+            ? self::DAILY_QUOTA_COOLDOWN_SECONDS
+            : min(self::RATE_LIMIT_COOLDOWN_SECONDS * (2 ** ($streak - 1)), self::DAILY_QUOTA_COOLDOWN_SECONDS);
+
+        $state[$Provider] = [
+            'until'  => max((int) ($state[$Provider]['until'] ?? 0), time() + $escalated),
+            'streak' => $streak,
+        ];
+        $this->WriteAttributeString(self::attributeProviderPausedUntil, json_encode($state));
+    }
+
+    // Gegenstück zu RecordProviderPaused: nach einem ECHTEN Übersetzungserfolg
+    // (TranslateChunk() erreicht diesen Aufruf nur bei einem tatsächlichen
+    // API-Erfolg - ein Cache-Treffer ruft TranslateChunk() gar nicht erst auf,
+    // siehe TranslateBatch) wird die Eskalations-Kette dieses Anbieters wieder
+    // komplett zurückgesetzt - ein zukünftiger einzelner Fehlschlag beginnt dann
+    // wieder bei der kurzen Basissperre statt eskaliert weiterzuzählen.
+    private function ClearProviderPause(string $Provider): void
+    {
+        $state = $this->GetRawProviderPauseState();
+        if (!isset($state[$Provider])) {
+            return;
+        }
+        unset($state[$Provider]);
+        $this->WriteAttributeString(self::attributeProviderPausedUntil, json_encode($state));
+    }
+
+    // Räumt beim Lesen gleich abgelaufene Einträge aus dem RÜCKGABEWERT (nicht aus
+    // dem gespeicherten Zustand selbst, siehe GetRawProviderPauseState) - bei der
+    // winzigen erwarteten Größe (höchstens 3 Anbieter) völlig unkritisch, auch bei
+    // jedem Aufruf neu zu berechnen. Migrations-Fallback: vor der Eskalations-Logik
+    // (Build 56 und früher) war der gespeicherte Wert direkt ein Timestamp statt
+    // eines {until, streak}-Arrays.
     private function GetProviderPausedUntilMap(): array
     {
-        $paused = json_decode($this->ReadAttributeString(self::attributeProviderPausedUntil), true);
-        if (!is_array($paused)) {
-            return [];
+        $now = time();
+        $result = [];
+        foreach ($this->GetRawProviderPauseState() as $provider => $entry) {
+            $until = is_array($entry) ? (int) ($entry['until'] ?? 0) : (int) $entry;
+            if ($until > $now) {
+                $result[$provider] = $until;
+            }
         }
 
-        $now = time();
-
-        return array_filter($paused, fn ($until) => (int) $until > $now);
+        return $result;
     }
 
     private function GetProviderPausedUntil(string $Provider): ?int
@@ -3458,6 +3529,26 @@ private const LANGUAGE_FLAGS = [
         }
 
         return $latestUntil;
+    }
+
+    // Bewertet den Instanz-Status zwischen "Aktiv" (102) und
+    // STATUS_TRANSLATE_PAUSED (205) neu, anhand des AKTUELLEN Pause-Zustands
+    // (siehe GetGlobalPauseUntil) - im Gegensatz zum reaktiven SetStatus() direkt
+    // in TranslateChunk() (nur beim tatsächlichen Übersetzungsversuch) greift
+    // diese Funktion auch dann, wenn seit dem letzten Übersetzungsversuch weder
+    // Rescan noch VM_UPDATE liefen (siehe ApplyChanges/GetConfigurationForm) - die
+    // Statuszeile bleibt so konsistent mit der jederzeit frisch berechneten
+    // Panel-Übersicht (BuildProviderPauseStatusText). Rührt ROOT_CATEGORY_MISSING/
+    // TRIAL_EXPIRED bewusst NICHT an (haben Vorrang, werden von ihrer jeweils
+    // eigenen Prüfung in ApplyChanges gesetzt) - nur wenn der aktuelle Status
+    // ohnehin schon einer der drei "generischen" Übersetzungs-Status ist.
+    private function RefreshTranslateChainStatus(): void
+    {
+        if (!in_array($this->GetStatus(), [102, self::STATUS_TRANSLATE_ERROR, self::STATUS_TRANSLATE_PAUSED], true)) {
+            return;
+        }
+
+        $this->SetStatus($this->GetGlobalPauseUntil() !== null ? self::STATUS_TRANSLATE_PAUSED : 102);
     }
 
     // Baut den Text für "ProviderPauseStatusLabel" im Panel "Übersetzungsanbieter" -
@@ -3995,6 +4086,11 @@ private const LANGUAGE_FLAGS = [
                 default  => $this->TranslateChunkFree($Texts, $Source, $Target, $DebugContext),
             };
             if ($result !== null) {
+                // Echter API-Erfolg (kein Cache-Treffer - der laeuft nie ueber
+                // TranslateChunk, siehe TranslateBatch) - Eskalations-Kette dieses
+                // Anbieters zuruecksetzen, siehe ClearProviderPause.
+                $this->ClearProviderPause($provider);
+
                 return $result;
             }
             $attempts[] = $provider;
