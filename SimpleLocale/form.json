@@ -108,6 +108,13 @@
                             "caption": "Ohne jede Eingabe unten funktioniert die Übersetzung sofort über den kostenfreien Anbieter (kein Konto nötig). Google und/oder DeepL sind optional - sind beide eingetragen, wird zuerst der bevorzugte versucht; schlägt ein Anbieter fehl (z.B. Tageskontingent erschöpft), springt die Übersetzung automatisch zum nächsten."
                         },
                         {
+                            "type": "Label",
+                            "name": "ProviderPauseStatusLabel",
+                            "caption": "",
+                            "visible": false,
+                            "color": 16711680
+                        },
+                        {
                             "type": "PasswordTextBox",
                             "name": "GoogleTranslateAPIKey",
                             "caption": "Google Cloud Translate API-Key (optional)"
@@ -720,6 +727,11 @@
             "code": 104,
             "icon": "inactive",
             "caption": "Deaktiviert (siehe Haken \"Aktiv\") - kein Rescan, keine Live-Nachübersetzung, kein Quellsprachen-Abgleich"
+        },
+        {
+            "code": 205,
+            "icon": "warning",
+            "caption": "Aktiv, aber pausiert - alle Übersetzungsanbieter melden ein Rate-Limit/Tageskontingent, siehe Panel \"Übersetzungsanbieter\""
         }
     ]
 }

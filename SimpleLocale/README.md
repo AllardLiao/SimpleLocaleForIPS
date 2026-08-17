@@ -149,6 +149,26 @@ Beschreibung des Moduls.
   MessageSink-Ausführungskontext nicht existierende Interface-Instanz
   vorauszusetzen) - seit Build 54 wird stattdessen die kontextunabhängige globale
   `IPS_LogMessage()`-Funktion verwendet.
+* **Automatische Pause bei Rate-Limit/Tageskontingent (Build 55).** Meldet ein
+  einzelner Übersetzungsanbieter ein Rate-Limit oder ein aufgebrauchtes
+  Tageskontingent (erkannt an HTTP 429/456 bzw. HTTP 403 mit "rate limit" in
+  der Antwort), wird genau dieser eine Anbieter für eine gewisse Zeit
+  automatisch pausiert (kurze Sperre bei einem reinen Burst-Limit, 24h bei
+  einem erkannten Tageskontingent) - er wird währenddessen nicht erneut
+  angefragt, die übrigen konfigurierten Anbieter werden aber normal
+  weiterversucht. Melden ALLE konfigurierten Anbieter gleichzeitig ein
+  Limit (bei nur einem konfigurierten Anbieter genügt bereits dieser eine),
+  lohnt sich kein weiterer Versuch mehr - die Instanz pausiert dann komplett
+  bis zum frühesten Reset-Zeitpunkt: kein einziger weiterer API-Aufruf, bis
+  mindestens ein Anbieter wieder verfügbar sein sollte. Sichtbar an drei
+  Stellen: ein kleiner roter Hinweis "Übersetzung pausiert bis HH:MM" direkt
+  unter dem Dropdown in der Kachel (live in die jeweils aktive Gast-Sprache
+  übersetzt), der Instanz-Status "Aktiv, aber pausiert", und eine detaillierte
+  Aufschlüsselung (welcher Anbieter pausiert bis wann) im Panel
+  "Übersetzungsanbieter" des Konfigurationsformulars. Ein ungültiger/
+  abgelaufener API-Key oder ein Netzwerkfehler lösen dagegen NIE eine Pause
+  aus (die würde sich ja nie von selbst erledigen) - nur ein tatsächlich als
+  Rate-Limit/Kontingent erkannter Fehler.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
