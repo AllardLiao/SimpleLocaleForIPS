@@ -454,6 +454,37 @@ Beschreibung des Moduls.
   Datum zusätzlich zur Uhrzeit (z. B. "18.08. 21:34" statt nur "21:34") -
   eine reine Uhrzeit war bei einer über Mitternacht hinausreichenden Pause
   (durch die Eskalation, siehe Build 57, bis zu 24h) mehrdeutig.
+
+  **Build 68 rundet die Build-67-Umstellung ab:** Live beobachtet blieben
+  zwei einzelne Textbausteine trotz Build 67 weiterhin unübersetzt -
+  "Tag(e):" und "Zeichen." -, obwohl das bloße "Tag(e)"/"Zeichen" an anderer
+  Stelle im selben Formular korrekt übersetzte. Ursache: an genau diesen
+  beiden Stellen war ein Satzzeichen DIREKT an das deutsche Wort angehängt
+  ("Tag(e):" statt "Tag(e)", "Zeichen." statt "Zeichen") - eine Zeichenkette,
+  die dadurch nicht mehr EXAKT dem registrierten `locale.json`-Schlüssel
+  entspricht, bleibt beim Abgleich unübersetzt stehen (siehe Build 67).
+  Jedes Satzzeichen, das zu keinem eigenen Textbaustein gehört, sitzt jetzt
+  in einem eigenen, unbenannten Element (kein `locale.json`-Eintrag nötig -
+  ein Satzzeichen ohne Übersetzungstreffer wird ohnehin unverändert
+  angezeigt). Zusätzlich fehlte "Kostenfreier Anbieter (MyMemory)" bisher
+  komplett als registrierter Übersetzungstext (nicht falsch zusammengesetzt,
+  sondern schlicht nie übersetzbar gemacht) - jetzt in allen 4 Sprachen
+  ergänzt und sowohl in der Pause-Übersicht als auch im
+  "Übersetzungsanbieter prüfen"-Ergebnis verwendet. Der Nutzungs-Zähler
+  wurde dabei gleich klarer strukturiert: statt der bisherigen ".../h"-Suffixe
+  zeigt eine neue, eigene Zeile "Stündlich" (übersetzbar) die
+  Pro-Stunde-Werte, "Insgesamt" (vormals klein geschrieben "insgesamt")
+  startet jetzt ebenfalls eine eigene Zeile - vier klar getrennte,
+  vollständig lokalisierte Zeilen (Seit Inbetriebnahme / Stündlich /
+  Insgesamt / Durch den Cache eingespart) statt eines einzigen, dichten
+  Absatzes. Nach demselben Muster wurden außerdem der Testphasen-Hinweis
+  (`TrialInfoFreshLabel`/`TrialInfoRunningRow`/`TrialInfoExpiredRow`, je
+  nach Testphasen-Status genau eine sichtbare Variante) und das Ergebnis-
+  Popup von "Übersetzungsanbieter prüfen" umgebaut (ein `RowLayout` je
+  geprüftem Anbieter, per `UpdateFormField()` einzeln befüllt statt eines
+  einzigen zusammengesetzten Texts) - beide hatten dieselbe Systemsprache-
+  statt-Konsolensprache-Einschränkung, waren bisher aber nur noch nicht
+  gemeldet worden.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
