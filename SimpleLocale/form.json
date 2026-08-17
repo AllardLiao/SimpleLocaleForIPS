@@ -16,6 +16,11 @@
                     "caption": "Notaus-Schalter: deaktiviert sofort jeden Rescan (manuell/automatisch), jede Live-Nachübersetzung und jeden Quellsprachen-Abgleich - z.B. um ein aufgebrauchtes Tageskontingent oder ein Rate-Limit sofort zu stoppen. Bereits vorhandene Übersetzungen bleiben nutzbar, die Sprachumschaltung in der Kachel funktioniert weiter."
                 },
                 {
+                    "type": "Label",
+                    "name": "TranslationStatsLabel",
+                    "caption": ""
+                },
+                {
                     "type": "SelectInstance",
                     "name": "WebFrontVisuInstanceID",
                     "caption": "Kachel-Visualisierung"
@@ -55,6 +60,15 @@
                     "type": "CheckBox",
                     "name": "ShowInfoIcon",
                     "caption": "Info-Symbol in der Kachel anzeigen"
+                },
+                {
+                    "type": "CheckBox",
+                    "name": "ShowTranslationStats",
+                    "caption": "Übersetzungsstatistik in der Kachel anzeigen"
+                },
+                {
+                    "type": "Label",
+                    "caption": "Kleiner Hinweis unter dem Dropdown (\"30 Übersetzungen/h, 500 Zeichen/h\") - rein informativ, aktualisiert sich in bereits offenen Kacheln alle 10 Minuten. Für eigene Kacheln stehen unabhängig von diesem Haken die Platzhalter <!--COUNT_TRANSLATIONS--> und <!--COUNT_SIGNES--> zur Verfügung (liefern nur die Zahl, siehe Abschnitt 7 der Dokumentation)."
                 },
                 {
                     "type": "CheckBox",

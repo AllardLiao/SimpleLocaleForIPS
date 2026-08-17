@@ -47,6 +47,12 @@ class SimpleLocale extends IPSModuleStrict
     // Gast-Sprache übersetzt.
     private const PAUSED_NOTICE_PREFIX_TEXT = 'Übersetzung pausiert bis';
 
+    // Guest-facing Label-Texte fuer die Uebersetzungs-Statistik in der Kachel (siehe
+    // BuildTranslationStatsNoticeHtml) - live in die aktive Gast-Sprache uebersetzt,
+    // wie TRIAL_NOTICE_PREFIX_TEXT/PAUSED_NOTICE_PREFIX_TEXT.
+    private const STATS_NOTICE_REQUESTS_LABEL_TEXT = 'Übersetzungen/h';
+    private const STATS_NOTICE_CHARACTERS_LABEL_TEXT = 'Zeichen/h';
+
     // Kurzes "Burst"-Rate-Limit (z.B. Googles "User Rate Limit Exceeded" - zu viele
     // Anfragen pro Sekunde/100 Sekunden, kein Tageskontingent) - erholt sich
     // erfahrungsgemäß innerhalb weniger Minuten von selbst, daher eine kurze Sperre.
@@ -284,6 +290,9 @@ private const LANGUAGE_FLAGS = [
         // werden sollen (z.B. falls er ein eigenes, schlankeres Design möchte).
         $this->RegisterPropertyBoolean(self::propertyShowGlobeIcon, true);
         $this->RegisterPropertyBoolean(self::propertyShowInfoIcon, true);
+        // Statistik-Hinweis in der Kachel (siehe BuildTranslationStatsNoticeHtml) -
+        // standardmäßig aus, rein informativ.
+        $this->RegisterPropertyBoolean(self::propertyShowTranslationStats, false);
 
         // Pro-Feature "custom_tile" (siehe HasLicenseFeature) - Wert bleibt auch
         // ohne Lizenz gespeichert, greift aber erst mit dem Feature-Flag
@@ -324,6 +333,10 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterAttributeInteger(self::attributeEffectiveRootCategoryID, 0);
         $this->RegisterAttributeString(self::attributeLastRowSourceLanguageFingerprint, '');
         $this->RegisterAttributeString(self::attributeProviderPausedUntil, '{}');
+        $this->RegisterAttributeString(self::attributeLastSeenProviderCredentialsHash, '{}');
+        $this->RegisterAttributeInteger(self::attributeStatsSince, 0);
+        $this->RegisterAttributeInteger(self::attributeStatsRequestCount, 0);
+        $this->RegisterAttributeInteger(self::attributeStatsCharacterCount, 0);
 
         $this->SetVisualizationType(1);
 
@@ -337,7 +350,15 @@ private const LANGUAGE_FLAGS = [
             }
         }
 
-        $this->RegisterTimer($this->GetAutoRescanTimerIdent(), 0, 'IPSSL_Rescan($_IPS[\'TARGET\']);');
+        // IPSSL_AutoRescan(), NICHT IPSSL_Rescan() - siehe Kommentar dort (kein
+        // ReloadForm(), damit ein offenes Konfigurationsformular während der
+        // Bearbeitung nicht mitten drin neu geladen wird).
+        $this->RegisterTimer($this->GetAutoRescanTimerIdent(), 0, 'IPSSL_AutoRescan($_IPS[\'TARGET\']);');
+        // Aktualisiert nur die guest-facing Statistik-Anzeige in bereits offenen
+        // Kacheln (siehe RefreshTranslationStatsTile/propertyShowTranslationStats) -
+        // rührt NIE das Konfigurationsformular an, komplett unabhängig vom
+        // Auto-Rescan-Timer.
+        $this->RegisterTimer($this->GetTranslationStatsTimerIdent(), 0, 'IPSSL_RefreshTranslationStatsTile($_IPS[\'TARGET\']);');
     }
 
     public function Destroy(): void
@@ -350,6 +371,15 @@ private const LANGUAGE_FLAGS = [
     {
         //Never delete this line!
         parent::ApplyChanges();
+
+        // "Inbetriebnahme" fuer die Uebersetzungs-Statistik (siehe
+        // BuildTranslationStatsText) - der Zeitpunkt des ALLERERSTEN
+        // ApplyChanges()-Durchlaufs ueberhaupt, unabhaengig vom Notaus-Schalter
+        // (siehe unten) oder davon, ob je tatsaechlich uebersetzt wurde. Nur einmal
+        // gesetzt (Wert bleibt 0, bis er das erste Mal beschrieben wird).
+        if ($this->ReadAttributeInteger(self::attributeStatsSince) === 0) {
+            $this->WriteAttributeInteger(self::attributeStatsSince, time());
+        }
 
         // Notaus-Schalter (siehe propertyActive) - VOR jeder anderen Logik geprüft:
         // bei false wird der Auto-Rescan-Timer sofort gestoppt und die komplette
@@ -368,6 +398,16 @@ private const LANGUAGE_FLAGS = [
 
             return;
         }
+
+        // Trägt der Admin einen NEUEN/anderen API-Key (Google/DeepL) oder eine andere
+        // Kontakt-E-Mail (kostenfreier Anbieter) ein, kann das die Ursache eines
+        // laufenden Pause-Zustands (siehe GetGlobalPauseUntil/DetectRateLimitCooldown)
+        // direkt beheben - ein ungültiger Key wird jetzt evtl. gültig, ein neues
+        // MyMemory-Kontingent (an die neue E-Mail gebunden) ist noch nicht
+        // ausgeschöpft. Ohne diesen Check müsste der Admin bis zum Ablauf der
+        // (ggf. bereits auf mehrere Stunden eskalierten) Sperre warten, obwohl das
+        // Problem längst behoben ist.
+        $this->ClearPauseOnCredentialChange();
 
         // Testphase startet mit der allerersten Einrichtung der Instanz, nicht erst
         // beim ersten Rescan - sonst könnte man den Ablauf durch einfaches Nichtstun
@@ -407,6 +447,18 @@ private const LANGUAGE_FLAGS = [
         // Button/IPSSL_Rescan bleibt davon unberührt und für alle Editionen nutzbar.
         $interval = $this->HasLicenseFeature('auto_rescan') ? $this->ReadPropertyInteger(self::propertyAutoRescanInterval) : 0;
         $this->SetTimerInterval($this->GetAutoRescanTimerIdent(), $interval > 0 ? $interval * 60 * 1000 : 0);
+
+        // Nur aktiv, wenn der Statistik-Hinweis in der Kachel ueberhaupt eingeblendet
+        // wird (siehe propertyShowTranslationStats) - sonst gaebe es fuer bereits
+        // offene Gast-Kacheln nichts periodisch zu aktualisieren. Feste 10-Minuten-
+        // Taktung (kein eigenes Konfigurationsfeld dafuer noetig) - haeufig genug,
+        // dass die Anzeige nicht spuerbar veraltet wirkt, selten genug, um keine
+        // spuerbare Last zu erzeugen (reine PushVisualizationUpdate()-Neuberechnung,
+        // kein API-Aufruf).
+        $this->SetTimerInterval(
+            $this->GetTranslationStatsTimerIdent(),
+            $this->ReadPropertyBoolean(self::propertyShowTranslationStats) ? 10 * 60 * 1000 : 0
+        );
 
         $this->SyncValueUpdateRegistrations();
 
@@ -673,6 +725,18 @@ private const LANGUAGE_FLAGS = [
                     $pauseStatusText = $this->BuildProviderPauseStatusText();
                     $element['caption'] = $pauseStatusText;
                     $element['visible'] = $pauseStatusText !== '';
+                    break;
+
+                // Direkt unter der Erläuterung des "Aktiv"-Schalters (siehe Nutzer-
+                // Anfrage) - wird bei jedem Öffnen/Neuladen des Formulars frisch
+                // berechnet (siehe BuildTranslationStatsText), kein eigener
+                // Refresh-Mechanismus, damit ein bereits geöffnetes Formular
+                // während der Bearbeitung NIE ungefragt neu geladen wird. Vor der
+                // allerersten Inbetriebnahme (attributeStatsSince noch 0) unsichtbar.
+                case 'TranslationStatsLabel':
+                    $statsText = $this->BuildTranslationStatsText();
+                    $element['caption'] = $statsText;
+                    $element['visible'] = $statsText !== '';
                     break;
 
                 case self::propertyCurrentLanguage:
@@ -969,9 +1033,26 @@ private const LANGUAGE_FLAGS = [
         $this->RequestAction(self::identLanguage, $LanguageCode);
     }
 
+    // Manuell ausgelöst (Formular-Button oder IPSSL_Rescan()) - lädt das
+    // Konfigurationsformular danach bewusst neu (siehe ScanRootTree), der Admin hat
+    // den Rescan ja selbst angestoßen und erwartet, die aktualisierte Liste sofort
+    // zu sehen.
     public function Rescan(): void
     {
-        $this->ScanRootTree();
+        $this->ScanRootTree(true);
+    }
+
+    // Wird AUSSCHLIESSLICH vom Auto-Rescan-Timer aufgerufen (siehe RegisterTimer in
+    // Create()) - inhaltlich identisch zu Rescan(), aber OHNE das abschließende
+    // ReloadForm(). Live gemeldeter Bug (2026-08-19): ein automatischer
+    // Hintergrund-Rescan während eines GERADE OFFENEN Konfigurationsformulars
+    // erzwang per ReloadForm() ein komplettes Neuladen im Browser - dabei gingen
+    // alle gerade im Formular eingetragenen, noch NICHT per "Übernehmen"
+    // gespeicherten Änderungen (z. B. eine manuell korrigierte Übersetzung)
+    // ersatzlos verloren, mitten in der Bearbeitung.
+    public function AutoRescan(): void
+    {
+        $this->ScanRootTree(false);
     }
 
     // Manueller Reset des Uebersetzungs-Caches (attributeTranslationCache,
@@ -2313,7 +2394,13 @@ private const LANGUAGE_FLAGS = [
         return $rootID;
     }
 
-    private function ScanRootTree(): void
+    // $ReloadFormAfterward: siehe Rescan()/AutoRescan() - false unterdrückt beide
+    // ReloadForm()-Aufrufe unten (Abbruch wegen unbenannter Objekte UND regulärer
+    // Abschluss), damit ein automatischer Hintergrund-Rescan ein GERADE OFFENES
+    // Konfigurationsformular nicht mitten in der Bearbeitung neu lädt und dabei
+    // unsavte Änderungen (z.B. eine manuell korrigierte Übersetzung) verwirft. Live
+    // gemeldeter Bug (2026-08-19).
+    private function ScanRootTree(bool $ReloadFormAfterward = true): void
     {
         // Notaus-Schalter (siehe propertyActive/ApplyChanges) - deckt sowohl den
         // manuellen Rescan-Button als auch den Auto-Rescan-Timer ab (beide laufen
@@ -2372,7 +2459,9 @@ private const LANGUAGE_FLAGS = [
         if ($unnamedObjects !== []) {
             $this->SendDebug('IPSSL_Debug', 'ScanRootTree: abort - unnamed objects found: ' . json_encode($unnamedObjects), 0);
             $this->SetStatus(self::STATUS_UNNAMED_OBJECTS);
-            $this->ReloadForm();
+            if ($ReloadFormAfterward) {
+                $this->ReloadForm();
+            }
 
             return;
         }
@@ -2458,8 +2547,13 @@ private const LANGUAGE_FLAGS = [
 
         // Kompletter Formular-Neuaufbau statt UpdateFormField: ein offenes Formular hat
         // sonst noch den alten (leeren) Stand im Speicher und würde ihn bei "Übernehmen"
-        // über die gerade gespeicherten Scan-Ergebnisse zurückschreiben.
-        $this->ReloadForm();
+        // über die gerade gespeicherten Scan-Ergebnisse zurückschreiben. NUR beim
+        // manuellen Rescan (siehe Rescan()) - der automatische Hintergrund-Timer
+        // (siehe AutoRescan()) unterdrückt das bewusst, siehe Kommentar oben an der
+        // Funktion.
+        if ($ReloadFormAfterward) {
+            $this->ReloadForm();
+        }
     }
 
     // Symcon lässt einen wirklich leeren Namen nicht zu - IPS_SetName('') (bzw. ein
@@ -3534,6 +3628,140 @@ private const LANGUAGE_FLAGS = [
         $this->WriteAttributeString(self::attributeProviderPausedUntil, json_encode($state));
     }
 
+    // Beendet eine laufende Pause (siehe ClearProviderPause) für GENAU den Anbieter,
+    // dessen Zugangsdaten sich seit dem letzten ApplyChanges() geändert haben - ein
+    // neuer/anderer Google-/DeepL-API-Key oder eine andere Kontakt-E-Mail für den
+    // kostenfreien Anbieter (siehe propertyFreeTranslateContactEmail, hebt bei
+    // MyMemory das Tageskontingent an) kann die Ursache der Sperre direkt beheben,
+    // ohne bis zum Ablauf der ggf. bereits eskalierten Sperrdauer warten zu müssen.
+    // Speichert nur einen HASH der jeweiligen Zugangsdaten (wie
+    // attributeLastCheckedLicenseKeyHash) statt der Werte selbst - reine
+    // Änderungserkennung, keine zusätzliche Kopie sensibler Daten nötig. Beim
+    // allerersten Aufruf (kein vorheriger Hash bekannt) wird bewusst NICHTS
+    // "geändert" gewertet - es gibt ja noch keine Vergleichsbasis.
+    private function ClearPauseOnCredentialChange(): void
+    {
+        $current = [
+            'google' => hash('sha256', $this->ReadPropertyString(self::propertyGoogleTranslateAPIKey)),
+            'deepl'  => hash('sha256', $this->ReadPropertyString(self::propertyDeepLAPIKey)),
+            'free'   => hash('sha256', $this->ReadPropertyString(self::propertyFreeTranslateContactEmail)),
+        ];
+
+        $lastSeen = json_decode($this->ReadAttributeString(self::attributeLastSeenProviderCredentialsHash), true);
+        if (!is_array($lastSeen)) {
+            $lastSeen = [];
+        }
+
+        foreach ($current as $provider => $hash) {
+            if (isset($lastSeen[$provider]) && $lastSeen[$provider] !== $hash) {
+                $this->ClearProviderPause($provider);
+            }
+        }
+
+        if ($lastSeen !== $current) {
+            $this->WriteAttributeString(self::attributeLastSeenProviderCredentialsHash, json_encode($current));
+        }
+    }
+
+    // Zaehlt EINEN tatsaechlichen HTTP-Aufruf an einen Uebersetzungsanbieter (siehe
+    // CallGoogleTranslateAPI/CallDeepLAPI/CallFreeTranslateAPI) - unabhaengig von
+    // Erfolg/Misserfolg, ein fehlgeschlagener Versuch verbraucht ebenfalls
+    // Kontingent/Last. $CharacterCount ist 0 bei reinen Sprachlisten-Abfragen (siehe
+    // FetchLanguageNamesGoogle/Deepl).
+    private function RecordTranslationRequestStats(int $CharacterCount): void
+    {
+        $this->WriteAttributeInteger(
+            self::attributeStatsRequestCount,
+            $this->ReadAttributeInteger(self::attributeStatsRequestCount) + 1
+        );
+        if ($CharacterCount > 0) {
+            $this->WriteAttributeInteger(
+                self::attributeStatsCharacterCount,
+                $this->ReadAttributeInteger(self::attributeStatsCharacterCount) + $CharacterCount
+            );
+        }
+    }
+
+    // Reine Lesefunktion (keine Seiteneffekte, kein Attribut-Write) - liefert die
+    // rohen Zaehler UND die daraus abgeleiteten Durchschnittswerte pro Stunde seit
+    // attributeStatsSince (siehe ApplyChanges). "hoursElapsed" wird auf mindestens
+    // eine Sekunde gedeckelt, um eine Division durch 0 direkt nach der allerersten
+    // Inbetriebnahme zu vermeiden.
+    private function ComputeTranslationStats(): array
+    {
+        $since = $this->ReadAttributeInteger(self::attributeStatsSince);
+        $requestCount = $this->ReadAttributeInteger(self::attributeStatsRequestCount);
+        $characterCount = $this->ReadAttributeInteger(self::attributeStatsCharacterCount);
+
+        $elapsedSeconds = $since > 0 ? max(1, time() - $since) : 1;
+        $hoursElapsed = $elapsedSeconds / 3600;
+
+        return [
+            'since'           => $since,
+            'requestCount'    => $requestCount,
+            'characterCount'  => $characterCount,
+            'hoursElapsed'    => $hoursElapsed,
+            'requestsPerHour' => $requestCount / $hoursElapsed,
+            'charsPerHour'    => $characterCount / $hoursElapsed,
+        ];
+    }
+
+    // Ganzzahlig gerundet, ohne Dezimalstellen - fuer die Platzhalter
+    // <!--COUNT_TRANSLATIONS-->/<!--COUNT_SIGNES--> (siehe ApplyTilePlaceholders) UND
+    // den Kachel-Hinweis (siehe BuildTranslationStatsNoticeHtml): "30
+    // Übersetzungen/h, 500 Zeichen/h", nicht "29,7".
+    private function FormatStatsCount(float $Value): string
+    {
+        return (string) (int) round($Value);
+    }
+
+    // Admin-facing Zusammenfassung fuers Konfigurationsformular (siehe
+    // PopulateFormElements, Label unter dem "Aktiv"-Schalter) - wird bei JEDEM
+    // Öffnen/Neuladen des Formulars frisch aus den aktuellen Zaehlern berechnet
+    // (kein eigener Cache, kein ReloadForm/Refresh-Mechanismus noetig - das Formular
+    // zeigt einfach den zum Zeitpunkt des Öffnens aktuellen Stand, wie jedes andere
+    // Formularfeld auch).
+    private function BuildTranslationStatsText(): string
+    {
+        $stats = $this->ComputeTranslationStats();
+        if ($stats['since'] === 0) {
+            return '';
+        }
+
+        $daysSince = max(0, (int) floor((time() - $stats['since']) / 86400));
+
+        return $this->Translate('Seit Inbetriebnahme am') . ' ' . date('d.m.Y', $stats['since'])
+            . ' (' . $daysSince . ' ' . $this->Translate('Tag(e)') . '): '
+            . $this->FormatStatsCount($stats['requestsPerHour']) . ' ' . $this->Translate('Anfragen/h')
+            . ', ' . $this->FormatStatsCount($stats['charsPerHour']) . ' ' . $this->Translate('Zeichen/h')
+            . ' (' . $this->Translate('insgesamt') . ': ' . $stats['requestCount'] . ' '
+            . $this->Translate('Anfragen') . ', ' . $stats['characterCount'] . ' ' . $this->Translate('Zeichen') . ').';
+    }
+
+    // Kleiner, neutraler (NICHT roter - kein Warnhinweis, rein informativ) Hinweis
+    // unter dem Dropdown in der Kachel, siehe propertyShowTranslationStats -
+    // standardmäßig aus. Aufbau bewusst analog zu BuildTrialNoticeHtml/
+    // BuildPausedNoticeHtml, nur mit neutraler statt roter Farbe.
+    private function BuildTranslationStatsNoticeHtml(array $GuestCache): string
+    {
+        if (!$this->ReadPropertyBoolean(self::propertyShowTranslationStats)) {
+            return '';
+        }
+
+        $stats = $this->ComputeTranslationStats();
+        $requestsLabel = $GuestCache['statsRequestsLabel'] ?? self::STATS_NOTICE_REQUESTS_LABEL_TEXT;
+        $charsLabel = $GuestCache['statsCharactersLabel'] ?? self::STATS_NOTICE_CHARACTERS_LABEL_TEXT;
+
+        $text = htmlspecialchars(
+            $this->FormatStatsCount($stats['requestsPerHour']) . ' ' . $requestsLabel
+                . ', ' . $this->FormatStatsCount($stats['charsPerHour']) . ' ' . $charsLabel,
+            ENT_QUOTES,
+            'UTF-8'
+        );
+
+        return '<div class="ipssl-stats-notice" style="font-size:11px; color:#666; text-align:center;">' . $text . '</div>';
+    }
+
     // Räumt beim Lesen gleich abgelaufene Einträge aus dem RÜCKGABEWERT (nicht aus
     // dem gespeicherten Zustand selbst, siehe GetRawProviderPauseState) - bei der
     // winzigen erwarteten Größe (höchstens 3 Anbieter) völlig unkritisch, auch bei
@@ -4234,7 +4462,8 @@ private const LANGUAGE_FLAGS = [
 
         $response = $this->CallGoogleTranslateAPI(
             'https://translation.googleapis.com/language/translate/v2?key=' . urlencode($ApiKey),
-            $payload
+            $payload,
+            array_sum(array_map(fn ($text) => mb_strlen($text, 'UTF-8'), $Texts))
         );
 
         $this->SendDebug('GoogleTranslate_Response', $DebugContext . ' | ' . ($response ?? '(keine Antwort)'), 0);
@@ -4278,7 +4507,12 @@ private const LANGUAGE_FLAGS = [
 
         $this->SendDebug('DeepLTranslate_Request', $DebugContext . ' | ' . $payload, 0);
 
-        $response = $this->CallDeepLAPI($ApiKey, '/v2/translate', $payload);
+        $response = $this->CallDeepLAPI(
+            $ApiKey,
+            '/v2/translate',
+            $payload,
+            array_sum(array_map(fn ($text) => mb_strlen($text, 'UTF-8'), $Texts))
+        );
 
         $this->SendDebug('DeepLTranslate_Response', $DebugContext . ' | ' . ($response ?? '(keine Antwort)'), 0);
 
@@ -4347,7 +4581,7 @@ private const LANGUAGE_FLAGS = [
 
         $this->SendDebug('FreeTranslate_Request', $DebugContext . ' | ' . $url, 0);
 
-        $response = $this->CallFreeTranslateAPI($url);
+        $response = $this->CallFreeTranslateAPI($url, mb_strlen($Text, 'UTF-8'));
 
         $this->SendDebug('FreeTranslate_Response', $DebugContext . ' | ' . ($response ?? '(keine Antwort)'), 0);
 
@@ -4534,9 +4768,17 @@ private const LANGUAGE_FLAGS = [
         return $names;
     }
 
-    // Gemeinsamer HTTP-Client für die Google Cloud Translate API (GET ohne Body, POST mit JSON-Body)
-    private function CallGoogleTranslateAPI(string $Url, ?string $JsonBody): ?string
+    // Gemeinsamer HTTP-Client für die Google Cloud Translate API (GET ohne Body, POST
+    // mit JSON-Body). $CharacterCount: Anzahl der in DIESEM Aufruf tatsächlich zur
+    // Übersetzung eingereichten Zeichen (0 bei reinen Sprachlisten-Abfragen, siehe
+    // FetchLanguageNamesGoogle) - fließt in die Nutzungsstatistik ein (siehe
+    // RecordTranslationRequestStats/BuildTranslationStatsText), unabhängig vom
+    // Erfolg dieses Aufrufs (ein fehlgeschlagener Versuch verbraucht ebenfalls
+    // Kontingent).
+    private function CallGoogleTranslateAPI(string $Url, ?string $JsonBody, int $CharacterCount = 0): ?string
     {
+        $this->RecordTranslationRequestStats($CharacterCount);
+
         $curl = curl_init($Url);
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($curl, CURLOPT_TIMEOUT, 15);
@@ -4588,9 +4830,12 @@ private const LANGUAGE_FLAGS = [
 
     // Gemeinsamer HTTP-Client fuer die DeepL API (GET ohne Body, POST mit JSON-Body) -
     // Aufbau bewusst parallel zu CallGoogleTranslateAPI, nur mit DeepL-spezifischer
-    // Auth (Header statt URL-Parameter) und Basis-URL-Wahl.
-    private function CallDeepLAPI(string $ApiKey, string $Path, ?string $JsonBody): ?string
+    // Auth (Header statt URL-Parameter) und Basis-URL-Wahl. $CharacterCount siehe
+    // CallGoogleTranslateAPI.
+    private function CallDeepLAPI(string $ApiKey, string $Path, ?string $JsonBody, int $CharacterCount = 0): ?string
     {
+        $this->RecordTranslationRequestStats($CharacterCount);
+
         $url = $this->GetDeepLBaseUrl($ApiKey) . $Path;
         $curl = curl_init($url);
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
@@ -4632,9 +4877,12 @@ private const LANGUAGE_FLAGS = [
 
     // Gemeinsamer HTTP-Client fuer die kostenfreie MyMemory Translation API - kein
     // Account, kein API-Key, keine Auth-Header noetig. GET-only (kein Batch-
-    // Endpoint, siehe TranslateChunkFree).
-    private function CallFreeTranslateAPI(string $Url): ?string
+    // Endpoint, siehe TranslateChunkFree) - hier zählt jeder Aufruf für GENAU EINEN
+    // Text, siehe $CharacterCount-Kommentar bei CallGoogleTranslateAPI.
+    private function CallFreeTranslateAPI(string $Url, int $CharacterCount = 0): ?string
     {
+        $this->RecordTranslationRequestStats($CharacterCount);
+
         $curl = curl_init($Url);
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($curl, CURLOPT_TIMEOUT, 15);
@@ -4707,17 +4955,44 @@ private const LANGUAGE_FLAGS = [
         return $this->ApplyTilePlaceholders($html);
     }
 
-    // Ersetzt die beiden dynamischen Platzhalter in einer Kachel-HTML-Vorlage
-    // (eingebaut oder vom Nutzer editiert, siehe GetVisualizationTile) -
-    // gemeinsame Stelle, damit beide Pfade garantiert identisch behandelt werden.
+    // Ersetzt die dynamischen Platzhalter in einer Kachel-HTML-Vorlage (eingebaut
+    // oder vom Nutzer editiert, siehe GetVisualizationTile) - gemeinsame Stelle,
+    // damit alle Pfade garantiert identisch behandelt werden. Die beiden
+    // Statistik-Platzhalter (siehe unten) werden ZULETZT ersetzt, nachdem
+    // LANGUAGE_SELECT bereits eingesetzt wurde - dadurch funktionieren sie auch,
+    // wenn sie innerhalb einer eigenen "Sprachauswahl"-Kachel (siehe
+    // propertyCustomLanguageSelectHtml) verwendet werden, nicht nur im äußeren
+    // Kachel-Rahmen selbst.
     private function ApplyTilePlaceholders(string $Html): string
     {
         // Instanz-eigene ID (nicht nur eine Klasse) - falls mehrere Instanzen jemals
         // im selben DOM landen sollten (statt jeweils eigenem iframe), verhindert das
         // eine ID-Kollision zwischen den Kacheln verschiedener Instanzen.
         $html = str_replace('<!--WRAPPER_ID-->', 'ipssl-select-wrapper-' . $this->InstanceID, $Html);
+        $html = str_replace('<!--LANGUAGE_SELECT-->', $this->ResolveLanguageSelectHtml(), $html);
 
-        return str_replace('<!--LANGUAGE_SELECT-->', $this->ResolveLanguageSelectHtml(), $html);
+        return $this->ApplyTranslationStatsPlaceholders($html);
+    }
+
+    // Für eigene Kacheln gedacht (siehe propertyCustomTileHtml/
+    // propertyCustomLanguageSelectHtml und README, Abschnitt 7): liefert NUR die
+    // reine Zahl (ganzzahlig gerundet, z. B. "30"/"500"), keinen Einheitstext - der
+    // Nutzer baut sich daraus seinen eigenen Text (z. B. "30 Übersetzungen/h"). Kein
+    // unnötiger Attribut-Read, wenn im übergebenen HTML gar kein Platzhalter
+    // vorkommt.
+    private function ApplyTranslationStatsPlaceholders(string $Html): string
+    {
+        if (strpos($Html, '<!--COUNT_TRANSLATIONS-->') === false && strpos($Html, '<!--COUNT_SIGNES-->') === false) {
+            return $Html;
+        }
+
+        $stats = $this->ComputeTranslationStats();
+
+        return str_replace(
+            ['<!--COUNT_TRANSLATIONS-->', '<!--COUNT_SIGNES-->'],
+            [$this->FormatStatsCount($stats['requestsPerHour']), $this->FormatStatsCount($stats['charsPerHour'])],
+            $Html
+        );
     }
 
     // Liefert entweder die vom Nutzer fest eingetragene Sprachauswahl (Pro-
@@ -4896,7 +5171,8 @@ HTML;
             . $infoIconHtml
             . '</div>'
             . $this->BuildTrialNoticeHtml($guestCache)
-            . $this->BuildPausedNoticeHtml($guestCache);
+            . $this->BuildPausedNoticeHtml($guestCache)
+            . $this->BuildTranslationStatsNoticeHtml($guestCache);
     }
 
     // Kleiner roter Hinweis unter dem Dropdown, solange diese Instanz auf einer
@@ -4921,7 +5197,7 @@ HTML;
         $prefix = $GuestCache['trialNoticePrefix'] ?? self::TRIAL_NOTICE_PREFIX_TEXT;
         $text = htmlspecialchars($prefix . ' ' . date('d.m.Y', $expiresAt), ENT_QUOTES, 'UTF-8');
 
-        return '<div class="ipssl-trial-notice" style="font-size:11px; color:#c0392b;">' . $text . '</div>';
+        return '<div class="ipssl-trial-notice" style="font-size:11px; color:#c0392b; text-align:center;">' . $text . '</div>';
     }
 
     // Kleiner roter Hinweis unter dem Dropdown, solange ALLE konfigurierten
@@ -4941,7 +5217,7 @@ HTML;
         $prefix = $GuestCache['pausedNoticePrefix'] ?? self::PAUSED_NOTICE_PREFIX_TEXT;
         $text = htmlspecialchars($prefix . ' ' . date('H:i', $pausedUntil), ENT_QUOTES, 'UTF-8');
 
-        return '<div class="ipssl-paused-notice" style="font-size:11px; color:#c0392b;">' . $text . '</div>';
+        return '<div class="ipssl-paused-notice" style="font-size:11px; color:#c0392b; text-align:center;">' . $text . '</div>';
     }
 
     // Sortiert $Codes anhand von $Names (ObjectID-Code => angezeigter Name) alphabetisch
@@ -5073,7 +5349,12 @@ HTML;
         $ownTexts = array_merge(
             [self::INFO_HEADING_TEXT],
             self::INFO_LIMITATION_TEXTS,
-            [self::TRIAL_NOTICE_PREFIX_TEXT, self::PAUSED_NOTICE_PREFIX_TEXT]
+            [
+                self::TRIAL_NOTICE_PREFIX_TEXT,
+                self::PAUSED_NOTICE_PREFIX_TEXT,
+                self::STATS_NOTICE_REQUESTS_LABEL_TEXT,
+                self::STATS_NOTICE_CHARACTERS_LABEL_TEXT,
+            ]
         );
         if ($language === 'de') {
             $translatedOwnTexts = $ownTexts;
@@ -5095,17 +5376,22 @@ HTML;
         foreach (self::INFO_LIMITATION_TEXTS as $i => $originalText) {
             $infoTexts[] = $orFallback($translatedOwnTexts[$i + 1] ?? null, $originalText);
         }
-        $trialNoticePrefix = $orFallback($translatedOwnTexts[count(self::INFO_LIMITATION_TEXTS) + 1] ?? null, self::TRIAL_NOTICE_PREFIX_TEXT);
-        $pausedNoticePrefix = $orFallback($translatedOwnTexts[count(self::INFO_LIMITATION_TEXTS) + 2] ?? null, self::PAUSED_NOTICE_PREFIX_TEXT);
+        $baseIndex = count(self::INFO_LIMITATION_TEXTS);
+        $trialNoticePrefix = $orFallback($translatedOwnTexts[$baseIndex + 1] ?? null, self::TRIAL_NOTICE_PREFIX_TEXT);
+        $pausedNoticePrefix = $orFallback($translatedOwnTexts[$baseIndex + 2] ?? null, self::PAUSED_NOTICE_PREFIX_TEXT);
+        $statsRequestsLabel = $orFallback($translatedOwnTexts[$baseIndex + 3] ?? null, self::STATS_NOTICE_REQUESTS_LABEL_TEXT);
+        $statsCharactersLabel = $orFallback($translatedOwnTexts[$baseIndex + 4] ?? null, self::STATS_NOTICE_CHARACTERS_LABEL_TEXT);
 
         $cache = [
-            'language'           => $language,
-            'names'              => $names,
-            'infoHeading'        => $infoHeading,
-            'infoTexts'          => $infoTexts,
-            'trialNoticePrefix'  => $trialNoticePrefix,
-            'pausedNoticePrefix' => $pausedNoticePrefix,
-            'fetchedAt'          => time(),
+            'language'             => $language,
+            'names'                => $names,
+            'infoHeading'          => $infoHeading,
+            'infoTexts'            => $infoTexts,
+            'trialNoticePrefix'    => $trialNoticePrefix,
+            'pausedNoticePrefix'   => $pausedNoticePrefix,
+            'statsRequestsLabel'   => $statsRequestsLabel,
+            'statsCharactersLabel' => $statsCharactersLabel,
+            'fetchedAt'            => time(),
         ];
 
         $this->WriteAttributeString(self::attributeGuestLanguageNamesCache, json_encode($cache));
@@ -5472,5 +5758,21 @@ HTML;
     private function GetAutoRescanTimerIdent(): string
     {
         return self::timerPrefix . $this->InstanceID . self::timerIdentAutoRescan;
+    }
+
+    private function GetTranslationStatsTimerIdent(): string
+    {
+        return self::timerPrefix . $this->InstanceID . self::timerIdentTranslationStats;
+    }
+
+    // Timer-Callback (siehe RegisterTimer in Create()) - schickt bereits offenen
+    // Kacheln lediglich eine frisch berechnete Anzeige (siehe
+    // PushVisualizationUpdate/BuildTranslationStatsNoticeHtml), rührt NIE das
+    // Konfigurationsformular an (kein ReloadForm(), keinerlei
+    // Formular-Interaktion) - komplett unabhängig vom Auto-Rescan-Timer/
+    // AutoRescan().
+    public function RefreshTranslationStatsTile(): void
+    {
+        $this->PushVisualizationUpdate();
     }
 }
