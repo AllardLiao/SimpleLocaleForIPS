@@ -255,6 +255,17 @@ trait SimpleLocaleConstants
     // getrennt vom AvailableLanguagesCache oben, der an der Admin-Konsolensprache haengt.
     private const attributeGuestLanguageNamesCache = 'GuestLanguageNamesCache';
 
+    // JSON-Map Anbieter => Unix-Timestamp, bis wann dieser Anbieter als "pausiert"
+    // gilt (siehe DetectRateLimitCooldown/RecordProviderPaused) - ein bei einem
+    // erkannten Rate-Limit/Tageskontingent-Fehler eingetragener Anbieter wird bis zu
+    // diesem Zeitpunkt in TranslateChunk()/FetchLanguageNames() uebersprungen, OHNE
+    // ihn erneut anzufragen (spart unnoetige, ohnehin aussichtslose Aufrufe waehrend
+    // der Sperre). Sind ALLE Anbieter der aktuellen Kette gleichzeitig pausiert,
+    // gilt die gesamte Instanz als pausiert (siehe GetGlobalPauseUntil) - dann wird
+    // ueberhaupt kein Uebersetzungsversuch mehr unternommen, bis der fruehste der
+    // eingetragenen Zeitpunkte erreicht ist.
+    private const attributeProviderPausedUntil = 'ProviderPausedUntil';
+
     // Uebersetzungs-Cache (JSON-Map "Quellsprache|Zielsprache|SHA-256(Text)" =>
     // uebersetzter Text), siehe TranslateBatch/GetCachedTranslation/
     // StoreCachedTranslation - vermeidet wiederholte, identische API-Aufruf bei
@@ -325,6 +336,12 @@ trait SimpleLocaleConstants
     private const STATUS_UNNAMED_OBJECTS = 202;
     private const STATUS_TRANSLATE_ERROR = 203;
     private const STATUS_TRIAL_EXPIRED = 204;
+    // Milder als STATUS_TRANSLATE_ERROR: kein echter Fehler, sondern ein erkanntes,
+    // selbstheilendes Rate-Limit/Tageskontingent bei ALLEN konfigurierten Anbietern
+    // gleichzeitig (siehe GetGlobalPauseUntil) - die Instanz bleibt "Aktiv", pausiert
+    // aber bis zum fruehesten Anbieter-Reset, statt bei jedem Versuch erneut gegen
+    // eine Wand zu laufen.
+    private const STATUS_TRANSLATE_PAUSED = 205;
 
     // Dient als Fallback, solange keine dynamische Liste im Cache liegt (z.B. Google/
     // DeepL noch nie erfolgreich abgefragt) UND als die einzige Liste, wenn nur der

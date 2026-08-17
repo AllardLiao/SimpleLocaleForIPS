@@ -41,6 +41,27 @@ class SimpleLocale extends IPSModuleStrict
     // Gast-Sprache übersetzt, nicht die Konsolensprache des Admins.
     private const TRIAL_NOTICE_PREFIX_TEXT = 'Testlizenz gültig bis';
 
+    // Kleiner, roter Hinweis unter dem Dropdown, solange ALLE konfigurierten
+    // Übersetzungsanbieter gleichzeitig ein Rate-Limit/Tageskontingent melden (siehe
+    // BuildPausedNoticeHtml/GetGlobalPauseUntil) - wie oben live in die aktive
+    // Gast-Sprache übersetzt.
+    private const PAUSED_NOTICE_PREFIX_TEXT = 'Übersetzung pausiert bis';
+
+    // Kurzes "Burst"-Rate-Limit (z.B. Googles "User Rate Limit Exceeded" - zu viele
+    // Anfragen pro Sekunde/100 Sekunden, kein Tageskontingent) - erholt sich
+    // erfahrungsgemäß innerhalb weniger Minuten von selbst, daher eine kurze Sperre.
+    private const RATE_LIMIT_COOLDOWN_SECONDS = 900;
+
+    // Tageskontingent/Quota-Fehler (z.B. MyMemorys "USED ALL AVAILABLE FREE
+    // TRANSLATIONS FOR TODAY" oder DeepLs Kontingent-Fehler) - erholt sich per
+    // Definition erst am nächsten Tag, daher die deutlich längere Sperre. Da keiner
+    // der drei Anbieter eine exakte Reset-Uhrzeit mitliefert, wird pragmatisch ab
+    // JETZT plus 24h gesperrt (statt z.B. "nächste Mitternacht UTC" zu berechnen,
+    // was je nach tatsächlicher Server-Zeitzone des jeweiligen Anbieters ohnehin nur
+    // eine Näherung wäre) - im schlechtesten Fall bleibt die Sperre dadurch bis zu
+    // einen Tag länger als nötig aktiv, nie kürzer.
+    private const DAILY_QUOTA_COOLDOWN_SECONDS = 86400;
+
     // ===== Lizenz / Testversion =====
     // Für den Vollversion-Build vor dem echten Release auf false setzen (siehe
     // README) - dann entfallen alle Einschränkungen unten unabhängig vom
@@ -302,6 +323,7 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterAttributeString(self::attributeEnumerationPresentationBackup, '{}');
         $this->RegisterAttributeInteger(self::attributeEffectiveRootCategoryID, 0);
         $this->RegisterAttributeString(self::attributeLastRowSourceLanguageFingerprint, '');
+        $this->RegisterAttributeString(self::attributeProviderPausedUntil, '{}');
 
         $this->SetVisualizationType(1);
 
@@ -3324,6 +3346,109 @@ private const LANGUAGE_FLAGS = [
         };
     }
 
+    // Unterscheidet ein erkennbares, sich von selbst erholendes Rate-Limit/
+    // Tageskontingent von jedem anderen Fehler (ungültiger/abgelaufener Key,
+    // Netzwerkfehler, Server down, ...) - NUR für Ersteres lohnt sich ein
+    // automatisches Pausieren (siehe RecordProviderPaused/GetGlobalPauseUntil), da
+    // es sich per Definition von selbst löst. Ein falscher Key würde dagegen bei
+    // JEDEM Versuch weiter fehlschlagen - ein "Pausieren" bis zu einem festen
+    // Zeitpunkt wäre dort irreführend (die Sperre liefe ab, der Versuch schlüge
+    // sofort wieder fehl). Liefert null = kein erkanntes Rate-Limit (kein
+    // automatisches Pausieren), sonst die Sperrdauer in Sekunden.
+    //
+    // Live beobachtete Signaturen (siehe README, Abschnitt "Bekannte
+    // Einschränkungen"):
+    // - Google: HTTP 403 mit "rate limit" in der Antwort (z.B. "User Rate Limit
+    //   Exceeded") = kurzes Burst-Limit, oder HTTP 429 = ebenfalls Rate-Limit.
+    // - DeepL: HTTP 429 (Too Many Requests) oder 456 (dediziert "Quota Exceeded").
+    // - MyMemory (kostenfrei): HTTP 429 mit "quota"/"day"/"today" in der Antwort
+    //   ("MYMEMORY WARNING: YOU USED ALL AVAILABLE FREE TRANSLATIONS FOR TODAY").
+    // Enthält die Antwort einen Tages-/Kontingent-Hinweis (Schlüsselwörter
+    // "day"/"today"/"daily"/"quota"), gilt die lange Sperre, sonst die kurze.
+    private function DetectRateLimitCooldown(int $HttpCode, ?string $Response): ?int
+    {
+        $isRateLimitSignature = $HttpCode === 429
+            || ($HttpCode === 403 && $Response !== null && stripos($Response, 'rate limit') !== false)
+            || $HttpCode === 456; // DeepL: "Quota Exceeded"
+
+        if (!$isRateLimitSignature) {
+            return null;
+        }
+
+        $isDailyOrQuota = $Response !== null && preg_match('/\b(day|today|daily|quota)\b/i', $Response) === 1;
+
+        return $isDailyOrQuota ? self::DAILY_QUOTA_COOLDOWN_SECONDS : self::RATE_LIMIT_COOLDOWN_SECONDS;
+    }
+
+    // Trägt einen Anbieter als pausiert ein (siehe attributeProviderPausedUntil) -
+    // verlängert eine bestehende Sperre nie rückwirkend nach unten (ein erneuter
+    // Fehlschlag während einer laufenden Sperre setzt sie höchstens neu/länger,
+    // nie kürzer).
+    private function RecordProviderPaused(string $Provider, int $CooldownSeconds): void
+    {
+        $paused = $this->GetProviderPausedUntilMap();
+        $paused[$Provider] = max($paused[$Provider] ?? 0, time() + $CooldownSeconds);
+        $this->WriteAttributeString(self::attributeProviderPausedUntil, json_encode($paused));
+    }
+
+    // Räumt beim Lesen gleich abgelaufene Einträge auf (kein separater Cleanup-Job
+    // nötig) - bei der winzigen erwarteten Größe (höchstens 3 Anbieter) völlig
+    // unkritisch, auch bei jedem Aufruf neu zu berechnen.
+    private function GetProviderPausedUntilMap(): array
+    {
+        $paused = json_decode($this->ReadAttributeString(self::attributeProviderPausedUntil), true);
+        if (!is_array($paused)) {
+            return [];
+        }
+
+        $now = time();
+
+        return array_filter($paused, fn ($until) => (int) $until > $now);
+    }
+
+    private function GetProviderPausedUntil(string $Provider): ?int
+    {
+        $until = $this->GetProviderPausedUntilMap()[$Provider] ?? null;
+
+        return $until !== null ? (int) $until : null;
+    }
+
+    // true, solange die Sperre für DIESEN Anbieter noch läuft - TranslateChunk()/
+    // FetchLanguageNames() überspringen ihn dann ohne API-Aufruf (siehe dort).
+    private function IsProviderPaused(string $Provider): bool
+    {
+        return $this->GetProviderPausedUntil($Provider) !== null;
+    }
+
+    // Liefert den frühesten Zeitpunkt, ab dem WIEDER irgendein Anbieter der
+    // aktuellen Kette (siehe GetProviderChain) verfügbar sein sollte - aber NUR,
+    // wenn WIRKLICH ALLE Anbieter der Kette gerade pausiert sind (siehe
+    // Nutzer-Anfrage: "wenn wirklich alle drei Dienste ein Limit melden"). Ist
+    // auch nur EINER noch nicht pausiert, liefert diese Funktion null - dieser
+    // eine kann (und soll) weiterhin normal versucht werden, es besteht also keine
+    // "globale Pause". Eine Kette mit nur einem einzigen Anbieter (z.B. nur der
+    // kostenfreie, ohne konfigurierten Google-/DeepL-Key) gilt bereits dann als
+    // komplett pausiert, wenn dieser eine es ist.
+    private function GetGlobalPauseUntil(): ?int
+    {
+        $chain = $this->GetProviderChain();
+        if ($chain === []) {
+            return null;
+        }
+
+        $latestUntil = null;
+        foreach ($chain as $provider) {
+            $until = $this->GetProviderPausedUntil($provider);
+            if ($until === null) {
+                // Mindestens ein Anbieter ist nicht pausiert - keine globale Pause.
+                return null;
+            }
+            $latestUntil = $latestUntil === null ? $until : min($latestUntil, $until);
+        }
+
+        return $latestUntil;
+    }
+
     // Google Cloud Translate lehnt Anfragen mit mehr als 128 Texten in einem
     // Aufruf komplett ab ("Too many text segments") - größere Batches werden
     // daher in mehrere Aufrufe aufgeteilt. DeepL dokumentiert kein hartes Limit,
@@ -3726,6 +3851,28 @@ private const LANGUAGE_FLAGS = [
     // Fehlerstatus (STATUS_TRANSLATE_ERROR) wird nur gesetzt, wenn ALLE Anbieter
     // der Kette fehlschlagen - der kostenfreie Anbieter am Ende der Kette macht
     // das praktisch unmoeglich, solange MyMemory selbst erreichbar ist.
+    // WICHTIG: nutzt bewusst die GLOBALE IPS_LogMessage()-Funktion, NICHT die von
+    // IPSModule geerbte $this->LogMessage()-Methode. Live beobachtet (2026-08-17):
+    // $this->LogMessage() aus dem Übersetzungs-Fehlerpfad heraus aufgerufen (der
+    // auch über MessageSink()/VM_UPDATE erreichbar ist, siehe
+    // HandleTrackedVariableUpdate) löste dort zuverlässig "Warning: InstanceInterface
+    // is not available" + "InstanzManager: Kann Schnittstellen-Instanz nicht
+    // erstellen" aus - die von IPSModule bereitgestellte Methode scheint eine
+    // Interface-Instanz vorauszusetzen, die im MessageSink-Ausführungskontext (im
+    // Gegensatz zu z.B. ApplyChanges/RequestAction) nicht existiert. IPS_LogMessage()
+    // ist die dokumentierte, kontextunabhängige Alternative (keine Instanz-Bindung,
+    // nur ein freier "Sender"-String) und schreibt zuverlässig aus JEDEM
+    // Ausführungskontext ins Meldungen-Log. Kein $Type-Parameter wie bei
+    // KL_ERROR/KL_WARNING - der Schweregrad steht daher als Text-Präfix in der
+    // Nachricht selbst.
+    private function LogTranslateMessage(string $Message, bool $IsError = false): void
+    {
+        IPS_LogMessage(
+            'Simple Locale #' . $this->InstanceID,
+            ($IsError ? '[FEHLER] ' : '[WARNUNG] ') . $Message
+        );
+    }
+
     private function TranslateChunk(array $Texts, string $Source, string $Target, string $DebugContext = ''): array
     {
         if ($Texts === []) {
@@ -3741,13 +3888,13 @@ private const LANGUAGE_FLAGS = [
         // Ketten-Fallback geheilt werden kann - kein Anbieter akzeptiert eine leere
         // Sprache.
         if ($Source === '' || $Target === '') {
-            $this->LogMessage(sprintf(
-                '[Simple Locale] Interner Fehler: leere Quell-/Zielsprache (Source="%s", Target="%s", Kontext="%s", %d Text(e)) - Uebersetzung uebersprungen, bitte Rescan erneut ausfuehren bzw. Kai/Support kontaktieren, falls das wiederholt auftritt.',
+            $this->LogTranslateMessage(sprintf(
+                'Interner Fehler: leere Quell-/Zielsprache (Source="%s", Target="%s", Kontext="%s", %d Text(e)) - Uebersetzung uebersprungen, bitte Rescan erneut ausfuehren bzw. Kai/Support kontaktieren, falls das wiederholt auftritt.',
                 $Source,
                 $Target,
                 $DebugContext,
                 count($Texts)
-            ), KL_ERROR);
+            ), true);
 
             return array_fill(0, count($Texts), '');
         }
@@ -3770,15 +3917,15 @@ private const LANGUAGE_FLAGS = [
         // CallDeepLAPI/CallFreeTranslateAPI/TranslateChunkGoogle/TranslateChunkDeepL),
         // hier nur noch die Zusammenfassung mit allen fuer die Diagnose relevanten
         // Eckdaten an einer Stelle.
-        $this->LogMessage(sprintf(
-            '[Simple Locale] Übersetzung fehlgeschlagen: alle Anbieter der Kette (%s) haben "%s" -> "%s" abgelehnt (Kontext: %s, %d Text(e), erster Text: "%s"). Details zu jedem einzelnen Anbieter-Fehler stehen als Warnung direkt darüber in diesem Log.',
+        $this->LogTranslateMessage(sprintf(
+            'Übersetzung fehlgeschlagen: alle Anbieter der Kette (%s) haben "%s" -> "%s" abgelehnt (Kontext: %s, %d Text(e), erster Text: "%s"). Details zu jedem einzelnen Anbieter-Fehler stehen als Warnung direkt darüber in diesem Log.',
             implode(', ', $attempts),
             $Source,
             $Target,
             $DebugContext !== '' ? $DebugContext : '(kein Kontext)',
             count($Texts),
             mb_substr((string) ($Texts[0] ?? ''), 0, 120, 'UTF-8')
-        ), KL_ERROR);
+        ), true);
 
         $this->SetStatus(self::STATUS_TRANSLATE_ERROR);
 
@@ -3825,11 +3972,11 @@ private const LANGUAGE_FLAGS = [
             // zurueckgekommen), aber die Antwort hat nicht die erwartete Struktur -
             // vorher komplett stillschweigend uebergangen, war dadurch faktisch
             // unmoeglich zu diagnostizieren.
-            $this->LogMessage(sprintf(
-                '[Simple Locale] Google Translate: unerwartetes Antwortformat (Kontext: %s), Antwort: %s',
+            $this->LogTranslateMessage(sprintf(
+                'Google Translate: unerwartetes Antwortformat (Kontext: %s), Antwort: %s',
                 $DebugContext,
                 mb_substr($response, 0, 300, 'UTF-8')
-            ), KL_WARNING);
+            ));
 
             return null;
         }
@@ -3864,11 +4011,11 @@ private const LANGUAGE_FLAGS = [
         $decoded = json_decode($response, true);
         $translations = $decoded['translations'] ?? null;
         if (!is_array($translations)) {
-            $this->LogMessage(sprintf(
-                '[Simple Locale] DeepL: unerwartetes Antwortformat (Kontext: %s), Antwort: %s',
+            $this->LogTranslateMessage(sprintf(
+                'DeepL: unerwartetes Antwortformat (Kontext: %s), Antwort: %s',
                 $DebugContext,
                 mb_substr($response, 0, 300, 'UTF-8')
-            ), KL_WARNING);
+            ));
 
             return null;
         }
@@ -3993,11 +4140,11 @@ private const LANGUAGE_FLAGS = [
             // wenn tatsaechlich Google/DeepL konfiguriert sind und trotzdem
             // scheitern.
             if ($this->GetProviderChain() !== ['free']) {
-                $this->LogMessage(sprintf(
-                    '[Simple Locale] Sprachliste konnte nicht geladen werden: alle konfigurierten Anbieter (%s) haben die Anfrage für Zielsprache "%s" abgelehnt. Details zu jedem einzelnen Anbieter-Fehler stehen als Warnung direkt darüber in diesem Log.',
+                $this->LogTranslateMessage(sprintf(
+                    'Sprachliste konnte nicht geladen werden: alle konfigurierten Anbieter (%s) haben die Anfrage für Zielsprache "%s" abgelehnt. Details zu jedem einzelnen Anbieter-Fehler stehen als Warnung direkt darüber in diesem Log.',
                     implode(', ', $this->GetProviderChain()),
                     $target
-                ), KL_ERROR);
+                ), true);
                 $this->SetStatus(self::STATUS_TRANSLATE_ERROR);
             }
 
@@ -4119,16 +4266,21 @@ private const LANGUAGE_FLAGS = [
             // Kein SetStatus hier: dieser Aufruf kann Teil einer Anbieter-Kette sein
             // (siehe TranslateChunk/FetchLanguageNames) - ein Fehlerstatus wird erst
             // gesetzt, wenn die GESAMTE Kette fehlschlaegt, nicht bei jedem einzelnen
-            // Anbieter-Versuch. KL_WARNING statt KL_ERROR aus demselben Grund - erst
-            // TranslateChunk() loggt einen KL_ERROR, wenn WIRKLICH alle Anbieter
+            // Anbieter-Versuch. Keine "FEHLER"-Stufe aus demselben Grund - erst
+            // TranslateChunk() loggt einen Fehler, wenn WIRKLICH alle Anbieter
             // fehlgeschlagen sind.
             $this->SendDebug('GoogleTranslate', sprintf('HTTP %s, Fehler: %s, Antwort: %s', $httpCode, $error, (string) $response), 0);
-            $this->LogMessage(sprintf(
-                '[Simple Locale] Google Translate fehlgeschlagen: HTTP %s%s, Antwort: %s',
+            $this->LogTranslateMessage(sprintf(
+                'Google Translate fehlgeschlagen: HTTP %s%s, Antwort: %s',
                 $httpCode,
                 $error !== '' ? ", cURL-Fehler: $error" : '',
                 mb_substr((string) $response, 0, 300, 'UTF-8')
-            ), KL_WARNING);
+            ));
+
+            $cooldown = $this->DetectRateLimitCooldown($httpCode, (string) $response);
+            if ($cooldown !== null) {
+                $this->RecordProviderPaused('google', $cooldown);
+            }
 
             return null;
         }
@@ -4170,12 +4322,17 @@ private const LANGUAGE_FLAGS = [
         if ($response === false || $httpCode >= 400 || $error !== '') {
             // Kein SetStatus hier - siehe CallGoogleTranslateAPI.
             $this->SendDebug('DeepLTranslate', sprintf('HTTP %s, Fehler: %s, Antwort: %s', $httpCode, $error, (string) $response), 0);
-            $this->LogMessage(sprintf(
-                '[Simple Locale] DeepL fehlgeschlagen: HTTP %s%s, Antwort: %s',
+            $this->LogTranslateMessage(sprintf(
+                'DeepL fehlgeschlagen: HTTP %s%s, Antwort: %s',
                 $httpCode,
                 $error !== '' ? ", cURL-Fehler: $error" : '',
                 mb_substr((string) $response, 0, 300, 'UTF-8')
-            ), KL_WARNING);
+            ));
+
+            $cooldown = $this->DetectRateLimitCooldown($httpCode, (string) $response);
+            if ($cooldown !== null) {
+                $this->RecordProviderPaused('deepl', $cooldown);
+            }
 
             return null;
         }
@@ -4199,12 +4356,17 @@ private const LANGUAGE_FLAGS = [
 
         if ($response === false || $httpCode >= 400 || $error !== '') {
             $this->SendDebug('FreeTranslate', sprintf('HTTP %s, Fehler: %s, Antwort: %s', $httpCode, $error, (string) $response), 0);
-            $this->LogMessage(sprintf(
-                '[Simple Locale] Kostenfreier Anbieter (MyMemory) fehlgeschlagen: HTTP %s%s, Antwort: %s',
+            $this->LogTranslateMessage(sprintf(
+                'Kostenfreier Anbieter (MyMemory) fehlgeschlagen: HTTP %s%s, Antwort: %s',
                 $httpCode,
                 $error !== '' ? ", cURL-Fehler: $error" : '',
                 mb_substr((string) $response, 0, 300, 'UTF-8')
-            ), KL_WARNING);
+            ));
+
+            $cooldown = $this->DetectRateLimitCooldown($httpCode, (string) $response);
+            if ($cooldown !== null) {
+                $this->RecordProviderPaused('free', $cooldown);
+            }
 
             return null;
         }
