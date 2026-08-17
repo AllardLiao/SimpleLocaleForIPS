@@ -3817,7 +3817,18 @@ private const LANGUAGE_FLAGS = [
         $requestCount = $this->ReadAttributeInteger(self::attributeStatsRequestCount);
         $characterCount = $this->ReadAttributeInteger(self::attributeStatsCharacterCount);
 
-        $elapsedSeconds = $since > 0 ? max(1, time() - $since) : 1;
+        // Auf MINDESTENS eine volle Stunde gedeckelt (nicht nur eine Sekunde) -
+        // sonst würde die hochgerechnete Pro-Stunde-Rate direkt nach der
+        // Inbetriebnahme (oder bei einem kurzen Testphasen-Ansturm wie über den
+        // "Übersetzungsanbieter prüfen"-Button) den tatsächlichen Gesamtzähler
+        // weit übersteigen (z.B. "1698 Anfragen/h" bei nur "783 Anfragen
+        // insgesamt", da erst 28 Minuten seit Inbetriebnahme vergangen waren) -
+        // wirkt auf den ersten Blick wie ein Rechenfehler, obwohl es nur eine
+        // Hochrechnung aus einem sehr kurzen Zeitfenster war. Mit dieser
+        // Untergrenze zeigt die Rate in der ersten Stunde nach Inbetriebnahme
+        // exakt den bisherigen Gesamtwert (nie mehr), erst danach weicht sie
+        // als echte Rate vom Gesamtwert ab.
+        $elapsedSeconds = $since > 0 ? max(3600, time() - $since) : 3600;
         $hoursElapsed = $elapsedSeconds / 3600;
 
         return [
@@ -4722,7 +4733,25 @@ private const LANGUAGE_FLAGS = [
         }
 
         $decoded = json_decode($response, true);
-        if (!is_array($decoded) || ($decoded['quotaFinished'] ?? false) === true) {
+        if (($decoded['quotaFinished'] ?? false) === true) {
+            // MyMemory meldet ein erschöpftes Tageskontingent NICHT über einen
+            // HTTP-Fehlercode (siehe CallFreeTranslateAPI) - HTTP bleibt 200, nur
+            // dieses JSON-Feld zeigt es an. DetectRateLimitCooldown/
+            // RecordProviderPaused wurden daher für diesen Fall bisher NIE
+            // ausgelöst: 'free' blieb dauerhaft als "nicht pausiert" sichtbar,
+            // obwohl JEDER weitere Versuch für den Rest des Tages ebenfalls
+            // scheiterte - live beobachtet (2026-08-19): ein Rescan blieb dadurch
+            // wirkungslos (keine neuen Übersetzungen, kein Fehlerstatus), sobald
+            // auch die bezahlten Anbieter bereits pausiert waren, weil 'free' als
+            // letztes Kettenglied fälschlich als verfügbar galt. Direkt auf die
+            // volle Tagessperre gesetzt (kein Eskalations-Ratespiel nötig, das
+            // JSON-Feld ist eindeutig).
+            $this->RecordProviderPaused('free', self::DAILY_QUOTA_COOLDOWN_SECONDS);
+            $this->LogTranslateMessage('MyMemory: Tageskontingent erschöpft (quotaFinished) - pausiert bis zum automatischen Reset.');
+
+            return null;
+        }
+        if (!is_array($decoded)) {
             return null;
         }
 

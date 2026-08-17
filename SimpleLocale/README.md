@@ -298,6 +298,33 @@ Beschreibung des Moduls.
   nach einem Kontingent-/Abo-Upgrade beim Anbieter, ohne auf das
   automatische Ablaufen der (ggf. bereits mehrfach eskalierten, siehe Build
   57) Pause warten zu müssen.
+
+  **Build 62 behebt zwei live gefundene Bugs:** (1) **Der eigentlich
+  schwerwiegendere:** Der kostenfreie Anbieter (MyMemory) meldet ein
+  erschöpftes Tageskontingent NICHT über einen HTTP-Fehlercode wie Google/
+  DeepL, sondern ausschließlich über das JSON-Feld `quotaFinished` bei
+  weiterhin HTTP 200 - `DetectRateLimitCooldown`/`RecordProviderPaused`
+  (siehe oben) wurden dadurch für diesen Fall bisher NIE ausgelöst: 'free'
+  blieb in der Panel-Übersicht dauerhaft als "nicht pausiert" sichtbar,
+  obwohl JEDER weitere Versuch für den Rest des Tages ebenfalls scheiterte.
+  Live beobachtet: Google/DeepL waren bereits (durch intensives Testen)
+  pausiert, MyMemory zusätzlich fälschlich als verfügbar geführt - jeder
+  weitere Rescan-Versuch schlug dadurch für ALLE drei Anbieter fehl, ohne
+  dass die Instanz das als Pause/Fehler erkannte oder meldete: Rescan lief
+  zwar technisch durch, aber ohne jede neue Übersetzung und ohne
+  Statusänderung - wirkte dadurch nach außen wie "Rescan tut gar nichts".
+  MyMemorys `quotaFinished` löst jetzt direkt die volle Tagessperre aus,
+  genau wie ein per HTTP erkanntes Tageskontingent bei Google/DeepL. (2) Die
+  in Build 60/61 eingeführte Pro-Stunde-Hochrechnung des Nutzungs-Zählers
+  konnte kurz nach der Inbetriebnahme (oder nach einem kurzen Anfragen-
+  Ansturm, z. B. über den "Übersetzungsanbieter prüfen"-Button) eine Rate
+  zeigen, die HÖHER als der tatsächliche Gesamtzähler war (z. B. "1698
+  Anfragen/h" bei nur "783 Anfragen insgesamt", da erst 28 Minuten seit
+  Inbetriebnahme vergangen waren) - wirkte wie ein Rechenfehler, war aber
+  nur eine Hochrechnung aus einem sehr kurzen Zeitfenster. Die Rate wird
+  jetzt auf mindestens eine volle Stunde gedeckelt: innerhalb der ersten
+  Stunde nach Inbetriebnahme zeigt sie exakt den bisherigen Gesamtwert (nie
+  mehr), erst danach weicht sie als echte Rate vom Gesamtwert ab.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
