@@ -22,8 +22,8 @@
                     "items": [
                         {"type": "Label", "caption": "Seit Inbetriebnahme am"},
                         {"type": "Label", "name": "TranslationStatsSinceDateLabel", "caption": ""},
-                        {"type": "Label", "name": "TranslationStatsDaysLabel", "caption": ""},
-                        {"type": "Label", "caption": "Tag(e):"}
+                        {"type": "Label", "caption": "Tag(e)"},
+                        {"type": "Label", "caption": "."}
                     ]
                 },
                 {
@@ -31,10 +31,12 @@
                     "name": "TranslationStatsRow2",
                     "visible": false,
                     "items": [
+                        {"type": "Label", "caption": "Stündlich"},
                         {"type": "Label", "name": "TranslationStatsRequestsPerHourLabel", "caption": ""},
-                        {"type": "Label", "caption": "Anfrage(n)/h"},
+                        {"type": "Label", "caption": "Anfrage(n)"},
                         {"type": "Label", "name": "TranslationStatsCharsPerHourValueLabel", "caption": ""},
-                        {"type": "Label", "caption": "Zeichen/h"}
+                        {"type": "Label", "caption": "Zeichen"},
+                        {"type": "Label", "caption": "."}
                     ]
                 },
                 {
@@ -42,11 +44,12 @@
                     "name": "TranslationStatsRow3",
                     "visible": false,
                     "items": [
-                        {"type": "Label", "caption": "insgesamt"},
+                        {"type": "Label", "caption": "Insgesamt"},
                         {"type": "Label", "name": "TranslationStatsTotalRequestsLabel", "caption": ""},
                         {"type": "Label", "caption": "Anfrage(n)"},
                         {"type": "Label", "name": "TranslationStatsTotalCharsLabel", "caption": ""},
-                        {"type": "Label", "caption": "Zeichen."}
+                        {"type": "Label", "caption": "Zeichen"},
+                        {"type": "Label", "caption": "."}
                     ]
                 },
                 {
@@ -58,7 +61,8 @@
                         {"type": "Label", "name": "TranslationStatsCacheSavedRequestsLabel", "caption": ""},
                         {"type": "Label", "caption": "Anfrage(n)"},
                         {"type": "Label", "name": "TranslationStatsCacheSavedCharsLabel", "caption": ""},
-                        {"type": "Label", "caption": "Zeichen."}
+                        {"type": "Label", "caption": "Zeichen"},
+                        {"type": "Label", "caption": "."}
                     ]
                 },
                 {
@@ -190,7 +194,9 @@
                             "name": "ProviderPauseGoogleRow",
                             "visible": false,
                             "items": [
-                                {"type": "Label", "caption": "- Google Cloud Translate:", "color": 16711680},
+                                {"type": "Label", "caption": "-", "color": 16711680},
+                                {"type": "Label", "caption": "Google Cloud Translate", "color": 16711680},
+                                {"type": "Label", "caption": ":", "color": 16711680},
                                 {"type": "Label", "caption": "pausiert bis", "color": 16711680},
                                 {"type": "Label", "name": "ProviderPauseGoogleUntilLabel", "caption": "", "color": 16711680}
                             ]
@@ -200,7 +206,9 @@
                             "name": "ProviderPauseDeepLRow",
                             "visible": false,
                             "items": [
-                                {"type": "Label", "caption": "- DeepL:", "color": 16711680},
+                                {"type": "Label", "caption": "-", "color": 16711680},
+                                {"type": "Label", "caption": "DeepL", "color": 16711680},
+                                {"type": "Label", "caption": ":", "color": 16711680},
                                 {"type": "Label", "caption": "pausiert bis", "color": 16711680},
                                 {"type": "Label", "name": "ProviderPauseDeepLUntilLabel", "caption": "", "color": 16711680}
                             ]
@@ -210,7 +218,9 @@
                             "name": "ProviderPauseFreeRow",
                             "visible": false,
                             "items": [
-                                {"type": "Label", "caption": "- Kostenfreier Anbieter (MyMemory):", "color": 16711680},
+                                {"type": "Label", "caption": "-", "color": 16711680},
+                                {"type": "Label", "caption": "Kostenfreier Anbieter (MyMemory)", "color": 16711680},
+                                {"type": "Label", "caption": ":", "color": 16711680},
                                 {"type": "Label", "caption": "pausiert bis", "color": 16711680},
                                 {"type": "Label", "name": "ProviderPauseFreeUntilLabel", "caption": "", "color": 16711680}
                             ]
@@ -477,9 +487,50 @@
             "items": [
                 {
                     "type": "Label",
-                    "name": "TrialInfoLabel",
-                    "caption": "Testversion",
+                    "name": "TrialInfoFreshLabel",
+                    "caption": "Testversion - läuft ab, sobald diese Instanz zum ersten Mal übernommen wurde.",
                     "visible": false
+                },
+                {
+                    "type": "RowLayout",
+                    "name": "TrialInfoRunningRow",
+                    "visible": false,
+                    "items": [
+                        {"type": "Label", "caption": "Testversion - läuft ab am"},
+                        {"type": "Label", "name": "TrialInfoRunningDateDaysLabel", "caption": ""},
+                        {"type": "Label", "caption": "Tag(e) verbleibend"},
+                        {"type": "Label", "caption": ")."}
+                    ]
+                },
+                {
+                    "type": "Label",
+                    "name": "TrialInfoRunningFeaturesLabel",
+                    "caption": "Bis dahin voller Funktionsumfang, aber nur mit den 5 testweise freigeschalteten Sprachen (Isländisch, Walisisch, Zulu, Maori, Latein).",
+                    "visible": false
+                },
+                {
+                    "type": "RowLayout",
+                    "name": "TrialInfoExpiredRow",
+                    "visible": false,
+                    "items": [
+                        {"type": "Label", "caption": "Testversion abgelaufen am"},
+                        {"type": "Label", "name": "TrialInfoExpiredDateLabel", "caption": ""}
+                    ]
+                },
+                {
+                    "type": "Label",
+                    "name": "TrialInfoExpiredDetailsLabel",
+                    "caption": "Die Kachel zeigt Anwendern ab jetzt wieder den unbearbeiteten Original-Text, ein weiterer Rescan ist blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.",
+                    "visible": false
+                },
+                {
+                    "type": "RowLayout",
+                    "name": "TrialInfoPurchaseRow",
+                    "visible": false,
+                    "items": [
+                        {"type": "Label", "caption": "Lizenz erwerben:"},
+                        {"type": "Label", "name": "TrialInfoPurchaseUrlLabel", "caption": ""}
+                    ]
                 },
                 {
                     "type": "PasswordTextBox",
@@ -647,9 +698,43 @@
                 "closeCaption": "OK",
                 "items": [
                     {
-                        "type": "Label",
-                        "name": "ProviderCheckResultText",
-                        "caption": ""
+                        "type": "RowLayout",
+                        "name": "ProviderCheckGoogleRow",
+                        "visible": false,
+                        "items": [
+                            {"type": "Label", "caption": "Google Cloud Translate"},
+                            {"type": "Label", "caption": ":"},
+                            {"type": "Label", "name": "ProviderCheckGoogleIconLabel", "caption": ""},
+                            {"type": "Label", "name": "ProviderCheckGoogleStatusLabel", "caption": ""},
+                            {"type": "Label", "name": "ProviderCheckGoogleDetailLabel", "caption": ""},
+                            {"type": "Label", "name": "ProviderCheckGooglePauseClearedLabel", "caption": "Pause wurde beendet", "visible": false}
+                        ]
+                    },
+                    {
+                        "type": "RowLayout",
+                        "name": "ProviderCheckDeepLRow",
+                        "visible": false,
+                        "items": [
+                            {"type": "Label", "caption": "DeepL"},
+                            {"type": "Label", "caption": ":"},
+                            {"type": "Label", "name": "ProviderCheckDeepLIconLabel", "caption": ""},
+                            {"type": "Label", "name": "ProviderCheckDeepLStatusLabel", "caption": ""},
+                            {"type": "Label", "name": "ProviderCheckDeepLDetailLabel", "caption": ""},
+                            {"type": "Label", "name": "ProviderCheckDeepLPauseClearedLabel", "caption": "Pause wurde beendet", "visible": false}
+                        ]
+                    },
+                    {
+                        "type": "RowLayout",
+                        "name": "ProviderCheckFreeRow",
+                        "visible": false,
+                        "items": [
+                            {"type": "Label", "caption": "Kostenfreier Anbieter (MyMemory)"},
+                            {"type": "Label", "caption": ":"},
+                            {"type": "Label", "name": "ProviderCheckFreeIconLabel", "caption": ""},
+                            {"type": "Label", "name": "ProviderCheckFreeStatusLabel", "caption": ""},
+                            {"type": "Label", "name": "ProviderCheckFreeDetailLabel", "caption": ""},
+                            {"type": "Label", "name": "ProviderCheckFreePauseClearedLabel", "caption": "Pause wurde beendet", "visible": false}
+                        ]
                     }
                 ]
             }

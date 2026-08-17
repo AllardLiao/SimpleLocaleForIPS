@@ -797,7 +797,6 @@ private const LANGUAGE_FLAGS = [
                     break;
 
                 case 'TranslationStatsSinceDateLabel':
-                case 'TranslationStatsDaysLabel':
                 case 'TranslationStatsRequestsPerHourLabel':
                 case 'TranslationStatsCharsPerHourValueLabel':
                 case 'TranslationStatsTotalRequestsLabel':
@@ -874,9 +873,48 @@ private const LANGUAGE_FLAGS = [
                     }
                     break;
 
-                case 'TrialInfoLabel':
-                    $element['visible'] = self::IS_TRIAL_BUILD && !$this->HasFullLicense();
-                    $element['caption'] = $this->BuildTrialInfoText();
+                // Bewusst als viele einzelne Formularelemente statt einem
+                // zusammengesetzten Fließtext (frühere Version, BuildTrialInfoText als
+                // reine String-Konkatenation über $this->Translate()) - dieselbe
+                // Systemsprache-statt-Konsolensprache-Einschränkung wie bei
+                // TranslationStatsRow1/ProviderPauseAllPausedRow (siehe dortige
+                // Kommentare). Jedes Element trägt entweder eine feste, vorregistrierte
+                // deutsche Zeichenkette (übersetzbar) oder einen rohen, nicht zu
+                // übersetzenden Wert (Datum/Zahl/URL) - nie beides zusammengesetzt.
+                case 'TrialInfoFreshLabel':
+                    $element['visible'] = self::IS_TRIAL_BUILD && !$this->HasFullLicense() && $this->GetTrialExpiresAt() === 0;
+                    break;
+
+                case 'TrialInfoRunningRow':
+                case 'TrialInfoRunningFeaturesLabel':
+                    $expiresAt = $this->GetTrialExpiresAt();
+                    $element['visible'] = self::IS_TRIAL_BUILD && !$this->HasFullLicense()
+                        && $expiresAt !== 0 && $this->GetTrialDaysLeft($expiresAt) > 0;
+                    break;
+
+                case 'TrialInfoRunningDateDaysLabel':
+                    $expiresAt = $this->GetTrialExpiresAt();
+                    $daysLeft = $this->GetTrialDaysLeft($expiresAt);
+                    $element['caption'] = $expiresAt !== 0 && $daysLeft > 0
+                        ? date('d.m.Y', $expiresAt) . ' (' . $daysLeft
+                        : '';
+                    break;
+
+                case 'TrialInfoExpiredRow':
+                case 'TrialInfoExpiredDetailsLabel':
+                case 'TrialInfoPurchaseRow':
+                    $expiresAt = $this->GetTrialExpiresAt();
+                    $element['visible'] = self::IS_TRIAL_BUILD && !$this->HasFullLicense()
+                        && $expiresAt !== 0 && $this->GetTrialDaysLeft($expiresAt) <= 0;
+                    break;
+
+                case 'TrialInfoExpiredDateLabel':
+                    $expiresAt = $this->GetTrialExpiresAt();
+                    $element['caption'] = $expiresAt !== 0 ? date('d.m.Y', $expiresAt) . '.' : '';
+                    break;
+
+                case 'TrialInfoPurchaseUrlLabel':
+                    $element['caption'] = self::LICENSE_PURCHASE_URL;
                     break;
 
                 // Übersetzung-Panel klappt automatisch auf, sobald eine echte Sprachliste
@@ -1201,42 +1239,47 @@ private const LANGUAGE_FLAGS = [
         // erfolgreichen Anbieter bestaetigt hat.
         $this->RefreshTranslateChainStatus();
 
-        $this->UpdateFormField('ProviderCheckResultText', 'caption', $this->BuildProviderCheckResultText($results));
-        $this->UpdateFormField('ProviderCheckResultPopup', 'visible', true);
-    }
-
-    // Menschenlesbarer Anbietername fuers Ergebnis-Popup (siehe
-    // BuildProviderCheckResultText) - dieselben drei internen Kennungen wie in
-    // GetProviderChain/GetApiKeyForProvider.
-    private function GetProviderDisplayName(string $Provider): string
-    {
-        return match ($Provider) {
-            'google' => 'Google Cloud Translate',
-            'deepl'  => 'DeepL',
-            default  => 'MyMemory (kostenfrei)',
-        };
-    }
-
-    // Baut den mehrzeiligen Ergebnistext fuer ProviderCheckResultPopup (siehe
-    // CheckProviders) - eine Zeile pro geprueftem Anbieter, mit Hinweis, falls
-    // eine zuvor laufende Pause gerade beendet wurde.
-    private function BuildProviderCheckResultText(array $Results): string
-    {
-        $lines = [];
-        foreach ($Results as $result) {
-            $name = $this->GetProviderDisplayName($result['provider']);
-            if ($result['succeeded']) {
-                $line = '✅ ' . $name . ': ' . $this->Translate('erfolgreich') . ' ("' . $result['translation'] . '")';
-                if ($result['wasPaused']) {
-                    $line .= ' - ' . $this->Translate('Pause wurde beendet');
-                }
-            } else {
-                $line = '⚠️ ' . $name . ': ' . $this->Translate('fehlgeschlagen - siehe Meldungen-Log für Details');
-            }
-            $lines[] = $line;
+        // Ein UpdateFormField() je Element statt einer zusammengesetzten Caption
+        // (fruehere Version, BuildProviderCheckResultText als reine String-
+        // Konkatenation ueber $this->Translate()) - dieselbe Systemsprache-statt-
+        // Konsolensprache-Einschraenkung wie bei ProviderPauseAllPausedRow/
+        // TranslationStatsRow1 (siehe dortige Kommentare in PopulateFormElements).
+        // Jedes Formularelement traegt entweder eine feste, vorregistrierte
+        // deutsche Zeichenkette (uebersetzbar vom Konsolen-Client) oder einen
+        // rohen, nicht zu uebersetzenden Wert (Icon/Uebersetzungs-Vorschau) - nie
+        // beides zusammengesetzt.
+        $resultsByProvider = [];
+        foreach ($results as $result) {
+            $resultsByProvider[$result['provider']] = $result;
         }
 
-        return implode("\n", $lines);
+        foreach (['google' => 'Google', 'deepl' => 'DeepL', 'free' => 'Free'] as $provider => $prefix) {
+            $result = $resultsByProvider[$provider] ?? null;
+            // Ein Anbieter, der DIESES Mal gar nicht geprueft wurde (z.B. DeepL-Key
+            // seit dem letzten Check entfernt), muss explizit ausgeblendet werden -
+            // sonst bliebe seine Zeile faelschlich vom vorherigen Check sichtbar
+            // (UpdateFormField aendert nur explizit angesprochene Elemente, alte
+            // Werte ueberleben sonst stillschweigend).
+            $this->UpdateFormField('ProviderCheck' . $prefix . 'Row', 'visible', $result !== null);
+            if ($result === null) {
+                continue;
+            }
+
+            $this->UpdateFormField('ProviderCheck' . $prefix . 'IconLabel', 'caption', $result['succeeded'] ? '✅' : '⚠️');
+            $this->UpdateFormField(
+                'ProviderCheck' . $prefix . 'StatusLabel',
+                'caption',
+                $result['succeeded'] ? 'erfolgreich' : 'fehlgeschlagen - siehe Meldungen-Log für Details'
+            );
+            $this->UpdateFormField(
+                'ProviderCheck' . $prefix . 'DetailLabel',
+                'caption',
+                $result['succeeded'] ? ' ("' . $result['translation'] . '")' : ''
+            );
+            $this->UpdateFormField('ProviderCheck' . $prefix . 'PauseClearedLabel', 'visible', $result['succeeded'] && $result['wasPaused']);
+        }
+
+        $this->UpdateFormField('ProviderCheckResultPopup', 'visible', true);
     }
 
     // Prüft/übernimmt den in propertyLicenseKey eingetragenen Schlüssel per
@@ -1723,24 +1766,12 @@ private const LANGUAGE_FLAGS = [
         return $startedAt + self::TRIAL_DURATION_DAYS * 24 * 60 * 60;
     }
 
-    private function BuildTrialInfoText(): string
+    // Reine Berechnung (keine Textbausteine, siehe PopulateFormElements) - Anzahl
+    // verbleibender Tage bis $ExpiresAt, aufgerundet (ein angebrochener letzter Tag
+    // zaehlt noch als "1 Tag verbleibend").
+    private function GetTrialDaysLeft(int $ExpiresAt): int
     {
-        $expiresAt = $this->GetTrialExpiresAt();
-        if ($expiresAt === 0) {
-            return $this->Translate('Testversion - läuft ab, sobald diese Instanz zum ersten Mal übernommen wurde.');
-        }
-
-        $daysLeft = (int) ceil(($expiresAt - time()) / (24 * 60 * 60));
-        $dateText = date('d.m.Y', $expiresAt);
-
-        if ($daysLeft > 0) {
-            return $this->Translate('Testversion - läuft ab am') . " $dateText ($daysLeft " . $this->Translate('Tag(e) verbleibend') . '). '
-                . $this->Translate('Bis dahin voller Funktionsumfang, aber nur mit den 5 testweise freigeschalteten Sprachen (Isländisch, Walisisch, Zulu, Maori, Latein).');
-        }
-
-        return $this->Translate('Testversion abgelaufen am') . " $dateText. "
-            . $this->Translate('Die Kachel zeigt Anwendern ab jetzt wieder den unbearbeiteten Original-Text, ein weiterer Rescan ist blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.')
-            . ' ' . $this->Translate('Lizenz erwerben:') . ' ' . self::LICENSE_PURCHASE_URL;
+        return (int) ceil(($ExpiresAt - time()) / (24 * 60 * 60));
     }
 
     private function ApplyLanguage(string $Language): void
@@ -3935,10 +3966,11 @@ private const LANGUAGE_FLAGS = [
             return '';
         }
 
+        $daysSince = max(0, (int) floor((time() - $stats['since']) / 86400));
+
         return match ($Ident) {
-            'TranslationStatsSinceDateLabel'       => date('d.m.Y', $stats['since']) . ',',
-            'TranslationStatsDaysLabel'            => (string) max(0, (int) floor((time() - $stats['since']) / 86400)),
-            'TranslationStatsRequestsPerHourLabel' => $this->FormatStatsCount($stats['requestsPerHour']),
+            'TranslationStatsSinceDateLabel'       => date('d.m.Y', $stats['since']) . ', ' . $daysSince,
+            'TranslationStatsRequestsPerHourLabel' => ': ' . $this->FormatStatsCount($stats['requestsPerHour']),
             'TranslationStatsCharsPerHourValueLabel' => ', ' . $this->FormatStatsCount($stats['charsPerHour']),
             'TranslationStatsTotalRequestsLabel'   => ': ' . $stats['requestCount'],
             'TranslationStatsTotalCharsLabel'      => ', ' . $stats['characterCount'],
