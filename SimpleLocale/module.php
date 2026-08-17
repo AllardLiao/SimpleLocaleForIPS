@@ -439,11 +439,25 @@ private const LANGUAGE_FLAGS = [
         // einzigen Quellsprache tatsaechlich etwas geaendert hat - nur die guenstige
         // Fingerprint-Berechnung (kein API-Aufruf) laeuft in dem Fall, die teure
         // Uebersetzungsarbeit wird uebersprungen.
-        $rowSourceLanguageFingerprint = $this->ComputeRowSourceLanguageFingerprint();
+        // Zusätzliche Sperre: läuft die Anbieter-Kette GERADE komplett pausiert
+        // (siehe GetGlobalPauseUntil), wird der Fingerprint-Abgleich bewusst
+        // komplett übersprungen - inklusive dem Update des gespeicherten
+        // Fingerprints selbst. Ein Reconcile-Versuch während einer Pause könnte
+        // sonst trotz der Absicherungen in ReconcileRowFields (leere Ergebnisse
+        // überschreiben keine bestehenden Spalten mehr) einzelne Zeilen als
+        // "bereits abgeglichen" markieren, ohne dass tatsächlich neu übersetzt
+        // wurde - und würde beim NÄCHSTEN ApplyChanges() (nach Ende der Pause)
+        // nicht mehr automatisch nachgeholt, weil der Fingerprint dann schon
+        // "aktuell" aussieht. Ohne Update bleibt der gespeicherte Fingerprint
+        // veraltet stehen, sodass der Abgleich zuverlässig erneut anläuft, sobald
+        // wieder mindestens ein Anbieter verfügbar ist.
         $rowSourceLanguagesReconciled = false;
-        if ($rowSourceLanguageFingerprint !== $this->ReadAttributeString(self::attributeLastRowSourceLanguageFingerprint)) {
-            $rowSourceLanguagesReconciled = $this->ReconcileRowSourceLanguageChanges();
-            $this->WriteAttributeString(self::attributeLastRowSourceLanguageFingerprint, $rowSourceLanguageFingerprint);
+        if ($this->GetGlobalPauseUntil() === null) {
+            $rowSourceLanguageFingerprint = $this->ComputeRowSourceLanguageFingerprint();
+            if ($rowSourceLanguageFingerprint !== $this->ReadAttributeString(self::attributeLastRowSourceLanguageFingerprint)) {
+                $rowSourceLanguagesReconciled = $this->ReconcileRowSourceLanguageChanges();
+                $this->WriteAttributeString(self::attributeLastRowSourceLanguageFingerprint, $rowSourceLanguageFingerprint);
+            }
         }
 
         $currentLanguage = $this->ReadPropertyString(self::propertyCurrentLanguage);
@@ -2000,22 +2014,47 @@ private const LANGUAGE_FLAGS = [
         // taeglich zwischen wenigen festen Werten abwechselt, heisst das:
         // Sprachwechsel praktisch immer unuebersetzt, ausser die zufaellig gerade
         // aktive Sprache war beim letzten externen Schreibvorgang bereits aktiv.
+        // Nur wenn WIRKLICH jede Zielsprache erfolgreich übersetzt wurde, gilt die
+        // Zeile unten als "frisch gegen $rowSourceLanguage übersetzt" - schlug auch
+        // nur eine einzige fehl (siehe unten), bleibt die Buchführung bewusst
+        // unverändert, damit ein späterer Abgleich (siehe
+        // ReconcileRowSourceLanguageChanges) die liegen gebliebene(n) Spalte(n)
+        // erneut versuchen kann, statt fälschlich "bereits erledigt" zu vermerken.
+        $allTranslationsSucceeded = true;
+
         foreach ($this->GetSelectedTargetLanguages() as $lang) {
             $translated = $this->TranslateBatch([$NewValue], $sourceLanguage, $lang, '', $IsHtml);
-            // TranslateBatch liefert bei einem fehlgeschlagenen Google-Aufruf einen
-            // Leerstring zurück (nicht null) - ein reines "??" würde diesen Fehlerfall
-            // nicht abfangen und eine leere Beschriftung in der Kachel hinterlassen.
+            // TranslateBatch liefert bei einem fehlgeschlagenen/pausierten Anbieter
+            // einen Leerstring zurück (nicht null) - ein reines "??" würde diesen
+            // Fehlerfall nicht abfangen. Die gespeicherte Spalte wird bei einem
+            // Leerstring bewusst NICHT überschrieben (siehe unten) - sonst würde ein
+            // einzelner externer Schreibvorgang während einer Anbieter-Pause die
+            // bisher funktionierende Übersetzung DAUERHAFT löschen, obwohl der
+            // Nutzer explizit erwartet, dass die zuletzt bekannte gute Übersetzung
+            // erhalten bleibt, bis eine neue erfolgreich berechnet werden konnte.
+            // Live beobachtet (2026-08-19): genau dieses Muster ("Original Import"
+            // intakt, alle Zielsprachen-Spalten leer) bei "Objektnamen"/"Eigene
+            // Texte" nach einer längeren Pause-Phase - dieselbe Fehlerklasse wie
+            // beim HTML-Text-Knoten-Fallback (siehe TranslateBatchUncached) und bei
+            // ReconcileRowFields.
             $translatedText = $translated[0] ?? '';
-            $Rows[$RowIndex][$TranslatedPrefix . $lang] = $translatedText;
+            if ($translatedText !== '') {
+                $Rows[$RowIndex][$TranslatedPrefix . $lang] = $translatedText;
+            } else {
+                $allTranslationsSucceeded = false;
+            }
             if ($lang === $currentLanguage && $translatedText !== '') {
                 $displayText = $translatedText;
             }
         }
-        // Alle Zielsprachen wurden gerade frisch gegen $rowSourceLanguage übersetzt -
-        // Buchführung entsprechend nachziehen (siehe ReconcileRowSourceLanguageChanges),
-        // damit ein nachfolgendes ApplyChanges() hier nicht fälschlich einen
-        // Quellsprachen-Wechsel erkennt und alles ein zweites Mal übersetzt.
-        $Rows[$RowIndex][self::fieldTranslatedAgainstSourceLanguage] = $rowSourceLanguage;
+        // Buchführung nur bei VOLLSTÄNDIGEM Erfolg nachziehen (siehe
+        // ReconcileRowSourceLanguageChanges) - schlug mindestens eine Zielsprache
+        // fehl, bleibt sie bewusst unverändert, damit ein späterer Abgleich die
+        // liegen gebliebene(n) Spalte(n) noch nachholen kann, statt fälschlich
+        // "bereits vollständig übersetzt" zu vermerken.
+        if ($allTranslationsSucceeded) {
+            $Rows[$RowIndex][self::fieldTranslatedAgainstSourceLanguage] = $rowSourceLanguage;
+        }
 
         IPS_SetProperty($this->InstanceID, $Property, json_encode($Rows));
         IPS_ApplyChanges($this->InstanceID);
@@ -2102,6 +2141,8 @@ private const LANGUAGE_FLAGS = [
             return $Row;
         }
 
+        $allTranslationsSucceeded = true;
+
         foreach ($FieldGroups as $group) {
             $rawText = (string) ($Row[$group['raw']] ?? '');
             $isHtml = $group['isHtml'] ?? false;
@@ -2122,17 +2163,42 @@ private const LANGUAGE_FLAGS = [
 
                 $translated = $this->TranslateBatch([$rawText], $newSourceLanguage, $language, '', $isHtml);
                 $value = $translated[0] ?? '';
-                if (!$isHtml && $value !== '') {
+                if ($value === '') {
+                    // Übersetzung fehlgeschlagen (Anbieter-Kette down/pausiert, siehe
+                    // TranslateChunk) - die bereits vorhandene Spalte NICHT blind mit
+                    // dem leeren Ergebnis überschreiben, sonst geht eine funktionierende,
+                    // wenn auch jetzt technisch gegen die alte Quellsprache berechnete
+                    // Übersetzung dauerhaft verloren, ohne jede Chance auf einen
+                    // erneuten Versuch. Live beobachtet (2026-08-19): eine komplett
+                    // leere Zielsprachen-Spalte in "Objektnamen"/"Eigene Texte" nach
+                    // einem Reconcile, obwohl vorher eine funktionierende Übersetzung
+                    // vorhanden war - derselbe Fehlerklasse wie beim
+                    // HTML-Text-Knoten-Fallback (siehe TranslateBatchUncached) und bei
+                    // ApplyTrackedVariableUpdate.
+                    $allTranslationsSucceeded = false;
+                    continue;
+                }
+                if (!$isHtml) {
                     $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5);
                 }
-                if ($capitalizeFirst && $value !== '') {
+                if ($capitalizeFirst) {
                     $value = $this->CapitalizeFirstLetter($value);
                 }
                 $Row[$group['prefix'] . $language] = $value;
             }
         }
 
-        $Row[self::fieldTranslatedAgainstSourceLanguage] = $newSourceLanguage;
+        // Buchführung nur bei VOLLSTÄNDIGEM Erfolg auf die neue Quellsprache
+        // umstellen (siehe ApplyTrackedVariableUpdate für dasselbe Prinzip) - schlug
+        // mindestens eine Zielsprache fehl, bleibt sie bewusst unverändert, damit
+        // der nächste Abgleich die liegen gebliebene(n) Spalte(n) noch nachholen
+        // kann, statt fälschlich "bereits vollständig übersetzt" zu vermerken. Die
+        // Zeile gilt trotzdem als geändert (siehe $Changed) - bereits erfolgreich
+        // übersetzte Spalten sollen gespeichert werden, auch wenn andere noch
+        // ausstehen.
+        if ($allTranslationsSucceeded) {
+            $Row[self::fieldTranslatedAgainstSourceLanguage] = $newSourceLanguage;
+        }
         $Changed = true;
 
         return $Row;
