@@ -396,6 +396,29 @@ Beschreibung des Moduls.
   betroffene Zellen müssen einmalig manuell im Formular geleert werden,
   danach übersetzt sie der nächste Rescan/die nächste Anbieter-Erholung
   normal nach.
+
+  **Build 66 schließt dieselbe Lücke zusätzlich im Übersetzungs-Cache:**
+  Live beobachtet direkt nach Build 65 - Zellen leeren + Rescan füllte
+  "Automations" trotzdem wieder mit Deutsch, obwohl "Begrüßung" im selben
+  Test korrekt übersetzt wurde. Ursache: der interne Übersetzungs-Cache
+  (siehe Abschnitt 1, `GetCachedTranslation`/`StoreCachedTranslation`) hatte
+  denselben unübersetzten Rohtext bereits VOR Build 65 unter genau diesem
+  Schlüssel als "echte Übersetzung" zwischengespeichert (z. B. "Gehen" für
+  Deutsch->Englisch) - ein Cache-TREFFER läuft komplett an `TranslateBatch()`s
+  frischem Übersetzungspfad (und damit am Build-65-Schutz) vorbei, liefert
+  also weiterhin den vergifteten alten Eintrag. Im Debug-Log erkennbar an
+  einem "..._Mapping"-Eintrag ganz ohne jeden nachfolgenden
+  "..._Request"/"..._Response" - der sichere Hinweis auf einen Cache-Treffer
+  statt eines echten (und damit geschützten) neuen Versuchs. Behoben wie
+  beim strukturell identischen Vorfall vom 2026-08-15 (siehe
+  `TRANSLATION_CACHE_SCHEMA_VERSION`): die Cache-Version wurde erneut erhöht
+  (2 → 3) - macht JEDEN vor Build 66 gecachten Eintrag unerreichbar (die
+  Version steckt im Cache-Schlüssel) und erzwingt für jeden betroffenen Text
+  einmalig einen frischen, jetzt korrekt geschützten Übersetzungsversuch.
+  **Mit Build 66 reicht das Leeren betroffener Zellen im Formular + Rescan
+  wieder allein aus** - ein zusätzliches manuelles "Übersetzungs-Cache
+  leeren" ist NICHT mehr nötig (macht aber ebenfalls nichts kaputt, falls
+  bereits geklickt).
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
