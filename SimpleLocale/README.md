@@ -325,6 +325,26 @@ Beschreibung des Moduls.
   jetzt auf mindestens eine volle Stunde gedeckelt: innerhalb der ersten
   Stunde nach Inbetriebnahme zeigt sie exakt den bisherigen Gesamtwert (nie
   mehr), erst danach weicht sie als echte Rate vom Gesamtwert ab.
+
+  **Build 63 korrigiert die Farbcodierung im Symcon-"Meldungen"-Log (englisch
+  "Status Log"):** Übersetzungs-Fehler/-Warnungen (`LogTranslateMessage()`,
+  siehe oben "MyMemorys quotaFinished" und die Anbieter-Fehlermeldungen)
+  erschienen dort bisher grau als generischer "Custom"-Eintrag mit einem
+  Text-Präfix "[FEHLER]"/"[WARNUNG]", statt in der eigentlich vorgesehenen
+  roten/gelben Farbcodierung für "Error"/"Warning". Grund: die global
+  aufgerufene `IPS_LogMessage()`-Funktion kennt gar keinen Schweregrad-
+  Parameter - nur die von `IPSModule` geerbte, INSTANZ-gebundene
+  `LogMessage($Message, $Type)`-Methode (mit `KL_ERROR`/`KL_WARNING`) liefert
+  die echte Farbcodierung, wurde hier aber bewusst gemieden, weil sie
+  nachweislich abstürzt, sobald sie aus dem `MessageSink()`/`VM_UPDATE`-
+  Ausführungskontext heraus aufgerufen wird (siehe Build 54). Seit Build 63
+  unterscheidet die Instanz beide Kontexte: außerhalb von `MessageSink()`
+  (Rescan, "Übersetzungsanbieter prüfen", `ApplyChanges()`, ...) wird jetzt
+  die typisierte `LogMessage()`-Methode verwendet - Fehler erscheinen dadurch
+  korrekt rot als "Error", Warnungen gelb als "Warning". Nur innerhalb der
+  einen bekannten Absturz-Situation (`MessageSink()`/`VM_UPDATE`) greift
+  weiterhin die alte, sichere `IPS_LogMessage()`-Variante mit Text-Präfix,
+  da dort echte Instabilität nachgewiesen wurde.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
