@@ -4116,6 +4116,37 @@ private const LANGUAGE_FLAGS = [
             $freshlyTranslated = $this->TranslateBatchUncached($freshTexts, $Source, $Target, $DebugContext, $IsHtml);
             foreach ($freshIndexes as $position => $originalIndex) {
                 $translated = $freshlyTranslated[$position] ?? '';
+                // TranslateBatchUncached faellt bei einem fehlgeschlagenen/pausierten
+                // Anbieter bewusst NIE auf einen leeren String zurueck, sondern auf den
+                // unuebersetzten Quelltext (siehe dortiger Kommentar zum
+                // HTML-Text-Knoten-Fallback) - richtig fuer die dortige
+                // Wiederzusammensetzung (nie eine kaputte/leere HTML-Struktur), aber
+                // HIER faelschlich als "erfolgreich uebersetzt" interpretierbar: JEDER
+                // Aufrufer von TranslateBatch() (FillLanguageColumn,
+                // ApplyTrackedVariableUpdate, ReconcileRowFields) entscheidet anhand
+                // eines Leerstrings, ob eine Zelle als "fertig, nicht erneut
+                // versuchen" oder "fehlgeschlagen, bitte spaeter erneut versuchen"
+                // gilt - ein still durchgereichter Fallback wuerde dort DAUERHAFT als
+                // erledigt gelten. Live beobachtet (2026-08-19): "Automations" und
+                // "Begrüßung" komplett auf den deutschen Rohtext eingefroren, nachdem
+                // waehrend eines Rescans alle Anbieter pausiert waren - jede
+                // Zielsprachen-Spalte einer NEUEN Zeile wurde beim allerersten
+                // Fuellversuch mit dem (fuer diesen einen Versuch unuebersetzten)
+                // Rohtext dauerhaft "erledigt" markiert, ein spaeterer Rescan
+                // erkannte sie nie wieder als offen. Ein Ergebnis, das EXAKT dem
+                // unuebersetzten Quelltext entspricht (bei unterschiedlicher
+                // Quell-/Zielsprache so gut wie sicher nur durch diesen Fallback
+                // moeglich - echte, zufaellig identisch bleibende Uebersetzungen,
+                // z.B. Eigennamen, sind die seltene Ausnahme und lassen sich bei
+                // Bedarf manuell im Formular eintragen), wird deshalb HIER wieder in
+                // einen echten Leerstring zurueckverwandelt, bevor er an irgendeinen
+                // Aufrufer weitergereicht wird - das schuetzt gleichzeitig auch den
+                // Cache (siehe StoreCachedTranslation unten): ohne diese Korrektur
+                // wuerde der Fallback dauerhaft als "echte Uebersetzung" gecacht und
+                // auch nach Ende der Pause nie mehr neu versucht.
+                if ($translated !== '' && $translated === $freshTexts[$position]) {
+                    $translated = '';
+                }
                 $results[$originalIndex] = $translated;
                 if ($translated !== '') {
                     $this->StoreCachedTranslation($Source, $Target, $freshTexts[$position], $translated);
