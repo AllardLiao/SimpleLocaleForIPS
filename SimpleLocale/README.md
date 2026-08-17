@@ -141,7 +141,14 @@ Beschreibung des Moduls.
   oben) - sofort per Formular umschaltbar, kein Warten auf ein Modul-Update
   nötig. Fehlerdetails zu jedem fehlgeschlagenen Übersetzungsversuch (welcher
   Anbieter, HTTP-Code, Antwort) landen seit Build 53 zusätzlich im normalen
-  Symcon-Meldungen-Log der Instanz (nicht mehr nur im Debug-Panel).
+  Symcon-Meldungen-Log der Instanz (nicht mehr nur im Debug-Panel). **Build 54**
+  korrigiert dabei einen Fehler in Build 53 selbst: die von IPSModule geerbte
+  `LogMessage()`-Methode löste, aus dem über `MessageSink()`/`VM_UPDATE`
+  erreichbaren Übersetzungs-Fehlerpfad heraus aufgerufen, zuverlässig eine
+  "InstanceInterface is not available"-Warnung aus (die Methode scheint eine im
+  MessageSink-Ausführungskontext nicht existierende Interface-Instanz
+  vorauszusetzen) - seit Build 54 wird stattdessen die kontextunabhängige globale
+  `IPS_LogMessage()`-Funktion verwendet.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
