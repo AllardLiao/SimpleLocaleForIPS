@@ -203,6 +203,36 @@ Beschreibung des Moduls.
   unter dem Dropdown teils nur die Uhrzeit ohne den Text davor (derselbe
   Grundfehler: ein leeres statt eines fehlenden Übersetzungsergebnisses wurde
   nicht als "fehlgeschlagen, bitte Original verwenden" erkannt).
+
+  **Build 59 behebt dieselbe Fehlerklasse an zwei weiteren, deutlich
+  schwerwiegenderen Stellen - dem eigentlichen DATENVERLUST-Bug dieser
+  Serie:** sowohl `ReconcileRowSourceLanguageChanges()` (läuft für ALLE fünf
+  Zeilen-Properties: Objektnamen, Eigene Texte, Beschriftungen, Automations,
+  Begrüßung) als auch der `VM_UPDATE`-Live-Übersetzungspfad überschrieben eine
+  bereits vorhandene, funktionierende Übersetzungsspalte bedingungslos mit dem
+  Ergebnis eines erneuten Übersetzungsversuchs - auch dann, wenn dieser wegen
+  einer pausierten/ausgefallenen Anbieter-Kette leer zurückkam. Live
+  beobachtet: nach einer längeren Pause-Phase waren in "Objektnamen" und
+  teilweise "Eigene Texte"/"Beschriftungen"/"Automations" sämtliche
+  Zielsprachen-Spalten leer, obwohl vorher funktionierende Übersetzungen
+  vorhanden waren - nur "Original-Import" blieb erhalten. Seit Build 59 wird
+  eine bestehende Spalte bei einem fehlgeschlagenen Übersetzungsversuch NIE
+  mehr überschrieben (die zuletzt bekannte gute Übersetzung bleibt stehen,
+  bis ein neuer Versuch tatsächlich erfolgreich war), und die interne
+  Buchführung wird nur bei VOLLSTÄNDIGEM Erfolg aller Zielsprachen
+  fortgeschrieben - schlägt auch nur eine einzige fehl, bleibt die betroffene
+  Zeile für einen späteren erneuten Versuch vorgemerkt, statt fälschlich als
+  "erledigt" zu gelten. Zusätzlich überspringt `ApplyChanges()` den kompletten
+  Quellsprachen-Abgleich jetzt schon im Vorfeld, solange die Anbieter-Kette
+  komplett pausiert ist (siehe oben) - der zugehörige interne Fingerprint
+  bleibt dabei bewusst unverändert, damit der Abgleich zuverlässig nachgeholt
+  wird, sobald mindestens ein Anbieter wieder verfügbar ist. Der eigentliche
+  Übersetzungs-Cache (`GetCachedTranslation`/`StoreCachedTranslation`, siehe
+  Abschnitt 1) war von diesem Bug nie betroffen - ein fehlgeschlagenes/leeres
+  Ergebnis wurde dort schon immer bewusst NICHT zwischengespeichert (siehe
+  `TranslateBatch`: nur tatsächlich übersetzte, nicht-leere Ergebnisse landen
+  im Cache), sodass ein erneuter Versuch für denselben Text nie an einem
+  fälschlich gecachten leeren Ergebnis scheitert.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
