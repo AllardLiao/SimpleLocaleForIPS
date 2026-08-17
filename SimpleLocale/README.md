@@ -82,6 +82,10 @@ Beschreibung des Moduls.
   Übersetzungsaufrufe pro Tag und Zielsprache - mit Cache nur noch die
   paar Werte, die sich tatsächlich bei jedem Update ändern (z. B.
   Temperatur, Wetterlage, Luftfeuchte), grob geschätzt 70-75 % weniger.
+  Wie viele Anfragen/Zeichen dadurch konkret eingespart wurden, zeigt seit
+  Build 61 der Nutzungs-Zähler im Konfigurationsformular (siehe
+  [Abschnitt 2](#2-bekannte-einschränkungen)) als reine Gesamtsumme seit
+  Inbetriebnahme.
   Zeigt ein Text weiterhin hartnäckig eine
   veraltete/falsche Übersetzung, hilft der Button "Übersetzungs-Cache
   leeren" im Formular - er löscht nur diesen internen Zwischenspeicher,
@@ -268,6 +272,32 @@ Beschreibung des Moduls.
   der automatische Hintergrund-Rescan aktualisiert die Objektliste weiterhin
   normal im Hintergrund, rührt ein gerade geöffnetes Formular aber nicht
   mehr an.
+
+  **Build 61** ergänzt den Nutzungs-Zähler aus Build 60 um eine zweite
+  Statistik und einen neuen Diagnose-Button: (1) Zusätzlich zu den
+  tatsächlich gestellten Anfragen zählt die Instanz jetzt auch mit, wie viele
+  Übersetzungsanfragen und Zeichen dank des Caches (siehe oben,
+  `GetCachedTranslation`/`StoreCachedTranslation`) gar nicht erst an einen
+  Anbieter geschickt werden mussten - als reine Gesamtsumme seit
+  Inbetriebnahme (keine Pro-Stunde-Rate wie beim Hauptzähler), direkt
+  angehängt an den Statistik-Satz unter der Erläuterung des "Aktiv"-Schalters
+  im Konfigurationsformular. Für eigene Kacheln stehen dafür zwei weitere
+  Platzhalter bereit, `<!--COUNT_CACHE_TRANSLATIONS-->` und
+  `<!--COUNT_CACHE_SIGNES-->` (ebenfalls reine Ganzzahl ohne Einheit), siehe
+  [Abschnitt 7](#7-visualisierung). (2) Ein neuer Button "Übersetzungsanbieter
+  prüfen" ganz unten im Konfigurationsformular schickt eine einzelne
+  Testanfrage ("Testabfrage" -> Englisch) DIREKT an jeden gerade
+  eingerichteten Anbieter (Google/DeepL, falls ein API-Key eingetragen ist,
+  sowie immer MyMemory) - bewusst am Cache vorbei (immer eine echte, frische
+  Antwort) und unabhängig von einer eventuell laufenden Pause (die würde
+  einen normalen Übersetzungsversuch sonst überspringen, hier soll aber
+  gerade geprüft werden, ob der Anbieter TROTZ Pause inzwischen wieder
+  funktioniert). Meldet für jeden Anbieter einzeln zurück, ob die Antwort
+  angekommen ist, und beendet dabei automatisch eine noch laufende Pause,
+  sobald ein Anbieter wieder erfolgreich antwortet - nützlich z. B. direkt
+  nach einem Kontingent-/Abo-Upgrade beim Anbieter, ohne auf das
+  automatische Ablaufen der (ggf. bereits mehrfach eskalierten, siehe Build
+  57) Pause warten zu müssen.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
@@ -478,6 +508,7 @@ Simple Locale funktioniert **ab Werk ohne jede Konfiguration**: Ganz ohne einget
 - **Google und/oder DeepL zusätzlich eingetragen, volle Verkettung** (Pro-Feature `paid_providers`, siehe [Abschnitt 8](#8-lizenz-und-testversion)): bezahlte Anbieter werden VOR dem kostenfreien versucht (Reihenfolge über "Bevorzugter Anbieter" wählbar, falls beide eingetragen sind), beide bezahlten Anbieter kombiniert, falls beide konfiguriert - deutlich großzügigere Freikontingente/Qualität, aber jeweils ein eigenes Konto samt API-Key nötig.
 - **Google und/oder DeepL eingetragen, ohne `paid_providers`** (z. B. "Light"-Edition): der kostenfreie Anbieter bleibt immer die primäre Grundausstattung, zusätzlich darf höchstens EIN einzelner bezahlter Anbieter als Rückfall danach greifen (nie beide gleichzeitig verkettet) - welcher, entscheidet "Bevorzugter Anbieter", falls beide eingetragen sind.
 - **Ausfallsicher durch Verkettung**: Schlägt ein Anbieter fehl (Tageskontingent erschöpft, Preismodell geändert, Key abgelaufen, Netzwerkfehler), übernimmt automatisch der nächste in der jeweiligen Kette - der kostenfreie Anbieter steht dabei immer als garantiert verfügbares Glied bereit (mit `paid_providers` am Ende, ohne dieses Feature am Anfang). Die Übersetzung funktioniert dadurch strukturell auch dann noch, wenn Google/DeepL komplett ausfallen oder ihr Preismodell ändern sollten.
+- **Anbieter gezielt prüfen (Build 61):** Der Button "Übersetzungsanbieter prüfen" ganz unten im Konfigurationsformular schickt eine einzelne Testanfrage direkt an jeden eingerichteten Anbieter (Google/DeepL, falls konfiguriert, sowie immer MyMemory) - am Cache vorbei und unabhängig von einer eventuell laufenden Pause, meldet also auch, ob ein eigentlich pausierter Anbieter inzwischen wieder geht. Eine noch laufende Pause wird dabei automatisch beendet, sobald ein Anbieter wieder erfolgreich antwortet - praktisch z. B. direkt nach einem Kontingent-/Abo-Upgrade beim Anbieter.
 
 Ein Anbieterwechsel (z. B. Google zu DeepL) macht bereits gewählte Zielsprachen ungültig, wenn die neue Sprachliste andere Codes verwendet (Google: klein geschrieben "de"/"en", DeepL: teils groß geschrieben mit Regionsvariante "DE"/"EN-GB") - betroffene Zielsprachen müssen dann neu ausgewählt werden. Der kostenfreie Anbieter hat keinen eigenen Sprachlisten-Endpunkt und nutzt eine eingebaute, rund 25 Sprachen umfassende statische Liste.
 
@@ -737,6 +768,15 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
      wird alle 10 Minuten über denselben `PushVisualizationUpdate()`-
      Mechanismus, der auch den `REFRESH`-Payload weiter unten auslöst - nie
      über einen Formular-Reload.
+
+     Seit Build 61 gibt es dazu zwei weitere, ebenfalls optionale Platzhalter:
+     `<!--COUNT_CACHE_TRANSLATIONS-->` und `<!--COUNT_CACHE_SIGNES-->` liefern
+     die reine Gesamtzahl der seit Inbetriebnahme durch den Übersetzungs-Cache
+     eingesparten Anfragen bzw. Zeichen (ebenfalls als reine Ganzzahl ohne
+     Einheit, aber - anders als die beiden oben - eine Gesamtsumme, keine
+     Pro-Stunde-Rate). Gelten dieselben Regeln wie für
+     `<!--COUNT_TRANSLATIONS-->`/`<!--COUNT_SIGNES-->`: unabhängig vom Toggle,
+     in beiden Feldern nutzbar, kein zusätzlicher Aufwand, falls ungenutzt.
 
    - **"Sprachauswahl-HTML-Code"** - ersetzt `<!--LANGUAGE_SELECT-->`.
      Standardmäßig **vorbefüllt mit einem funktionierenden Beispiel** (zwei

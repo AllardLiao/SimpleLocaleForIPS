@@ -337,6 +337,8 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterAttributeInteger(self::attributeStatsSince, 0);
         $this->RegisterAttributeInteger(self::attributeStatsRequestCount, 0);
         $this->RegisterAttributeInteger(self::attributeStatsCharacterCount, 0);
+        $this->RegisterAttributeInteger(self::attributeStatsCacheSavedRequestCount, 0);
+        $this->RegisterAttributeInteger(self::attributeStatsCacheSavedCharacterCount, 0);
 
         $this->SetVisualizationType(1);
 
@@ -574,6 +576,10 @@ private const LANGUAGE_FLAGS = [
 
             case self::identActivateLicense:
                 $this->ActivateLicense();
+                break;
+
+            case self::identCheckProviders:
+                $this->CheckProviders();
                 break;
 
             case self::identShowApiKeyWarning:
@@ -1070,6 +1076,105 @@ private const LANGUAGE_FLAGS = [
         $this->WriteAttributeString(self::attributeTranslationCache, '{}');
         $this->UpdateFormField('CacheClearedPopup', 'visible', true);
         $this->SendDebug('IPSSL_Debug', 'ClearTranslationCache: Cache geleert', 0);
+    }
+
+    // Button "Übersetzungsanbieter prüfen": schickt EINE einzelne, minimale
+    // Testanfrage ("Testabfrage" DE->EN) direkt an jeden Anbieter, der gerade
+    // eingerichtet ist (Google/DeepL, falls ein API-Key eingetragen ist, sowie
+    // immer MyMemory) - bewusst DIREKT über TranslateChunkGoogle/-DeepL/-Free,
+    // nicht über TranslateChunk() (das würde bereits pausierte Anbieter
+    // überspringen, ohne sie wirklich zu testen) und auch nicht über
+    // TranslateBatch/TranslateBatchUncached (das würde bei einem Cache-Treffer
+    // gar keine echte Anfrage stellen - hier soll aber IMMER eine frische,
+    // aktuelle Antwort geprüft werden). Die einzelnen CallXxxAPI()-Methoden
+    // pausieren/entpausen die Anbieter dabei schon automatisch als Nebeneffekt
+    // (siehe CallGoogleTranslateAPI/CallDeepLAPI/CallFreeTranslateAPI/
+    // ClearProviderPause) - ein frisch erfolgreicher Versuch beendet eine noch
+    // laufende Pause also sofort, z.B. direkt nach einem Kontingent-/Abo-
+    // Upgrade beim Anbieter, statt erst auf deren automatisches Ablaufen warten
+    // zu müssen.
+    private function CheckProviders(): void
+    {
+        $testText = 'Testabfrage';
+        $source = 'de';
+        $target = 'en';
+
+        $providers = ['free'];
+        if ($this->ReadPropertyString(self::propertyGoogleTranslateAPIKey) !== '') {
+            $providers[] = 'google';
+        }
+        if ($this->ReadPropertyString(self::propertyDeepLAPIKey) !== '') {
+            $providers[] = 'deepl';
+        }
+
+        $results = [];
+        foreach ($providers as $provider) {
+            $wasPaused = $this->IsProviderPaused($provider);
+
+            $translated = match ($provider) {
+                'google' => $this->TranslateChunkGoogle([$testText], $source, $target, $this->GetApiKeyForProvider('google'), 'ProviderCheck'),
+                'deepl'  => $this->TranslateChunkDeepL([$testText], $source, $target, $this->GetApiKeyForProvider('deepl'), 'ProviderCheck'),
+                default  => $this->TranslateChunkFree([$testText], $source, $target, 'ProviderCheck'),
+            };
+
+            $succeeded = is_array($translated) && ($translated[0] ?? '') !== '';
+            if ($succeeded) {
+                // Echter, gerade erst bestätigter Erfolg - siehe TranslateChunk fuer
+                // denselben Mechanismus im normalen Uebersetzungspfad.
+                $this->ClearProviderPause($provider);
+            }
+
+            $results[] = [
+                'provider'    => $provider,
+                'succeeded'   => $succeeded,
+                'wasPaused'   => $wasPaused,
+                'translation' => $succeeded ? $translated[0] : null,
+            ];
+        }
+
+        // Aktualisiert die Instanz-Statuszeile sofort, falls sich die Pause-Lage
+        // gerade veraendert hat (siehe RefreshTranslateChainStatus) - ohne diesen
+        // Aufruf bliebe z.B. "Aktiv, aber pausiert" bis zum naechsten Formular-
+        // Neuladen faelschlich stehen, obwohl der Test oben gerade einen
+        // erfolgreichen Anbieter bestaetigt hat.
+        $this->RefreshTranslateChainStatus();
+
+        $this->UpdateFormField('ProviderCheckResultText', 'caption', $this->BuildProviderCheckResultText($results));
+        $this->UpdateFormField('ProviderCheckResultPopup', 'visible', true);
+    }
+
+    // Menschenlesbarer Anbietername fuers Ergebnis-Popup (siehe
+    // BuildProviderCheckResultText) - dieselben drei internen Kennungen wie in
+    // GetProviderChain/GetApiKeyForProvider.
+    private function GetProviderDisplayName(string $Provider): string
+    {
+        return match ($Provider) {
+            'google' => 'Google Cloud Translate',
+            'deepl'  => 'DeepL',
+            default  => 'MyMemory (kostenfrei)',
+        };
+    }
+
+    // Baut den mehrzeiligen Ergebnistext fuer ProviderCheckResultPopup (siehe
+    // CheckProviders) - eine Zeile pro geprueftem Anbieter, mit Hinweis, falls
+    // eine zuvor laufende Pause gerade beendet wurde.
+    private function BuildProviderCheckResultText(array $Results): string
+    {
+        $lines = [];
+        foreach ($Results as $result) {
+            $name = $this->GetProviderDisplayName($result['provider']);
+            if ($result['succeeded']) {
+                $line = '✅ ' . $name . ': ' . $this->Translate('erfolgreich') . ' ("' . $result['translation'] . '")';
+                if ($result['wasPaused']) {
+                    $line .= ' - ' . $this->Translate('Pause wurde beendet');
+                }
+            } else {
+                $line = '⚠️ ' . $name . ': ' . $this->Translate('fehlgeschlagen - siehe Meldungen-Log für Details');
+            }
+            $lines[] = $line;
+        }
+
+        return implode("\n", $lines);
     }
 
     // Prüft/übernimmt den in propertyLicenseKey eingetragenen Schlüssel per
@@ -3682,6 +3787,25 @@ private const LANGUAGE_FLAGS = [
         }
     }
 
+    // Gegenstueck zu RecordTranslationRequestStats: zaehlt einen Cache-TREFFER
+    // (siehe TranslateBatch) - genau EIN Text, der dadurch OHNE Anbieter-Aufruf
+    // aufgeloest werden konnte. $CharacterCount ist hier immer die Laenge des
+    // (unuebersetzten) Quelltexts, da fuer einen Cache-Treffer nie eine Anfrage
+    // an einen Anbieter gestellt wird.
+    private function RecordCacheSavingsStats(int $CharacterCount): void
+    {
+        $this->WriteAttributeInteger(
+            self::attributeStatsCacheSavedRequestCount,
+            $this->ReadAttributeInteger(self::attributeStatsCacheSavedRequestCount) + 1
+        );
+        if ($CharacterCount > 0) {
+            $this->WriteAttributeInteger(
+                self::attributeStatsCacheSavedCharacterCount,
+                $this->ReadAttributeInteger(self::attributeStatsCacheSavedCharacterCount) + $CharacterCount
+            );
+        }
+    }
+
     // Reine Lesefunktion (keine Seiteneffekte, kein Attribut-Write) - liefert die
     // rohen Zaehler UND die daraus abgeleiteten Durchschnittswerte pro Stunde seit
     // attributeStatsSince (siehe ApplyChanges). "hoursElapsed" wird auf mindestens
@@ -3697,12 +3821,17 @@ private const LANGUAGE_FLAGS = [
         $hoursElapsed = $elapsedSeconds / 3600;
 
         return [
-            'since'           => $since,
-            'requestCount'    => $requestCount,
-            'characterCount'  => $characterCount,
-            'hoursElapsed'    => $hoursElapsed,
-            'requestsPerHour' => $requestCount / $hoursElapsed,
-            'charsPerHour'    => $characterCount / $hoursElapsed,
+            'since'                    => $since,
+            'requestCount'             => $requestCount,
+            'characterCount'           => $characterCount,
+            'hoursElapsed'             => $hoursElapsed,
+            'requestsPerHour'          => $requestCount / $hoursElapsed,
+            'charsPerHour'             => $characterCount / $hoursElapsed,
+            // Reine Gesamtzaehler (keine Pro-Stunde-Rate) - siehe
+            // RecordCacheSavingsStats, dort ist "seit wann" bereits identisch
+            // attributeStatsSince, ein eigener Zeitbezug ist daher nicht noetig.
+            'cacheSavedRequestCount'   => $this->ReadAttributeInteger(self::attributeStatsCacheSavedRequestCount),
+            'cacheSavedCharacterCount' => $this->ReadAttributeInteger(self::attributeStatsCacheSavedCharacterCount),
         ];
     }
 
@@ -3735,7 +3864,9 @@ private const LANGUAGE_FLAGS = [
             . $this->FormatStatsCount($stats['requestsPerHour']) . ' ' . $this->Translate('Anfragen/h')
             . ', ' . $this->FormatStatsCount($stats['charsPerHour']) . ' ' . $this->Translate('Zeichen/h')
             . ' (' . $this->Translate('insgesamt') . ': ' . $stats['requestCount'] . ' '
-            . $this->Translate('Anfragen') . ', ' . $stats['characterCount'] . ' ' . $this->Translate('Zeichen') . ').';
+            . $this->Translate('Anfragen') . ', ' . $stats['characterCount'] . ' ' . $this->Translate('Zeichen') . '). '
+            . $this->Translate('Durch den Cache eingespart') . ': ' . $stats['cacheSavedRequestCount'] . ' '
+            . $this->Translate('Anfragen') . ', ' . $stats['cacheSavedCharacterCount'] . ' ' . $this->Translate('Zeichen') . '.';
     }
 
     // Kleiner, neutraler (NICHT roter - kein Warnhinweis, rein informativ) Hinweis
@@ -3946,6 +4077,7 @@ private const LANGUAGE_FLAGS = [
             $cached = $this->GetCachedTranslation($Source, $Target, $text);
             if ($cached !== null) {
                 $results[$i] = $cached;
+                $this->RecordCacheSavingsStats(mb_strlen($text, 'UTF-8'));
             } else {
                 $freshIndexes[] = $i;
                 $freshTexts[] = $text;
@@ -4982,15 +5114,30 @@ private const LANGUAGE_FLAGS = [
     // vorkommt.
     private function ApplyTranslationStatsPlaceholders(string $Html): string
     {
-        if (strpos($Html, '<!--COUNT_TRANSLATIONS-->') === false && strpos($Html, '<!--COUNT_SIGNES-->') === false) {
+        $placeholders = ['<!--COUNT_TRANSLATIONS-->', '<!--COUNT_SIGNES-->', '<!--COUNT_CACHE_TRANSLATIONS-->', '<!--COUNT_CACHE_SIGNES-->'];
+        $hasAnyPlaceholder = false;
+        foreach ($placeholders as $placeholder) {
+            if (strpos($Html, $placeholder) !== false) {
+                $hasAnyPlaceholder = true;
+                break;
+            }
+        }
+        if (!$hasAnyPlaceholder) {
             return $Html;
         }
 
         $stats = $this->ComputeTranslationStats();
 
         return str_replace(
-            ['<!--COUNT_TRANSLATIONS-->', '<!--COUNT_SIGNES-->'],
-            [$this->FormatStatsCount($stats['requestsPerHour']), $this->FormatStatsCount($stats['charsPerHour'])],
+            $placeholders,
+            [
+                $this->FormatStatsCount($stats['requestsPerHour']),
+                $this->FormatStatsCount($stats['charsPerHour']),
+                // Reine Gesamtzaehler, keine Pro-Stunde-Rate - siehe
+                // RecordCacheSavingsStats/ComputeTranslationStats.
+                (string) $stats['cacheSavedRequestCount'],
+                (string) $stats['cacheSavedCharacterCount'],
+            ],
             $Html
         );
     }
