@@ -25,6 +25,15 @@ class SimpleLocale extends IPSModuleStrict
 {
     use SimpleLocaleConstants\SimpleLocaleConstants;
 
+    // Reine Laufzeit-Markierung (kein RegisterAttribute noetig - gilt nur fuer
+    // die Dauer EINES synchronen Aufrufs), true waehrend MessageSink() gerade
+    // HandleTrackedVariableUpdate() (VM_UPDATE) durchlaeuft - siehe
+    // LogTranslateMessage(): nur in diesem einen Kontext ist $this->LogMessage()
+    // nachweislich instabil (siehe dortiger Kommentar), ueberall sonst (Rescan,
+    // CheckProviders, ApplyChanges, ...) ist sie sicher nutzbar und liefert die
+    // richtige Farbcodierung (ERROR/WARNING statt grau "Custom") im Status Log.
+    private bool $isInMessageSinkDispatch = false;
+
     // Hinweistexte fürs Info-Symbol neben dem Dropdown - live in die aktive
     // Gast-Sprache übersetzt (siehe EnsureGuestLanguageNamesFresh), damit auch
     // dieser Text nicht die Konsolensprache des Admins mit der Gast-Sprache mischt.
@@ -532,7 +541,15 @@ private const LANGUAGE_FLAGS = [
         parent::MessageSink($TimeStamp, $SenderID, $Message, $Data);
 
         if ($Message === VM_UPDATE) {
-            $this->HandleTrackedVariableUpdate($SenderID);
+            // siehe isInMessageSinkDispatch/LogTranslateMessage - try/finally
+            // garantiert den Reset auch bei einer Exception innerhalb von
+            // HandleTrackedVariableUpdate().
+            $this->isInMessageSinkDispatch = true;
+            try {
+                $this->HandleTrackedVariableUpdate($SenderID);
+            } finally {
+                $this->isInMessageSinkDispatch = false;
+            }
         }
     }
 
@@ -3872,12 +3889,12 @@ private const LANGUAGE_FLAGS = [
 
         return $this->Translate('Seit Inbetriebnahme am') . ' ' . date('d.m.Y', $stats['since'])
             . ' (' . $daysSince . ' ' . $this->Translate('Tag(e)') . '): '
-            . $this->FormatStatsCount($stats['requestsPerHour']) . ' ' . $this->Translate('Anfragen/h')
+            . $this->FormatStatsCount($stats['requestsPerHour']) . ' ' . $this->Translate('Anfrage(n)/h')
             . ', ' . $this->FormatStatsCount($stats['charsPerHour']) . ' ' . $this->Translate('Zeichen/h')
             . ' (' . $this->Translate('insgesamt') . ': ' . $stats['requestCount'] . ' '
-            . $this->Translate('Anfragen') . ', ' . $stats['characterCount'] . ' ' . $this->Translate('Zeichen') . '). '
+            . $this->Translate('Anfrage(n)') . ', ' . $stats['characterCount'] . ' ' . $this->Translate('Zeichen') . '). '
             . $this->Translate('Durch den Cache eingespart') . ': ' . $stats['cacheSavedRequestCount'] . ' '
-            . $this->Translate('Anfragen') . ', ' . $stats['cacheSavedCharacterCount'] . ' ' . $this->Translate('Zeichen') . '.';
+            . $this->Translate('Anfrage(n)') . ', ' . $stats['cacheSavedCharacterCount'] . ' ' . $this->Translate('Zeichen') . '.';
     }
 
     // Kleiner, neutraler (NICHT roter - kein Warnhinweis, rein informativ) Hinweis
@@ -4449,22 +4466,31 @@ private const LANGUAGE_FLAGS = [
     // Fehlerstatus (STATUS_TRANSLATE_ERROR) wird nur gesetzt, wenn ALLE Anbieter
     // der Kette fehlschlagen - der kostenfreie Anbieter am Ende der Kette macht
     // das praktisch unmoeglich, solange MyMemory selbst erreichbar ist.
-    // WICHTIG: nutzt bewusst die GLOBALE IPS_LogMessage()-Funktion, NICHT die von
-    // IPSModule geerbte $this->LogMessage()-Methode. Live beobachtet (2026-08-17):
-    // $this->LogMessage() aus dem Übersetzungs-Fehlerpfad heraus aufgerufen (der
-    // auch über MessageSink()/VM_UPDATE erreichbar ist, siehe
-    // HandleTrackedVariableUpdate) löste dort zuverlässig "Warning: InstanceInterface
-    // is not available" + "InstanzManager: Kann Schnittstellen-Instanz nicht
-    // erstellen" aus - die von IPSModule bereitgestellte Methode scheint eine
-    // Interface-Instanz vorauszusetzen, die im MessageSink-Ausführungskontext (im
-    // Gegensatz zu z.B. ApplyChanges/RequestAction) nicht existiert. IPS_LogMessage()
-    // ist die dokumentierte, kontextunabhängige Alternative (keine Instanz-Bindung,
-    // nur ein freier "Sender"-String) und schreibt zuverlässig aus JEDEM
-    // Ausführungskontext ins Meldungen-Log. Kein $Type-Parameter wie bei
-    // KL_ERROR/KL_WARNING - der Schweregrad steht daher als Text-Präfix in der
-    // Nachricht selbst.
+    // Nutzt normalerweise $this->LogMessage($Message, $Type) - die von IPSModule
+    // geerbte, TYPISIERTE Methode (KL_ERROR/KL_WARNING), damit ein Fehler im
+    // Status Log auch WIRKLICH rot als "ERROR" erscheint (Farbcodierung), statt
+    // nur als grauer "Custom"-Eintrag mit einem Text-Präfix. NUR innerhalb von
+    // MessageSink()/VM_UPDATE (siehe isInMessageSinkDispatch) weicht diese
+    // Funktion auf die globale, untypisierte IPS_LogMessage() aus: live
+    // beobachtet (2026-08-17), dass $this->LogMessage() GENAU in diesem einen
+    // Ausführungskontext zuverlässig "Warning: InstanceInterface is not
+    // available" + "InstanzManager: Kann Schnittstellen-Instanz nicht
+    // erstellen" auslöste - die von IPSModule bereitgestellte Methode scheint
+    // dort eine Interface-Instanz vorauszusetzen, die im MessageSink-Kontext
+    // (im Gegensatz zu z.B. ApplyChanges/RequestAction) nicht existiert.
+    // IPS_LogMessage() ist die dokumentierte, kontextunabhängige Alternative
+    // (keine Instanz-Bindung, nur ein freier "Sender"-String) und schreibt
+    // zuverlässig aus JEDEM Ausführungskontext - dafür ohne Farbcodierung
+    // (erscheint als "Custom"), weshalb hier weiterhin ein Text-Präfix nötig
+    // ist, um den Schweregrad wenigstens lesbar zu machen.
     private function LogTranslateMessage(string $Message, bool $IsError = false): void
     {
+        if (!$this->isInMessageSinkDispatch) {
+            $this->LogMessage($Message, $IsError ? KL_ERROR : KL_WARNING);
+
+            return;
+        }
+
         IPS_LogMessage(
             'Simple Locale #' . $this->InstanceID,
             ($IsError ? '[FEHLER] ' : '[WARNUNG] ') . $Message
