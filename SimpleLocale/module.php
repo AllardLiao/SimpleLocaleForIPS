@@ -742,24 +742,69 @@ private const LANGUAGE_FLAGS = [
                 // Zeigt genau dort, wo der Admin nach einem Rate-Limit/Tageskontingent
                 // suchen würde (Panel "Übersetzungsanbieter"), welcher Anbieter gerade
                 // pausiert ist und bis wann - siehe DetectRateLimitCooldown/
-                // GetProviderPausedUntilMap. Unsichtbar (kein leerer roter Balken), wenn
+                // GetProviderPausedUntilMap. Unsichtbar (keine leere rote Zeile), wenn
                 // aktuell kein einziger Anbieter pausiert ist.
-                case 'ProviderPauseStatusLabel':
-                    $pauseStatusText = $this->BuildProviderPauseStatusText();
-                    $element['caption'] = $pauseStatusText;
-                    $element['visible'] = $pauseStatusText !== '';
+                //
+                // Bewusst als viele einzelne RowLayout-Elemente statt einem
+                // zusammengesetzten Fließtext (frühere Version, BuildProviderPauseStatusText
+                // als reine String-Konkatenation über $this->Translate()) - siehe
+                // ausführlichen Kommentar bei den "LicenseInfoXxx"-Fällen oben: eine zur
+                // Laufzeit aus mehreren übersetzten Fragmenten zusammengebaute
+                // Zeichenkette matcht NIE einen locale.json-Eintrag und bleibt dadurch an
+                // die Symcon-SYSTEMSPRACHE gebunden statt an die individuelle
+                // Konsolensprache des Betrachters - live beobachtet (2026-08-19) bei
+                // Konsolensprache Englisch, während die Systemsprache Deutsch blieb.
+                // Jedes Element hier trägt entweder eine feste, vorregistrierte deutsche
+                // Zeichenkette (vom Konsolen-Client anhand von locale.json übersetzt) oder
+                // einen rohen, nicht zu übersetzenden Wert (Datum/Uhrzeit) - nie beides
+                // zusammengesetzt in einer Caption.
+                case 'ProviderPauseAllPausedRow':
+                case 'ProviderPauseAllPausedFollowupLabel':
+                case 'ProviderPausePartialLabel':
+                case 'ProviderPauseGoogleRow':
+                case 'ProviderPauseDeepLRow':
+                case 'ProviderPauseFreeRow':
+                    $this->PopulateProviderPauseStatusElement($element['name'], $element);
+                    break;
+
+                case 'ProviderPauseAllPausedUntilLabel':
+                case 'ProviderPauseGoogleUntilLabel':
+                case 'ProviderPauseDeepLUntilLabel':
+                case 'ProviderPauseFreeUntilLabel':
+                    $element['caption'] = $this->FormatProviderPauseUntil($element['name']);
                     break;
 
                 // Direkt unter der Erläuterung des "Aktiv"-Schalters (siehe Nutzer-
                 // Anfrage) - wird bei jedem Öffnen/Neuladen des Formulars frisch
-                // berechnet (siehe BuildTranslationStatsText), kein eigener
+                // berechnet (siehe ComputeTranslationStats), kein eigener
                 // Refresh-Mechanismus, damit ein bereits geöffnetes Formular
                 // während der Bearbeitung NIE ungefragt neu geladen wird. Vor der
                 // allerersten Inbetriebnahme (attributeStatsSince noch 0) unsichtbar.
-                case 'TranslationStatsLabel':
-                    $statsText = $this->BuildTranslationStatsText();
-                    $element['caption'] = $statsText;
-                    $element['visible'] = $statsText !== '';
+                //
+                // Bewusst als viele einzelne RowLayout-Elemente statt einem
+                // zusammengesetzten Fließtext (frühere Version, BuildTranslationStatsText
+                // als reine String-Konkatenation über $this->Translate()) - dieselbe
+                // Systemsprache-statt-Konsolensprache-Einschränkung wie bei
+                // ProviderPauseAllPausedRow oben (siehe dortiger Kommentar). Jede der 4
+                // Zeilen trägt ausschließlich feste, vorregistrierte deutsche
+                // Zeichenketten (übersetzbar) oder rohe Zahlen-/Datumswerte (nicht zu
+                // übersetzen).
+                case 'TranslationStatsRow1':
+                case 'TranslationStatsRow2':
+                case 'TranslationStatsRow3':
+                case 'TranslationStatsRow4':
+                    $element['visible'] = $this->ReadAttributeInteger(self::attributeStatsSince) !== 0;
+                    break;
+
+                case 'TranslationStatsSinceDateLabel':
+                case 'TranslationStatsDaysLabel':
+                case 'TranslationStatsRequestsPerHourLabel':
+                case 'TranslationStatsCharsPerHourValueLabel':
+                case 'TranslationStatsTotalRequestsLabel':
+                case 'TranslationStatsTotalCharsLabel':
+                case 'TranslationStatsCacheSavedRequestsLabel':
+                case 'TranslationStatsCacheSavedCharsLabel':
+                    $element['caption'] = $this->FormatTranslationStatsValue($element['name']);
                     break;
 
                 case self::propertyCurrentLanguage:
@@ -3872,29 +3917,35 @@ private const LANGUAGE_FLAGS = [
         return (string) (int) round($Value);
     }
 
-    // Admin-facing Zusammenfassung fuers Konfigurationsformular (siehe
-    // PopulateFormElements, Label unter dem "Aktiv"-Schalter) - wird bei JEDEM
-    // Öffnen/Neuladen des Formulars frisch aus den aktuellen Zaehlern berechnet
-    // (kein eigener Cache, kein ReloadForm/Refresh-Mechanismus noetig - das Formular
-    // zeigt einfach den zum Zeitpunkt des Öffnens aktuellen Stand, wie jedes andere
-    // Formularfeld auch).
-    private function BuildTranslationStatsText(): string
+    // Liefert NUR den rohen Wert (Zahl/Datum, kein Text drumherum) fuer EIN
+    // einzelnes Element der 4 Statistik-Zeilen im Konfigurationsformular (siehe
+    // PopulateFormElements/form.json, "TranslationStatsRow1".."Row4") - wird bei
+    // JEDEM Öffnen/Neuladen des Formulars frisch aus den aktuellen Zaehlern
+    // berechnet (kein eigener Cache, kein ReloadForm/Refresh-Mechanismus noetig -
+    // das Formular zeigt einfach den zum Zeitpunkt des Öffnens aktuellen Stand,
+    // wie jedes andere Formularfeld auch). Umgebende Satzzeichen (":", ","), die
+    // zu keinem eigenen Textbaustein gehoeren, werden hier bewusst mit an den
+    // jeweils naechsten rohen Wert angehaengt statt an ein eigenes Element - siehe
+    // ausfuehrlichen Kommentar in PopulateFormElements, warum die umgebenden
+    // Textbausteine selbst NIE mit einem Wert zusammengesetzt werden duerfen.
+    private function FormatTranslationStatsValue(string $Ident): string
     {
         $stats = $this->ComputeTranslationStats();
         if ($stats['since'] === 0) {
             return '';
         }
 
-        $daysSince = max(0, (int) floor((time() - $stats['since']) / 86400));
-
-        return $this->Translate('Seit Inbetriebnahme am') . ' ' . date('d.m.Y', $stats['since'])
-            . ' (' . $daysSince . ' ' . $this->Translate('Tag(e)') . '): '
-            . $this->FormatStatsCount($stats['requestsPerHour']) . ' ' . $this->Translate('Anfrage(n)/h')
-            . ', ' . $this->FormatStatsCount($stats['charsPerHour']) . ' ' . $this->Translate('Zeichen/h')
-            . ' (' . $this->Translate('insgesamt') . ': ' . $stats['requestCount'] . ' '
-            . $this->Translate('Anfrage(n)') . ', ' . $stats['characterCount'] . ' ' . $this->Translate('Zeichen') . '). '
-            . $this->Translate('Durch den Cache eingespart') . ': ' . $stats['cacheSavedRequestCount'] . ' '
-            . $this->Translate('Anfrage(n)') . ', ' . $stats['cacheSavedCharacterCount'] . ' ' . $this->Translate('Zeichen') . '.';
+        return match ($Ident) {
+            'TranslationStatsSinceDateLabel'       => date('d.m.Y', $stats['since']) . ',',
+            'TranslationStatsDaysLabel'            => (string) max(0, (int) floor((time() - $stats['since']) / 86400)),
+            'TranslationStatsRequestsPerHourLabel' => $this->FormatStatsCount($stats['requestsPerHour']),
+            'TranslationStatsCharsPerHourValueLabel' => ', ' . $this->FormatStatsCount($stats['charsPerHour']),
+            'TranslationStatsTotalRequestsLabel'   => ': ' . $stats['requestCount'],
+            'TranslationStatsTotalCharsLabel'      => ', ' . $stats['characterCount'],
+            'TranslationStatsCacheSavedRequestsLabel' => ': ' . $stats['cacheSavedRequestCount'],
+            'TranslationStatsCacheSavedCharsLabel' => ', ' . $stats['cacheSavedCharacterCount'],
+            default                                => '',
+        };
     }
 
     // Kleiner, neutraler (NICHT roter - kein Warnhinweis, rein informativ) Hinweis
@@ -4004,44 +4055,62 @@ private const LANGUAGE_FLAGS = [
         $this->SetStatus($this->GetGlobalPauseUntil() !== null ? self::STATUS_TRANSLATE_PAUSED : 102);
     }
 
-    // Baut den Text für "ProviderPauseStatusLabel" im Panel "Übersetzungsanbieter" -
-    // leerer String (Label bleibt unsichtbar, siehe PopulateFormElements), solange
-    // kein einziger Anbieter pausiert ist. Zeigt sonst JEDEN aktuell pausierten
-    // Anbieter einzeln mit Datum/Uhrzeit seines Reset - unabhängig davon, ob
-    // dadurch bereits die GESAMTE Instanz pausiert ist (siehe GetGlobalPauseUntil)
-    // oder nur ein einzelner von mehreren konfigurierten Anbietern.
-    private function BuildProviderPauseStatusText(): string
+    // Setzt 'visible' fuer die RowLayout/Label-Elemente des Panels
+    // "Übersetzungsanbieter" (siehe PopulateFormElements) - jede Zeile traegt nur
+    // feste, vorregistrierte deutsche Zeichenketten (siehe form.json), damit der
+    // Konsolen-Client sie unabhaengig von der Symcon-Systemsprache korrekt in die
+    // tatsaechliche Konsolensprache des Betrachters uebersetzen kann (siehe
+    // ausfuehrlichen Kommentar in PopulateFormElements).
+    private function PopulateProviderPauseStatusElement(string $Ident, array &$Element): void
     {
         $paused = $this->GetProviderPausedUntilMap();
-        if ($paused === []) {
-            return '';
-        }
-
-        $providerLabels = [
-            'google' => 'Google Cloud Translate',
-            'deepl'  => 'DeepL',
-            'free'   => 'Kostenfreier Anbieter (MyMemory)',
-        ];
-
-        // Wie BuildTrialInfoText: statische Textbausteine serverseitig per
-        // Translate() übersetzt (an die Symcon-Systemsprache gebunden, nicht die
-        // individuelle Konsolensprache des Betrachters - dieselbe dokumentierte
-        // Einschränkung), die dynamischen Teile (Anbietername, Datum/Uhrzeit)
-        // bleiben unübersetzt angehängt.
-        $lines = [];
-        foreach ($paused as $provider => $until) {
-            $lines[] = '- ' . ($providerLabels[$provider] ?? $provider) . ': '
-                . $this->Translate('pausiert bis') . ' ' . date('d.m. H:i', (int) $until);
-        }
-
         $globalPauseUntil = $this->GetGlobalPauseUntil();
-        $intro = $globalPauseUntil !== null
-            ? $this->Translate('Alle konfigurierten Anbieter melden aktuell ein Rate-Limit/Tageskontingent - keine neuen Übersetzungsversuche bis spätestens')
-                . ' ' . date('d.m. H:i', $globalPauseUntil) . '. '
-                . $this->Translate('Bereits vorhandene Übersetzungen bleiben nutzbar.')
-            : $this->Translate('Mindestens ein Anbieter meldet aktuell ein Rate-Limit/Tageskontingent (die übrigen werden normal weiterverwendet):');
 
-        return $intro . "\n" . implode("\n", $lines);
+        switch ($Ident) {
+            case 'ProviderPauseAllPausedRow':
+            case 'ProviderPauseAllPausedFollowupLabel':
+                $Element['visible'] = $globalPauseUntil !== null;
+                break;
+
+            case 'ProviderPausePartialLabel':
+                $Element['visible'] = $paused !== [] && $globalPauseUntil === null;
+                break;
+
+            case 'ProviderPauseGoogleRow':
+                $Element['visible'] = isset($paused['google']);
+                break;
+
+            case 'ProviderPauseDeepLRow':
+                $Element['visible'] = isset($paused['deepl']);
+                break;
+
+            case 'ProviderPauseFreeRow':
+                $Element['visible'] = isset($paused['free']);
+                break;
+        }
+    }
+
+    // Liefert NUR den rohen Datums-/Uhrzeit-Wert (kein Text drumherum, siehe
+    // PopulateProviderPauseStatusElement/form.json) fuer die "...UntilLabel"-Elemente
+    // im Panel "Übersetzungsanbieter".
+    private function FormatProviderPauseUntil(string $Ident): string
+    {
+        if ($Ident === 'ProviderPauseAllPausedUntilLabel') {
+            $globalPauseUntil = $this->GetGlobalPauseUntil();
+
+            return $globalPauseUntil !== null ? date('d.m. H:i', $globalPauseUntil) . '.' : '';
+        }
+
+        $provider = match ($Ident) {
+            'ProviderPauseGoogleUntilLabel' => 'google',
+            'ProviderPauseDeepLUntilLabel'  => 'deepl',
+            'ProviderPauseFreeUntilLabel'   => 'free',
+            default                         => '',
+        };
+
+        $until = $this->GetProviderPausedUntilMap()[$provider] ?? null;
+
+        return $until !== null ? date('d.m. H:i', (int) $until) : '';
     }
 
     // Google Cloud Translate lehnt Anfragen mit mehr als 128 Texten in einem
@@ -5466,7 +5535,12 @@ HTML;
         }
 
         $prefix = $GuestCache['pausedNoticePrefix'] ?? self::PAUSED_NOTICE_PREFIX_TEXT;
-        $text = htmlspecialchars($prefix . ' ' . date('H:i', $pausedUntil), ENT_QUOTES, 'UTF-8');
+        // Datum + Uhrzeit statt nur Uhrzeit (Nutzer-Anfrage) - eine Pause kann durch
+        // die Eskalation (siehe RecordProviderPaused, bis zu 24h) über Mitternacht
+        // hinausreichen; eine reine Uhrzeit ("bis 12:58") wäre dann mehrdeutig
+        // (heute oder morgen?). Gleiches Format wie im admin-seitigen Panel
+        // "Übersetzungsanbieter" (siehe BuildProviderPauseStatusText).
+        $text = htmlspecialchars($prefix . ' ' . date('d.m. H:i', $pausedUntil), ENT_QUOTES, 'UTF-8');
 
         return '<div class="ipssl-paused-notice" style="font-size:11px; color:#c0392b; text-align:center;">' . $text . '</div>';
     }

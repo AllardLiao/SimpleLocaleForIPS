@@ -16,9 +16,50 @@
                     "caption": "Notaus-Schalter: deaktiviert sofort jeden Rescan (manuell/automatisch), jede Live-Nachübersetzung und jeden Quellsprachen-Abgleich - z.B. um ein aufgebrauchtes Tageskontingent oder ein Rate-Limit sofort zu stoppen. Bereits vorhandene Übersetzungen bleiben nutzbar, die Sprachumschaltung in der Kachel funktioniert weiter."
                 },
                 {
-                    "type": "Label",
-                    "name": "TranslationStatsLabel",
-                    "caption": ""
+                    "type": "RowLayout",
+                    "name": "TranslationStatsRow1",
+                    "visible": false,
+                    "items": [
+                        {"type": "Label", "caption": "Seit Inbetriebnahme am"},
+                        {"type": "Label", "name": "TranslationStatsSinceDateLabel", "caption": ""},
+                        {"type": "Label", "name": "TranslationStatsDaysLabel", "caption": ""},
+                        {"type": "Label", "caption": "Tag(e):"}
+                    ]
+                },
+                {
+                    "type": "RowLayout",
+                    "name": "TranslationStatsRow2",
+                    "visible": false,
+                    "items": [
+                        {"type": "Label", "name": "TranslationStatsRequestsPerHourLabel", "caption": ""},
+                        {"type": "Label", "caption": "Anfrage(n)/h"},
+                        {"type": "Label", "name": "TranslationStatsCharsPerHourValueLabel", "caption": ""},
+                        {"type": "Label", "caption": "Zeichen/h"}
+                    ]
+                },
+                {
+                    "type": "RowLayout",
+                    "name": "TranslationStatsRow3",
+                    "visible": false,
+                    "items": [
+                        {"type": "Label", "caption": "insgesamt"},
+                        {"type": "Label", "name": "TranslationStatsTotalRequestsLabel", "caption": ""},
+                        {"type": "Label", "caption": "Anfrage(n)"},
+                        {"type": "Label", "name": "TranslationStatsTotalCharsLabel", "caption": ""},
+                        {"type": "Label", "caption": "Zeichen."}
+                    ]
+                },
+                {
+                    "type": "RowLayout",
+                    "name": "TranslationStatsRow4",
+                    "visible": false,
+                    "items": [
+                        {"type": "Label", "caption": "Durch den Cache eingespart"},
+                        {"type": "Label", "name": "TranslationStatsCacheSavedRequestsLabel", "caption": ""},
+                        {"type": "Label", "caption": "Anfrage(n)"},
+                        {"type": "Label", "name": "TranslationStatsCacheSavedCharsLabel", "caption": ""},
+                        {"type": "Label", "caption": "Zeichen."}
+                    ]
                 },
                 {
                     "type": "SelectInstance",
@@ -122,11 +163,57 @@
                             "caption": "Ohne jede Eingabe unten funktioniert die Übersetzung sofort über den kostenfreien Anbieter (kein Konto nötig). Google und/oder DeepL sind optional - sind beide eingetragen, wird zuerst der bevorzugte versucht; schlägt ein Anbieter fehl (z.B. Tageskontingent erschöpft), springt die Übersetzung automatisch zum nächsten."
                         },
                         {
+                            "type": "RowLayout",
+                            "name": "ProviderPauseAllPausedRow",
+                            "visible": false,
+                            "items": [
+                                {"type": "Label", "caption": "Alle konfigurierten Anbieter melden aktuell ein Rate-Limit/Tageskontingent - keine neuen Übersetzungsversuche bis spätestens", "color": 16711680},
+                                {"type": "Label", "name": "ProviderPauseAllPausedUntilLabel", "caption": "", "color": 16711680}
+                            ]
+                        },
+                        {
                             "type": "Label",
-                            "name": "ProviderPauseStatusLabel",
-                            "caption": "",
+                            "name": "ProviderPauseAllPausedFollowupLabel",
+                            "caption": "Bereits vorhandene Übersetzungen bleiben nutzbar.",
                             "visible": false,
                             "color": 16711680
+                        },
+                        {
+                            "type": "Label",
+                            "name": "ProviderPausePartialLabel",
+                            "caption": "Mindestens ein Anbieter meldet aktuell ein Rate-Limit/Tageskontingent (die übrigen werden normal weiterverwendet):",
+                            "visible": false,
+                            "color": 16711680
+                        },
+                        {
+                            "type": "RowLayout",
+                            "name": "ProviderPauseGoogleRow",
+                            "visible": false,
+                            "items": [
+                                {"type": "Label", "caption": "- Google Cloud Translate:", "color": 16711680},
+                                {"type": "Label", "caption": "pausiert bis", "color": 16711680},
+                                {"type": "Label", "name": "ProviderPauseGoogleUntilLabel", "caption": "", "color": 16711680}
+                            ]
+                        },
+                        {
+                            "type": "RowLayout",
+                            "name": "ProviderPauseDeepLRow",
+                            "visible": false,
+                            "items": [
+                                {"type": "Label", "caption": "- DeepL:", "color": 16711680},
+                                {"type": "Label", "caption": "pausiert bis", "color": 16711680},
+                                {"type": "Label", "name": "ProviderPauseDeepLUntilLabel", "caption": "", "color": 16711680}
+                            ]
+                        },
+                        {
+                            "type": "RowLayout",
+                            "name": "ProviderPauseFreeRow",
+                            "visible": false,
+                            "items": [
+                                {"type": "Label", "caption": "- Kostenfreier Anbieter (MyMemory):", "color": 16711680},
+                                {"type": "Label", "caption": "pausiert bis", "color": 16711680},
+                                {"type": "Label", "name": "ProviderPauseFreeUntilLabel", "caption": "", "color": 16711680}
+                            ]
                         },
                         {
                             "type": "PasswordTextBox",
