@@ -7,6 +7,17 @@ namespace SimpleLocaleConstants;
 trait SimpleLocaleConstants
 {
     // Properties
+    // Notaus-Schalter (Standard-Konvention "Instanz aktiv" vieler Symcon-Module) -
+    // deaktiviert bei false SOFORT jede Uebersetzungsarbeit (Rescan/Auto-Rescan,
+    // VM_UPDATE-Live-Nachuebersetzung, ReconcileRowSourceLanguageChanges), unabhaengig
+    // von jeder anderen Einstellung - siehe ApplyChanges/ScanRootTree/
+    // HandleTrackedVariableUpdate. Gedacht, um z.B. ein durchgehendes API-Rate-Limit
+    // oder ein aufgebrauchtes Tageskontingent sofort zu stoppen, ohne erst ein neues
+    // Modul-Build abwarten zu muessen - der Admin kann einfach dieses Haekchen im
+    // Formular entfernen und "Uebernehmen" klicken. Bereits vorhandene Uebersetzungen
+    // bleiben nutzbar (Sprachwechsel ueber die Kachel funktioniert weiter, es wird nur
+    // NICHTS NEUES mehr uebersetzt) - kein Datenverlust, rein additiv reversibel.
+    private const propertyActive = 'Active';
     private const propertySourceLanguage = 'SourceLanguage';
     private const propertyTargetLanguages = 'TargetLanguages';
     private const propertyGoogleTranslateAPIKey = 'GoogleTranslateAPIKey';
@@ -292,6 +303,17 @@ trait SimpleLocaleConstants
     // ReconcileRowSourceLanguageChanges).
     private const fieldRowSourceLanguage = 'Quellsprache';
     private const fieldTranslatedAgainstSourceLanguage = 'UebersetztGegen';
+
+    // Fingerprint (md5 ueber alle fieldRowSourceLanguage-Werte aller 5 Zeilen-Properties,
+    // siehe ComputeRowSourceLanguageFingerprint) - guenstige Kurzschluss-Pruefung VOR
+    // ReconcileRowSourceLanguageChanges: die teure Zeilen-fuer-Zeilen-Neuuebersetzung
+    // laeuft nur, wenn sich seit dem letzten ApplyChanges() TATSAECHLICH irgendeine
+    // Quellsprache geaendert hat, nicht bei JEDEM ApplyChanges()-Aufruf (der auch durch
+    // haeufige VM_UPDATE-Live-Nachuebersetzungen re-entrant ausgeloest wird - siehe
+    // ApplyTrackedVariableUpdate). Ohne diesen Schutz wuerde ein latenter Fehler in der
+    // Abgleichs-Logik (oder auch nur ihre schiere Aufrufhaeufigkeit) das
+    // API-Kontingent in kuerzester Zeit aufbrauchen koennen.
+    private const attributeLastRowSourceLanguageFingerprint = 'LastRowSourceLanguageFingerprint';
 
     // Timer: Präfix als Salt auf den Namen, falls im jeweiligen IPS-System
     // bereits ein Timer/Objekt mit demselben Basisnamen existieren sollte.

@@ -7,6 +7,15 @@
             "expanded": true,
             "items": [
                 {
+                    "type": "CheckBox",
+                    "name": "Active",
+                    "caption": "Aktiv"
+                },
+                {
+                    "type": "Label",
+                    "caption": "Notaus-Schalter: deaktiviert sofort jeden Rescan (manuell/automatisch), jede Live-Nachübersetzung und jeden Quellsprachen-Abgleich - z.B. um ein aufgebrauchtes Tageskontingent oder ein Rate-Limit sofort zu stoppen. Bereits vorhandene Übersetzungen bleiben nutzbar, die Sprachumschaltung in der Kachel funktioniert weiter."
+                },
+                {
                     "type": "SelectInstance",
                     "name": "WebFrontVisuInstanceID",
                     "caption": "Kachel-Visualisierung"
@@ -706,6 +715,11 @@
             "code": 204,
             "icon": "error",
             "caption": "Testversion abgelaufen - bitte Lizenzschlüssel eintragen und aktivieren"
+        },
+        {
+            "code": 104,
+            "icon": "inactive",
+            "caption": "Deaktiviert (siehe Haken \"Aktiv\") - kein Rescan, keine Live-Nachübersetzung, kein Quellsprachen-Abgleich"
         }
     ]
 }

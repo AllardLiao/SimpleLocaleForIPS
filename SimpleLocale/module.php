@@ -223,6 +223,9 @@ private const LANGUAGE_FLAGS = [
         //Never delete this line!
         parent::Create();
 
+        // Notaus-Schalter, siehe Konstante - Default true (an), damit sich am
+        // Verhalten bestehender Instanzen nach einem Modul-Update nichts aendert.
+        $this->RegisterPropertyBoolean(self::propertyActive, true);
         $this->RegisterPropertyString(self::propertySourceLanguage, 'de');
         $this->RegisterPropertyString(self::propertyTargetLanguages, '[]');
         $this->RegisterPropertyString(self::propertyGoogleTranslateAPIKey, '');
@@ -298,6 +301,7 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterAttributeString(self::attributeLastSelfWrittenValues, '{}');
         $this->RegisterAttributeString(self::attributeEnumerationPresentationBackup, '{}');
         $this->RegisterAttributeInteger(self::attributeEffectiveRootCategoryID, 0);
+        $this->RegisterAttributeString(self::attributeLastRowSourceLanguageFingerprint, '');
 
         $this->SetVisualizationType(1);
 
@@ -324,6 +328,24 @@ private const LANGUAGE_FLAGS = [
     {
         //Never delete this line!
         parent::ApplyChanges();
+
+        // Notaus-Schalter (siehe propertyActive) - VOR jeder anderen Logik geprüft:
+        // bei false wird der Auto-Rescan-Timer sofort gestoppt und die komplette
+        // restliche ApplyChanges()-Logik (Reconcile, ApplyLanguage) übersprungen.
+        // ScanRootTree() und HandleTrackedVariableUpdate() prüfen denselben Schalter
+        // zusätzlich selbst (siehe dort) - deckt damit alle drei tatsächlichen
+        // Übersetzungs-Auslöser ab (Rescan/Auto-Rescan, Sprachwechsel-Reconcile,
+        // VM_UPDATE-Live-Nachübersetzung), nicht nur den, der zufällig gerade über
+        // ApplyChanges() lief. Bereits vorhandene Übersetzungen bleiben nutzbar - die
+        // Kachel selbst (RequestAction/ApplyLanguage) fragt diesen Schalter bewusst
+        // NICHT ab, da sie nur mit bereits vorhandenen, gecachten Übersetzungen
+        // arbeitet und keinen einzigen neuen API-Aufruf auslöst.
+        if (!$this->ReadPropertyBoolean(self::propertyActive)) {
+            $this->SetTimerInterval($this->GetAutoRescanTimerIdent(), 0);
+            $this->SetStatus(IS_INACTIVE);
+
+            return;
+        }
 
         // Testphase startet mit der allerersten Einrichtung der Instanz, nicht erst
         // beim ersten Rescan - sonst könnte man den Ablauf durch einfaches Nichtstun
@@ -375,7 +397,23 @@ private const LANGUAGE_FLAGS = [
         // ein reiner Quellsprachen-Wechsel OHNE gleichzeitigen Sprachwechsel selbst
         // einen ApplyLanguage()-Lauf erzwingt (sonst bliebe die Live-Anzeige bis zum
         // nächsten Rescan/Sprachwechsel auf der alten Übersetzung stehen).
-        $rowSourceLanguagesReconciled = $this->ReconcileRowSourceLanguageChanges();
+        //
+        // Guenstige Kurzschluss-Pruefung DAVOR (siehe attributeLastRowSourceLanguageFingerprint):
+        // ApplyChanges() laeuft nicht nur beim Speichern im Formular, sondern re-entrant
+        // bei JEDEM VM_UPDATE-ausgeloesten ApplyTrackedVariableUpdate() (siehe dort, ruft
+        // am Ende immer IPS_ApplyChanges auf) - bei einer aktiven Wetter-/Sensor-Variable
+        // kann das mehrmals pro Minute passieren. Ohne diesen Schutz wuerde
+        // ReconcileRowSourceLanguageChanges() (Zeilen-fuer-Zeilen-Scan ueber alle 5
+        // Properties) bei JEDEM dieser Aufrufe erneut laufen, obwohl sich an keiner
+        // einzigen Quellsprache tatsaechlich etwas geaendert hat - nur die guenstige
+        // Fingerprint-Berechnung (kein API-Aufruf) laeuft in dem Fall, die teure
+        // Uebersetzungsarbeit wird uebersprungen.
+        $rowSourceLanguageFingerprint = $this->ComputeRowSourceLanguageFingerprint();
+        $rowSourceLanguagesReconciled = false;
+        if ($rowSourceLanguageFingerprint !== $this->ReadAttributeString(self::attributeLastRowSourceLanguageFingerprint)) {
+            $rowSourceLanguagesReconciled = $this->ReconcileRowSourceLanguageChanges();
+            $this->WriteAttributeString(self::attributeLastRowSourceLanguageFingerprint, $rowSourceLanguageFingerprint);
+        }
 
         $currentLanguage = $this->ReadPropertyString(self::propertyCurrentLanguage);
         if ($rowSourceLanguagesReconciled || $currentLanguage !== $this->ReadAttributeString(self::attributeLastAppliedLanguage)) {
@@ -1807,6 +1845,12 @@ private const LANGUAGE_FLAGS = [
     // Grund genauso vorgeht).
     private function HandleTrackedVariableUpdate(int $ValueObjectID): void
     {
+        // Notaus-Schalter (siehe propertyActive/ApplyChanges) - keine Live-
+        // Nachübersetzung mehr, solange die Instanz deaktiviert ist.
+        if (!$this->ReadPropertyBoolean(self::propertyActive)) {
+            return;
+        }
+
         if (!@IPS_ObjectExists($ValueObjectID)) {
             return;
         }
@@ -2045,6 +2089,34 @@ private const LANGUAGE_FLAGS = [
         return $Row;
     }
 
+    // Guenstiger Fingerabdruck ueber die fieldRowSourceLanguage-Werte ALLER Zeilen in
+    // ALLEN fuenf Zeilen-Properties (keine Uebersetzungsspalten, keine API-Aufrufe -
+    // reines Lesen der bereits gespeicherten Property-Strings) - siehe Aufrufer in
+    // ApplyChanges() fuer den Grund (Kurzschluss-Pruefung vor dem teuren
+    // ReconcileRowSourceLanguageChanges-Scan). Reihenfolge ist stabil (immer dieselbe
+    // Property-Reihenfolge, dieselbe Zeilen-Reihenfolge innerhalb einer Property), der
+    // Fingerprint aendert sich also NUR, wenn sich an mindestens einer Quellsprache
+    // tatsaechlich etwas geaendert hat (neue/entfernte Zeile zaehlt ebenfalls als
+    // Aenderung, absichtlich - eine neue Zeile hat immer eine frisch gestempelte
+    // Quellsprache, siehe WalkTree/Scan*, die exakt einmal mitreconciled werden soll).
+    private function ComputeRowSourceLanguageFingerprint(): string
+    {
+        $parts = [];
+        foreach ([
+            self::propertyObjectNames,
+            self::propertyObjectTexts,
+            self::propertyEnumerationOptions,
+            self::propertyObjectAutomations,
+            self::propertyObjectGreeting,
+        ] as $property) {
+            foreach ($this->DecodeRows($property) as $row) {
+                $parts[] = (string) ($row[self::fieldRowSourceLanguage] ?? '');
+            }
+        }
+
+        return md5(implode('|', $parts));
+    }
+
     // Läuft über alle fünf Zeilen-haltenden Properties und stößt für jede Zeile mit
     // geänderter Quellsprache (siehe ReconcileRowFields) eine sofortige Neuübersetzung
     // an - Gegenstück zum "Quellsprache änderbar"-Wunsch: ändert der Admin die
@@ -2128,6 +2200,15 @@ private const LANGUAGE_FLAGS = [
 
     private function ScanRootTree(): void
     {
+        // Notaus-Schalter (siehe propertyActive/ApplyChanges) - deckt sowohl den
+        // manuellen Rescan-Button als auch den Auto-Rescan-Timer ab (beide laufen
+        // über diese Funktion).
+        if (!$this->ReadPropertyBoolean(self::propertyActive)) {
+            $this->SetStatus(IS_INACTIVE);
+
+            return;
+        }
+
         $rootID = $this->GetEffectiveRootCategoryID();
         if ($rootID === 0 || !@IPS_ObjectExists($rootID)) {
             $this->SetStatus(self::STATUS_ROOT_CATEGORY_MISSING);
@@ -3651,6 +3732,27 @@ private const LANGUAGE_FLAGS = [
             return [];
         }
 
+        // Verteidigungslinie gegen einen internen Programmierfehler (z.B. eine leere
+        // oder anderweitig ungueltige Zeilen-Quellsprache, siehe GetRowSourceLanguage) -
+        // ohne diese Pruefung wuerde ein solcher Fehler unbemerkt als generischer
+        // "Google Translate Fehler" beim Anbieter selbst landen (der eine leere/
+        // ungueltige Sprache mit einem HTTP-Fehler quittiert), was die eigentliche
+        // Ursache verschleiert. KL_ERROR statt nur KL_WARNING, weil das NIE durch einen
+        // Ketten-Fallback geheilt werden kann - kein Anbieter akzeptiert eine leere
+        // Sprache.
+        if ($Source === '' || $Target === '') {
+            $this->LogMessage(sprintf(
+                '[Simple Locale] Interner Fehler: leere Quell-/Zielsprache (Source="%s", Target="%s", Kontext="%s", %d Text(e)) - Uebersetzung uebersprungen, bitte Rescan erneut ausfuehren bzw. Kai/Support kontaktieren, falls das wiederholt auftritt.',
+                $Source,
+                $Target,
+                $DebugContext,
+                count($Texts)
+            ), KL_ERROR);
+
+            return array_fill(0, count($Texts), '');
+        }
+
+        $attempts = [];
         foreach ($this->GetProviderChain() as $provider) {
             $result = match ($provider) {
                 'google' => $this->TranslateChunkGoogle($Texts, $Source, $Target, $this->GetApiKeyForProvider('google'), $DebugContext),
@@ -3660,7 +3762,23 @@ private const LANGUAGE_FLAGS = [
             if ($result !== null) {
                 return $result;
             }
+            $attempts[] = $provider;
         }
+
+        // Alle Anbieter der Kette sind fehlgeschlagen - Details zu JEDEM einzelnen
+        // Versuch wurden bereits als KL_WARNING geloggt (siehe CallGoogleTranslateAPI/
+        // CallDeepLAPI/CallFreeTranslateAPI/TranslateChunkGoogle/TranslateChunkDeepL),
+        // hier nur noch die Zusammenfassung mit allen fuer die Diagnose relevanten
+        // Eckdaten an einer Stelle.
+        $this->LogMessage(sprintf(
+            '[Simple Locale] Übersetzung fehlgeschlagen: alle Anbieter der Kette (%s) haben "%s" -> "%s" abgelehnt (Kontext: %s, %d Text(e), erster Text: "%s"). Details zu jedem einzelnen Anbieter-Fehler stehen als Warnung direkt darüber in diesem Log.',
+            implode(', ', $attempts),
+            $Source,
+            $Target,
+            $DebugContext !== '' ? $DebugContext : '(kein Kontext)',
+            count($Texts),
+            mb_substr((string) ($Texts[0] ?? ''), 0, 120, 'UTF-8')
+        ), KL_ERROR);
 
         $this->SetStatus(self::STATUS_TRANSLATE_ERROR);
 
@@ -3703,6 +3821,16 @@ private const LANGUAGE_FLAGS = [
         $decoded = json_decode($response, true);
         $translations = $decoded['data']['translations'] ?? null;
         if (!is_array($translations)) {
+            // HTTP war OK (sonst waere CallGoogleTranslateAPI oben schon mit null
+            // zurueckgekommen), aber die Antwort hat nicht die erwartete Struktur -
+            // vorher komplett stillschweigend uebergangen, war dadurch faktisch
+            // unmoeglich zu diagnostizieren.
+            $this->LogMessage(sprintf(
+                '[Simple Locale] Google Translate: unerwartetes Antwortformat (Kontext: %s), Antwort: %s',
+                $DebugContext,
+                mb_substr($response, 0, 300, 'UTF-8')
+            ), KL_WARNING);
+
             return null;
         }
 
@@ -3736,6 +3864,12 @@ private const LANGUAGE_FLAGS = [
         $decoded = json_decode($response, true);
         $translations = $decoded['translations'] ?? null;
         if (!is_array($translations)) {
+            $this->LogMessage(sprintf(
+                '[Simple Locale] DeepL: unerwartetes Antwortformat (Kontext: %s), Antwort: %s',
+                $DebugContext,
+                mb_substr($response, 0, 300, 'UTF-8')
+            ), KL_WARNING);
+
             return null;
         }
 
@@ -3859,6 +3993,11 @@ private const LANGUAGE_FLAGS = [
             // wenn tatsaechlich Google/DeepL konfiguriert sind und trotzdem
             // scheitern.
             if ($this->GetProviderChain() !== ['free']) {
+                $this->LogMessage(sprintf(
+                    '[Simple Locale] Sprachliste konnte nicht geladen werden: alle konfigurierten Anbieter (%s) haben die Anfrage für Zielsprache "%s" abgelehnt. Details zu jedem einzelnen Anbieter-Fehler stehen als Warnung direkt darüber in diesem Log.',
+                    implode(', ', $this->GetProviderChain()),
+                    $target
+                ), KL_ERROR);
                 $this->SetStatus(self::STATUS_TRANSLATE_ERROR);
             }
 
@@ -3980,8 +4119,16 @@ private const LANGUAGE_FLAGS = [
             // Kein SetStatus hier: dieser Aufruf kann Teil einer Anbieter-Kette sein
             // (siehe TranslateChunk/FetchLanguageNames) - ein Fehlerstatus wird erst
             // gesetzt, wenn die GESAMTE Kette fehlschlaegt, nicht bei jedem einzelnen
-            // Anbieter-Versuch.
+            // Anbieter-Versuch. KL_WARNING statt KL_ERROR aus demselben Grund - erst
+            // TranslateChunk() loggt einen KL_ERROR, wenn WIRKLICH alle Anbieter
+            // fehlgeschlagen sind.
             $this->SendDebug('GoogleTranslate', sprintf('HTTP %s, Fehler: %s, Antwort: %s', $httpCode, $error, (string) $response), 0);
+            $this->LogMessage(sprintf(
+                '[Simple Locale] Google Translate fehlgeschlagen: HTTP %s%s, Antwort: %s',
+                $httpCode,
+                $error !== '' ? ", cURL-Fehler: $error" : '',
+                mb_substr((string) $response, 0, 300, 'UTF-8')
+            ), KL_WARNING);
 
             return null;
         }
@@ -4023,6 +4170,12 @@ private const LANGUAGE_FLAGS = [
         if ($response === false || $httpCode >= 400 || $error !== '') {
             // Kein SetStatus hier - siehe CallGoogleTranslateAPI.
             $this->SendDebug('DeepLTranslate', sprintf('HTTP %s, Fehler: %s, Antwort: %s', $httpCode, $error, (string) $response), 0);
+            $this->LogMessage(sprintf(
+                '[Simple Locale] DeepL fehlgeschlagen: HTTP %s%s, Antwort: %s',
+                $httpCode,
+                $error !== '' ? ", cURL-Fehler: $error" : '',
+                mb_substr((string) $response, 0, 300, 'UTF-8')
+            ), KL_WARNING);
 
             return null;
         }
@@ -4046,6 +4199,12 @@ private const LANGUAGE_FLAGS = [
 
         if ($response === false || $httpCode >= 400 || $error !== '') {
             $this->SendDebug('FreeTranslate', sprintf('HTTP %s, Fehler: %s, Antwort: %s', $httpCode, $error, (string) $response), 0);
+            $this->LogMessage(sprintf(
+                '[Simple Locale] Kostenfreier Anbieter (MyMemory) fehlgeschlagen: HTTP %s%s, Antwort: %s',
+                $httpCode,
+                $error !== '' ? ", cURL-Fehler: $error" : '',
+                mb_substr((string) $response, 0, 300, 'UTF-8')
+            ), KL_WARNING);
 
             return null;
         }

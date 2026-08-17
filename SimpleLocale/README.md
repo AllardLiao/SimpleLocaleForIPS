@@ -124,6 +124,24 @@ Beschreibung des Moduls.
 
   Dieser Punkt ist auch direkt in der Kachel über das Info-Symbol (ⓘ)
   neben dem Dropdown einsehbar, live in der jeweils aktiven Sprache.
+* **Sehr häufig aktualisierte Variablen können viele API-Aufrufe erzeugen.**
+  Jede externe Aktualisierung einer verfolgten "Eigene Texte"-Variable löst
+  eine eigene Live-Nachübersetzung aus (siehe oben) - bei einer Variable, die
+  sich mehrmals pro Minute ändert (z. B. ein sehr aktives Sensor-/Wetter-Skript),
+  kann das entsprechend oft passieren. Ein interner Fehler (behoben mit Build 53)
+  ließ diesen Live-Pfad zusätzlich bei JEDER dieser Aktualisierungen einen
+  kompletten, eigentlich nur nach einer Quellsprachen-Änderung nötigen
+  Zeilen-Abgleich (siehe "Quellsprache: pro Zeile individuell änderbar" in
+  Abschnitt 7) erneut anstoßen und dabei in kurzer Zeit die Tageskontingente
+  mehrerer Übersetzungsanbieter gleichzeitig aufbrauchen können - seit Build 53
+  läuft dieser Abgleich nur noch, wenn sich seit dem letzten Mal tatsächlich
+  eine Quellsprache geändert hat (Fingerprint-Vergleich, kein API-Aufruf). Für
+  genau diesen Fall (Anbieter melden Rate-Limits/aufgebrauchte Kontingente)
+  gibt es außerdem den Notaus-Schalter "Aktiv" (siehe Konfigurationstabelle
+  oben) - sofort per Formular umschaltbar, kein Warten auf ein Modul-Update
+  nötig. Fehlerdetails zu jedem fehlgeschlagenen Übersetzungsversuch (welcher
+  Anbieter, HTTP-Code, Antwort) landen seit Build 53 zusätzlich im normalen
+  Symcon-Meldungen-Log der Instanz (nicht mehr nur im Debug-Panel).
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
@@ -291,6 +309,7 @@ Felder auf einmal überfrachten:
 
 Name                            | Beschreibung
 -------------------------------- | ------------------
+Aktiv                           | Notaus-Schalter (Standard-Konvention "Instanz aktiv"). Deaktiviert **sofort** jeden Rescan (manuell/automatisch), jede Live-Nachübersetzung (`VM_UPDATE`) und jeden Quellsprachen-Abgleich (siehe unten) - z. B. um ein aufgebrauchtes Tageskontingent oder ein Rate-Limit bei einem Übersetzungsanbieter sofort zu stoppen, ohne auf ein neues Modul-Update warten zu müssen. Bereits vorhandene Übersetzungen bleiben nutzbar, die Sprachumschaltung in der Kachel funktioniert normal weiter - es wird nur nichts NEUES mehr übersetzt. Instanz-Status zeigt währenddessen "Deaktiviert". Default: an.
 Kachel-Visualisierung           | Instanz der eingebauten Kachel-Visualisierung (WebFront-Kernmodul, nicht Teil von Simple Locale). **Pflichtfeld** - ihre eigene "Startkategorie" wird automatisch als Root der Visualisierung übernommen (Kategorie im Objektbaum, deren Inhalt - Namen + Werte von String-Variablen - übersetzt wird; sollte nur die Sichtbereich-Kacheln enthalten, nicht die Admin-Oberfläche) und sie liefert zusätzlich die Automations/Favoriten-Übersetzung, siehe eigenen Absatz unten. Ohne Auswahl (oder ohne gültige Startkategorie) bleibt die Instanz im Status "Root der Visualisierung fehlt".
 Scan-Sprache                    | Sprache, in der die Objektnamen/-werte ursprünglich gepflegt sind. Dient Google Translate als feste Quellsprache für alle Zielsprachen-Übersetzungen; die Scan-Sprache selbst hat keine eigene Übersetzungsspalte, siehe [Abschnitt 7](#7-visualisierung).
 Aktuell aktive Sprache          | Welche Sprache gerade angezeigt wird - normalerweise über die Kachel vom Anwender selbst gesteuert (siehe Abschnitt 7), lässt sich hier aber auch manuell umschalten (inkl. aller sonst nur bei einem Kachel-Wechsel ausgelösten Umbenennungen/Wertänderungen - identisches Verhalten zur Kachel selbst). **Wichtig für die eigene Weiterentwicklung der Visualisierung, siehe Warnung unten.**
