@@ -730,7 +730,7 @@
         },
         {
             "code": 205,
-            "icon": "warning",
+            "icon": "active",
             "caption": "Aktiv, aber pausiert - alle Übersetzungsanbieter melden ein Rate-Limit/Tageskontingent, siehe Panel \"Übersetzungsanbieter\""
         }
     ]
