@@ -186,6 +186,23 @@ Beschreibung des Moduls.
   immer frisch berechnet wird) bereits alle Anbieter als pausiert zeigte.
   Seit Build 57 wird der Status zusätzlich bei jedem Öffnen des
   Konfigurationsformulars und bei jedem "Übernehmen" neu bewertet.
+
+  **Build 58 behebt den bisher schwerwiegendsten Fund dieser Reihe:** ein
+  HTML-Widget (z. B. das Wetter-Beispiel aus Abschnitt 1) konnte bei
+  pausierter/fehlgeschlagener Übersetzung komplett LEER erscheinen - Struktur
+  (Rahmen, Icons, Tagesüberschriften) intakt, aber jeder einzelne dynamische
+  Wert (Prozentzahlen, Windgeschwindigkeit, Temperaturen) leer, statt wie
+  erwartet auf die unübersetzte Originalsprache zurückzufallen. Ursache: die
+  Text-Knoten-Zerlegung für HTML-Inhalte (siehe Abschnitt 7, Build 47) setzte
+  ein leeres Übersetzungsergebnis je Knoten direkt in die wiederzusammengesetzte
+  HTML-Struktur ein, statt bei einem fehlgeschlagenen/pausierten
+  Übersetzungsversuch auf den unübersetzten Original-Knoten zurückzufallen -
+  betraf dadurch praktisch jedes mehrsprachige HTML-Widget, sobald auch nur
+  EIN einzelner Übersetzungsversuch fehlschlug (nicht nur während einer
+  Pause). Zusätzlich zeigte der kleine rote "Übersetzung pausiert bis"-Hinweis
+  unter dem Dropdown teils nur die Uhrzeit ohne den Text davor (derselbe
+  Grundfehler: ein leeres statt eines fehlenden Übersetzungsergebnisses wurde
+  nicht als "fehlgeschlagen, bitte Original verwenden" erkannt).
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der

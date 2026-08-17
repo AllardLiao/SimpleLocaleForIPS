@@ -3901,14 +3901,33 @@ private const LANGUAGE_FLAGS = [
                         if (isset($overrides[$index])) {
                             $translatedNodes[] = $overrides[$index];
                         } else {
-                            $translatedNodes[] = $apiSlice[$apiPosition] ?? '';
+                            $apiResult = $apiSlice[$apiPosition] ?? '';
+                            // Fällt auf den unübersetzten Original-Knoten zurück, wenn
+                            // die Übersetzung dieses Knotens fehlgeschlagen ist (leeres
+                            // Ergebnis, siehe TranslateChunk - passiert bei jedem
+                            // einzelnen Knoten gleichzeitig, sobald die gesamte
+                            // Anbieter-Kette pausiert/fehlgeschlagen ist) - sonst würde
+                            // ein fehlgeschlagener Übersetzungsversuch den Knoten
+                            // stillschweigend LEEREN statt ihn unübersetzt (aber
+                            // lesbar) stehen zu lassen. Live beobachtet (2026-08-18):
+                            // eine komplett pausierte Anbieter-Kette reproduzierte ein
+                            // Wetter-Widget mit intakter HTML-Struktur, aber
+                            // vollständig leeren Text-Knoten (Prozentwerte,
+                            // Windgeschwindigkeit, Temperaturen) statt der erwarteten
+                            // unübersetzten Originalwerte.
+                            $translatedNodes[] = $apiResult !== '' ? $apiResult : $segment['nodes'][$index];
                             $apiPosition++;
                         }
                     }
 
                     $rebuilt .= ($segment['reassemble'])($translatedNodes);
                 } else {
-                    $rebuilt .= $translatedFlat[$cursor++] ?? '';
+                    // Gleicher Fallback wie oben, nur für nicht-HTML-Segmente (z.B.
+                    // Objektnamen/Enum-Beschriftungen) - ein einzelnes Segment ohne
+                    // Knoten-Zerlegung.
+                    $apiResult = $translatedFlat[$cursor] ?? '';
+                    $rebuilt .= $apiResult !== '' ? $apiResult : $segment['text'];
+                    $cursor++;
                 }
             }
             $result[] = $rebuilt;
@@ -4111,7 +4130,16 @@ private const LANGUAGE_FLAGS = [
             mb_substr((string) ($Texts[0] ?? ''), 0, 120, 'UTF-8')
         ), true);
 
-        $this->SetStatus(self::STATUS_TRANSLATE_ERROR);
+        // Erneut PRÜFEN statt blind STATUS_TRANSLATE_ERROR zu setzen: der obige
+        // Schleifendurchlauf kann selbst gerade erst den LETZTEN noch fehlenden
+        // Anbieter pausiert haben (siehe RecordProviderPaused in
+        // CallGoogleTranslateAPI/CallDeepLAPI/CallFreeTranslateAPI) - der
+        // Kurzschluss-Check ganz oben in dieser Funktion sah zu diesem Zeitpunkt
+        // dagegen noch NICHT alle pausiert. Ohne diese zweite Prüfung stünde die
+        // Instanz bis zum nächsten Formular-Neuladen (siehe
+        // RefreshTranslateChainStatus) fälschlich auf "Übersetzungsfehler" statt
+        // korrekt auf "pausiert" - live beobachtet 2026-08-18.
+        $this->SetStatus($this->GetGlobalPauseUntil() !== null ? self::STATUS_TRANSLATE_PAUSED : self::STATUS_TRANSLATE_ERROR);
 
         return array_fill(0, count($Texts), '');
     }
@@ -4987,13 +5015,22 @@ HTML;
             $translatedOwnTexts = $this->TranslateBatch($ownTexts, 'de', $language);
         }
 
-        $infoHeading = $translatedOwnTexts[0] ?? self::INFO_HEADING_TEXT;
+        // "?? $fallback" allein reicht nicht: TranslateBatch() liefert bei einem
+        // fehlgeschlagenen/pausierten Anbieter einen LEEREN STRING zurück (kein
+        // fehlender Array-Index, siehe TranslateChunk) - "??" greift nur bei
+        // fehlendem/null-Index, ein leerer String besteht den Test bereits und
+        // würde ohne diese explizite Prüfung als "erfolgreich übersetzt, aber
+        // leer" durchgehen. Live beobachtet (2026-08-18): der Pausiert-Hinweis
+        // zeigte dadurch nur noch die Uhrzeit ohne den Text davor an.
+        $orFallback = fn ($value, string $fallback): string => ($value ?? '') !== '' ? $value : $fallback;
+
+        $infoHeading = $orFallback($translatedOwnTexts[0] ?? null, self::INFO_HEADING_TEXT);
         $infoTexts = [];
         foreach (self::INFO_LIMITATION_TEXTS as $i => $originalText) {
-            $infoTexts[] = $translatedOwnTexts[$i + 1] ?? $originalText;
+            $infoTexts[] = $orFallback($translatedOwnTexts[$i + 1] ?? null, $originalText);
         }
-        $trialNoticePrefix = $translatedOwnTexts[count(self::INFO_LIMITATION_TEXTS) + 1] ?? self::TRIAL_NOTICE_PREFIX_TEXT;
-        $pausedNoticePrefix = $translatedOwnTexts[count(self::INFO_LIMITATION_TEXTS) + 2] ?? self::PAUSED_NOTICE_PREFIX_TEXT;
+        $trialNoticePrefix = $orFallback($translatedOwnTexts[count(self::INFO_LIMITATION_TEXTS) + 1] ?? null, self::TRIAL_NOTICE_PREFIX_TEXT);
+        $pausedNoticePrefix = $orFallback($translatedOwnTexts[count(self::INFO_LIMITATION_TEXTS) + 2] ?? null, self::PAUSED_NOTICE_PREFIX_TEXT);
 
         $cache = [
             'language'           => $language,
