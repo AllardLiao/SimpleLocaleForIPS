@@ -419,6 +419,41 @@ Beschreibung des Moduls.
   wieder allein aus** - ein zusätzliches manuelles "Übersetzungs-Cache
   leeren" ist NICHT mehr nötig (macht aber ebenfalls nichts kaputt, falls
   bereits geklickt).
+
+  **Build 67 behebt eine Konsolensprachen-Einschränkung, die zwei
+  dynamische Textbereiche im Konfigurationsformular betraf** - den
+  Nutzungs-Zähler-Satz unter "Aktiv" (siehe oben) und die
+  Pause-Übersicht im Panel "Übersetzungsanbieter": beide blieben live
+  beobachtet dauerhaft auf Deutsch stehen, selbst bei englischer
+  (oder jeder anderen) Konsolensprache des Betrachters - obwohl fest
+  eingebaute Formular-Beschriftungen ("Aktiv", "Notaus-Schalter: ...")
+  im selben Formular korrekt übersetzt erschienen. Ursache: `$this->Translate()`
+  ist an die Symcon-SYSTEMSPRACHE gebunden (eine einzelne, installationsweite
+  Kernel-Einstellung), NICHT an die individuelle Konsolensprache der gerade
+  betrachtenden Admin-Sitzung - die tatsächliche, per-Betrachter korrekte
+  Übersetzung von `GetConfigurationForm()`-Beschriftungen übernimmt
+  stattdessen der Konsolen-Client selbst, per exaktem Textabgleich einer
+  KOMPLETTEN Beschriftung gegen `locale.json` - unabhängig davon, ob diese
+  Beschriftung ursprünglich statisch in `form.json` stand oder von PHP
+  gesetzt wurde. Eine zur Laufzeit aus mehreren `Translate()`-Fragmenten und
+  eingefügten Werten (Datum, Uhrzeit, Zahlen) ZUSAMMENGESETZTE Zeichenkette
+  matcht dadurch NIE einen `locale.json`-Eintrag als Ganzes und bleibt
+  unabhängig von der tatsächlichen Konsolensprache stehen - exakt dieselbe,
+  bereits beim Lizenz-Infobereich gefundene und dort erfolgreich behobene
+  Einschränkung (siehe die vielen einzelnen `LicenseInfoXxx`-Formularelemente).
+  Beide betroffenen Bereiche wurden nach demselben, bereits bewährten Muster
+  umgebaut: viele einzelne, kleine `RowLayout`/Label-Formularelemente statt
+  eines zusammengesetzten Fließtexts - jedes Element trägt entweder eine
+  feste, unveränderte deutsche Zeichenkette (die der Konsolen-Client korrekt
+  je nach Betrachter übersetzt) oder einen rohen, nicht zu übersetzenden Wert
+  (Datum/Uhrzeit/Zahl), nie beides zusammengesetzt in einer Caption. Kein
+  `$this->Translate()`-Aufruf mehr in `FormatTranslationStatsValue()`/
+  `PopulateProviderPauseStatusElement()`/`FormatProviderPauseUntil()`.
+  Zusätzlich zeigt die Pause-Übersicht im Panel "Übersetzungsanbieter"
+  jetzt auch in der Kachel selbst (roter Hinweis unter dem Dropdown) das
+  Datum zusätzlich zur Uhrzeit (z. B. "18.08. 21:34" statt nur "21:34") -
+  eine reine Uhrzeit war bei einer über Mitternacht hinausreichenden Pause
+  (durch die Eskalation, siehe Build 57, bis zu 24h) mehrdeutig.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
