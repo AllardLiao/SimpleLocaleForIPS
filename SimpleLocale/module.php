@@ -4647,6 +4647,22 @@ private const LANGUAGE_FLAGS = [
         );
     }
 
+    // MyMemory (und vereinzelt auch andere Anbieter) liefert manchmal einen
+    // unsichtbaren Zeichen-Rest direkt aus ihrer Übersetzungsspeicher-Datenbank
+    // mit - live beobachtet (2026-08-19): ein geschütztes Leerzeichen (U+00A0)
+    // direkt am Wortende, z.B. "Position " statt "Position". PHPs trim()
+    // fängt NUR ASCII-Leerraum (Space/Tab/Newline), kein U+00A0 - hier wird
+    // deshalb zusätzlich per Unicode-bewusstem Regex am Anfang/Ende entfernt,
+    // was wie Leerraum AUSSIEHT, aber kein echtes ASCII-Leerzeichen ist (NBSP,
+    // Zero-Width-Space). Bewusst NUR diese unsichtbaren Artefakt-Zeichen, NIE
+    // ein normales Leerzeichen - das könnte bei einzelnen HTML-Text-Knoten
+    // (siehe SplitHtmlIntoTextNodes) ein beabsichtigter Abstand zwischen zwei
+    // benachbarten Inline-Elementen sein (z.B. "Hello " + "World").
+    private function SanitizeTranslatedText(string $Text): string
+    {
+        return preg_replace('/^[\x{00A0}\x{200B}]+|[\x{00A0}\x{200B}]+$/u', '', $Text) ?? $Text;
+    }
+
     private function TranslateChunk(array $Texts, string $Source, string $Target, string $DebugContext = ''): array
     {
         if ($Texts === []) {
@@ -4723,7 +4739,7 @@ private const LANGUAGE_FLAGS = [
                 // Anbieters zuruecksetzen, siehe ClearProviderPause.
                 $this->ClearProviderPause($provider);
 
-                return $result;
+                return array_map([$this, 'SanitizeTranslatedText'], $result);
             }
             $attempts[] = $provider;
         }
