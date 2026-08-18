@@ -485,6 +485,24 @@ Beschreibung des Moduls.
   einzigen zusammengesetzten Texts) - beide hatten dieselbe Systemsprache-
   statt-Konsolensprache-Einschränkung, waren bisher aber nur noch nicht
   gemeldet worden.
+
+  **Build 69 behebt einen unsichtbaren Zeichen-Artefakt aus MyMemory:** Live
+  im Debug-Log beobachtet lieferte MyMemory bei einem Treffer aus seiner
+  Übersetzungsspeicher-Datenbank ein zusätzliches, unsichtbares Zeichen direkt
+  am Ende der Übersetzung mit ("Position" wurde tatsächlich als
+  "Position " - mit einem geschützten Leerzeichen (U+00A0) dahinter -
+  zurückgegeben). PHPs `trim()` entfernt nur ASCII-Leerraum (Leerzeichen, Tab,
+  Zeilenumbruch), niemals Unicode-Zeichen wie ein geschütztes Leerzeichen oder
+  ein Zero-Width-Space (U+200B) - ein solches Ergebnis wurde daher unverändert
+  gespeichert/gecacht und sah in den allermeisten Ansichten optisch identisch
+  zum sauberen Text aus, obwohl es ihm nicht exakt entsprach. Behoben an der
+  einen zentralen Stelle, durch die die Ergebnisse aller drei Anbieter
+  (Google/DeepL/MyMemory) laufen (`TranslateChunk()`): am Anfang und Ende
+  werden jetzt gezielt nur geschützte Leerzeichen und Zero-Width-Spaces
+  entfernt - bewusst NIE ein normales ASCII-Leerzeichen, da ein einzelner
+  HTML-Textknoten (siehe Build 63/`SplitHtmlIntoTextNodes`) am Rand
+  absichtlich ein Leerzeichen tragen kann, das für den korrekten Abstand
+  zwischen zwei benachbarten Inline-Elementen gebraucht wird.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
