@@ -573,6 +573,30 @@ Beschreibung des Moduls.
   oben einen Hinweis mit der voraussichtlichen Uhrzeit der nächsten
   Persistierung an, solange etwas ansteht - rein informativ, da Speichern
   jederzeit gefahrlos möglich ist.
+
+  **Build 72 macht den Übersetzungs-Cache treffsicherer und größer:** Bisher
+  war der lokale Cache (bis zu 500 Einträge) rein nach Einfügereihenfolge
+  organisiert (FIFO) - wurde er voll, flog immer der ZUERST gespeicherte
+  Eintrag zuerst raus, unabhängig davon, wie oft er seitdem tatsächlich
+  wiederverwendet wurde. Ein Schwung einmaliger, nie wieder vorkommender
+  Texte konnte dadurch theoretisch einen häufig wiederverwendeten Kern-
+  Eintrag (z. B. einen festen Objektnamen) verdrängen, nur weil dieser
+  zufällig zuerst im Cache landete. Jeder Eintrag führt jetzt zusätzlich
+  einen Hit-Zähler und den Zeitpunkt seines letzten Zugriffs - wird der
+  Cache voll, fliegt der Eintrag mit dem NIEDRIGSTEN Hit-Zähler zuerst raus
+  (bei Gleichstand der am längsten nicht mehr genutzte). Ein Eintrag, der
+  seit über 24 Stunden nicht mehr gelesen wurde, gilt beim nächsten Zugriff
+  als "neu wieder aufgewärmt" (Zähler-Reset auf 1) statt seinen alten
+  Zähler für immer fortzuschreiben - verhindert, dass ein früher einmal
+  populärer, inzwischen längst nicht mehr gebrauchter Eintrag einen frisch
+  aktiven verdrängt. Die Kapazität wurde gleichzeitig von 500 auf 1000
+  Einträge angehoben. Da sich dabei die gespeicherte FORM eines Eintrags
+  ändert (von einem reinen String zu einem kleinen Objekt mit Hit-Zähler/
+  Zeitstempel), wurde `TRANSLATION_CACHE_SCHEMA_VERSION` erhöht (4) - macht
+  den kompletten, bis dahin aufgewärmten Cache einmalig unerreichbar (jeder
+  Text wird beim nächsten Bedarf einmal frisch übersetzt, alte Einträge
+  bleiben als toter Ballast stehen, bis die neue Verdrängungslogik sie -
+  mangels jedes Hit-Zählers - als Erstes wieder herausdrängt).
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der

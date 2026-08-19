@@ -4348,13 +4348,19 @@ private const LANGUAGE_FLAGS = [
     // dieselbe Chunk-Groesse ist trotzdem eine vernuenftige Obergrenze pro Request.
     private const translateMaxTextsPerRequest = 128;
 
-    // Auf die letzten N Eintraege begrenzt (aeltere zuerst raus), analog zu
-    // attributeActivationLog - verhindert unbegrenztes Wachstum bei Instanzen mit
-    // sehr vielen unterschiedlichen, sich staendig aendernden Texten. Fuer den
-    // eigentlichen Zweck (wiederkehrende Werte wie eine tageszeitabhaengige
-    // Begruessungsvariable mit einer Handvoll fester Varianten) reicht das bei
-    // weitem.
-    private const TRANSLATION_CACHE_MAX_ENTRIES = 500;
+    // Auf die letzten N Eintraege begrenzt - verhindert unbegrenztes Wachstum bei
+    // Instanzen mit sehr vielen unterschiedlichen, sich staendig aendernden Texten.
+    // Build 72: 500 -> 1000 erhoeht, gemeinsam mit der Umstellung von reiner
+    // Einfuegereihenfolge (FIFO) auf Hit-Zaehler-basierte Verdraengung (siehe
+    // GetCachedTranslation/StoreCachedTranslation) - beides zusammen macht den Cache
+    // deutlich widerstandsfaehiger gegen einen Schwung einmaliger Texte, der sonst
+    // haeufig wiederverwendete Kern-Inhalte hinausdraengen wuerde.
+    private const TRANSLATION_CACHE_MAX_ENTRIES = 1000;
+
+    // Build 72: "Treffer der letzten 24 Stunden" wird ueber einen Decay-Zaehler
+    // angenaehert statt ueber eine vollstaendige Historie einzelner Zeitstempel
+    // (die pro Eintrag unbegrenzt wachsen wuerde) - siehe GetCachedTranslation.
+    private const TRANSLATION_CACHE_HIT_DECAY_SECONDS = 86400;
 
     // Teil des Cache-Schluessels (siehe BuildTranslationCacheKey) - wird
     // erhoeht, wann immer sich die eigentliche Uebersetzungs-LOGIK aendert
@@ -4393,7 +4399,21 @@ private const LANGUAGE_FLAGS = [
     // BuildTranslationCacheKey) - erzwingt dadurch fuer JEDEN Text einmalig
     // einen frischen Uebersetzungsversuch, der dann korrekt vom
     // Build-65-Schutz erfasst wird.
-    private const TRANSLATION_CACHE_SCHEMA_VERSION = 3;
+    //
+    // Build 72: erneut erhoeht (3 -> 4) - die gespeicherte FORM eines Cache-Eintrags
+    // hat sich geaendert, von einem blossen String (nur das Uebersetzungsergebnis)
+    // zu einem kleinen Objekt {v: Ergebnis, h: Hit-Zaehler, t: letzter Zugriff} fuer
+    // die neue Hit-Zaehler-basierte Verdraengung (siehe GetCachedTranslation/
+    // StoreCachedTranslation). Ohne diese Erhoehung wuerden alte, noch als reiner
+    // String gespeicherte Eintraege unter denselben Schluesseln weiterhin gefunden,
+    // aber vom neuen Code als Objekt interpretiert - kostet einmalig einen frischen
+    // Uebersetzungsversuch pro bereits gecachtem Text, dafuer keine Sonderbehandlung
+    // fuer zwei gemischte Speicherformen noetig. Alte, unter der alten Version noch
+    // vorhandene Eintraege werden dabei nicht sofort geloescht, sondern bleiben als
+    // toter Ballast im Cache stehen, bis die neue Verdraengungslogik sie - mangels
+    // jedes Hit-Zaehlers (siehe dort, ein String liefert dort sicher 0) - als Erstes
+    // wieder herausdraengt, sobald der Cache erneut voll wird.
+    private const TRANSLATION_CACHE_SCHEMA_VERSION = 4;
 
     // Uebersetzt (Quelle, Ziel, Text) IMMER zuerst gegen den lokalen Cache
     // (attributeTranslationCache, siehe GetCachedTranslation/StoreCachedTranslation)
@@ -4475,6 +4495,11 @@ private const LANGUAGE_FLAGS = [
         return array_values($results);
     }
 
+    // Build 72: liest nicht mehr nur, sondern schreibt bei jedem Treffer auch den
+    // Hit-Zaehler/Zeitstempel dieses EINEN Eintrags fort (siehe StoreCachedTranslation
+    // fuer die Verdraengungslogik, die darauf aufbaut) - ein lokaler Attribut-
+    // Schreibvorgang, verschwindend billig gegenüber der API-Anfrage, die dieser
+    // Cache-Treffer gerade eingespart hat.
     private function GetCachedTranslation(string $SourceLanguage, string $TargetLanguage, string $SourceText): ?string
     {
         $cache = json_decode($this->ReadAttributeString(self::attributeTranslationCache), true);
@@ -4482,7 +4507,28 @@ private const LANGUAGE_FLAGS = [
             return null;
         }
 
-        return $cache[$this->BuildTranslationCacheKey($SourceLanguage, $TargetLanguage, $SourceText)] ?? null;
+        $key = $this->BuildTranslationCacheKey($SourceLanguage, $TargetLanguage, $SourceText);
+        if (!isset($cache[$key]) || !is_array($cache[$key])) {
+            return null;
+        }
+
+        $entry = $cache[$key];
+        $now = time();
+        // Naehert "Treffer der letzten 24 Stunden" an, ohne eine unbegrenzt
+        // wachsende Historie einzelner Zeitstempel je Eintrag speichern zu muessen:
+        // war der letzte Zugriff laenger als TRANSLATION_CACHE_HIT_DECAY_SECONDS her,
+        // gilt der Eintrag als "neu wieder aufgewaermt" (Zaehler auf 1 zurueckgesetzt)
+        // statt seinen alten Zaehler auf ewig fortzuschreiben - sonst wuerde ein
+        // frueher einmal populaerer, inzwischen laengst nicht mehr gebrauchter
+        // Eintrag bei der naechsten Verdraengung (siehe StoreCachedTranslation)
+        // faelschlich einen frisch aktiven Eintrag verdraengen.
+        $cache[$key]['h'] = ($now - ($entry['t'] ?? 0)) > self::TRANSLATION_CACHE_HIT_DECAY_SECONDS
+            ? 1
+            : (int) ($entry['h'] ?? 0) + 1;
+        $cache[$key]['t'] = $now;
+        $this->WriteAttributeString(self::attributeTranslationCache, json_encode($cache));
+
+        return $entry['v'] ?? null;
     }
 
     private function StoreCachedTranslation(string $SourceLanguage, string $TargetLanguage, string $SourceText, string $TranslatedText): void
@@ -4492,9 +4538,28 @@ private const LANGUAGE_FLAGS = [
             $cache = [];
         }
 
-        $cache[$this->BuildTranslationCacheKey($SourceLanguage, $TargetLanguage, $SourceText)] = $TranslatedText;
+        $cache[$this->BuildTranslationCacheKey($SourceLanguage, $TargetLanguage, $SourceText)] = [
+            'v' => $TranslatedText,
+            'h' => 1,
+            't' => time(),
+        ];
+
         if (count($cache) > self::TRANSLATION_CACHE_MAX_ENTRIES) {
-            $cache = array_slice($cache, -self::TRANSLATION_CACHE_MAX_ENTRIES, null, true);
+            // Build 72: statt bisher der aeltesten (reine Einfuegereihenfolge, FIFO)
+            // werden jetzt die Eintraege mit dem GERINGSTEN Hit-Zaehler zuerst
+            // verdraengt (siehe GetCachedTranslation) - schuetzt haeufig
+            // wiederverwendete Kern-Inhalte (z.B. feste Objektnamen/Automations-
+            // Beschriftungen) davor, durch einen Schwung einmaliger, nie wieder
+            // vorkommender Texte verdraengt zu werden, nur weil diese zufaellig
+            // zuletzt eingefuegt wurden. Bei gleichem Hit-Zaehler entscheidet der
+            // Zeitpunkt des letzten Zugriffs (sekundaeres Sortierkriterium) - ein
+            // aelterer, unter der vorigen Schema-Version noch als reiner String
+            // gespeicherter Eintrag hat dabei ueber ?? 0 sicher Hit-Zaehler 0 und
+            // wird dadurch garantiert zuerst verdraengt (siehe TRANSLATION_CACHE_SCHEMA_VERSION).
+            uasort($cache, static function ($a, $b): int {
+                return (($a['h'] ?? 0) <=> ($b['h'] ?? 0)) ?: (($a['t'] ?? 0) <=> ($b['t'] ?? 0));
+            });
+            $cache = array_slice($cache, count($cache) - self::TRANSLATION_CACHE_MAX_ENTRIES, null, true);
         }
 
         $this->WriteAttributeString(self::attributeTranslationCache, json_encode($cache));
