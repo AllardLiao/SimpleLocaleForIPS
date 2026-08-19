@@ -3172,24 +3172,31 @@ private const LANGUAGE_FLAGS = [
             return null;
         }
 
-        $sourceKey = $this->GetPresentationSourceKey($VariableID, $presentation);
-
         // Legacy-Profile referenzieren nur einen Namen - der eigentliche Text liegt
         // nicht inline in der Presentation, sondern muss separat aus dem (ggf.
         // geteilten) Profil gelesen werden. Auf eine Enumeration-ähnliche Struktur
-        // gebracht, damit ab hier derselbe generische Mechanismus greift.
-        if (($presentation['PRESENTATION'] ?? '') === VARIABLE_PRESENTATION_LEGACY) {
+        // gebracht, damit ab hier derselbe generische Mechanismus greift. VOR
+        // GetPresentationSourceKey aufgelöst, da deren Content-Hash-Fallback (siehe
+        // dort) die tatsächlich extrahierten Felder braucht, nicht die rohe
+        // Presentation.
+        $isLegacyProfile = ($presentation['PRESENTATION'] ?? '') === VARIABLE_PRESENTATION_LEGACY;
+        if ($isLegacyProfile) {
             $profileName = $presentation['PROFILE'] ?? '';
             if ($profileName === '' || !@IPS_VariableProfileExists($profileName) || $this->IsContinuousLegacyProfile($profileName)) {
                 return null;
             }
             $associations = IPS_GetVariableProfile($profileName)['Associations'] ?? [];
-            $presentation = ['OPTIONS' => array_map(fn ($a) => ['Caption' => $a['Name'] ?? ''], $associations)];
+            $presentation = ['OPTIONS' => array_map(fn ($a) => ['Caption' => $a['Name'] ?? ''], $associations), 'PRESENTATION' => VARIABLE_PRESENTATION_LEGACY, 'PROFILE' => $profileName];
         }
 
         $fields = $this->ExtractTranslatableFields($presentation);
+        if ($fields === []) {
+            return null;
+        }
 
-        return $fields === [] ? null : ['sourceKey' => $sourceKey, 'fields' => $fields];
+        $sourceKey = $this->GetPresentationSourceKey($VariableID, $presentation, $fields);
+
+        return ['sourceKey' => $sourceKey, 'fields' => $fields];
     }
 
     // Profile (Legacy) und Templates (moderne Presentations, seit Symcon 8.0) sind
@@ -3205,7 +3212,7 @@ private const LANGUAGE_FLAGS = [
     // vollständig aufgelöste Ergebnis OHNE eigenen TEMPLATE-Schlüssel (live geprüft) -
     // die Referenz selbst ist daher nur über das rohe VariableCustomPresentation/
     // VariablePresentation-Feld sichtbar.
-    private function GetPresentationSourceKey(int $VariableID, array $ResolvedPresentation): string
+    private function GetPresentationSourceKey(int $VariableID, array $ResolvedPresentation, array $Fields): string
     {
         if (($ResolvedPresentation['PRESENTATION'] ?? '') === VARIABLE_PRESENTATION_LEGACY) {
             $profileName = $ResolvedPresentation['PROFILE'] ?? '';
@@ -3222,7 +3229,26 @@ private const LANGUAGE_FLAGS = [
             return 'template:' . $templateGUID;
         }
 
-        return 'variable:' . $VariableID;
+        // Build 75: KEIN geteiltes Profil/Template referenziert - trotzdem NICHT
+        // blind auf einen rein variablenspezifischen Schlüssel zurückfallen. Viele
+        // Symcon-Gerätetreiber schreiben eine INLINE VariableCustomPresentation
+        // direkt in jede einzelne Variable (kein gemeinsames Template-Objekt
+        // dahinter), obwohl der tatsächliche Inhalt (dieselben OPTIONS-
+        // Beschriftungen, z.B. "Ja"/"Nein") über viele Variablen hinweg identisch
+        // ist. Live beobachtet: Dutzende Variablen mit exakt demselben "Ja"/"Nein"-
+        // Inhalt erschienen als komplett separate Zeilen, obwohl Profile UND
+        // Templates korrekt dedupliziert wurden. Ein Hash über den tatsächlich
+        // extrahierten übersetzbaren Inhalt (Feldpfad+Text, siehe
+        // ExtractTranslatableFields) fasst inhaltlich identische Präsentationen
+        // automatisch zusammen, auch ganz ohne eine geteilte Symcon-Objektidentität
+        // dahinter - zwei Variablen mit unterschiedlichem Inhalt landen weiterhin
+        // auf unterschiedlichen Schlüsseln/Zeilen. Auf 12 Zeichen gekürzt, rein
+        // für eine lesbare Anzeige in der "Profil/Template"-Spalte des Formulars -
+        // Kollisionsrisiko bei der hier realistischen Anzahl unterschiedlicher
+        // Inhalte pro Installation vernachlässigbar.
+        ksort($Fields);
+
+        return 'content:' . substr(hash('sha256', json_encode($Fields)), 0, 12);
     }
 
     // Sucht rekursiv (auch durch JSON-kodierte String-Felder wie OPTIONS hindurch)

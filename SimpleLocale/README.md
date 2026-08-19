@@ -652,6 +652,35 @@ Beschreibung des Moduls.
   schließt auch aus, dass ein wörtliches "&"/"<" in einem Objektnamen (z. B.
   "Bad & WC") im html-Modus fälschlich als Beginn einer HTML-Entity/eines
   Tags interpretiert wird.
+
+  **Build 75 fasst inhaltlich identische Beschriftungen ohne geteiltes
+  Profil/Template zu einer Zeile zusammen:** Live gemeldet (Screenshot):
+  mehrere Variablen mit exakt identischem Beschriftungs-Inhalt (z. B. eine
+  ganze Reihe "Ja"/"Nein"-Variablen) erschienen als komplett getrennte
+  Zeilen in "Captions", obwohl über ein geteiltes Profil oder Template
+  verknüpfte Variablen bereits korrekt zu einer Zeile zusammengefasst
+  wurden. Ursache: `GetPresentationSourceKey()` fiel auf einen rein
+  variablenspezifischen Schlüssel zurück, sobald eine Variable ihre
+  `VariableCustomPresentation` INLINE trägt (kein Profilname, keine
+  Template-GUID) - ein sehr verbreitetes Muster, da viele Symcon-
+  Gerätetreiber dieselbe JSON-Struktur direkt in jede einzelne Variable
+  schreiben, statt ein gemeinsames Template-Objekt zu referenzieren. Fällt
+  jetzt zusätzlich auf einen Hash über den tatsächlich extrahierten,
+  übersetzbaren Inhalt (Feldpfad + Text) zurück, wenn weder Profil noch
+  Template vorliegen - zwei Variablen mit identischem Inhalt landen jetzt
+  automatisch in derselben Zeile, auch ganz ohne eine geteilte Symcon-
+  Objektidentität dahinter. Profil-/Template-basierte Gruppierung (bereits
+  korrekt) bleibt davon komplett unberührt und hat weiterhin Vorrang - das
+  ist bewusst so: verweisen zwei Variablen auf ein ECHTES, aber (durch ein
+  fremdes Modul, z. B. Echo/Alexa) je Geräteinstanz eigenes Profil, bleiben
+  sie zurecht getrennte Zeilen, selbst wenn ihr Inhalt gerade zufällig
+  übereinstimmt - sonst würde eine spätere, unabhängige Änderung an EINEM
+  der beiden Profile fälschlich beide Zeilen gemeinsam betreffen. Hinweis:
+  nach dem ersten Rescan mit diesem Build bleiben die alten,
+  variablenspezifischen Zeilen als verwaiste Duplikate bestehen (wie bei
+  jedem entfernten/veränderten Objekt, siehe Abschnitt "Bekannte
+  Einschränkungen") - können nach Prüfung der neuen, zusammengeführten
+  Zeile manuell gelöscht werden.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
