@@ -4169,10 +4169,10 @@ private const LANGUAGE_FLAGS = [
             'TranslationStatsSinceDateLabel'       => date('d.m.Y', $stats['since']) . ', ' . $daysSince,
             'TranslationStatsRequestsPerHourLabel' => $this->FormatStatsCount($stats['requestsPerHour']),
             'TranslationStatsCharsPerHourValueLabel' => $this->FormatStatsCount($stats['charsPerHour']),
-            'TranslationStatsTotalRequestsLabel'   => $stats['requestCount'],
-            'TranslationStatsTotalCharsLabel'      => $stats['characterCount'],
-            'TranslationStatsCacheSavedRequestsLabel' => $stats['cacheSavedRequestCount'],
-            'TranslationStatsCacheSavedCharsLabel' => $stats['cacheSavedCharacterCount'],
+            'TranslationStatsTotalRequestsLabel'   => (string) $stats['requestCount'],
+            'TranslationStatsTotalCharsLabel'      => (string) $stats['characterCount'],
+            'TranslationStatsCacheSavedRequestsLabel' => (string) $stats['cacheSavedRequestCount'],
+            'TranslationStatsCacheSavedCharsLabel' => (string) $stats['cacheSavedCharacterCount'],
             default                                => '',
         };
     }
