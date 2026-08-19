@@ -1963,13 +1963,16 @@ private const LANGUAGE_FLAGS = [
     // das übernimmt der Aufrufer (ApplyLanguage), um mit einem evtl. ohnehin nötigen
     // IPS_ApplyChanges() für propertyCurrentLanguage zu einem einzigen Reentry
     // verschmolzen zu werden. Liefert true, wenn mindestens eine Property geändert wurde.
-    private function StagePendingLanguageTranslations(string $Language): bool
+    // Gemeinsame Feldgruppen-Definition (raw/prefix/capitalizeFirst/isHtml je Zeilen-
+    // Property) fuer alle Stellen, die FillMissingTranslations() ueber ALLE fuenf
+    // Zeilen-haltenden Properties hinweg aufrufen (siehe StagePendingLanguageTranslations,
+    // ReconcileRowSourceLanguageChanges) - ScanRootTree() selbst behaelt bewusst seine
+    // eigenen, einzelnen Aufrufe (dort zusaetzlich mit Debug-Logging pro Property
+    // verzahnt), diese Auslagerung betrifft nur die beiden neueren, strukturell
+    // identischen Aufrufer.
+    private function GetTranslatableFieldGroupsByProperty(): array
     {
-        $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
-        $targetLanguages = [$Language];
-        $anyStaged = false;
-
-        $propertiesAndFieldGroups = [
+        return [
             self::propertyObjectNames => [
                 ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],
             ],
@@ -1987,8 +1990,15 @@ private const LANGUAGE_FLAGS = [
                 ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],
             ],
         ];
+    }
 
-        foreach ($propertiesAndFieldGroups as $property => $fieldGroups) {
+    private function StagePendingLanguageTranslations(string $Language): bool
+    {
+        $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
+        $targetLanguages = [$Language];
+        $anyStaged = false;
+
+        foreach ($this->GetTranslatableFieldGroupsByProperty() as $property => $fieldGroups) {
             $original = $this->DecodeRows($property);
             if ($original === []) {
                 continue;
@@ -2489,7 +2499,21 @@ private const LANGUAGE_FLAGS = [
         // Rein informativ fuers Konfigurationsformular (siehe PopulateFormElements/
         // PendingRowUpdateNoticeRow) - jeder neue Puffer-Eintrag verschiebt den
         // erwarteten Zeitpunkt, exakt synchron zum eben (neu) gesetzten Timer.
-        $this->WriteAttributeInteger(self::attributePendingRowUpdateFlushAt, time() + self::PENDING_ROW_UPDATE_DEBOUNCE_SECONDS);
+        $flushAt = time() + self::PENDING_ROW_UPDATE_DEBOUNCE_SECONDS;
+        $this->WriteAttributeInteger(self::attributePendingRowUpdateFlushAt, $flushAt);
+
+        // Build 73: PopulateFormElements() liest diesen Zustand nur beim (Neu-)Oeffnen
+        // des Formulars - ein bereits GEOEFFNETES Formular wuerde den Hinweis sonst nie
+        // sehen, egal wie lange man wartet (genau das war der Sinn von Build 71: kein
+        // ReloadForm() mehr bei jedem externen Schreibvorgang). UpdateFormField() pusht
+        // stattdessen gezielt NUR diese beiden Elemente in ein evtl. gerade offenes
+        // Formular, voellig unabhaengig davon, ob/wo gerade editiert wird - identisch
+        // sicher wie die bereits bestehenden UpdateFormField()-Aufrufe in CheckProviders()/
+        // ActivateLicense(), nur diesmal aus einem VM_UPDATE-Kontext statt aus
+        // RequestAction() heraus aufgerufen. Ein NICHT geoeffnetes Formular ignoriert
+        // diesen Aufruf einfach folgenlos.
+        $this->UpdateFormField('PendingRowUpdateNoticeRow', 'visible', true);
+        $this->UpdateFormField('PendingRowUpdateFlushAtLabel', 'caption', date('H:i', $flushAt));
     }
 
     // Build 71: schreibt alle gepufferten Zeilen-Feld-Aenderungen (siehe
@@ -2509,6 +2533,10 @@ private const LANGUAGE_FLAGS = [
         $this->WriteAttributeString(self::attributePendingTrackedRowUpdates, '{}');
         $this->SetTimerInterval($this->GetPendingRowUpdateFlushTimerIdent(), 0);
         $this->WriteAttributeInteger(self::attributePendingRowUpdateFlushAt, 0);
+        // Build 73: siehe BufferPendingTrackedRowUpdate - derselbe Live-Push in die
+        // Gegenrichtung, sobald tatsaechlich geschrieben wurde und nichts mehr aussteht.
+        $this->UpdateFormField('PendingRowUpdateNoticeRow', 'visible', false);
+        $this->UpdateFormField('PendingRowUpdateFlushAtLabel', 'caption', '');
 
         $anyChanged = false;
         foreach ($pending as $property => $fieldUpdatesByValueObjectID) {
@@ -2717,15 +2745,11 @@ private const LANGUAGE_FLAGS = [
     // Kommentar an ReconcileRowFields für die Aufteilung der Zuständigkeiten.
     private function ReconcileRowSourceLanguageChanges(): bool
     {
+        $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
+        $targetLanguages = $this->GetSelectedTargetLanguages();
         $anyChanged = false;
 
-        foreach ([
-            self::propertyObjectNames,
-            self::propertyObjectTexts,
-            self::propertyEnumerationOptions,
-            self::propertyObjectAutomations,
-            self::propertyObjectGreeting,
-        ] as $property) {
+        foreach ($this->GetTranslatableFieldGroupsByProperty() as $property => $fieldGroups) {
             $rows = $this->DecodeRows($property);
             if ($rows === []) {
                 continue;
@@ -2737,6 +2761,13 @@ private const LANGUAGE_FLAGS = [
             }
 
             if ($propertyChanged) {
+                // Build 73: wie beim manuellen/Auto-Rescan werden ALLE konfigurierten
+                // Zielsprachen sofort nachgezogen, nicht nur die aktive - ein
+                // Quellsprachen-Wechsel ist eine bewusste Admin-Aktion (Formularfeld
+                // geändert + "Übernehmen"), kein automatischer Live-Trigger wie
+                // ApplyTrackedVariableUpdate (siehe Kommentar dort für die
+                // Abgrenzung).
+                $rows = $this->FillMissingTranslations($rows, $fieldGroups, $sourceLanguage, $targetLanguages);
                 IPS_SetProperty($this->InstanceID, $property, json_encode(array_values($rows)));
                 $anyChanged = true;
             }
@@ -2886,14 +2917,21 @@ private const LANGUAGE_FLAGS = [
         $this->SendDebug('IPSSL_Debug', 'ScanRootTree: mergedGreeting=' . json_encode($objectGreeting), 0);
 
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
-        $currentLanguage = $this->ReadPropertyString(self::propertyCurrentLanguage);
-        // Build 70: Rescan übersetzt sofort nur noch in die aktuell aktive Gast-Sprache -
-        // alle anderen konfigurierten Zielsprachen werden bewusst NICHT mehr hier vorab
-        // befüllt, sondern erst bei Bedarf beim nächsten Wechsel auf genau diese Sprache
-        // nachgeholt (siehe EnsureLanguageTranslationsCurrent/ApplyLanguage). Reduziert
-        // die pro Rescan verbrauchten API-Anfragen um den Faktor "Anzahl Zielsprachen".
-        // Die Pseudo-Sprache ORIGINAL_IMPORT braucht naturgemäß keine Übersetzung.
-        $targetLanguages = $currentLanguage !== self::langOriginalImport ? [$currentLanguage] : [];
+        // Build 73: Rescan (manuell UND Auto-Rescan) übersetzt bewusst wieder ALLE
+        // konfigurierten Zielsprachen in einem Durchgang, nicht nur die aktuell
+        // aktive - ein Nutzer, der "Baum neu einlesen" klickt (oder eine Zeile/Zelle
+        // manuell leert, um eine Neuübersetzung zu erzwingen), erwartet zurecht, dass
+        // das JEDE fehlende Übersetzung nachholt, nicht nur die gerade angezeigte
+        // Sprache. Das unterscheidet sich bewusst von der Live-Nachübersetzung bei
+        // externen Variablenänderungen (siehe ApplyTrackedVariableUpdate) - DORT bleibt
+        // es bei "nur die aktuell aktive Sprache", weil genau DAS (nicht ein normaler
+        // Rescan) live beobachtet das tägliche Übersetzungs-Kontingent in wenigen
+        // Stunden aufgebraucht hat: eine häufig (mehrmals pro Minute) extern
+        // aktualisierte Variable multipliziert JEDEN einzelnen Tick mit der Anzahl
+        // Zielsprachen, waehrend ein einmaliger Rescan pro fehlender Zelle nur EINMAL
+        // übersetzt und danach (dank Cache/Staleness-Tracking) bis zur nächsten
+        // tatsächlichen Änderung nicht erneut anfällt.
+        $targetLanguages = $this->GetSelectedTargetLanguages();
 
         $objectNames = $this->FillMissingTranslations($objectNames, [
             ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],

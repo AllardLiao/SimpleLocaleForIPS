@@ -597,6 +597,36 @@ Beschreibung des Moduls.
   Text wird beim nächsten Bedarf einmal frisch übersetzt, alte Einträge
   bleiben als toter Ballast stehen, bis die neue Verdrängungslogik sie -
   mangels jedes Hit-Zählers - als Erstes wieder herausdrängt).
+
+  **Build 73 stellt klar, dass "nur aktive Sprache" ausschließlich für den
+  automatischen Live-Trigger gilt, nicht für Rescan, und macht den
+  Persistierungs-Hinweis live sichtbar:** Zwei Nachbesserungen nach dem
+  ersten Praxistest von Build 70/71. Erstens: Rescan (manuell wie
+  Auto-Rescan) und der Quellsprachen-Abgleich (siehe Build 57) übersetzen
+  ab sofort wieder ALLE konfigurierten Zielsprachen in einem Durchgang,
+  nicht mehr nur die aktuell aktive - live gemeldet, nachdem gelöschte
+  Objekte per Rescan zurückkehrten (bzw. eine Zelle manuell geleert wurde),
+  aber keine ihrer Zielsprachen nachübersetzt wurde, solange sie nicht
+  gerade aktiv war. Ein Nutzer, der "Baum neu einlesen" klickt oder eine
+  Zelle absichtlich leert, erwartet zu Recht, dass JEDE fehlende
+  Übersetzung nachgeholt wird, nicht nur die gerade angezeigte Sprache -
+  das war ursprünglich zu weit gefasst: die eigentliche
+  Kontingent-Ursache (siehe Build 70) war ausschließlich die automatische
+  Live-Nachübersetzung bei externen Variablenänderungen
+  (`ApplyTrackedVariableUpdate`, mehrmals pro Minute bei einer aktiven
+  Wetter-/Sensor-Variable), NICHT ein einmaliger Rescan. Diese eine Stelle
+  bleibt weiterhin bewusst auf die aktive Sprache beschränkt - der
+  Nachhol-Mechanismus beim Sprachwechsel bleibt für sie zusätzlich als
+  Backstop bestehen. Zweitens: der in Build 71 eingeführte
+  Persistierungs-Hinweis im Formular wurde bislang nur beim (Neu-)Öffnen
+  des Formulars berechnet - ein bereits offenes Formular zeigte ihn
+  deshalb nie an, egal wie lange man wartete (folgerichtig, da Build 71
+  bewusst kein `ReloadForm()` mehr bei externen Schreibvorgängen auslöst).
+  Der Hinweis wird jetzt zusätzlich per `UpdateFormField()` direkt aus dem
+  Puffer-Mechanismus heraus live in ein bereits offenes Formular
+  eingeblendet bzw. wieder ausgeblendet - ohne jede Störung der laufenden
+  Bearbeitung, exakt wie die bereits bestehenden `UpdateFormField()`-
+  Aufrufe in anderen Formular-Popups.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
