@@ -53,10 +53,9 @@
                     "items": [
                         {"type": "Label", "caption": "Stündlich"},
                         {"type": "Label", "name": "TranslationStatsRequestsPerHourLabel", "caption": ""},
-                        {"type": "Label", "caption": "Anfrage(n)"},
+                        {"type": "Label", "caption": "Anfrage(n),"},
                         {"type": "Label", "name": "TranslationStatsCharsPerHourValueLabel", "caption": ""},
-                        {"type": "Label", "caption": "Zeichen"},
-                        {"type": "Label", "caption": "."}
+                        {"type": "Label", "caption": "Zeichen."}
                     ]
                 },
                 {
@@ -66,10 +65,9 @@
                     "items": [
                         {"type": "Label", "caption": "Insgesamt"},
                         {"type": "Label", "name": "TranslationStatsTotalRequestsLabel", "caption": ""},
-                        {"type": "Label", "caption": "Anfrage(n)"},
+                        {"type": "Label", "caption": "Anfrage(n),"},
                         {"type": "Label", "name": "TranslationStatsTotalCharsLabel", "caption": ""},
-                        {"type": "Label", "caption": "Zeichen"},
-                        {"type": "Label", "caption": "."}
+                        {"type": "Label", "caption": "Zeichen."}
                     ]
                 },
                 {
@@ -79,10 +77,9 @@
                     "items": [
                         {"type": "Label", "caption": "Durch den Cache eingespart"},
                         {"type": "Label", "name": "TranslationStatsCacheSavedRequestsLabel", "caption": ""},
-                        {"type": "Label", "caption": "Anfrage(n)"},
+                        {"type": "Label", "caption": "Anfrage(n),"},
                         {"type": "Label", "name": "TranslationStatsCacheSavedCharsLabel", "caption": ""},
-                        {"type": "Label", "caption": "Zeichen"},
-                        {"type": "Label", "caption": "."}
+                        {"type": "Label", "caption": "Zeichen."}
                     ]
                 },
                 {
