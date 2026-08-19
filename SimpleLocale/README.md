@@ -544,6 +544,35 @@ Beschreibung des Moduls.
   durch eine Übersetzungs-API-Anfrage geschickt und kann deshalb auch
   keine darüber hinausgehende, kontextabhängige Umformatierung mehr
   erhalten, die Google/DeepL gelegentlich mitgeliefert haben.
+
+  **Build 71 entkoppelt die Live-Übersetzung von der Formular-Persistierung
+  einer häufig aktualisierten Variable:** Live gemeldet - trotz Build 70
+  konnte ein Admin praktisch keine eigene Änderung im Konfigurationsformular
+  mehr speichern, wenn eine "Eigene Texte"-Variable mehrmals pro Minute von
+  außen aktualisiert wurde (z. B. ein Wetter-/Sensor-Widget). Ursache: jede
+  externe Änderung hat weiterhin sofort per `IPS_SetProperty()` + `IPS_
+  ApplyChanges()` genau die Property umgeschrieben, die im offenen Formular
+  als bearbeitbare "Eigene Texte"-Liste angezeigt wird - kein `ReloadForm()`
+  nötig, das reine Überschreiben der zugrunde liegenden Property unter einer
+  live gebundenen Formularliste reichte bereits, um eine laufende Bearbeitung
+  zu stören. Ab Build 71 sind zwei Schreibvorgänge, die bislang immer
+  gemeinsam sofort passierten, sauber entkoppelt: die **Live-Variable**
+  (das, was der Gast in der Kachel sieht) wird weiterhin komplett
+  unverändert/unverzögert geschrieben; nur die **Property-Persistierung**
+  (die Buchführung, die ausschließlich für einen späteren, seltenen
+  Sprachwechsel gebraucht wird) wird jetzt gepuffert und erst nach 12
+  Minuten Ruhe auf der jeweiligen Variable tatsächlich committet (Debounce -
+  jede neue Änderung schiebt den Zeitpunkt weiter nach hinten). Speichert
+  der Admin währenddessen im Formular ("Übernehmen"), wird der noch
+  wartende Puffer automatisch VORHER eingespielt, bevor die eigene Änderung
+  verarbeitet wird - die zuletzt gepufferte externe Änderung geht dabei
+  nicht verloren, unabhängig vom Timing. Ein tatsächlicher Sprachwechsel
+  (selten, aber jederzeit möglich) leert den Puffer ebenfalls sofort, statt
+  auf das Ende der Ruhephase zu warten - ein Gast bekommt dadurch immer den
+  aktuellsten Stand zu sehen. Das Konfigurationsformular zeigt zusätzlich
+  oben einen Hinweis mit der voraussichtlichen Uhrzeit der nächsten
+  Persistierung an, solange etwas ansteht - rein informativ, da Speichern
+  jederzeit gefahrlos möglich ist.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
