@@ -503,6 +503,47 @@ Beschreibung des Moduls.
   HTML-Textknoten (siehe Build 63/`SplitHtmlIntoTextNodes`) am Rand
   absichtlich ein Leerzeichen tragen kann, das für den korrekten Abstand
   zwischen zwei benachbarten Inline-Elementen gebraucht wird.
+
+  **Build 70 übersetzt live nur noch die aktuell aktive Gast-Sprache, holt
+  alle anderen bei Bedarf nach, und filtert reine Zahlen/Symbole komplett
+  heraus:** Live beobachtet lief ein täglich verfügbares Übersetzungs-
+  Kontingent innerhalb weniger Stunden vollständig leer (77.000 Zeichen an
+  einem einzigen Tag), obwohl die Übersetzungs-Anbieter zwischenzeitlich
+  sogar pausiert waren. Ursache: eine häufig extern aktualisierte "Eigene
+  Texte"-Variable (z. B. ein Wetter-/Sensor-Widget, mehrmals pro Minute
+  über `VM_UPDATE` aktualisiert) hat bei JEDER Änderung sofort ALLE
+  konfigurierten Zielsprachen neu übersetzt, obwohl zu keinem Zeitpunkt
+  mehr als eine Sprache gleichzeitig angezeigt wurde. Ab Build 70
+  übersetzen der Rescan, die `VM_UPDATE`-Live-Nachübersetzung und der
+  Quellsprachen-Abgleich (siehe Build 57) sofort nur noch die AKTUELL
+  aktive Gast-Sprache - alle anderen Zielsprachen-Zellen bleiben dabei
+  bewusst auf ihrem letzten bekannten (ggf. jetzt veralteten) Stand stehen,
+  statt geleert zu werden. Ein neuer Zeitstempel-Abgleich je Zeile (wann
+  wurde der Rohtext zuletzt geändert, wann wurde jede Sprache zuletzt
+  tatsächlich übersetzt) erkennt zuverlässig, welche Zelle veraltet ist,
+  ohne den bisherigen Fallback-Wert zu löschen. Wechselt ein Gast
+  tatsächlich auf eine bisher nur lazy behandelte Sprache, holt ein neuer
+  Nachhol-Mechanismus GENAU die betroffenen Zeilen gebündelt (ein
+  API-Aufruf je Zeilen-Property statt einzeln je Zeile) nach, bevor die
+  Sprache angezeigt wird - danach ist sie normal gecacht. Bereits vor
+  diesem Build gespeicherte Zeilen ohne die neue Zeitstempel-Buchführung
+  gelten dabei bewusst als "aktuell" (keine Massen-Neuübersetzung des
+  kompletten Bestands nach dem Update). Zusätzlich geht ein Text-Fragment
+  ganz ohne jeden Buchstaben (reine Zahlen, "%", "°", Uhrzeiten,
+  Satzzeichen - besonders häufig bei der feingranularen HTML-Text-Knoten-
+  Zerlegung eines Live-Widgets, siehe Build 63) gar nicht mehr an eine
+  Übersetzungs-API: eine erkannte einzelne Zahl wird stattdessen über
+  PHPs eingebaute `NumberFormatter`-Klasse (Intl-Erweiterung) rein lokal
+  in die landesübliche Schreibweise der Zielsprache umgerechnet (z. B.
+  deutsches "1.234,56" → englisches "1,234.56"), ohne dabei eine
+  ungruppierte Zahl (z. B. eine Jahreszahl oder Zimmernummer wie "2026")
+  fälschlich mit einem künstlich eingefügten Tausendertrennzeichen zu
+  versehen. Fehlt die Intl-Erweiterung auf einer Installation, wird der
+  Text stattdessen unverändert durchgereicht (kein Fehler). Einziger,
+  bewusst in Kauf genommener Nebeneffekt: eine reine Zahl wird nie mehr
+  durch eine Übersetzungs-API-Anfrage geschickt und kann deshalb auch
+  keine darüber hinausgehende, kontextabhängige Umformatierung mehr
+  erhalten, die Google/DeepL gelegentlich mitgeliefert haben.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der

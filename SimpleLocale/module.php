@@ -1781,16 +1781,30 @@ private const LANGUAGE_FLAGS = [
         // Hineinlaufen wieder "ungleich" sehen und in eine Endlosschleife laufen.
         $this->WriteAttributeString(self::attributeLastAppliedLanguage, $Language);
 
+        // Build 70: BEVOR die Sprache tatsächlich aktiv geschaltet/angezeigt wird, holt
+        // EnsureLanguageTranslationsCurrent() genau die Zeilen nach, deren Übersetzung
+        // für $Language fehlt oder veraltet ist (siehe IsRowLanguageTranslationCurrent)
+        // - gebündelt in maximal 5 API-Aufrufen (einer je Zeilen-Property), einmalig pro
+        // tatsächlich betroffenem Text. Läuft bewusst NICHT für die Pseudo-Sprache
+        // ORIGINAL_IMPORT (die braucht keine Übersetzung) und bewusst OHNE eigenen
+        // IPS_ApplyChanges()-Aufruf - wird unten mit dem ohnehin evtl. nötigen
+        // IPS_ApplyChanges() für propertyCurrentLanguage zu EINEM einzigen Reentry
+        // zusammengefasst (siehe dort).
+        $stagedCatchUp = $Language !== self::langOriginalImport && $this->StagePendingLanguageTranslations($Language);
+
         // Wie Rescan(): direktes IPS_SetProperty + IPS_ApplyChanges, damit die neue
         // Sprache sofort persistiert ist und im Konfigurationsformular korrekt
-        // angezeigt wird, sobald es (neu) geöffnet wird - aber NUR, wenn die
-        // Property das nicht ohnehin schon ist: kommt dieser Aufruf aus
-        // ApplyChanges() selbst (Sprache direkt im Konfigurationsformular
-        // umgestellt, siehe dort), ist sie das bereits, ein erneutes
-        // IPS_ApplyChanges() hier waere nur ein unnoetiger kompletter
+        // angezeigt wird, sobald es (neu) geöffnet wird - aber NUR, wenn die Property
+        // das nicht ohnehin schon ist ODER oben tatsächlich etwas nachgeholt wurde:
+        // kommt dieser Aufruf aus ApplyChanges() selbst (Sprache direkt im
+        // Konfigurationsformular umgestellt, siehe dort) UND gab es nichts
+        // nachzuholen, wäre ein IPS_ApplyChanges() hier nur ein unnoetiger kompletter
         // ApplyChanges()-Reentry.
-        if ($this->ReadPropertyString(self::propertyCurrentLanguage) !== $Language) {
+        $languagePropertyChanged = $this->ReadPropertyString(self::propertyCurrentLanguage) !== $Language;
+        if ($languagePropertyChanged) {
             IPS_SetProperty($this->InstanceID, self::propertyCurrentLanguage, $Language);
+        }
+        if ($languagePropertyChanged || $stagedCatchUp) {
             IPS_ApplyChanges($this->InstanceID);
         }
         $this->PushVisualizationUpdate();
@@ -1880,6 +1894,65 @@ private const LANGUAGE_FLAGS = [
 
         $this->ApplyAutomationsLanguage($Language, $sourceLanguage);
         $this->ApplyGreetingLanguage($Language, $sourceLanguage, $writtenValueObjectIDs);
+    }
+
+    // Build 70: Nachhol-Mechanismus fuer den "nur aktive Sprache sofort"-Ansatz (siehe
+    // ApplyTrackedVariableUpdate/FillLanguageColumn) - wird von ApplyLanguage() VOR dem
+    // eigentlichen Schreiben der Objektnamen/-werte aufgerufen, damit ein Gast, der auf
+    // eine bisher nur lazy behandelte Sprache wechselt, sofort eine frische statt einer
+    // veralteten/fehlenden Übersetzung sieht. Übersetzt gebündelt (ein TranslateBatch-
+    // Aufruf je Zeilen-Property/Feldgruppe, nicht einzeln je Zeile) über genau denselben
+    // Mechanismus wie ein Rescan (FillMissingTranslations/FillLanguageColumn, jetzt
+    // staleness-bewusst statt nur "Zelle leer", siehe IsRowLanguageTranslationCurrent) -
+    // betrifft in der Praxis nur Zeilen, deren $Language-Zelle seit der letzten Rescan-
+    // /Live-Übersetzung fehlt oder durch einen zwischenzeitlichen VM_UPDATE-Schreib-
+    // vorgang bzw. Quellsprachen-Wechsel veraltet ist; alle bereits aktuellen Zeilen
+    // verursachen keinen einzigen API-Aufruf. Persistiert NUR die Properties, die sich
+    // tatsächlich geändert haben, und ruft bewusst KEIN eigenes IPS_ApplyChanges() auf -
+    // das übernimmt der Aufrufer (ApplyLanguage), um mit einem evtl. ohnehin nötigen
+    // IPS_ApplyChanges() für propertyCurrentLanguage zu einem einzigen Reentry
+    // verschmolzen zu werden. Liefert true, wenn mindestens eine Property geändert wurde.
+    private function StagePendingLanguageTranslations(string $Language): bool
+    {
+        $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
+        $targetLanguages = [$Language];
+        $anyStaged = false;
+
+        $propertiesAndFieldGroups = [
+            self::propertyObjectNames => [
+                ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],
+            ],
+            self::propertyObjectTexts => [
+                ['raw' => self::fieldOriginalImportName, 'prefix' => self::fieldNamePrefix, 'capitalizeFirst' => true],
+                ['raw' => self::langOriginalImportText, 'prefix' => self::fieldTextPrefix, 'capitalizeFirst' => false, 'isHtml' => true],
+            ],
+            self::propertyEnumerationOptions => [
+                ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => false],
+            ],
+            self::propertyObjectAutomations => [
+                ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],
+            ],
+            self::propertyObjectGreeting => [
+                ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],
+            ],
+        ];
+
+        foreach ($propertiesAndFieldGroups as $property => $fieldGroups) {
+            $original = $this->DecodeRows($property);
+            if ($original === []) {
+                continue;
+            }
+
+            $filled = $this->FillMissingTranslations($original, $fieldGroups, $sourceLanguage, $targetLanguages);
+            if ($filled === $original) {
+                continue;
+            }
+
+            IPS_SetProperty($this->InstanceID, $property, json_encode(array_values($filled)));
+            $anyStaged = true;
+        }
+
+        return $anyStaged;
     }
 
     // Schreibt übersetzte Automation-Namen in die LIVE "Automations"-Property der
@@ -2269,6 +2342,11 @@ private const LANGUAGE_FLAGS = [
         bool $IsHtml = false
     ): void {
         $Rows[$RowIndex][$RawField] = $NewValue;
+        // Build 70: der Rohtext hat sich JETZT nachweislich geändert - macht alle
+        // bisher übersetzten Zielsprachen-Zellen dieser Zeile rückwirkend als
+        // veraltet erkennbar (siehe IsRowLanguageTranslationCurrent), ohne ihren
+        // bisherigen (Fallback-)Wert zu löschen.
+        $this->MarkRowSourceChanged($Rows[$RowIndex]);
 
         $currentLanguage = $this->ReadPropertyString(self::propertyCurrentLanguage);
         // Die Zeile behält ihre EIGENE Quellsprache (siehe GetRowSourceLanguage) - der
@@ -2277,62 +2355,42 @@ private const LANGUAGE_FLAGS = [
         // Fremdmodul, das dauerhaft englischsprachig liefert, während der Rest der
         // Instanz deutsch scannt).
         $rowSourceLanguage = $this->GetRowSourceLanguage($Rows[$RowIndex], $this->ReadPropertyString(self::propertySourceLanguage));
-        $sourceLanguage = $rowSourceLanguage;
         $displayText = $NewValue;
 
-        // ALLE konfigurierten Zielsprachen sofort neu uebersetzen, nicht nur die
-        // gerade aktive - dank Uebersetzungs-Cache (siehe TranslateBatch) meist
-        // ohne echten API-Aufruf, sobald derselbe Rohtext schon einmal vorkam.
-        // Fruehere Version leerte hier nur alle Zielsprachen-Zellen und uebersetzte
-        // ausschliesslich die gerade aktive neu ("lazy", regenerieren sich
-        // eigentlich erst beim naechsten Rescan oder Sprachwechsel) - das hatte
-        // einen echten Nebeneffekt: schaltete ein Gast danach in eine ANDERE
-        // Sprache, lieferte ResolveRowValue() fuer die (noch leere) Zielspalte
-        // schlicht den rohen Quelltext zurueck (kein Absturz, aber auch keine
-        // Uebersetzung) - fuer eine Begruessungsvariable, die sich mehrmals
-        // taeglich zwischen wenigen festen Werten abwechselt, heisst das:
-        // Sprachwechsel praktisch immer unuebersetzt, ausser die zufaellig gerade
-        // aktive Sprache war beim letzten externen Schreibvorgang bereits aktiv.
-        // Nur wenn WIRKLICH jede Zielsprache erfolgreich übersetzt wurde, gilt die
-        // Zeile unten als "frisch gegen $rowSourceLanguage übersetzt" - schlug auch
-        // nur eine einzige fehl (siehe unten), bleibt die Buchführung bewusst
-        // unverändert, damit ein späterer Abgleich (siehe
-        // ReconcileRowSourceLanguageChanges) die liegen gebliebene(n) Spalte(n)
-        // erneut versuchen kann, statt fälschlich "bereits erledigt" zu vermerken.
-        $allTranslationsSucceeded = true;
-
-        foreach ($this->GetSelectedTargetLanguages() as $lang) {
-            $translated = $this->TranslateBatch([$NewValue], $sourceLanguage, $lang, '', $IsHtml);
+        // Build 70: NUR NOCH die aktuell aktive Gast-Sprache wird hier sofort live
+        // nachübersetzt - alle anderen konfigurierten Zielsprachen bleiben bewusst
+        // veraltet stehen (alter Fallback-Wert bleibt sichtbar, siehe
+        // MarkRowSourceChanged oben) und werden erst nachgeholt, sobald tatsächlich
+        // ein Gast auf genau diese Sprache wechselt (siehe
+        // EnsureLanguageTranslationsCurrent/ApplyLanguage). Live beobachtet
+        // (2026-08-19): eine häufig extern aktualisierte Variable (Wetter-/Sensor-
+        // Widget, mehrmals pro Minute) hat mit der VORHERIGEN "alle Zielsprachen
+        // sofort"-Logik das tägliche Übersetzungs-Kontingent in wenigen Stunden
+        // aufgebraucht, obwohl zu keinem Zeitpunkt mehr als eine Sprache gleichzeitig
+        // angezeigt wurde. Kein Nebeneffekt mehr wie in der Vorgänger-Version (siehe
+        // History): Sprachwechsel auf eine bis dahin nicht live nachgezogene Sprache
+        // liefert jetzt aktiv eine frische Übersetzung statt des rohen Quelltexts,
+        // eben über den neuen Nachhol-Mechanismus statt hier vorab für alle Sprachen.
+        if ($rowSourceLanguage !== $currentLanguage && $currentLanguage !== self::langOriginalImport) {
+            $translated = $this->TranslateBatch([$NewValue], $rowSourceLanguage, $currentLanguage, '', $IsHtml);
             // TranslateBatch liefert bei einem fehlgeschlagenen/pausierten Anbieter
             // einen Leerstring zurück (nicht null) - ein reines "??" würde diesen
             // Fehlerfall nicht abfangen. Die gespeicherte Spalte wird bei einem
-            // Leerstring bewusst NICHT überschrieben (siehe unten) - sonst würde ein
-            // einzelner externer Schreibvorgang während einer Anbieter-Pause die
-            // bisher funktionierende Übersetzung DAUERHAFT löschen, obwohl der
-            // Nutzer explizit erwartet, dass die zuletzt bekannte gute Übersetzung
-            // erhalten bleibt, bis eine neue erfolgreich berechnet werden konnte.
-            // Live beobachtet (2026-08-19): genau dieses Muster ("Original Import"
-            // intakt, alle Zielsprachen-Spalten leer) bei "Objektnamen"/"Eigene
-            // Texte" nach einer längeren Pause-Phase - dieselbe Fehlerklasse wie
-            // beim HTML-Text-Knoten-Fallback (siehe TranslateBatchUncached) und bei
-            // ReconcileRowFields.
+            // Leerstring bewusst NICHT überschrieben - sonst würde ein einzelner
+            // externer Schreibvorgang während einer Anbieter-Pause die bisher
+            // funktionierende Übersetzung DAUERHAFT löschen, obwohl der Nutzer
+            // explizit erwartet, dass die zuletzt bekannte gute Übersetzung erhalten
+            // bleibt, bis eine neue erfolgreich berechnet werden konnte. Live
+            // beobachtet (2026-08-19): genau dieses Muster ("Original Import" intakt,
+            // Zielsprachen-Spalte leer) bei "Objektnamen"/"Eigene Texte" nach einer
+            // längeren Pause-Phase - dieselbe Fehlerklasse wie beim HTML-Text-Knoten-
+            // Fallback (siehe TranslateBatchUncached) und bei ReconcileRowFields.
             $translatedText = $translated[0] ?? '';
             if ($translatedText !== '') {
-                $Rows[$RowIndex][$TranslatedPrefix . $lang] = $translatedText;
-            } else {
-                $allTranslationsSucceeded = false;
-            }
-            if ($lang === $currentLanguage && $translatedText !== '') {
+                $Rows[$RowIndex][$TranslatedPrefix . $currentLanguage] = $translatedText;
+                $this->MarkRowLanguageTranslated($Rows[$RowIndex], $currentLanguage);
                 $displayText = $translatedText;
             }
-        }
-        // Buchführung nur bei VOLLSTÄNDIGEM Erfolg nachziehen (siehe
-        // ReconcileRowSourceLanguageChanges) - schlug mindestens eine Zielsprache
-        // fehl, bleibt sie bewusst unverändert, damit ein späterer Abgleich die
-        // liegen gebliebene(n) Spalte(n) noch nachholen kann, statt fälschlich
-        // "bereits vollständig übersetzt" zu vermerken.
-        if ($allTranslationsSucceeded) {
-            $Rows[$RowIndex][self::fieldTranslatedAgainstSourceLanguage] = $rowSourceLanguage;
         }
 
         IPS_SetProperty($this->InstanceID, $Property, json_encode($Rows));
@@ -2401,83 +2459,77 @@ private const LANGUAGE_FLAGS = [
         return $Row;
     }
 
+    // Build 70: entscheidet, ob eine EINZELNE Zielsprachen-Zelle einer Zeile noch
+    // aktuell ist, oder ob sie (leer ODER durch eine zwischenzeitliche Änderung des
+    // Rohtexts/der Quellsprache veraltet) neu übersetzt werden muss - Kern der
+    // "nur aktive Sprache sofort, Rest lazy beim nächsten Sprachwechsel"-Architektur
+    // (siehe FillLanguageColumn/ApplyTrackedVariableUpdate/ReconcileRowFields/
+    // EnsureLanguageTranslationsCurrent). Eine leere Zelle ist IMMER "nicht aktuell",
+    // unabhängig von jedem Zeitstempel - deckt sowohl brandneue Zeilen als auch ganz
+    // neu hinzugekommene Zielsprachen ab. Fehlt fieldSourceChangedAt komplett (0 =
+    // Zeile stammt aus einer Installation vor Build 70, oder wurde seither nie
+    // inhaltlich geändert), gilt eine bereits gefüllte Zelle bewusst als aktuell -
+    // sonst würde ein Modul-Update den kompletten Bestand einmalig neu übersetzen,
+    // obwohl sich inhaltlich nichts geändert hat.
+    private function IsRowLanguageTranslationCurrent(array $Row, string $ToField, string $Language): bool
+    {
+        if (($Row[$ToField] ?? '') === '') {
+            return false;
+        }
+
+        $sourceChangedAt = (int) ($Row[self::fieldSourceChangedAt] ?? 0);
+        if ($sourceChangedAt === 0) {
+            return true;
+        }
+
+        $translatedAt = (int) ($Row[self::fieldTranslatedAtByLanguage][$Language] ?? 0);
+
+        return $translatedAt >= $sourceChangedAt;
+    }
+
+    // Gegenstück zu IsRowLanguageTranslationCurrent: nach einer erfolgreichen
+    // (Neu-)Übersetzung einer einzelnen Sprache wird deren Zeitstempel aktualisiert.
+    private function MarkRowLanguageTranslated(array &$Row, string $Language): void
+    {
+        $Row[self::fieldTranslatedAtByLanguage][$Language] = time();
+    }
+
+    // Markiert, dass sich der Rohtext/die Quellsprache dieser Zeile JETZT inhaltlich
+    // geändert hat - macht alle bisher übersetzten Zielsprachen-Zellen (deren
+    // fieldTranslatedAtByLanguage-Zeitstempel zwangsläufig davor liegt) rückwirkend als
+    // veraltet erkennbar, OHNE ihren bisherigen (Fallback-)Wert zu löschen.
+    private function MarkRowSourceChanged(array &$Row): void
+    {
+        $Row[self::fieldSourceChangedAt] = time();
+    }
+
     // Kern von ReconcileRowSourceLanguageChanges: prüft EINE Zeile auf einen
     // Quellsprachen-Wechsel (fieldRowSourceLanguage weicht von der Buchführung
-    // fieldTranslatedAgainstSourceLanguage ab - siehe dort) und übersetzt bei
-    // Abweichung SOFORT neu gegen die neue Quellsprache, statt lazy auf den nächsten
-    // Rescan/Sprachwechsel zu warten (FillMissingTranslations/FillLanguageColumn
-    // übersetzen nur leere Zellen - ohne dieses Leeren+Sofort-Neuübersetzen blieben
-    // die alten, gegen die FALSCHE Quellsprache berechneten Übersetzungen stehen).
-    // $FieldGroups wie bei FillMissingTranslations (raw/prefix/capitalizeFirst/isHtml).
+    // fieldTranslatedAgainstSourceLanguage ab - siehe dort). Build 70: übersetzt hier
+    // bewusst NICHT mehr selbst - macht stattdessen nur noch alle bisherigen
+    // Zielsprachen-Zellen dieser Zeile rückwirkend als veraltet erkennbar (siehe
+    // MarkRowSourceChanged/IsRowLanguageTranslationCurrent), ohne ihre bisherigen
+    // (jetzt gegen die FALSCHE Quellsprache berechneten) Fallback-Werte zu löschen.
+    // Die eigentliche Neuübersetzung der aktuell aktiven Gast-Sprache übernimmt der
+    // GARANTIERT im selben ApplyChanges()-Durchlauf direkt anschließende
+    // ApplyLanguage()-Aufruf (siehe ApplyChanges: $rowSourceLanguagesReconciled löst
+    // ihn aus) über EnsureLanguageTranslationsCurrent() - EIN einheitlicher
+    // Übersetzungspfad (FillLanguageColumn) statt zweier separater, fast identischer
+    // Implementierungen. Alle anderen Sprachen holt derselbe Mechanismus lazy nach,
+    // sobald tatsächlich ein Gast auf sie wechselt.
     // $Changed wird per Referenz auf true gesetzt, wenn diese Zeile tatsächlich
     // reconciled wurde - steuert in ReconcileRowSourceLanguageChanges, ob die Property
     // überhaupt neu gespeichert werden muss.
-    private function ReconcileRowFields(array $Row, array $FieldGroups, array $TargetLanguages, bool &$Changed): array
+    private function ReconcileRowFields(array $Row, bool &$Changed): array
     {
         $newSourceLanguage = $this->GetRowSourceLanguage($Row, '');
-        $translatedAgainst = (string) ($Row[self::fieldTranslatedAgainstSourceLanguage] ?? '');
-        if ($newSourceLanguage === '' || $newSourceLanguage === $translatedAgainst) {
+        $reconciledAgainst = (string) ($Row[self::fieldTranslatedAgainstSourceLanguage] ?? '');
+        if ($newSourceLanguage === '' || $newSourceLanguage === $reconciledAgainst) {
             return $Row;
         }
 
-        $allTranslationsSucceeded = true;
-
-        foreach ($FieldGroups as $group) {
-            $rawText = (string) ($Row[$group['raw']] ?? '');
-            $isHtml = $group['isHtml'] ?? false;
-            $capitalizeFirst = $group['capitalizeFirst'] ?? false;
-
-            foreach ($TargetLanguages as $language) {
-                if ($language === $newSourceLanguage) {
-                    // Quellsprache selbst braucht keine eigene Spalte - ResolveRowValue
-                    // liefert für SelectedLanguage === SourceLanguage ohnehin immer den
-                    // Rohtext, unabhängig vom Spalteninhalt.
-                    $Row[$group['prefix'] . $language] = '';
-                    continue;
-                }
-                if ($rawText === '') {
-                    $Row[$group['prefix'] . $language] = '';
-                    continue;
-                }
-
-                $translated = $this->TranslateBatch([$rawText], $newSourceLanguage, $language, '', $isHtml);
-                $value = $translated[0] ?? '';
-                if ($value === '') {
-                    // Übersetzung fehlgeschlagen (Anbieter-Kette down/pausiert, siehe
-                    // TranslateChunk) - die bereits vorhandene Spalte NICHT blind mit
-                    // dem leeren Ergebnis überschreiben, sonst geht eine funktionierende,
-                    // wenn auch jetzt technisch gegen die alte Quellsprache berechnete
-                    // Übersetzung dauerhaft verloren, ohne jede Chance auf einen
-                    // erneuten Versuch. Live beobachtet (2026-08-19): eine komplett
-                    // leere Zielsprachen-Spalte in "Objektnamen"/"Eigene Texte" nach
-                    // einem Reconcile, obwohl vorher eine funktionierende Übersetzung
-                    // vorhanden war - derselbe Fehlerklasse wie beim
-                    // HTML-Text-Knoten-Fallback (siehe TranslateBatchUncached) und bei
-                    // ApplyTrackedVariableUpdate.
-                    $allTranslationsSucceeded = false;
-                    continue;
-                }
-                if (!$isHtml) {
-                    $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5);
-                }
-                if ($capitalizeFirst) {
-                    $value = $this->CapitalizeFirstLetter($value);
-                }
-                $Row[$group['prefix'] . $language] = $value;
-            }
-        }
-
-        // Buchführung nur bei VOLLSTÄNDIGEM Erfolg auf die neue Quellsprache
-        // umstellen (siehe ApplyTrackedVariableUpdate für dasselbe Prinzip) - schlug
-        // mindestens eine Zielsprache fehl, bleibt sie bewusst unverändert, damit
-        // der nächste Abgleich die liegen gebliebene(n) Spalte(n) noch nachholen
-        // kann, statt fälschlich "bereits vollständig übersetzt" zu vermerken. Die
-        // Zeile gilt trotzdem als geändert (siehe $Changed) - bereits erfolgreich
-        // übersetzte Spalten sollen gespeichert werden, auch wenn andere noch
-        // ausstehen.
-        if ($allTranslationsSucceeded) {
-            $Row[self::fieldTranslatedAgainstSourceLanguage] = $newSourceLanguage;
-        }
+        $this->MarkRowSourceChanged($Row);
+        $Row[self::fieldTranslatedAgainstSourceLanguage] = $newSourceLanguage;
         $Changed = true;
 
         return $Row;
@@ -2511,42 +2563,28 @@ private const LANGUAGE_FLAGS = [
         return md5(implode('|', $parts));
     }
 
-    // Läuft über alle fünf Zeilen-haltenden Properties und stößt für jede Zeile mit
-    // geänderter Quellsprache (siehe ReconcileRowFields) eine sofortige Neuübersetzung
-    // an - Gegenstück zum "Quellsprache änderbar"-Wunsch: ändert der Admin die
+    // Läuft über alle fünf Zeilen-haltenden Properties und markiert für jede Zeile mit
+    // geänderter Quellsprache (siehe ReconcileRowFields) alle Zielsprachen-Zellen als
+    // veraltet - Gegenstück zum "Quellsprache änderbar"-Wunsch: ändert der Admin die
     // Quellsprache EINER Zeile im Formular und klickt "Übernehmen", sind die
     // bisherigen Übersetzungsspalten dieser Zeile ab sofort gegen die FALSCHE Sprache
-    // berechnet - ohne dieses Reconcile blieben sie bis zum nächsten Rescan
-    // fälschlich stehen. Liefert true, wenn irgendetwas geändert wurde - der Aufrufer
-    // (ApplyChanges) nutzt das, um direkt im Anschluss einmalig ApplyLanguage()
-    // aufzurufen (schreibt die evtl. betroffene, gerade aktive Gast-Sprache sofort
-    // live, exakt wie ApplyTrackedVariableUpdate() das für externe Variablenschreib-
-    // vorgänge tut - kein Warten auf den nächsten Sprachwechsel/Rescan nötig).
+    // berechnet - ohne diesen Abgleich blieben sie unerkannt fälschlich stehen.
+    // Liefert true, wenn irgendetwas geändert wurde - der Aufrufer (ApplyChanges)
+    // nutzt das, um direkt im Anschluss einmalig ApplyLanguage() aufzurufen, das über
+    // EnsureLanguageTranslationsCurrent() die aktuell aktive Gast-Sprache sofort neu
+    // übersetzt (kein Warten auf den nächsten Sprachwechsel/Rescan nötig) - siehe
+    // Kommentar an ReconcileRowFields für die Aufteilung der Zuständigkeiten.
     private function ReconcileRowSourceLanguageChanges(): bool
     {
-        $targetLanguages = $this->GetSelectedTargetLanguages();
         $anyChanged = false;
 
-        $propertiesAndFieldGroups = [
-            self::propertyObjectNames => [
-                ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],
-            ],
-            self::propertyObjectTexts => [
-                ['raw' => self::fieldOriginalImportName, 'prefix' => self::fieldNamePrefix, 'capitalizeFirst' => true],
-                ['raw' => self::langOriginalImportText, 'prefix' => self::fieldTextPrefix, 'capitalizeFirst' => false, 'isHtml' => true],
-            ],
-            self::propertyEnumerationOptions => [
-                ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => false],
-            ],
-            self::propertyObjectAutomations => [
-                ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],
-            ],
-            self::propertyObjectGreeting => [
-                ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],
-            ],
-        ];
-
-        foreach ($propertiesAndFieldGroups as $property => $fieldGroups) {
+        foreach ([
+            self::propertyObjectNames,
+            self::propertyObjectTexts,
+            self::propertyEnumerationOptions,
+            self::propertyObjectAutomations,
+            self::propertyObjectGreeting,
+        ] as $property) {
             $rows = $this->DecodeRows($property);
             if ($rows === []) {
                 continue;
@@ -2554,7 +2592,7 @@ private const LANGUAGE_FLAGS = [
 
             $propertyChanged = false;
             foreach ($rows as $index => $row) {
-                $rows[$index] = $this->ReconcileRowFields($row, $fieldGroups, $targetLanguages, $propertyChanged);
+                $rows[$index] = $this->ReconcileRowFields($row, $propertyChanged);
             }
 
             if ($propertyChanged) {
@@ -2707,7 +2745,14 @@ private const LANGUAGE_FLAGS = [
         $this->SendDebug('IPSSL_Debug', 'ScanRootTree: mergedGreeting=' . json_encode($objectGreeting), 0);
 
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
-        $targetLanguages = $this->GetSelectedTargetLanguages();
+        $currentLanguage = $this->ReadPropertyString(self::propertyCurrentLanguage);
+        // Build 70: Rescan übersetzt sofort nur noch in die aktuell aktive Gast-Sprache -
+        // alle anderen konfigurierten Zielsprachen werden bewusst NICHT mehr hier vorab
+        // befüllt, sondern erst bei Bedarf beim nächsten Wechsel auf genau diese Sprache
+        // nachgeholt (siehe EnsureLanguageTranslationsCurrent/ApplyLanguage). Reduziert
+        // die pro Rescan verbrauchten API-Anfragen um den Faktor "Anzahl Zielsprachen".
+        // Die Pseudo-Sprache ORIGINAL_IMPORT braucht naturgemäß keine Übersetzung.
+        $targetLanguages = $currentLanguage !== self::langOriginalImport ? [$currentLanguage] : [];
 
         $objectNames = $this->FillMissingTranslations($objectNames, [
             ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],
@@ -3603,6 +3648,14 @@ private const LANGUAGE_FLAGS = [
         // Quellsprache an die Übersetzungs-API geschickt. null (Standard) bedeutet
         // "alle Zeilen" - deckt Aufrufer außerhalb von FillMissingTranslations ab, die
         // (noch) keine Gruppierung kennen.
+        //
+        // "pending" heißt seit Build 70 nicht mehr nur "Zelle leer", sondern auch
+        // "Zelle veraltet" (siehe IsRowLanguageTranslationCurrent) - fängt Zeilen ab,
+        // deren Rohtext/Quellsprache sich zwischenzeitlich geändert hat (VM_UPDATE-
+        // Live-Schreibvorgang, siehe ApplyTrackedVariableUpdate, oder ein
+        // Quellsprachen-Wechsel, siehe ReconcileRowFields), während diese eine
+        // konkrete Zielsprache gerade NICHT die aktiv angezeigte war und deshalb dort
+        // absichtlich nicht sofort mit-aktualisiert wurde.
         $pending = [];
         foreach (($RowIndices ?? array_keys($Rows)) as $index) {
             if (!isset($Rows[$index])) {
@@ -3610,7 +3663,7 @@ private const LANGUAGE_FLAGS = [
             }
             $row = $Rows[$index];
             $fromText = $row[$FromField] ?? '';
-            if ($fromText !== '' && ($row[$ToField] ?? '') === '') {
+            if ($fromText !== '' && !$this->IsRowLanguageTranslationCurrent($row, $ToField, $TargetLanguageCode)) {
                 $pending[$index] = $fromText;
             }
         }
@@ -3644,7 +3697,10 @@ private const LANGUAGE_FLAGS = [
             if ($CapitalizeFirst && $value !== '') {
                 $value = $this->CapitalizeFirstLetter($value);
             }
-            $Rows[$index][$ToField] = $value;
+            if ($value !== '') {
+                $Rows[$index][$ToField] = $value;
+                $this->MarkRowLanguageTranslated($Rows[$index], $TargetLanguageCode);
+            }
             $i++;
         }
 
@@ -4389,6 +4445,88 @@ private const LANGUAGE_FLAGS = [
         return $overrides;
     }
 
+    // Build 70: Text-Fragmente ganz OHNE Buchstaben (reine Zahlen, Prozent-/Grad-Zeichen,
+    // Uhrzeiten, Satzzeichen, ...) sind in JEDER Sprache identisch - "12", "%", "78"
+    // bleiben "12", "%", "78", egal ob Deutsch oder Englisch. Ein Fragment MIT
+    // mindestens einem Buchstaben (auch nur einem, z.B. die Einheit "h" in "21 km/h")
+    // geht dagegen weiterhin ganz normal durch die Übersetzungs-API - eine verlässliche,
+    // wenn auch konservative Abgrenzung: lieber ein einzelnes, folgenlos identisch
+    // übersetztes und danach für immer gecachtes Ein-Buchstaben-Fragment zu viel
+    // schicken, als ein echtes Wort fälschlich unübersetzt zu lassen. \p{L} erkennt
+    // Buchstaben JEDER Schrift, nicht nur ASCII. Live beobachtet (2026-08-19): bei
+    // feingranularer HTML-Text-Knoten-Zerlegung (siehe SplitHtmlIntoTextNodes) besteht
+    // ein großer Teil der Knoten eines Live-Widgets (Uhrzeiten, Prozent-/Gradwerte)
+    // ausschließlich aus solchem Inhalt - jeder davon ging bisher als eigener
+    // API-Aufruf durch die komplette Übersetzungs-Kette.
+    private function TextNeedsTranslation(string $Text): bool
+    {
+        return preg_match('/\p{L}/u', $Text) === 1;
+    }
+
+    // Reformatiert eine reine Zahl (optionales Vorzeichen, Tausendertrennzeichen,
+    // Dezimalstelle, plus ein evtl. nicht-alphabetischer Suffix wie "%") gemäß der
+    // landesüblichen Schreibweise der Zielsprache - KOMPLETT ohne Übersetzungs-API-
+    // Aufruf, PHPs eingebaute Intl-Erweiterung berechnet das rein lokal (z.B. deutsches
+    // "1.234,56" -> englisches "1,234.56"). Wird ausschließlich für Fragmente
+    // aufgerufen, die laut TextNeedsTranslation ohnehin KEINEN Buchstaben enthalten
+    // (siehe ResolveNonTranslatableText) - ein evtl. Suffix kann also nur aus
+    // ziffernfremden Symbolen bestehen, nie aus einer Einheit MIT Buchstaben (die läuft
+    // stattdessen ganz normal durch die Übersetzungs-API). Liefert null, wenn die
+    // Intl-Erweiterung auf dieser Symcon-Installation fehlt (bewusst kein Fataler
+    // Fehler, siehe dieselbe Vorsicht bei ext-dom in SplitHtmlIntoTextNodes), das
+    // Fragment keine eindeutig erkennbare einzelne Zahl enthält, oder das Parsen/
+    // Formatieren scheitert - der Aufrufer verwendet den Text dann unverändert.
+    private function LocalizeNumericFragment(string $Text, string $SourceLanguage, string $TargetLanguage): ?string
+    {
+        if (!class_exists('NumberFormatter')) {
+            return null;
+        }
+
+        if (!preg_match('/^(\s*)([+\-]?[0-9][0-9.,\x{00A0}\x{202F}]*)(.*)$/u', $Text, $matches)) {
+            return null;
+        }
+        [, $leading, $numberPart, $trailing] = $matches;
+
+        $sourceFormatter = new NumberFormatter($SourceLanguage, NumberFormatter::DECIMAL);
+        $decimalSeparator = $sourceFormatter->getSymbol(NumberFormatter::DECIMAL_SEPARATOR_SYMBOL);
+        $groupingSeparator = $sourceFormatter->getSymbol(NumberFormatter::GROUPING_SEPARATOR_SYMBOL);
+
+        $lastDecimalPos = $decimalSeparator !== '' ? strrpos($numberPart, $decimalSeparator) : false;
+        $integerPart = $lastDecimalPos !== false ? substr($numberPart, 0, $lastDecimalPos) : $numberPart;
+        $fractionDigits = 0;
+        if ($lastDecimalPos !== false) {
+            $fractionDigits = strlen(preg_replace('/[^0-9]/u', '', substr($numberPart, $lastDecimalPos + strlen($decimalSeparator))));
+        }
+        // Nur wenn das Original selbst schon ein Tausendertrennzeichen trug, soll auch
+        // das Ergebnis eines bekommen - sonst würde aus einer reinen ID-/Jahreszahl wie
+        // "1234" plötzlich "1,234" werden, obwohl im Original keine Gruppierung vorlag
+        // (ICU fügt beim Formatieren standardmäßig IMMER eine Gruppierung ab 4 Ziffern
+        // ein, unabhängig davon, ob die Eingabe eine hatte).
+        $hadGrouping = $groupingSeparator !== '' && str_contains($integerPart, $groupingSeparator);
+
+        $parsed = $sourceFormatter->parse($numberPart);
+        if ($parsed === false) {
+            return null;
+        }
+
+        $targetFormatter = new NumberFormatter($TargetLanguage, NumberFormatter::DECIMAL);
+        $targetFormatter->setAttribute(NumberFormatter::MIN_FRACTION_DIGITS, $fractionDigits);
+        $targetFormatter->setAttribute(NumberFormatter::MAX_FRACTION_DIGITS, $fractionDigits);
+        $targetFormatter->setAttribute(NumberFormatter::GROUPING_USED, $hadGrouping ? 1 : 0);
+        $formatted = $targetFormatter->format($parsed);
+
+        return $formatted === false ? null : $leading . $formatted . $trailing;
+    }
+
+    // Gemeinsamer Einstiegspunkt für alle Stellen, die ein Fragment laut
+    // TextNeedsTranslation NICHT an die Übersetzungs-API schicken: reine Zahlen werden
+    // über LocalizeNumericFragment lokal landesüblich umformatiert, alles andere
+    // (Satzzeichen, Symbole ohne erkennbare Zahl) unverändert übernommen.
+    private function ResolveNonTranslatableText(string $Text, string $SourceLanguage, string $TargetLanguage): string
+    {
+        return $this->LocalizeNumericFragment($Text, $SourceLanguage, $TargetLanguage) ?? $Text;
+    }
+
     private function TranslateBatchUncached(array $Texts, string $Source, string $Target, string $DebugContext = '', bool $IsHtml = false): array
     {
         if ($Texts === []) {
@@ -4447,14 +4585,24 @@ private const LANGUAGE_FLAGS = [
                     continue;
                 }
                 $split = $this->SplitHtmlIntoTextNodes($segment['text']);
+                // Knotenindex => bereits feststehender Wert - diese Knoten werden unten
+                // NICHT an die API geschickt, sondern direkt eingesetzt. Zwei Quellen:
+                // erkannte Wochentags-Abkürzungen (siehe DetectWeekdayAbbreviationOverrides)
+                // UND, seit Build 70, jeder Knoten ganz ohne Buchstaben (siehe
+                // TextNeedsTranslation/ResolveNonTranslatableText) - reine Zahlen/Symbole,
+                // die in einem feingranular zerlegten HTML-Widget den Großteil der Knoten
+                // ausmachen können.
+                $overrides = $this->DetectWeekdayAbbreviationOverrides($split['nodes'], $Source, $Target);
+                foreach ($split['nodes'] as $nodeIndex => $nodeText) {
+                    if (!isset($overrides[$nodeIndex]) && !$this->TextNeedsTranslation($nodeText)) {
+                        $overrides[$nodeIndex] = $this->ResolveNonTranslatableText($nodeText, $Source, $Target);
+                    }
+                }
                 $tokenizedSegments[] = [
                     'protected'  => false,
                     'nodes'      => $split['nodes'],
                     'reassemble' => $split['reassemble'],
-                    // Knotenindex => bereits feststehender Wert (siehe
-                    // DetectWeekdayAbbreviationOverrides) - diese Knoten werden
-                    // unten NICHT an die API geschickt, sondern direkt eingesetzt.
-                    'overrides'  => $this->DetectWeekdayAbbreviationOverrides($split['nodes'], $Source, $Target),
+                    'overrides'  => $overrides,
                 ];
             }
             $segmentsPerText[] = $tokenizedSegments;
@@ -4474,7 +4622,13 @@ private const LANGUAGE_FLAGS = [
                         $translatable[] = $node;
                     }
                 } else {
-                    $translatable[] = $segment['text'];
+                    // Build 70: ein nicht-HTML-Segment ganz ohne Buchstaben (siehe
+                    // TextNeedsTranslation) geht gar nicht erst an die Übersetzungs-API -
+                    // wird unten in der Rekonstruktion stattdessen direkt über
+                    // ResolveNonTranslatableText aufgelöst.
+                    if ($this->TextNeedsTranslation($segment['text'])) {
+                        $translatable[] = $segment['text'];
+                    }
                 }
             }
         }
@@ -4525,13 +4679,18 @@ private const LANGUAGE_FLAGS = [
                     }
 
                     $rebuilt .= ($segment['reassemble'])($translatedNodes);
-                } else {
+                } elseif ($this->TextNeedsTranslation($segment['text'])) {
                     // Gleicher Fallback wie oben, nur für nicht-HTML-Segmente (z.B.
                     // Objektnamen/Enum-Beschriftungen) - ein einzelnes Segment ohne
                     // Knoten-Zerlegung.
                     $apiResult = $translatedFlat[$cursor] ?? '';
                     $rebuilt .= $apiResult !== '' ? $apiResult : $segment['text'];
                     $cursor++;
+                } else {
+                    // Wurde oben beim Aufbau von $translatable bewusst übersprungen
+                    // (kein Buchstabe im Segment) - kein API-Ergebnis zu konsumieren,
+                    // $cursor bleibt unverändert.
+                    $rebuilt .= $this->ResolveNonTranslatableText($segment['text'], $Source, $Target);
                 }
             }
             $result[] = $rebuilt;
