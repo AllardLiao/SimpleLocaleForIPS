@@ -359,6 +359,24 @@ trait SimpleLocaleConstants
     private const fieldRowSourceLanguage = 'Quellsprache';
     private const fieldTranslatedAgainstSourceLanguage = 'UebersetztGegen';
 
+    // NICHT im Formular sichtbar - reines internes Bookkeeping fuer die
+    // aktiv-Sprache-only-Uebersetzung + Nachhol-beim-Sprachwechsel-Mechanik (Build 70,
+    // siehe IsRowLanguageTranslationCurrent): fieldSourceChangedAt ist ein Unix-Timestamp,
+    // der IMMER dann neu gesetzt wird, wenn sich der Rohtext einer Zeile inhaltlich
+    // aendert (VM_UPDATE-Live-Schreibvorgang) oder ihre fieldRowSourceLanguage
+    // umgestellt wird (macht alle bisherigen Zielsprachen-Spalten ungueltig, da sie
+    // gegen die FALSCHE Ausgangssprache berechnet wurden). fieldTranslatedAtByLanguage
+    // ist eine verschachtelte Map (Sprachcode => Unix-Timestamp), die je Sprache
+    // festhaelt, WANN diese Zeile zuletzt tatsaechlich (neu) uebersetzt wurde - eine
+    // Sprache gilt als aktuell, wenn ihr Zeitstempel >= fieldSourceChangedAt ist. Beide
+    // Felder fehlen bei alten, vor Build 70 gespeicherten Zeilen komplett (bzw. sind 0) -
+    // das wird bewusst NICHT als "muss neu uebersetzt werden" gewertet (siehe
+    // IsRowLanguageTranslationCurrent), sonst wuerde ein Modul-Update auf einer
+    // bestehenden Installation eine Massen-Neuuebersetzung des kompletten Bestands
+    // auslösen, obwohl inhaltlich nichts geaendert wurde.
+    private const fieldSourceChangedAt = 'QuelleGeaendertAm';
+    private const fieldTranslatedAtByLanguage = 'UebersetztAm';
+
     // Fingerprint (md5 ueber alle fieldRowSourceLanguage-Werte aller 5 Zeilen-Properties,
     // siehe ComputeRowSourceLanguageFingerprint) - guenstige Kurzschluss-Pruefung VOR
     // ReconcileRowSourceLanguageChanges: die teure Zeilen-fuer-Zeilen-Neuuebersetzung
