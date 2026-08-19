@@ -681,6 +681,27 @@ Beschreibung des Moduls.
   jedem entfernten/veränderten Objekt, siehe Abschnitt "Bekannte
   Einschränkungen") - können nach Prüfung der neuen, zusammengeführten
   Zeile manuell gelöscht werden.
+
+  **Build 76 ergänzt "Aufräumen": verwaiste Zeilen künftig per Klick statt
+  einzeln von Hand entfernbar.** Nutzer-Wunsch nach einem Feature-Vergleich
+  mit Symcons eigener, konkurrierender Lösung - die hat eine entsprechende
+  Funktion, Simple Locale bislang nicht. Bereits mit Build 51 (Root-Baum-
+  Merge) bewusst als Designentscheidung eingeführt: Rescan/Auto-Rescan
+  lassen Zeilen, deren Objekt inzwischen gelöscht oder aus der
+  Visualisierung entfernt wurde, absichtlich unangetastet stehen (siehe
+  `MergeRows`/`MergeEnumerationOptions`/`MergeAutomationRows`) - ein
+  Sicherheitsnetz gegen eine versehentlich falsche/unvollständige Root-
+  Kategorie, das schon mehrfach in dieser Historie vor Datenverlust
+  geschützt hat (u. a. Build 75s eigene Migrationsnotiz direkt darüber).
+  Der neue Button "Übersetzungen gelöschter Elemente in der Visualisierung
+  entfernen" (siehe [Abschnitt 5](#5-einrichten-der-instanzen-in-symcon),
+  Absatz "Aufräumen: verwaiste Zeilen endgültig entfernen") macht diese
+  bislang nur manuelle, zeilenweise Aufräumarbeit zu einer bewussten,
+  expliziten Ein-Klick-Aktion - mit ausdrücklicher Warnung im Formular,
+  dass (anders als ein normaler Rescan) dabei tatsächlich unwiederbringlich
+  gelöscht wird, falls die Root-Kategorie gerade falsch/unvollständig
+  gewählt ist. "Begrüßung" bleibt bewusst ausgenommen (keine gescannte
+  Liste, sondern eine einzelne direkt konfigurierte Einstellung).
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
@@ -857,6 +878,7 @@ Info-Symbol in der Kachel anzeigen | Blendet das ⓘ-Symbol (Erklärung der Eins
 Eigene Sprachauswahl-Kachel verwenden | Unterdrückt die eingebaute Dropdown-Kachel zugunsten einer selbstgebauten (siehe Abschnitt 7). **Pro-Feature** (`custom_tile`, siehe [Abschnitt 8](#8-lizenz-und-testversion)) - ohne dieses Feature bleibt das Feld ausgegraut und die eingebaute Kachel aktiv.
 Übersetzungsanbieter (Panel)    | Siehe eigenen Abschnitt unten ("Übersetzungsanbieter: Google/DeepL/kostenfrei") - funktioniert ab Werk ohne jede Eingabe.
 Automatischer Rescan (Minuten)  | Intervall für automatisches Neu-Einlesen der Visualisierung, 0 = nur manuell über den Button "Visualisierung neu einlesen" (siehe unten). **Pro-Feature** (`auto_rescan`, siehe [Abschnitt 8](#8-lizenz-und-testversion)) - ohne dieses Feature bleibt das Feld ausgegraut und der Timer aus, der manuelle Rescan-Button bleibt aber in jeder Edition nutzbar.
+Übersetzungen gelöschter Elemente in der Visualisierung entfernen | "Aufräumen" (Build 76, siehe eigenen Absatz unten "Aufräumen: verwaiste Zeilen endgültig entfernen") - entfernt dauerhaft Zeilen, die keinem Objekt in der aktuellen Visualisierung mehr zugeordnet werden können. In jeder Edition nutzbar.
 
 **Quellsprache: pro Zeile individuell änderbar**
 
@@ -914,6 +936,38 @@ Objektnamen        | Nur per Rescan (manuell/Timer) erkannt. | Ändert sich ein 
 Eigene Texte (Werte) | Nur per Rescan erkannt. | Automatisch (siehe Abschnitt 1, `VM_UPDATE`) - **kein** Rescan nötig, solange die Scan-Sprache stimmt.
 Begrüßung           | Nur per Rescan erkannt (auch ein Moduswechsel zwischen "Automatic"/"Static"/"Variable"). | Modus "Variable": automatisch, genau wie Eigene Texte (Werte). Modi "Automatic"/"Static" (freier Text im Feld "Name"): nur per Rescan.
 Beschriftungen      | Nur per Rescan erkannt. | **Kein** automatisches Erkennen von Änderungen am zugrunde liegenden Profil/Template - Symcon liefert dafür keine Update-Benachrichtigung. Ändert ein anderes Modul/der Admin die Beschriftungen eines Profils, das eine bereits geforkte Variable nutzt, wird das erst nach manuellem Löschen der betroffenen Original-Import-Zelle + Rescan übernommen.
+
+**Aufräumen: verwaiste Zeilen endgültig entfernen (Build 76)**
+
+Ein Rescan (siehe Tabelle oben) erkennt zwar neue/verschobene Objekte, entfernt
+aber **nie** von sich aus eine bereits vorhandene Zeile, auch wenn das
+zugehörige Objekt inzwischen gelöscht oder aus der Visualisierung entfernt
+wurde - das ist Absicht (siehe `MergeRows`/`MergeEnumerationOptions`/
+`MergeAutomationRows`): eine versehentlich falsche oder unvollständige
+"Kachel-Visualisierung"-Auswahl soll niemals bereits geleistete
+Übersetzungsarbeit stillschweigend vernichten. Solche verwaisten Zeilen
+sammeln sich über die Zeit an und mussten bisher manuell einzeln über das
+Papierkorb-Symbol gelöscht werden.
+
+Der Button **"Übersetzungen gelöschter Elemente in der Visualisierung
+entfernen"** (unterhalb von "Visualisierung neu einlesen") macht genau das in
+einem Schritt: er führt intern denselben frischen Scan wie ein Rescan durch
+und löscht anschließend **alle** Zeilen in "Objektnamen", "Eigene Texte",
+"Beschriftungen" und "Automations", die dabei nicht mehr gefunden wurden -
+unwiederbringlich (regenerieren sich automatisch neu, falls das Objekt später
+wieder auftaucht). Ein Popup nach dem Klick meldet, wie viele Zeilen entfernt
+wurden. **"Begrüßung" ist bewusst ausgenommen** - anders als die anderen vier
+Listen ist das keine aus dem Baum gescannte, wachsende Liste, sondern eine
+einzelne, direkt konfigurierte Einstellung (siehe Abschnitt 1).
+
+**Wichtig:** genau wie bei einem Rescan gilt auch hier - die "Kachel-
+Visualisierung"-Auswahl oben muss wirklich die vollständige, korrekte
+Visualisierung referenzieren, bevor "Aufräumen" geklickt wird. Anders als ein
+normaler Rescan (der bei einer falschen Auswahl höchstens *nichts Neues*
+findet) LÖSCHT "Aufräumen" bei einer falschen/unvollständigen Auswahl aktiv
+noch gültige Übersetzungen. Im Zweifel vorher einmal die betroffenen Listen
+durchsehen (die "Pfad"-Spalte hilft dabei) oder ein Backup der Instanz-
+Konfiguration ziehen.
 
 > **Wichtig beim Weiterentwickeln der Visualisierung: immer mit "Aktuell aktive
 > Sprache" = Scan-Sprache (bzw. "Original") arbeiten, solange neue Objekte
