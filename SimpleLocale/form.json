@@ -42,8 +42,7 @@
                     "items": [
                         {"type": "Label", "caption": "Seit Inbetriebnahme am"},
                         {"type": "Label", "name": "TranslationStatsSinceDateLabel", "caption": ""},
-                        {"type": "Label", "caption": "Tag(e)"},
-                        {"type": "Label", "caption": "."}
+                        {"type": "Label", "caption": "Tag(e)."}
                     ]
                 },
                 {
@@ -51,7 +50,7 @@
                     "name": "TranslationStatsRow2",
                     "visible": false,
                     "items": [
-                        {"type": "Label", "caption": "Stündlich"},
+                        {"type": "Label", "caption": "Stündlich:"},
                         {"type": "Label", "name": "TranslationStatsRequestsPerHourLabel", "caption": ""},
                         {"type": "Label", "caption": "Anfrage(n),"},
                         {"type": "Label", "name": "TranslationStatsCharsPerHourValueLabel", "caption": ""},
@@ -63,7 +62,7 @@
                     "name": "TranslationStatsRow3",
                     "visible": false,
                     "items": [
-                        {"type": "Label", "caption": "Insgesamt"},
+                        {"type": "Label", "caption": "Insgesamt:"},
                         {"type": "Label", "name": "TranslationStatsTotalRequestsLabel", "caption": ""},
                         {"type": "Label", "caption": "Anfrage(n),"},
                         {"type": "Label", "name": "TranslationStatsTotalCharsLabel", "caption": ""},
@@ -75,7 +74,7 @@
                     "name": "TranslationStatsRow4",
                     "visible": false,
                     "items": [
-                        {"type": "Label", "caption": "Durch den Cache eingespart"},
+                        {"type": "Label", "caption": "Durch den Cache eingespart:"},
                         {"type": "Label", "name": "TranslationStatsCacheSavedRequestsLabel", "caption": ""},
                         {"type": "Label", "caption": "Anfrage(n),"},
                         {"type": "Label", "name": "TranslationStatsCacheSavedCharsLabel", "caption": ""},
