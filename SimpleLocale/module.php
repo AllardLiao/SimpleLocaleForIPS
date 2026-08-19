@@ -41,9 +41,13 @@ class SimpleLocale extends IPSModuleStrict
         'Die gewählte Sprache gilt für alle Besucher dieser Seite gleichzeitig - nicht individuell für jede Person.',
     ];
 
-    // Überschrift für den Info-Alert - alert() kennt keinen eigenen Titel-Parameter,
-    // daher als erste Zeile des Texts selbst (siehe BuildInfoAlertJs).
-    private const INFO_HEADING_TEXT = 'Hinweise';
+    // Build 77: die Ueberschrift des Info-Alerts ist keine uebersetzte Zeichenkette
+    // mehr, sondern direkt aus App-Name + Lizenz-Edition zusammengesetzt (siehe
+    // BuildInfoAlertJs) - eine Marken-/Editionsbezeichnung wie "Simple Locale - Pro
+    // Edition" wird bewusst NICHT je Sprache uebersetzt, analog dazu, dass
+    // "Simple Locale" selbst auch in module.json fuer jede Sprache identisch
+    // registriert ist und $licenseInfo['edition'] im Formular bereits als roher,
+    // nicht zu uebersetzender Wert behandelt wird (siehe LicenseInfoEditionLabel).
 
     // Kleiner, roter Hinweis unter dem Dropdown während der Testphase (siehe
     // BuildTrialNoticeHtml) - wie die Info-Texte oben live in die aktive
@@ -53,14 +57,32 @@ class SimpleLocale extends IPSModuleStrict
     // Kleiner, roter Hinweis unter dem Dropdown, solange ALLE konfigurierten
     // Übersetzungsanbieter gleichzeitig ein Rate-Limit/Tageskontingent melden (siehe
     // BuildPausedNoticeHtml/GetGlobalPauseUntil) - wie oben live in die aktive
-    // Gast-Sprache übersetzt.
+    // Gast-Sprache übersetzt. Build 77: dieselben zwei Texte werden zusaetzlich im
+    // Info-Popup wiederverwendet (siehe BuildGuestPauseInfoText), ergaenzt um die
+    // Bestaetigung, dass bereits vorhandene Uebersetzungen weiterhin nutzbar bleiben.
     private const PAUSED_NOTICE_PREFIX_TEXT = 'Übersetzung pausiert bis';
+    private const PAUSED_POPUP_REASSURANCE_TEXT = 'Bereits vorhandene Übersetzungen bleiben nutzbar.';
 
     // Guest-facing Label-Texte fuer die Uebersetzungs-Statistik in der Kachel (siehe
     // BuildTranslationStatsNoticeHtml) - live in die aktive Gast-Sprache uebersetzt,
     // wie TRIAL_NOTICE_PREFIX_TEXT/PAUSED_NOTICE_PREFIX_TEXT.
     private const STATS_NOTICE_REQUESTS_LABEL_TEXT = 'Übersetzungen/h';
     private const STATS_NOTICE_CHARACTERS_LABEL_TEXT = 'Zeichen/h';
+
+    // Build 77: dieselbe Statistik wie im Konfigurationsformular (siehe
+    // FormatTranslationStatsValue/form.json "TranslationStatsRow1".."Row4"), jetzt
+    // zusaetzlich als eigener Absatz im Gast-Info-Popup (siehe
+    // BuildGuestStatsInfoText) - dieselben deutschen Wortlaute wie dort, aber ueber
+    // TranslateBatch() live in die Gast-Sprache uebersetzt statt ueber die
+    // Konsolen-exakt-Match-Uebersetzung (die nur fuer die Admin-Konsole gilt, nicht
+    // fuer Gast-Sprachen).
+    private const STATS_POPUP_SINCE_PREFIX_TEXT = 'Seit Inbetriebnahme am';
+    private const STATS_POPUP_DAYS_SUFFIX_TEXT = 'Tag(e).';
+    private const STATS_POPUP_HOURLY_LABEL_TEXT = 'Stündlich:';
+    private const STATS_POPUP_REQUESTS_UNIT_TEXT = 'Anfrage(n),';
+    private const STATS_POPUP_CHARACTERS_UNIT_TEXT = 'Zeichen.';
+    private const STATS_POPUP_TOTAL_LABEL_TEXT = 'Insgesamt:';
+    private const STATS_POPUP_CACHE_SAVED_LABEL_TEXT = 'Durch den Cache eingespart:';
 
     // Kurzes "Burst"-Rate-Limit (z.B. Googles "User Rate Limit Exceeded" - zu viele
     // Anfragen pro Sekunde/100 Sekunden, kein Tageskontingent) - erholt sich
@@ -6084,6 +6106,25 @@ HTML;
         $this->UpdateVisualizationValue($payload);
     }
 
+    // Build 77: liest das kleine, eigens fürs Inline-Einbetten verkleinerte
+    // Simple-Locale-Symbol (libs/assets/module_icon_48.png, 48x48px - die
+    // mitgelieferten 1024px/256px-Varianten wären als Base64 pro Kachel-Render
+    // unnötig groß) und bettet es als Base64-Data-URI direkt ein - kein
+    // öffentlicher Pfad/Webhook nötig, funktioniert dadurch in jedem WebFront-
+    // Kontext identisch. Fällt auf die alte 🌐-Glyphe zurück, falls die Datei aus
+    // irgendeinem Grund (z.B. bei einer beschädigten Installation) nicht lesbar
+    // ist - nie einfach leer bleiben.
+    private function BuildAppIconImgHtml(): string
+    {
+        $iconData = @file_get_contents(__DIR__ . '/../libs/assets/module_icon_48.png');
+        if ($iconData === false) {
+            return '🌐';
+        }
+
+        return '<img alt="" style="width:20px;height:20px;display:block;"'
+            . ' src="data:image/png;base64,' . base64_encode($iconData) . '">';
+    }
+
     // Schlankes natives <select> statt der Symcon-Standarddarstellung (Buttons
     // untereinander) - ruft beim Ändern dieselbe RequestAction wie die
     // Profil-Variable auf. Kein Text-Label ("Sprache" o.ä.), damit nicht die
@@ -6110,8 +6151,14 @@ HTML;
             $optionsHtml .= "<option value=\"{$value}\"{$selected}>{$label}</option>";
         }
 
+        // Build 77: statt der 🌐-Emoji-Glyphe jetzt das eigentliche Simple-Locale-
+        // Symbol (siehe BuildAppIconImgHtml), Nutzer-Wunsch fürs Wiedererkennen der
+        // Marke direkt in der Gast-Kachel. Property/Attribut-Name (ShowGlobeIcon)
+        // und CSS-Klasse (ipssl-globe, siehe module.html) bleiben bewusst
+        // unverändert - eine Umbenennung würde Admins mit bereits eigenem, an diese
+        // Klasse gebundenem Kachel-HTML (siehe README Abschnitt 7) ohne Not brechen.
         $globeIconHtml = $this->ReadPropertyBoolean(self::propertyShowGlobeIcon)
-            ? '<span class="ipssl-globe" aria-hidden="true">🌐</span>'
+            ? '<span class="ipssl-globe" aria-hidden="true">' . $this->BuildAppIconImgHtml() . '</span>'
             : '';
 
         $infoIconHtml = $this->ReadPropertyBoolean(self::propertyShowInfoIcon)
@@ -6212,18 +6259,94 @@ HTML;
     // zuverlässig verifizieren. Text live in die aktuell aktive Gast-Sprache
     // übersetzt, damit auch dieser Hinweis nicht die Admin-Konsolensprache mit der
     // Gast-Sprache mischt.
+    // Build 77: Ueberschrift jetzt App-Name + Lizenz-Edition (z.B. "Simple Locale -
+    // Pro Edition"), bewusst NICHT uebersetzt (siehe Kommentar bei den entfernten
+    // INFO_HEADING_TEXT-Konstanten oben) - kein "edition"-Wert (Testphase/kein
+    // Lizenzschluessel) liefert schlicht "Simple Locale" ohne Zusatz.
+    private function BuildInfoAlertHeading(): string
+    {
+        $edition = trim((string) ($this->GetLicenseInfo()['edition'] ?? ''));
+
+        return 'Simple Locale' . ($edition !== '' ? ' - ' . $edition . ' Edition' : '');
+    }
+
     private function BuildInfoAlertJs(array $GuestCache): string
     {
-        $heading = $GuestCache['infoHeading'] ?? self::INFO_HEADING_TEXT;
         $texts = $GuestCache['infoTexts'] ?? self::INFO_LIMITATION_TEXTS;
 
         // alert() zeigt reinen Text, kein HTML - Absätze also nur per Leerzeile
         // trennen, keine Tags/Aufzählungszeichen (beides würde wörtlich erscheinen
         // bzw. wirkte unpassend). Die Überschrift ist einfach die erste Zeile,
-        // da alert() keinen eigenen Titel-Parameter kennt.
-        $alertText = $heading . "\n\n" . implode("\n\n", $texts);
+        // da alert() keinen eigenen Titel-Parameter kennt. Build 77: Statistik- und
+        // (falls gerade aktiv) Pause-Info als zusätzliche Absätze - dieselben
+        // Inhalte, die der Admin bereits im Konfigurationsformular sieht, jetzt auch
+        // für den Gast direkt in der Kachel, in dessen eigener aktiver Sprache.
+        $paragraphs = array_merge(
+            [$this->BuildInfoAlertHeading()],
+            $texts,
+            array_filter([
+                $this->BuildGuestStatsInfoText($GuestCache),
+                $this->BuildGuestPauseInfoText($GuestCache),
+            ], fn (string $p): bool => $p !== '')
+        );
+        $alertText = implode("\n\n", $paragraphs);
 
         return htmlspecialchars(json_encode($alertText, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES, 'UTF-8');
+    }
+
+    // Build 77: dieselbe Statistik wie im Konfigurationsformular (siehe
+    // FormatTranslationStatsValue), als eigener mehrzeiliger Absatz im Gast-Info-
+    // Popup - nur sichtbar, wenn der Admin "Übersetzungsstatistik in der Kachel
+    // anzeigen" aktiviert hat (dieselbe Bedingung wie beim kleinen Hinweis unter
+    // dem Dropdown, siehe BuildTranslationStatsNoticeHtml) und seit Inbetriebnahme
+    // bereits irgendetwas übersetzt wurde. Leerer String = kein eigener Absatz.
+    private function BuildGuestStatsInfoText(array $GuestCache): string
+    {
+        if (!$this->ReadPropertyBoolean(self::propertyShowTranslationStats)) {
+            return '';
+        }
+
+        $stats = $this->ComputeTranslationStats();
+        if ($stats['since'] === 0) {
+            return '';
+        }
+
+        $daysSince = max(0, (int) floor((time() - $stats['since']) / 86400));
+        $sincePrefix = $GuestCache['statsSincePrefix'] ?? self::STATS_POPUP_SINCE_PREFIX_TEXT;
+        $daysSuffix = $GuestCache['statsDaysSuffix'] ?? self::STATS_POPUP_DAYS_SUFFIX_TEXT;
+        $hourlyLabel = $GuestCache['statsHourlyLabel'] ?? self::STATS_POPUP_HOURLY_LABEL_TEXT;
+        $requestsUnit = $GuestCache['statsRequestsUnit'] ?? self::STATS_POPUP_REQUESTS_UNIT_TEXT;
+        $charsUnit = $GuestCache['statsCharsUnit'] ?? self::STATS_POPUP_CHARACTERS_UNIT_TEXT;
+        $totalLabel = $GuestCache['statsTotalLabel'] ?? self::STATS_POPUP_TOTAL_LABEL_TEXT;
+        $cacheSavedLabel = $GuestCache['statsCacheSavedLabel'] ?? self::STATS_POPUP_CACHE_SAVED_LABEL_TEXT;
+
+        return $sincePrefix . ' ' . date('d.m.Y', $stats['since']) . ', ' . $daysSince . ' ' . $daysSuffix . "\n"
+            . $hourlyLabel . ' ' . $this->FormatStatsCount($stats['requestsPerHour']) . ' ' . $requestsUnit
+                . ' ' . $this->FormatStatsCount($stats['charsPerHour']) . ' ' . $charsUnit . "\n"
+            . $totalLabel . ' ' . $stats['requestCount'] . ' ' . $requestsUnit
+                . ' ' . $stats['characterCount'] . ' ' . $charsUnit . "\n"
+            . $cacheSavedLabel . ' ' . $stats['cacheSavedRequestCount'] . ' ' . $requestsUnit
+                . ' ' . $stats['cacheSavedCharacterCount'] . ' ' . $charsUnit;
+    }
+
+    // Build 77: Kurzfassung des admin-seitigen Pause-Panels ("Übersetzungsanbieter"),
+    // als eigener Absatz im Gast-Info-Popup, nur solange TATSÄCHLICH gerade
+    // pausiert ist (leerer String sonst = kein eigener Absatz). Bewusst OHNE
+    // Anbieter-Einzelaufschlüsselung (Google/DeepL/MyMemory je mit eigener Uhrzeit,
+    // siehe PopulateProviderPauseStatusElement) - das ist Admin-Diagnosedetail, für
+    // einen Gast zählt nur "bis wann" und "meine bisherige Sprache funktioniert
+    // trotzdem weiter".
+    private function BuildGuestPauseInfoText(array $GuestCache): string
+    {
+        $globalPauseUntil = $this->GetGlobalPauseUntil();
+        if ($globalPauseUntil === null) {
+            return '';
+        }
+
+        $pausedPrefix = $GuestCache['pausedNoticePrefix'] ?? self::PAUSED_NOTICE_PREFIX_TEXT;
+        $reassurance = $GuestCache['pausedReassurance'] ?? self::PAUSED_POPUP_REASSURANCE_TEXT;
+
+        return $pausedPrefix . ' ' . date('d.m. H:i', $globalPauseUntil) . "\n" . $reassurance;
     }
 
     // "Original" liefert seit dem Wegfall der separaten Basissprachspalte exakt
@@ -6301,27 +6424,61 @@ HTML;
             return $cache;
         }
 
+        // Build 77: sind GERADE JETZT alle konfigurierten Anbieter pausiert (siehe
+        // GetGlobalPauseUntil), lohnt sich kein frischer Versuch - identische
+        // Kurzschluss-Pruefung wie in TranslateChunk(). Der bestehende, ggf. veraltete,
+        // aber zuletzt ECHT erfolgreich uebersetzte Cache bleibt dabei unangetastet
+        // stehen, STATT durch einen waehrend der Pause zwangslaeufig fehlschlagenden
+        // Versuch (Rueckfall auf rohes Deutsch fuer JEDEN Text) ueberschrieben und
+        // dann faelschlich fuer bis zu 24h als "frisch" markiert zu werden. Live
+        // gemeldet (2026-08-20): Pausiert-Hinweis und Statistik-Hinweis blieben auch
+        // bei aktiv gewaehlter englischer Gast-Sprache auf Deutsch stehen, weil genau
+        // dieser Fall eintrat - ein Cache-Refresh lief waehrend einer Anbieter-Pause,
+        // der komplette Fehlschlag wurde aber trotzdem als "erledigt" verbucht und
+        // dadurch fuer den Rest des Tages nie erneut versucht.
+        if ($this->GetGlobalPauseUntil() !== null) {
+            return $cache;
+        }
+
         $names = $this->FetchLanguageNames($language) ?? ($cache['names'] ?? []);
 
-        // Info-Überschrift + Info-Hinweistexte + Testphasen-Hinweis-Präfix in einem
-        // gemeinsamen Aufruf übersetzen (statt je einem eigenen) - alles feste, kurze
-        // Texte, die ohnehin nur bei Sprachwechsel/Cache-Ablauf einmal aktualisiert
-        // werden.
-        $ownTexts = array_merge(
-            [self::INFO_HEADING_TEXT],
-            self::INFO_LIMITATION_TEXTS,
-            [
-                self::TRIAL_NOTICE_PREFIX_TEXT,
-                self::PAUSED_NOTICE_PREFIX_TEXT,
-                self::STATS_NOTICE_REQUESTS_LABEL_TEXT,
-                self::STATS_NOTICE_CHARACTERS_LABEL_TEXT,
-            ]
-        );
+        // Info-Hinweistexte + Testphasen-/Pause-Präfixe + Statistik-Beschriftungen in
+        // einem gemeinsamen Aufruf übersetzen (statt je einem eigenen) - alles feste,
+        // kurze Texte, die ohnehin nur bei Sprachwechsel/Cache-Ablauf einmal
+        // aktualisiert werden. Build 77: über parallele Schlüssel-/Text-Listen
+        // zugeordnet (statt fest verdrahteter Index-Arithmetik wie vor diesem Build) -
+        // robust gegen künftig weitere hinzukommende Texte, ohne jeden nachfolgenden
+        // Offset von Hand nachzuführen.
+        $ownTextKeys = [];
+        $ownTexts = [];
+        foreach (self::INFO_LIMITATION_TEXTS as $i => $text) {
+            $ownTextKeys[] = "infoText$i";
+            $ownTexts[] = $text;
+        }
+        foreach ([
+            'trialNoticePrefix'    => self::TRIAL_NOTICE_PREFIX_TEXT,
+            'pausedNoticePrefix'   => self::PAUSED_NOTICE_PREFIX_TEXT,
+            'pausedReassurance'    => self::PAUSED_POPUP_REASSURANCE_TEXT,
+            'statsRequestsLabel'   => self::STATS_NOTICE_REQUESTS_LABEL_TEXT,
+            'statsCharactersLabel' => self::STATS_NOTICE_CHARACTERS_LABEL_TEXT,
+            'statsSincePrefix'     => self::STATS_POPUP_SINCE_PREFIX_TEXT,
+            'statsDaysSuffix'      => self::STATS_POPUP_DAYS_SUFFIX_TEXT,
+            'statsHourlyLabel'     => self::STATS_POPUP_HOURLY_LABEL_TEXT,
+            'statsRequestsUnit'    => self::STATS_POPUP_REQUESTS_UNIT_TEXT,
+            'statsCharsUnit'       => self::STATS_POPUP_CHARACTERS_UNIT_TEXT,
+            'statsTotalLabel'      => self::STATS_POPUP_TOTAL_LABEL_TEXT,
+            'statsCacheSavedLabel' => self::STATS_POPUP_CACHE_SAVED_LABEL_TEXT,
+        ] as $key => $text) {
+            $ownTextKeys[] = $key;
+            $ownTexts[] = $text;
+        }
+
         if ($language === 'de') {
             $translatedOwnTexts = $ownTexts;
         } else {
             $translatedOwnTexts = $this->TranslateBatch($ownTexts, 'de', $language);
         }
+        $translatedByKey = array_combine($ownTextKeys, $translatedOwnTexts);
 
         // "?? $fallback" allein reicht nicht: TranslateBatch() liefert bei einem
         // fehlgeschlagenen/pausierten Anbieter einen LEEREN STRING zurück (kein
@@ -6332,27 +6489,42 @@ HTML;
         // zeigte dadurch nur noch die Uhrzeit ohne den Text davor an.
         $orFallback = fn ($value, string $fallback): string => ($value ?? '') !== '' ? $value : $fallback;
 
-        $infoHeading = $orFallback($translatedOwnTexts[0] ?? null, self::INFO_HEADING_TEXT);
         $infoTexts = [];
         foreach (self::INFO_LIMITATION_TEXTS as $i => $originalText) {
-            $infoTexts[] = $orFallback($translatedOwnTexts[$i + 1] ?? null, $originalText);
+            $infoTexts[] = $orFallback($translatedByKey["infoText$i"] ?? null, $originalText);
         }
-        $baseIndex = count(self::INFO_LIMITATION_TEXTS);
-        $trialNoticePrefix = $orFallback($translatedOwnTexts[$baseIndex + 1] ?? null, self::TRIAL_NOTICE_PREFIX_TEXT);
-        $pausedNoticePrefix = $orFallback($translatedOwnTexts[$baseIndex + 2] ?? null, self::PAUSED_NOTICE_PREFIX_TEXT);
-        $statsRequestsLabel = $orFallback($translatedOwnTexts[$baseIndex + 3] ?? null, self::STATS_NOTICE_REQUESTS_LABEL_TEXT);
-        $statsCharactersLabel = $orFallback($translatedOwnTexts[$baseIndex + 4] ?? null, self::STATS_NOTICE_CHARACTERS_LABEL_TEXT);
+
+        // Build 77: zweite Verteidigungslinie zusaetzlich zur Pause-Kurzschluss-
+        // Pruefung oben - deckt auch einen Fehlschlag ab, der NICHT auf eine globale
+        // Pause zurueckgeht (z.B. ein einzelner, voruebergehender Anbieter-Fehler).
+        // "Erfolg" heisst: WENIGSTENS ein Text wurde tatsaechlich uebersetzt (nicht
+        // komplett leer geblieben) - ein Totalausfall soll NICHT als "fuer den ganzen
+        // Tag erledigt" gelten, sonst bliebe der Gast-Hinweistext bis zu 24h auf
+        // Deutsch eingefroren. Deutsch selbst braucht keine Uebersetzung (zaehlt immer
+        // als Erfolg).
+        $anyOwnTextTranslated = $language === 'de' || array_filter($translatedOwnTexts, fn (string $t): bool => $t !== '') !== [];
 
         $cache = [
             'language'             => $language,
             'names'                => $names,
-            'infoHeading'          => $infoHeading,
             'infoTexts'            => $infoTexts,
-            'trialNoticePrefix'    => $trialNoticePrefix,
-            'pausedNoticePrefix'   => $pausedNoticePrefix,
-            'statsRequestsLabel'   => $statsRequestsLabel,
-            'statsCharactersLabel' => $statsCharactersLabel,
-            'fetchedAt'            => time(),
+            'trialNoticePrefix'    => $orFallback($translatedByKey['trialNoticePrefix'] ?? null, self::TRIAL_NOTICE_PREFIX_TEXT),
+            'pausedNoticePrefix'   => $orFallback($translatedByKey['pausedNoticePrefix'] ?? null, self::PAUSED_NOTICE_PREFIX_TEXT),
+            'pausedReassurance'    => $orFallback($translatedByKey['pausedReassurance'] ?? null, self::PAUSED_POPUP_REASSURANCE_TEXT),
+            'statsRequestsLabel'   => $orFallback($translatedByKey['statsRequestsLabel'] ?? null, self::STATS_NOTICE_REQUESTS_LABEL_TEXT),
+            'statsCharactersLabel' => $orFallback($translatedByKey['statsCharactersLabel'] ?? null, self::STATS_NOTICE_CHARACTERS_LABEL_TEXT),
+            'statsSincePrefix'     => $orFallback($translatedByKey['statsSincePrefix'] ?? null, self::STATS_POPUP_SINCE_PREFIX_TEXT),
+            'statsDaysSuffix'      => $orFallback($translatedByKey['statsDaysSuffix'] ?? null, self::STATS_POPUP_DAYS_SUFFIX_TEXT),
+            'statsHourlyLabel'     => $orFallback($translatedByKey['statsHourlyLabel'] ?? null, self::STATS_POPUP_HOURLY_LABEL_TEXT),
+            'statsRequestsUnit'    => $orFallback($translatedByKey['statsRequestsUnit'] ?? null, self::STATS_POPUP_REQUESTS_UNIT_TEXT),
+            'statsCharsUnit'       => $orFallback($translatedByKey['statsCharsUnit'] ?? null, self::STATS_POPUP_CHARACTERS_UNIT_TEXT),
+            'statsTotalLabel'      => $orFallback($translatedByKey['statsTotalLabel'] ?? null, self::STATS_POPUP_TOTAL_LABEL_TEXT),
+            'statsCacheSavedLabel' => $orFallback($translatedByKey['statsCacheSavedLabel'] ?? null, self::STATS_POPUP_CACHE_SAVED_LABEL_TEXT),
+            // Nur bei echtem (Teil-)Erfolg als "heute schon frisch" verbuchen - bei
+            // einem Totalausfall bleibt der alte fetchedAt-Wert stehen, damit der
+            // naechste Aufruf (nach Ende der Pause/des Fehlers) sofort erneut
+            // versucht, statt bis zum naechsten natuerlichen Ablauf zu warten.
+            'fetchedAt'            => $anyOwnTextTranslated ? time() : ($cache['fetchedAt'] ?? 0),
         ];
 
         $this->WriteAttributeString(self::attributeGuestLanguageNamesCache, json_encode($cache));

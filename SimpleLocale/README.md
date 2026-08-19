@@ -702,6 +702,48 @@ Beschreibung des Moduls.
   gelöscht wird, falls die Root-Kategorie gerade falsch/unvollständig
   gewählt ist. "Begrüßung" bleibt bewusst ausgenommen (keine gescannte
   Liste, sondern eine einzelne direkt konfigurierte Einstellung).
+
+  **Build 77 behebt eingefrorene deutsche Gast-Hinweise nach einer
+  Anbieter-Pause und erweitert das Info-Popup der Kachel.** Live gemeldet:
+  bei aktiv gewählter englischer Gast-Sprache blieben der
+  Pausiert-Hinweis ("Übersetzung pausiert bis...") und der
+  Statistik-Hinweis unter dem Dropdown trotzdem auf Deutsch stehen.
+  Ursache: `EnsureGuestLanguageNamesFresh()` (der Cache für alle
+  live in die Gast-Sprache übersetzten UI-Texte, max. 1x/Tag
+  aktualisiert) lief während einer AKTIVEN Anbieter-Pause, der
+  Übersetzungsversuch schlug dadurch für JEDEN Text zwangsläufig fehl
+  und fiel korrekt auf den rohen deutschen Text zurück - wurde
+  anschließend aber trotzdem als "heute schon erfolgreich aktualisiert"
+  verbucht und dadurch bis zu 24 Stunden lang nicht erneut versucht,
+  selbst nachdem die Pause längst vorbei war. Behoben durch dieselbe
+  Kurzschluss-Prüfung wie in `TranslateChunk()` (während einer aktiven
+  Pause lohnt sich gar kein Versuch, der bestehende - zuletzt ECHT
+  erfolgreich übersetzte - Cache bleibt unangetastet) plus eine zweite
+  Absicherung: der Cache gilt nur dann als "heute schon frisch", wenn
+  wirklich mindestens ein Text erfolgreich übersetzt wurde, nicht bei
+  einem kompletten (auch anbieter-pause-unabhängigen) Fehlschlag.
+  Zusätzlich, auf Nutzer-Wunsch, zeigt das Info-Popup der Kachel (ⓘ-Symbol)
+  jetzt zusätzlich dieselbe Übersetzungsstatistik (Seit Inbetriebnahme/
+  Stündlich/Insgesamt/Durch den Cache eingespart, wie im
+  Konfigurationsformular) sowie - falls gerade aktiv - einen Kurzhinweis
+  zur laufenden Anbieter-Pause, beides live in die jeweils aktive
+  Gast-Sprache übersetzt. Die bisherige Überschrift "Hinweise" wurde durch
+  App-Name + Lizenz-Edition ersetzt (z. B. "Simple Locale - Pro Edition",
+  ohne Lizenz schlicht "Simple Locale") - bewusst NICHT übersetzt, eine
+  Marken-/Editionsbezeichnung ist sprachunabhängig, genau wie
+  `$licenseInfo['edition']` im Konfigurationsformular selbst bereits als
+  roher Wert behandelt wird.
+
+  Außerdem, ebenfalls auf Nutzer-Wunsch: das 🌐-Emoji links neben dem
+  Sprach-Dropdown wurde durch das eigentliche Simple-Locale-Symbol ersetzt
+  (`libs/assets/module_icon_48.png`, als Base64-Grafik eingebettet - kein
+  öffentlicher Pfad/Webhook nötig, funktioniert dadurch überall
+  identisch). Fällt auf die alte 🌐-Glyphe zurück, falls die Bilddatei aus
+  irgendeinem Grund nicht lesbar ist. Die zugehörige Einstellung heißt
+  jetzt "Simple-Locale-Symbol in der Kachel anzeigen" (Property/Attribut-
+  Name `ShowGlobeIcon` und CSS-Klasse `ipssl-globe` bleiben aus
+  Kompatibilitätsgründen unverändert - siehe Abschnitt 7 für eigene,
+  darauf aufbauende Kachel-Anpassungen).
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
@@ -873,7 +915,7 @@ Aktiv                           | Notaus-Schalter (Standard-Konvention "Instanz 
 Kachel-Visualisierung           | Instanz der eingebauten Kachel-Visualisierung (WebFront-Kernmodul, nicht Teil von Simple Locale). **Pflichtfeld** - ihre eigene "Startkategorie" wird automatisch als Root der Visualisierung übernommen (Kategorie im Objektbaum, deren Inhalt - Namen + Werte von String-Variablen - übersetzt wird; sollte nur die Sichtbereich-Kacheln enthalten, nicht die Admin-Oberfläche) und sie liefert zusätzlich die Automations/Favoriten-Übersetzung, siehe eigenen Absatz unten. Ohne Auswahl (oder ohne gültige Startkategorie) bleibt die Instanz im Status "Root der Visualisierung fehlt".
 Scan-Sprache                    | Sprache, in der die Objektnamen/-werte ursprünglich gepflegt sind. Dient Google Translate als feste Quellsprache für alle Zielsprachen-Übersetzungen; die Scan-Sprache selbst hat keine eigene Übersetzungsspalte, siehe [Abschnitt 7](#7-visualisierung).
 Aktuell aktive Sprache          | Welche Sprache gerade angezeigt wird - normalerweise über die Kachel vom Anwender selbst gesteuert (siehe Abschnitt 7), lässt sich hier aber auch manuell umschalten (inkl. aller sonst nur bei einem Kachel-Wechsel ausgelösten Umbenennungen/Wertänderungen - identisches Verhalten zur Kachel selbst). **Wichtig für die eigene Weiterentwicklung der Visualisierung, siehe Warnung unten.**
-Weltkugel-Symbol in der Kachel anzeigen | Blendet das 🌐-Symbol links neben dem Dropdown aus, falls nicht gewünscht (z. B. bei eigenem Kachel-Design). Standardmäßig an.
+Simple-Locale-Symbol in der Kachel anzeigen | Blendet das Simple-Locale-Symbol links neben dem Dropdown aus, falls nicht gewünscht (z. B. bei eigenem Kachel-Design). Bis Build 76 die 🌐-Emoji-Glyphe, ab Build 77 das eigentliche, als Base64-Grafik eingebettete Markensymbol (siehe Abschnitt 7). Standardmäßig an.
 Info-Symbol in der Kachel anzeigen | Blendet das ⓘ-Symbol (Erklärung der Einschränkungen, siehe Abschnitt 2) aus. Standardmäßig an.
 Eigene Sprachauswahl-Kachel verwenden | Unterdrückt die eingebaute Dropdown-Kachel zugunsten einer selbstgebauten (siehe Abschnitt 7). **Pro-Feature** (`custom_tile`, siehe [Abschnitt 8](#8-lizenz-und-testversion)) - ohne dieses Feature bleibt das Feld ausgegraut und die eingebaute Kachel aktiv.
 Übersetzungsanbieter (Panel)    | Siehe eigenen Abschnitt unten ("Übersetzungsanbieter: Google/DeepL/kostenfrei") - funktioniert ab Werk ohne jede Eingabe.
@@ -1179,7 +1221,7 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
      `BuildLanguageSelectHtml()`, solange das zweite Feld unten leer bleibt):
      ```html
      <div class="ipssl-select-row">
-       <span class="ipssl-globe" aria-hidden="true">🌐</span>
+       <span class="ipssl-globe" aria-hidden="true"><img src="data:image/png;base64,..." alt=""></span>
        <select onchange="requestAction('Language', this.value);">
          <option value="ORIGINAL_IMPORT">Deutsch</option>
          <option value="en" selected>English</option>
@@ -1188,6 +1230,12 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
      </div>
      <!-- + roter Testphase-Hinweis, nur solange ungelizenziert und Testphase läuft -->
      ```
+     Das `<img>` (Build 77) ist das Simple-Locale-Symbol
+     (`libs/assets/module_icon_48.png`), als Base64-Data-URI eingebettet -
+     kein öffentlicher Pfad/Webhook nötig. Für eine eigene Kachel kann hier
+     stattdessen jedes beliebige eigene Icon/Emoji stehen, die CSS-Klasse
+     `ipssl-globe` (Name aus historischen Gründen unverändert) liefert
+     bereits einen passenden 32×32px-Kreis als Container.
 
      Zusätzlich zu den beiden oben genannten PFLICHT-Platzhaltern gibt es
      zwei OPTIONALE Platzhalter für die in [Abschnitt 2](#2-bekannte-einschränkungen)

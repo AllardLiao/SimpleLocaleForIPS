@@ -134,7 +134,7 @@
                 {
                     "type": "CheckBox",
                     "name": "ShowGlobeIcon",
-                    "caption": "Weltkugel-Symbol in der Kachel anzeigen"
+                    "caption": "Simple-Locale-Symbol in der Kachel anzeigen"
                 },
                 {
                     "type": "CheckBox",
