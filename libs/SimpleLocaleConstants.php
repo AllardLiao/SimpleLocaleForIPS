@@ -241,6 +241,30 @@ trait SimpleLocaleConstants
     // Endlosschleife übersetzt.
     private const attributeLastSelfWrittenValues = 'LastSelfWrittenValues';
 
+    // Build 71: gepufferte, noch NICHT persistierte Zeilen-Feld-Aenderungen aus
+    // ApplyTrackedVariableUpdate (JSON-Map Property => ValueObjectID => Feld => Wert) -
+    // siehe BufferPendingTrackedRowUpdate/StagePendingTrackedRowUpdates/
+    // FlushPendingTrackedRowUpdates. Live gemeldet (2026-08-19): eine haeufig
+    // (mehrmals pro Minute) aktualisierte "Eigene Texte"-Variable hat bei JEDEM
+    // externen Schreibvorgang sofort IPS_SetProperty+IPS_ApplyChanges auf genau die
+    // Property ausgeloest, die im GERADE OFFENEN Konfigurationsformular als
+    // bearbeitbare Liste angezeigt wird - der Admin konnte dadurch praktisch nie
+    // eine eigene Aenderung speichern, bevor die Liste unter ihm neu geschrieben
+    // wurde. Der GAST sieht die neue Uebersetzung weiterhin sofort (WriteTrackedValueString
+    // bleibt unveraendert/unverzoegert) - nur die Buchfuehrung fuer einen SPAETEREN,
+    // seltenen Sprachwechsel wird jetzt per Debounce-Timer erst nach einer Ruhephase
+    // committet.
+    private const attributePendingTrackedRowUpdates = 'PendingTrackedRowUpdates';
+
+    // Build 71: Unix-Timestamp, wann der Debounce-Timer (siehe
+    // BufferPendingTrackedRowUpdate) den aktuell gepufferten Stand voraussichtlich
+    // schreibt - 0, solange nichts gepuffert ist. Rein informativ fuers
+    // Konfigurationsformular (siehe PopulateFormElements/PendingRowUpdateNoticeRow),
+    // damit der Admin sieht, bis wann er in Ruhe editieren kann bzw. wann die
+    // Property als naechstes automatisch aktualisiert wird - unabhaengig davon,
+    // welchen Wert eine EINZELNE Zeile gerade puffert.
+    private const attributePendingRowUpdateFlushAt = 'PendingRowUpdateFlushAt';
+
     // Zustand der VariableCustomPresentation (JSON, roh - genau das Array, das
     // IPS_GetVariable($id)['VariableCustomPresentation'] vor dem allerersten eigenen
     // Fork-Schreibvorgang zurückgegeben hat) je ValueObjectID, unmittelbar bevor
@@ -393,6 +417,16 @@ trait SimpleLocaleConstants
     private const timerPrefix = 'IPSSL_TIMER_';
     private const timerIdentAutoRescan = 'AutoRescan';
     private const timerIdentTranslationStats = 'TranslationStats';
+    private const timerIdentPendingRowUpdateFlush = 'PendingRowUpdateFlush';
+
+    // Build 71: Debounce-Fenster fuer BufferPendingTrackedRowUpdate - erst wenn eine
+    // extern getrackte "Eigene Texte"-Variable fuer diese Zeitspanne RUHIG bleibt
+    // (keine weitere VM_UPDATE-Nachricht), wird die Zeilen-Buchfuehrung tatsaechlich
+    // in die Property geschrieben. Bewusst grosszuegig: ein Sprachwechsel (der
+    // JEDERZEIT sofort den neuesten Rohtext braucht, siehe FlushPendingTrackedRowUpdates
+    // in ApplyLanguage) ist ein seltenes Ereignis, waehrend das ungestoerte manuelle
+    // Editieren des Formulars haeufig und die eigentliche Beschwerde ist.
+    private const PENDING_ROW_UPDATE_DEBOUNCE_SECONDS = 720;
 
     // Statuscodes
     private const STATUS_ROOT_CATEGORY_MISSING = 201;

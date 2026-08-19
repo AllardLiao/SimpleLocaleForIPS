@@ -1,6 +1,26 @@
 {
     "elements": [
         {
+            "type": "RowLayout",
+            "name": "PendingRowUpdateNoticeRow",
+            "visible": false,
+            "items": [
+                {
+                    "type": "Label",
+                    "caption": "Nächste automatische Aktualisierung zwischenzeitlich extern geänderter Variablen um"
+                },
+                {
+                    "type": "Label",
+                    "name": "PendingRowUpdateFlushAtLabel",
+                    "caption": ""
+                },
+                {
+                    "type": "Label",
+                    "caption": "- eigene Änderungen können jederzeit gefahrlos gespeichert werden."
+                }
+            ]
+        },
+        {
             "type": "ExpansionPanel",
             "name": "ConfigPanel",
             "caption": "Konfiguration",

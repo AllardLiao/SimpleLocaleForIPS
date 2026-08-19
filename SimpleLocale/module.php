@@ -338,6 +338,8 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterAttributeString(self::attributeLastAppliedLanguage, self::langOriginalImport);
         $this->RegisterAttributeString(self::attributeRegisteredValueObjectIDs, '[]');
         $this->RegisterAttributeString(self::attributeLastSelfWrittenValues, '{}');
+        $this->RegisterAttributeString(self::attributePendingTrackedRowUpdates, '{}');
+        $this->RegisterAttributeInteger(self::attributePendingRowUpdateFlushAt, 0);
         $this->RegisterAttributeString(self::attributeEnumerationPresentationBackup, '{}');
         $this->RegisterAttributeInteger(self::attributeEffectiveRootCategoryID, 0);
         $this->RegisterAttributeString(self::attributeLastRowSourceLanguageFingerprint, '');
@@ -370,6 +372,11 @@ private const LANGUAGE_FLAGS = [
         // rührt NIE das Konfigurationsformular an, komplett unabhängig vom
         // Auto-Rescan-Timer.
         $this->RegisterTimer($this->GetTranslationStatsTimerIdent(), 0, 'IPSSL_RefreshTranslationStatsTile($_IPS[\'TARGET\']);');
+        // Build 71: einmaliger (ReloadForm-freier) Debounce-Flush fuer gepufferte
+        // VM_UPDATE-Zeilenaenderungen, siehe BufferPendingTrackedRowUpdate/
+        // ProcessPendingRowUpdateFlush - ruehrt das Konfigurationsformular nie direkt
+        // an, schreibt nur die betroffene(n) Property(s).
+        $this->RegisterTimer($this->GetPendingRowUpdateFlushTimerIdent(), 0, 'IPSSL_ProcessPendingRowUpdateFlush($_IPS[\'TARGET\']);');
     }
 
     public function Destroy(): void
@@ -382,6 +389,18 @@ private const LANGUAGE_FLAGS = [
     {
         //Never delete this line!
         parent::ApplyChanges();
+
+        // Build 71: gepufferte VM_UPDATE-Zeilenaenderungen (siehe
+        // BufferPendingTrackedRowUpdate/StagePendingTrackedRowUpdates) zuerst
+        // einspielen, BEVOR der Rest von ApplyChanges() (insbesondere ein evtl.
+        // gleich folgender ApplyLanguage()-Lauf) mit den Zeilen-Properties arbeitet -
+        // ein manuelles "Übernehmen" im Konfigurationsformular während der Debounce-
+        // Ruhephase (siehe PENDING_ROW_UPDATE_DEBOUNCE_SECONDS) verwirft die zuletzt
+        // vom externen Schreibvorgang gelieferte Änderung dadurch NICHT, sondern
+        // übernimmt sie mit. Läuft bewusst VOR dem Notaus-Schalter-Check unten - eine
+        // bereits berechnete Übersetzung geht auch bei inzwischen deaktivierter
+        // Instanz nicht verloren.
+        $this->FlushPendingTrackedRowUpdates();
 
         // "Inbetriebnahme" fuer die Uebersetzungs-Statistik (siehe
         // BuildTranslationStatsText) - der Zeitpunkt des ALLERERSTEN
@@ -774,6 +793,20 @@ private const LANGUAGE_FLAGS = [
                     $element['caption'] = $this->FormatProviderPauseUntil($element['name']);
                     break;
 
+                // Build 71: sichtbar, solange eine extern getrackte Variable (siehe
+                // BufferPendingTrackedRowUpdate) noch auf ihre gepufferte Persistierung
+                // wartet - rein informativ, das Speichern im Formular ist unabhängig
+                // davon jederzeit sicher (siehe FlushPendingTrackedRowUpdates in
+                // ApplyChanges, spielt einen wartenden Puffer immer zuerst ein).
+                case 'PendingRowUpdateNoticeRow':
+                    $element['visible'] = $this->ReadAttributeInteger(self::attributePendingRowUpdateFlushAt) > time();
+                    break;
+
+                case 'PendingRowUpdateFlushAtLabel':
+                    $flushAt = $this->ReadAttributeInteger(self::attributePendingRowUpdateFlushAt);
+                    $element['caption'] = $flushAt > time() ? date('H:i', $flushAt) : '';
+                    break;
+
                 // Direkt unter der Erläuterung des "Aktiv"-Schalters (siehe Nutzer-
                 // Anfrage) - wird bei jedem Öffnen/Neuladen des Formulars frisch
                 // berechnet (siehe ComputeTranslationStats), kein eigener
@@ -1159,6 +1192,16 @@ private const LANGUAGE_FLAGS = [
     public function AutoRescan(): void
     {
         $this->ScanRootTree(false);
+    }
+
+    // Timer-Callback (siehe RegisterTimer in Create()) - Build 71: schreibt gepufferte
+    // VM_UPDATE-Zeilenaenderungen (siehe BufferPendingTrackedRowUpdate) erst, nachdem
+    // die getrackte Variable fuer PENDING_ROW_UPDATE_DEBOUNCE_SECONDS ruhig geblieben
+    // ist - schaltet sich danach von selbst wieder ab (SetTimerInterval(...,0) in
+    // StagePendingTrackedRowUpdates). Ruehrt kein ReloadForm() an, genau wie AutoRescan().
+    public function ProcessPendingRowUpdateFlush(): void
+    {
+        $this->FlushPendingTrackedRowUpdates();
     }
 
     // Manueller Reset des Uebersetzungs-Caches (attributeTranslationCache,
@@ -1781,30 +1824,38 @@ private const LANGUAGE_FLAGS = [
         // Hineinlaufen wieder "ungleich" sehen und in eine Endlosschleife laufen.
         $this->WriteAttributeString(self::attributeLastAppliedLanguage, $Language);
 
+        // Wie Rescan(): direktes IPS_SetProperty + IPS_ApplyChanges, damit die neue
+        // Sprache sofort persistiert ist und im Konfigurationsformular korrekt
+        // angezeigt wird, sobald es (neu) geöffnet wird - aber NUR, wenn die Property
+        // das nicht ohnehin schon ist: kommt dieser Aufruf aus ApplyChanges() selbst
+        // (Sprache direkt im Konfigurationsformular umgestellt, siehe dort), ist sie
+        // das bereits, ein erneutes IPS_ApplyChanges() hier waere nur ein unnoetiger
+        // kompletter ApplyChanges()-Reentry. WICHTIG: muss VOR den beiden folgenden
+        // Schritten committet werden, sonst wuerde deren eigener IPS_ApplyChanges()-
+        // Reentry (siehe dort) attributeLastAppliedLanguage bereits auf $Language,
+        // propertyCurrentLanguage aber noch auf dem ALTEN Wert vorfinden und faelschlich
+        // ein zweites Mal ApplyLanguage() mit der alten Sprache anstossen.
+        if ($this->ReadPropertyString(self::propertyCurrentLanguage) !== $Language) {
+            IPS_SetProperty($this->InstanceID, self::propertyCurrentLanguage, $Language);
+            IPS_ApplyChanges($this->InstanceID);
+        }
+
+        // Build 71: ein Sprachwechsel braucht IMMER den neuesten Rohtext einer extern
+        // getrackten Variable, auch wenn deren Debounce-Fenster (siehe
+        // BufferPendingTrackedRowUpdate/PENDING_ROW_UPDATE_DEBOUNCE_SECONDS) noch nicht
+        // abgelaufen ist - deshalb hier zuerst committen (eigener Reentry), BEVOR
+        // StagePendingLanguageTranslations() gleich anschliessend die Zeilen liest.
+        // propertyCurrentLanguage ist an dieser Stelle bereits konsistent mit
+        // attributeLastAppliedLanguage (siehe oben), der Reentry ist daher sicher.
+        $this->FlushPendingTrackedRowUpdates();
+
         // Build 70: BEVOR die Sprache tatsächlich aktiv geschaltet/angezeigt wird, holt
         // EnsureLanguageTranslationsCurrent() genau die Zeilen nach, deren Übersetzung
         // für $Language fehlt oder veraltet ist (siehe IsRowLanguageTranslationCurrent)
         // - gebündelt in maximal 5 API-Aufrufen (einer je Zeilen-Property), einmalig pro
         // tatsächlich betroffenem Text. Läuft bewusst NICHT für die Pseudo-Sprache
-        // ORIGINAL_IMPORT (die braucht keine Übersetzung) und bewusst OHNE eigenen
-        // IPS_ApplyChanges()-Aufruf - wird unten mit dem ohnehin evtl. nötigen
-        // IPS_ApplyChanges() für propertyCurrentLanguage zu EINEM einzigen Reentry
-        // zusammengefasst (siehe dort).
-        $stagedCatchUp = $Language !== self::langOriginalImport && $this->StagePendingLanguageTranslations($Language);
-
-        // Wie Rescan(): direktes IPS_SetProperty + IPS_ApplyChanges, damit die neue
-        // Sprache sofort persistiert ist und im Konfigurationsformular korrekt
-        // angezeigt wird, sobald es (neu) geöffnet wird - aber NUR, wenn die Property
-        // das nicht ohnehin schon ist ODER oben tatsächlich etwas nachgeholt wurde:
-        // kommt dieser Aufruf aus ApplyChanges() selbst (Sprache direkt im
-        // Konfigurationsformular umgestellt, siehe dort) UND gab es nichts
-        // nachzuholen, wäre ein IPS_ApplyChanges() hier nur ein unnoetiger kompletter
-        // ApplyChanges()-Reentry.
-        $languagePropertyChanged = $this->ReadPropertyString(self::propertyCurrentLanguage) !== $Language;
-        if ($languagePropertyChanged) {
-            IPS_SetProperty($this->InstanceID, self::propertyCurrentLanguage, $Language);
-        }
-        if ($languagePropertyChanged || $stagedCatchUp) {
+        // ORIGINAL_IMPORT (die braucht keine Übersetzung).
+        if ($Language !== self::langOriginalImport && $this->StagePendingLanguageTranslations($Language)) {
             IPS_ApplyChanges($this->InstanceID);
         }
         $this->PushVisualizationUpdate();
@@ -2393,11 +2444,101 @@ private const LANGUAGE_FLAGS = [
             }
         }
 
-        IPS_SetProperty($this->InstanceID, $Property, json_encode($Rows));
-        IPS_ApplyChanges($this->InstanceID);
+        // Build 71: die eigentliche PERSISTIERUNG dieser Zeile (nur fuer einen
+        // SPAETEREN, seltenen Sprachwechsel gebraucht) wird NICHT mehr sofort
+        // committet, sondern gepuffert und erst nach einer Ruhephase geschrieben -
+        // siehe BufferPendingTrackedRowUpdate. Der Gast sieht die neue Uebersetzung
+        // trotzdem sofort (siehe WriteTrackedValueString unten, komplett
+        // unveraendert/unverzoegert) - nur die Buchfuehrung wartet kurz, damit eine
+        // haeufig aktualisierte Variable nicht mehrmals pro Minute genau die Property
+        // umschreibt, die ein gerade offenes Konfigurationsformular als bearbeitbare
+        // Liste anzeigt.
+        $fieldUpdates = [
+            $RawField => $Rows[$RowIndex][$RawField],
+            self::fieldSourceChangedAt => $Rows[$RowIndex][self::fieldSourceChangedAt],
+        ];
+        if (isset($Rows[$RowIndex][self::fieldTranslatedAtByLanguage])) {
+            $fieldUpdates[self::fieldTranslatedAtByLanguage] = $Rows[$RowIndex][self::fieldTranslatedAtByLanguage];
+        }
+        if ($displayText !== $NewValue) {
+            $fieldUpdates[$TranslatedPrefix . $currentLanguage] = $Rows[$RowIndex][$TranslatedPrefix . $currentLanguage];
+        }
+        $this->BufferPendingTrackedRowUpdate($Property, (string) $ValueObjectID, $fieldUpdates);
 
         if ($displayText !== $NewValue) {
             $this->WriteTrackedValueString($ValueObjectID, $displayText);
+        }
+    }
+
+    // Build 71: merkt sich eine noch nicht persistierte Zeilen-Feld-Aenderung aus
+    // ApplyTrackedVariableUpdate (JSON-Map Property => ValueObjectID => Feldwerte) und
+    // (re-)startet den Debounce-Timer - jeder neue externe Schreibvorgang fuer
+    // DIESELBE ValueObjectID ERSETZT den bisherigen Pufferinhalt (nicht summiert ihn),
+    // korrekt fuer einen Debounce: nur der ZULETZT berechnete Stand vor Eintritt der
+    // Ruhephase muss am Ende geschrieben werden.
+    private function BufferPendingTrackedRowUpdate(string $Property, string $ValueObjectIDKey, array $FieldUpdates): void
+    {
+        $pending = json_decode($this->ReadAttributeString(self::attributePendingTrackedRowUpdates), true);
+        if (!is_array($pending)) {
+            $pending = [];
+        }
+        $pending[$Property][$ValueObjectIDKey] = $FieldUpdates;
+        $this->WriteAttributeString(self::attributePendingTrackedRowUpdates, json_encode($pending));
+
+        $this->SetTimerInterval($this->GetPendingRowUpdateFlushTimerIdent(), self::PENDING_ROW_UPDATE_DEBOUNCE_SECONDS * 1000);
+        // Rein informativ fuers Konfigurationsformular (siehe PopulateFormElements/
+        // PendingRowUpdateNoticeRow) - jeder neue Puffer-Eintrag verschiebt den
+        // erwarteten Zeitpunkt, exakt synchron zum eben (neu) gesetzten Timer.
+        $this->WriteAttributeInteger(self::attributePendingRowUpdateFlushAt, time() + self::PENDING_ROW_UPDATE_DEBOUNCE_SECONDS);
+    }
+
+    // Build 71: schreibt alle gepufferten Zeilen-Feld-Aenderungen (siehe
+    // BufferPendingTrackedRowUpdate) in die jeweils betroffene(n) Property(s) - ueber
+    // ValueObjectID gesucht (robust gegen zwischenzeitliche Index-Verschiebungen, z.B.
+    // durch einen Rescan), NICHT ueber den urspruenglichen Zeilenindex. Ruft bewusst
+    // KEIN IPS_ApplyChanges() auf - das entscheidet der Aufrufer (siehe
+    // FlushPendingTrackedRowUpdates), je nachdem, ob er ohnehin schon in einem
+    // ApplyChanges()-Durchlauf steckt oder eigenstaendig committen muss. Liefert true,
+    // wenn mindestens eine Property tatsaechlich geaendert wurde.
+    private function StagePendingTrackedRowUpdates(): bool
+    {
+        $pending = json_decode($this->ReadAttributeString(self::attributePendingTrackedRowUpdates), true);
+        if (!is_array($pending) || $pending === []) {
+            return false;
+        }
+        $this->WriteAttributeString(self::attributePendingTrackedRowUpdates, '{}');
+        $this->SetTimerInterval($this->GetPendingRowUpdateFlushTimerIdent(), 0);
+        $this->WriteAttributeInteger(self::attributePendingRowUpdateFlushAt, 0);
+
+        $anyChanged = false;
+        foreach ($pending as $property => $fieldUpdatesByValueObjectID) {
+            $rows = $this->DecodeRows($property);
+            $propertyChanged = false;
+            foreach ($rows as $index => $row) {
+                $valueObjectIDKey = (string) ($row['ValueObjectID'] ?? $row['ObjectID'] ?? 0);
+                if (!isset($fieldUpdatesByValueObjectID[$valueObjectIDKey])) {
+                    continue;
+                }
+                $rows[$index] = array_replace($row, $fieldUpdatesByValueObjectID[$valueObjectIDKey]);
+                $propertyChanged = true;
+            }
+            if ($propertyChanged) {
+                IPS_SetProperty($this->InstanceID, $property, json_encode(array_values($rows)));
+                $anyChanged = true;
+            }
+        }
+
+        return $anyChanged;
+    }
+
+    // Build 71: bequemer Rundum-Aufruf fuer alle Stellen, die NICHT bereits selbst
+    // gleich danach ein eigenes IPS_ApplyChanges() ausloesen (siehe StagePendingLanguageTranslations
+    // fuer das Gegenstueck): staged und committet in einem Schritt, falls tatsaechlich
+    // etwas gepuffert war.
+    private function FlushPendingTrackedRowUpdates(): void
+    {
+        if ($this->StagePendingTrackedRowUpdates()) {
+            IPS_ApplyChanges($this->InstanceID);
         }
     }
 
@@ -6295,6 +6436,11 @@ HTML;
     private function GetTranslationStatsTimerIdent(): string
     {
         return self::timerPrefix . $this->InstanceID . self::timerIdentTranslationStats;
+    }
+
+    private function GetPendingRowUpdateFlushTimerIdent(): string
+    {
+        return self::timerPrefix . $this->InstanceID . self::timerIdentPendingRowUpdateFlush;
     }
 
     // Timer-Callback (siehe RegisterTimer in Create()) - schickt bereits offenen
