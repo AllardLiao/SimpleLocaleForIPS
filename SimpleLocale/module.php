@@ -325,6 +325,7 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterAttributeString(self::attributeGuestLanguageNamesCache, '{}');
         $this->RegisterAttributeString(self::attributeTranslationCache, '{}');
         $this->RegisterAttributeString(self::attributeUnnamedObjects, '[]');
+        $this->RegisterAttributeInteger(self::attributeLastCleanupRemovedCount, -1);
         $this->RegisterAttributeString(self::attributeLicenseInfo, '{}');
         $this->RegisterAttributeInteger(self::attributeTrialStartedAt, 0);
         $this->RegisterAttributeString(self::attributeActivationLog, '[]');
@@ -618,6 +619,10 @@ private const LANGUAGE_FLAGS = [
                 $this->CheckProviders();
                 break;
 
+            case self::identCleanupOrphanedRows:
+                $this->CleanupOrphanedRows();
+                break;
+
             case self::identShowApiKeyWarning:
                 // Prüft die tatsächliche Ursache serverseitig nach, statt sich allein
                 // auf den (nur indirekten) Hinweis "hinzugefügte Zeile hat leeren Code"
@@ -650,8 +655,20 @@ private const LANGUAGE_FLAGS = [
         // RefreshTranslateChainStatus/ApplyChanges).
         $this->RefreshTranslateChainStatus();
 
+        // Build 76: Ergebnis eines evtl. GERADE eben abgeschlossenen "Aufräumen"-Laufs
+        // (siehe CleanupOrphanedRows) genau EINMAL abholen, bevor PopulateFormElements()
+        // rekursiv durch alle (verschachtelten) Elemente läuft - nicht dort selbst
+        // gelesen+zurückgesetzt, weil jede rekursive Selbstaufruf-Ebene sonst den
+        // bereits zurückgesetzten Wert der äußeren Ebene sehen würde (Lese-und-
+        // Zurücksetzen ist hier bewusst NICHT idempotent, anders als z.B.
+        // attributeUnnamedObjects, das nur gelesen, nie hier zurückgeschrieben wird).
+        $cleanupResultCount = $this->ReadAttributeInteger(self::attributeLastCleanupRemovedCount);
+        if ($cleanupResultCount >= 0) {
+            $this->WriteAttributeInteger(self::attributeLastCleanupRemovedCount, -1);
+        }
+
         $form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
-        $this->PopulateFormElements($form['elements']);
+        $this->PopulateFormElements($form['elements'], $cleanupResultCount);
 
         return json_encode($form);
     }
@@ -659,8 +676,10 @@ private const LANGUAGE_FLAGS = [
     // Läuft rekursiv durch alle Formularelemente, auch verschachtelt innerhalb der
     // ExpansionPanel-"items" (Konfiguration/Übersetzung/Lizenz-Panel im Formular) -
     // die dynamisch befüllten Felder stecken inzwischen alle in einem dieser Panels,
-    // nicht mehr direkt auf oberster Ebene von $form['elements'].
-    private function PopulateFormElements(array &$Elements): void
+    // nicht mehr direkt auf oberster Ebene von $form['elements']. $CleanupResultCount
+    // wird nur durchgereicht (siehe GetConfigurationForm für den Grund, warum das
+    // NICHT hier selbst aus dem Attribut gelesen wird).
+    private function PopulateFormElements(array &$Elements, int $CleanupResultCount = -1): void
     {
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
         $targetLanguages = $this->GetSelectedTargetLanguages();
@@ -673,7 +692,7 @@ private const LANGUAGE_FLAGS = [
 
         foreach ($Elements as &$element) {
             if (isset($element['items']) && is_array($element['items'])) {
-                $this->PopulateFormElements($element['items']);
+                $this->PopulateFormElements($element['items'], $CleanupResultCount);
             }
 
             switch ($element['name'] ?? '') {
@@ -904,6 +923,17 @@ private const LANGUAGE_FLAGS = [
                     if (($element['name'] ?? '') === 'UnnamedObjects') {
                         $element['values'] = $unnamedObjects;
                     }
+                    break;
+
+                // Build 76: einmaliges Ergebnis-Popup nach "Aufräumen" (siehe
+                // CleanupOrphanedRows) - $CleanupResultCount kommt bereits fertig
+                // gelesen+zurückgesetzt von GetConfigurationForm() rein (siehe dort).
+                case 'CleanupResultPopup':
+                    $element['visible'] = $CleanupResultCount >= 0;
+                    break;
+
+                case 'CleanupResultCountLabel':
+                    $element['caption'] = $CleanupResultCount >= 0 ? (string) $CleanupResultCount : '';
                     break;
 
                 // Bewusst als viele einzelne Formularelemente statt einem
@@ -1202,6 +1232,113 @@ private const LANGUAGE_FLAGS = [
     public function ProcessPendingRowUpdateFlush(): void
     {
         $this->FlushPendingTrackedRowUpdates();
+    }
+
+    // Build 76: "Aufräumen" (Nutzer-Wunsch, analog zur gleichnamigen Funktion in
+    // Symcons eigener Lösung) - entfernt Zeilen aus "Objektnamen"/"Eigene Texte"/
+    // "Beschriftungen"/"Automations", die bei einem FRISCHEN Scan der aktuell
+    // konfigurierten Visualisierung nicht mehr gefunden werden (Objekt gelöscht,
+    // aus dem Root-Baum entfernt/verschoben, oder - bei Automations - in der
+    // Kachel-Visu selbst gelöscht). Bewusst NUR über einen expliziten Button
+    // ausgelöst, NIE automatisch während eines normalen Rescans: Rescan/
+    // Auto-Rescan behalten verwaiste Zeilen ganz bewusst bei (siehe MergeRows/
+    // MergeEnumerationOptions/MergeAutomationRows) - eine übersehene falsche
+    // Root-Kategorie oder ein Objekt, das nur VORÜBERGEHEND fehlt, soll keine
+    // bereits geleistete Übersetzungsarbeit unwiederbringlich löschen. "Aufräumen"
+    // ist der bewusste Gegenpol dazu, für den Fall, dass der Admin selbst
+    // bestätigt hat, dass die Löschung/Verschiebung endgültig ist.
+    //
+    // "Begrüßung" wird bewusst NICHT bereinigt - anders als die anderen vier
+    // Properties ist das keine wachsende, aus dem Baum gescannte Liste, sondern
+    // eine einzelne, direkt konfigurierte Einstellung (Text/Variable/Automatic,
+    // siehe ScanGreetingText) - hier gibt es strukturell nichts "Verwaistes".
+    //
+    // Dieselben drei Notaus-/Status-Prüfungen wie ScanRootTree (Aktiv, Root-
+    // Kategorie vorhanden, Testphase nicht abgelaufen) - Aufräumen braucht
+    // denselben frischen Baum-Scan wie ein Rescan und soll bei denselben
+    // Bedingungen genauso ausbleiben.
+    private function CleanupOrphanedRows(): void
+    {
+        if (!$this->ReadPropertyBoolean(self::propertyActive)) {
+            $this->SetStatus(IS_INACTIVE);
+
+            return;
+        }
+
+        $rootID = $this->GetEffectiveRootCategoryID();
+        if ($rootID === 0 || !@IPS_ObjectExists($rootID)) {
+            $this->SetStatus(self::STATUS_ROOT_CATEGORY_MISSING);
+
+            return;
+        }
+
+        if ($this->IsTrialLocked()) {
+            $this->SetStatus(self::STATUS_TRIAL_EXPIRED);
+
+            return;
+        }
+
+        $liveNames = [];
+        $liveTexts = [];
+        $liveOptions = [];
+        $visitedIDs = [$rootID => true];
+        $this->WalkTree($rootID, $liveNames, $liveTexts, $liveOptions, $visitedIDs, []);
+        $liveNames += $this->ScanFavoriteObjectsOutsideRootTree($liveNames);
+        $liveAutomationIDs = $this->ScanAutomationsByID();
+
+        $removedCount = 0;
+
+        $objectNames = array_values(array_filter(
+            $this->DecodeRows(self::propertyObjectNames),
+            function (array $row) use ($liveNames, &$removedCount): bool {
+                $keep = isset($liveNames[(int) ($row['ObjectID'] ?? 0)]);
+                $removedCount += $keep ? 0 : 1;
+
+                return $keep;
+            }
+        ));
+
+        $objectTexts = array_values(array_filter(
+            $this->DecodeRows(self::propertyObjectTexts),
+            function (array $row) use ($liveTexts, &$removedCount): bool {
+                $keep = isset($liveTexts[(int) ($row['ObjectID'] ?? 0)]);
+                $removedCount += $keep ? 0 : 1;
+
+                return $keep;
+            }
+        ));
+
+        $enumerationOptions = array_values(array_filter(
+            $this->DecodeRows(self::propertyEnumerationOptions),
+            function (array $row) use ($liveOptions, &$removedCount): bool {
+                $key = ($row['SourceKey'] ?? '') . ':' . ($row['FieldPath'] ?? '');
+                $keep = isset($liveOptions[$key]);
+                $removedCount += $keep ? 0 : 1;
+
+                return $keep;
+            }
+        ));
+
+        $objectAutomations = array_values(array_filter(
+            $this->DecodeRows(self::propertyObjectAutomations),
+            function (array $row) use ($liveAutomationIDs, &$removedCount): bool {
+                $keep = isset($liveAutomationIDs[(int) ($row['AutomationID'] ?? 0)]);
+                $removedCount += $keep ? 0 : 1;
+
+                return $keep;
+            }
+        ));
+
+        IPS_SetProperty($this->InstanceID, self::propertyObjectNames, json_encode($objectNames));
+        IPS_SetProperty($this->InstanceID, self::propertyObjectTexts, json_encode($objectTexts));
+        IPS_SetProperty($this->InstanceID, self::propertyEnumerationOptions, json_encode($enumerationOptions));
+        IPS_SetProperty($this->InstanceID, self::propertyObjectAutomations, json_encode($objectAutomations));
+        IPS_ApplyChanges($this->InstanceID);
+
+        // Fürs einmalige Anzeigen im CleanupResultPopup nach dem gleich folgenden
+        // ReloadForm() - siehe attributeLastCleanupRemovedCount/PopulateFormElements.
+        $this->WriteAttributeInteger(self::attributeLastCleanupRemovedCount, $removedCount);
+        $this->ReloadForm();
     }
 
     // Manueller Reset des Uebersetzungs-Caches (attributeTranslationCache,

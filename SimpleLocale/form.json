@@ -7,7 +7,7 @@
             "items": [
                 {
                     "type": "Label",
-                    "caption": "Nächste automatische Aktualisierung zwischenzeitlich extern geänderter Variablen um"
+                    "caption": "Nächste Persistierung extern geänderter Texte und damit Refresh dieses Formulars um"
                 },
                 {
                     "type": "Label",
@@ -16,9 +16,28 @@
                 },
                 {
                     "type": "Label",
-                    "caption": "- eigene Änderungen können jederzeit gefahrlos gespeichert werden."
+                    "caption": "- speichere Deine Änderungen bitte vorher ab."
                 }
             ]
+        },
+        {
+            "name": "CleanupResultPopup",
+            "type": "PopupAlert",
+            "visible": false,
+            "popup": {
+                "caption": "Ergebnis von \"Aufräumen\"",
+                "closeCaption": "OK",
+                "items": [
+                    {
+                        "type": "RowLayout",
+                        "items": [
+                            {"type": "Label", "caption": "Entfernt:"},
+                            {"type": "Label", "name": "CleanupResultCountLabel", "caption": ""},
+                            {"type": "Label", "caption": "Zeile(n), die keinem Objekt mehr in der aktuellen Visualisierung zugeordnet werden konnten."}
+                        ]
+                    }
+                ]
+            }
         },
         {
             "type": "ExpansionPanel",
@@ -686,6 +705,15 @@
         {
             "type": "Label",
             "caption": "Durchsucht den Root der Visualisierung erneut nach neuen/verschobenen Objekten und übersetzt nur noch leere Zellen in Objektnamen, Eigene Texte und Beschriftungen. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben."
+        },
+        {
+            "type": "Button",
+            "caption": "Übersetzungen gelöschter Elemente in der Visualisierung entfernen",
+            "onClick": "IPS_RequestAction($id, 'CleanupOrphanedRows', true);"
+        },
+        {
+            "type": "Label",
+            "caption": "Entfernt dauerhaft alle Zeilen aus Objektnamen, Eigenen Texten, Beschriftungen und Automations, die bei einem frischen Scan der aktuell konfigurierten Visualisierung nicht mehr gefunden werden - z.B. weil das zugehörige Objekt gelöscht oder aus der Visualisierung entfernt/verschoben wurde. Anders als ein normaler Rescan (der solche Zeilen bewusst unangetastet lässt, siehe oben) werden sie hier komplett gelöscht, nicht nur übersprungen - bereits geleistete Übersetzungsarbeit für diese Zeilen geht dabei verloren (regeneriert sich automatisch, falls das Objekt später wieder auftaucht). Vor dem Klick prüfen, ob die \"Kachel-Visualisierung\"-Auswahl oben wirklich korrekt und vollständig ist - eine versehentlich falsche oder unvollständige Root-Kategorie würde sonst auch noch gültige Übersetzungen unwiederbringlich löschen. \"Begrüßung\" ist von dieser Funktion nicht betroffen (keine aus dem Baum gescannte Liste, sondern eine einzelne, direkt konfigurierte Einstellung)."
         },
         {
             "type": "Button",

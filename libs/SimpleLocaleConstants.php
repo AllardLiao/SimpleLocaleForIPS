@@ -283,6 +283,16 @@ trait SimpleLocaleConstants
     // und würde als leere Beschriftung in der Gäste-Visualisierung landen).
     private const attributeUnnamedObjects = 'UnnamedObjects';
 
+    // Build 76: Ergebnis des letzten "Aufräumen"-Laufs (siehe CleanupOrphanedRows) -
+    // Anzahl entfernter, verwaister Zeilen, NUR fürs einmalige Anzeigen im
+    // CleanupResultPopup direkt nach dem zugehörigen ReloadForm() gedacht (analog zum
+    // etablierten attributeUnnamedObjects-Muster, aber "zeig einmal und vergiss"
+    // statt dauerhaft sichtbar) - wird von PopulateFormElements() sofort nach dem
+    // Anzeigen wieder auf -1 zurückgesetzt, damit ein SPÄTERES, unabhängiges Öffnen
+    // des Formulars nicht denselben alten Treffer erneut zeigt. -1 = nichts
+    // anzuzeigen, >= 0 = genau einmal anzuzeigende Anzahl.
+    private const attributeLastCleanupRemovedCount = 'LastCleanupRemovedCount';
+
     // Sprachnamen (+ das Label der "Original"-Pseudo-Sprache) live in die gerade
     // aktive Gast-Sprache übersetzt - fuer die Kachel-Visualisierung (GetVisualizationTile),
     // getrennt vom AvailableLanguagesCache oben, der an der Admin-Konsolensprache haengt.
@@ -354,6 +364,7 @@ trait SimpleLocaleConstants
     private const identActivateLicense = 'ActivateLicense';
     private const identClearTranslationCache = 'ClearTranslationCache';
     private const identCheckProviders = 'CheckProviders';
+    private const identCleanupOrphanedRows = 'CleanupOrphanedRows';
 
     // Reservierter Pseudo-Sprachcode für den unangetasteten Rohtext beim ersten Scan
     // (Tippfehler inklusive). Nicht vom Gast über die Sprachauswahl erreichbar.
