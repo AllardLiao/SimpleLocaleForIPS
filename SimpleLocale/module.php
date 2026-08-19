@@ -3811,13 +3811,17 @@ private const LANGUAGE_FLAGS = [
     // $FromField nach $ToField (gebatcht in einem API-Aufruf).
     // $ToField ist der Property-Feldname zum Speichern (kann präfixiert sein, z.B.
     // "Text_de"), $TargetLanguageCode der reine Sprachcode, der an Google geht.
-    // $IsHtml: TranslateChunk fragt Google IMMER mit format=html an (schützt Tags in
-    // HTMLBox-Inhalten, siehe dort) - Google liefert dabei Sonderzeichen wie Apostroph
-    // als HTML-Entity zurück (z.B. "o&#39;r" statt "o'r"), was in einem HTML-Renderer
-    // korrekt dargestellt wird, aber als reiner Text (Objektname, Enum-Beschriftung)
-    // wörtlich sichtbar bliebe (live gefunden: Kachelüberschrift zeigte "&#39;" statt
-    // Apostroph). Nur bei echten "Eigene Texte"-Inhalten (können vollständige
-    // HTMLBox-Widgets sein) macht das Belassen als HTML weiterhin Sinn.
+    // $IsHtml: wird bis zu TranslateChunkGoogle/TranslateChunkDeepL durchgereicht und
+    // schaltet dort format=html/tag_handling=html nur noch fuer ECHTE HTML-Inhalte ein
+    // (Build 74 - vorher IMMER an, unabhaengig vom Inhalt, siehe dort fuer den live
+    // gefundenen Grund: DeepL kann dabei sonst auch bei ganz normalem Klartext eigene,
+    // synthetische Platzhalter-Tags in die Ausgabe einschleusen). Google haette im
+    // html-Modus bei reinem Text zusaetzlich Sonderzeichen wie Apostroph als HTML-
+    // Entity zurueckgeliefert (z.B. "o&#39;r" statt "o'r") - html_entity_decode()
+    // unten bleibt als zusaetzliche Absicherung bestehen, ist fuer Google/DeepL im
+    // text-Modus inzwischen aber nur noch ein Sicherheitsnetz, kein notwendiger
+    // Reparaturschritt mehr. Nur bei echten "Eigene Texte"-Inhalten (können
+    // vollständige HTMLBox-Widgets sein) macht das Belassen als HTML weiterhin Sinn.
     private function FillLanguageColumn(array $Rows, string $FromField, string $ToField, string $ForceSource, string $TargetLanguageCode, bool $CapitalizeFirst, bool $IsHtml = false, ?array $RowIndices = null): array
     {
         // $RowIndices grenzt (seit der pro-Zeile editierbaren Quellsprache, siehe
@@ -4879,7 +4883,7 @@ private const LANGUAGE_FLAGS = [
 
         $translatedFlat = [];
         foreach (array_chunk($translatable, self::translateMaxTextsPerRequest) as $chunk) {
-            $translatedFlat = array_merge($translatedFlat, $this->TranslateChunk($chunk, $Source, $Target, $DebugContext));
+            $translatedFlat = array_merge($translatedFlat, $this->TranslateChunk($chunk, $Source, $Target, $DebugContext, $IsHtml));
         }
 
         $result = [];
@@ -5066,7 +5070,7 @@ private const LANGUAGE_FLAGS = [
         return preg_replace('/^[\x{00A0}\x{200B}]+|[\x{00A0}\x{200B}]+$/u', '', $Text) ?? $Text;
     }
 
-    private function TranslateChunk(array $Texts, string $Source, string $Target, string $DebugContext = ''): array
+    private function TranslateChunk(array $Texts, string $Source, string $Target, string $DebugContext = '', bool $IsHtml = false): array
     {
         if ($Texts === []) {
             return [];
@@ -5132,8 +5136,8 @@ private const LANGUAGE_FLAGS = [
             }
 
             $result = match ($provider) {
-                'google' => $this->TranslateChunkGoogle($Texts, $Source, $Target, $this->GetApiKeyForProvider('google'), $DebugContext),
-                'deepl'  => $this->TranslateChunkDeepL($Texts, $Source, $Target, $this->GetApiKeyForProvider('deepl'), $DebugContext),
+                'google' => $this->TranslateChunkGoogle($Texts, $Source, $Target, $this->GetApiKeyForProvider('google'), $DebugContext, $IsHtml),
+                'deepl'  => $this->TranslateChunkDeepL($Texts, $Source, $Target, $this->GetApiKeyForProvider('deepl'), $DebugContext, $IsHtml),
                 default  => $this->TranslateChunkFree($Texts, $Source, $Target, $DebugContext),
             };
             if ($result !== null) {
@@ -5178,16 +5182,21 @@ private const LANGUAGE_FLAGS = [
 
     // null = dieser Anbieter ist fehlgeschlagen (Kontingent/Key/Netzwerk) -
     // TranslateChunk versucht dann den naechsten in der Kette.
-    private function TranslateChunkGoogle(array $Texts, string $Source, string $Target, string $ApiKey, string $DebugContext = ''): ?array
+    private function TranslateChunkGoogle(array $Texts, string $Source, string $Target, string $ApiKey, string $DebugContext = '', bool $IsHtml = false): ?array
     {
         $body = [
             'q'      => $Texts,
             'source' => $Source,
             'target' => $Target,
-            // "html" statt "text": Google übersetzt dann nur den Text zwischen Tags,
-            // nicht die Tags/Attribute selbst - wichtig für "Eigene Texte", die
-            // vollständige HTML-Widgets (Symcon-HTMLBox-Inhalte) sein können.
-            'format' => 'html',
+            // Build 74: nur noch bei ECHTEN HTML-Inhalten (siehe $IsHtml, "Eigene
+            // Texte" kann vollständige HTMLBox-Widgets enthalten) "html" statt "text" -
+            // Google übersetzt dann nur den Text zwischen Tags, nicht die Tags/
+            // Attribute selbst. Für alles andere (Objektnamen, Enum-Beschriftungen, ...)
+            // bewusst "text": ein wörtliches "&"/"<" in einem Objektnamen (z.B.
+            // "Bad & WC") würde im "html"-Modus als Beginn einer HTML-Entity/eines
+            // Tags fehlinterpretiert und könnte den Text verfälschen - im "text"-Modus
+            // strukturell ausgeschlossen.
+            'format' => $IsHtml ? 'html' : 'text',
         ];
         $payload = json_encode($body);
 
@@ -5231,16 +5240,29 @@ private const LANGUAGE_FLAGS = [
         }, $translations);
     }
 
-    private function TranslateChunkDeepL(array $Texts, string $Source, string $Target, string $ApiKey, string $DebugContext = ''): ?array
+    private function TranslateChunkDeepL(array $Texts, string $Source, string $Target, string $ApiKey, string $DebugContext = '', bool $IsHtml = false): ?array
     {
         $body = [
             'text'        => $Texts,
             'source_lang' => $Source,
             'target_lang' => $Target,
-            // "html": DeepL uebersetzt dann nur den Text zwischen Tags, analog zum
-            // "format": "html" bei Google - siehe TranslateChunkGoogle.
-            'tag_handling' => 'html',
         ];
+        // Build 74: "tag_handling": "html" nur noch bei ECHTEN HTML-Inhalten (siehe
+        // $IsHtml) setzen, analog zu "format" bei Google (siehe TranslateChunkGoogle) -
+        // aber NICHT dieselbe Begründung: anders als Googles "format" schaltet DeepLs
+        // "tag_handling" seine komplette Markup-Verarbeitung ein, die auch OHNE jedes
+        // echte Tag im Eingabetext eigene, synthetische Platzhalter-Tags
+        // (z.B. "<g id=\"1\">...</g>") in die Ausgabe einfügen kann - live beobachtet
+        // (2026-08-19): ein einzelner Objektname ("N-JOY") kam auf Spanisch als
+        // "<g id=\"1\">N-JOY</g>  <g id=\"2\"><g id=\"3\"/></g>" zurück, obwohl der
+        // Ausgangstext nie ein einziges HTML-Zeichen enthielt. Für alles außer "Eigene
+        // Texte" (die tatsächlich vollständige HTMLBox-Widgets sein können) bleibt
+        // "tag_handling" deshalb komplett WEG (kein Schlüssel im Request) - DeepLs
+        // Standardmodus ohne jede Markup-Erkennung, strukturell ausgeschlossen, dass
+        // so ein Platzhalter-Tag je entstehen kann.
+        if ($IsHtml) {
+            $body['tag_handling'] = 'html';
+        }
         $payload = json_encode($body);
 
         $this->SendDebug('DeepLTranslate_Request', $DebugContext . ' | ' . $payload, 0);

@@ -627,6 +627,31 @@ Beschreibung des Moduls.
   eingeblendet bzw. wieder ausgeblendet - ohne jede Störung der laufenden
   Bearbeitung, exakt wie die bereits bestehenden `UpdateFormField()`-
   Aufrufe in anderen Formular-Popups.
+
+  **Build 74 behebt eingeschleuste Platzhalter-Tags bei DeepL-Übersetzungen
+  reiner Objektnamen:** Live gemeldet (Screenshot, zweimal beobachtet): ein
+  völlig einfacher Objektname ohne jedes HTML ("N-JOY") kam auf Spanisch als
+  `<g id="1">N-JOY</g>                    <g id="2"><g id="3"/></g>` zurück
+  - sichtbare, kaputte Auszeichnungs-Reste mitten im Klartext. Ursache:
+  `TranslateChunkDeepL()` hat bei JEDER Anfrage unterschiedslos
+  `"tag_handling": "html"` an DeepL geschickt, unabhängig davon, ob der Text
+  tatsächlich HTML enthielt (kopiert vom analogen, aber harmloseren Muster
+  bei Google, siehe unten). Anders als Googles `format`-Parameter (der nur
+  steuert, ob Sonderzeichen als HTML-Entity zurückkommen) schaltet DeepLs
+  `tag_handling` seine komplette Markup-Verarbeitung ein - und kann dabei
+  auch bei komplett taglosem Eingabetext eigene, synthetische
+  Platzhalter-Tags in die Ausgabe einschleusen. `$IsHtml` wird jetzt bis zu
+  `TranslateChunkGoogle()`/`TranslateChunkDeepL()` durchgereicht:
+  `tag_handling` wird bei DeepL nur noch für echte "Eigene Texte"-HTML-
+  Inhalte überhaupt gesetzt (sonst fehlt der Schlüssel im Request komplett -
+  DeepLs Standardmodus ohne jede Markup-Erkennung, strukturell
+  ausgeschlossen, dass so ein Platzhalter-Tag je entstehen kann). Bei dieser
+  Gelegenheit auch Google angepasst: `format` steht jetzt nur noch bei
+  echtem HTML auf `"html"`, sonst auf `"text"` - vermeidet nicht nur den
+  bisher nötigen `html_entity_decode()`-Umweg für reinen Text, sondern
+  schließt auch aus, dass ein wörtliches "&"/"<" in einem Objektnamen (z. B.
+  "Bad & WC") im html-Modus fälschlich als Beginn einer HTML-Entity/eines
+  Tags interpretiert wird.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
