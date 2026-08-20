@@ -943,6 +943,45 @@ Beschreibung des Moduls.
   jetzt direkt an den Anbieternamen angehängt ("Google Cloud Translate:"
   statt "Google Cloud Translate" + ":" als getrennte Elemente) - dieselbe
   Technik wie bei "Stündlich:"/"Insgesamt:" im Statistik-Panel.
+
+  **Build 84 behebt zwei weitere, live gefundene Probleme.** Erstens war
+  das Simple-Locale-Symbol nach Build 82 auf manchen Kacheln sichtbar
+  GRÖSSER als das Dropdown, nicht exakt gleich hoch: die Höhenanpassung
+  lief über `align-self: stretch`, was das Icon auf die Höhe der GESAMTEN
+  Zeile (`.ipssl-select-row`) skalierte - in der echten Kachel-Darstellung
+  bekommt diese Zeile aber offenbar mehr Höhe zugewiesen, als das Dropdown
+  selbst braucht, wodurch auch das Icon zu groß wurde. Gelöst über eine
+  gemeinsame, feste CSS-Variable (`--ipssl-control-height`), die Dropdown
+  UND Icon jetzt beide explizit auf denselben Wert setzt - unabhängig
+  davon, wie viel Höhe die umgebende Zeile tatsächlich bekommt.
+
+  Zweitens, deutlich wichtiger: eine String-Variable im gescannten Baum
+  kann statt echtem Gast-Anzeigetext auch Konfigurations-/Steuerdaten für
+  ein GANZ ANDERES Modul enthalten (live beobachtet: eine
+  Favoriten-/Playlist-Liste mit Inhalt wie
+  `{"musicProvider":"CLOUDPLAYER","searchPhrase":"Mein Discovery Mix"}`).
+  Simple Locale übersetzte diesen Rohtext bisher wie gewöhnlichen
+  Fließtext - Google/DeepL lieferten dabei u. a. HTML-kodierte
+  Anführungszeichen (`&quot;` statt `"`) zurück, was die JSON-Struktur für
+  das eigentlich konsumierende Skript zerstörte (z. B. erwartete dieses
+  Skript für `musicProvider` einen bestimmten, festen Wert). Eine gezielte
+  "nur die Anzeigetexte innerhalb des JSON übersetzen, Struktur/Schlüssel
+  erhalten"-Lösung wäre technisch nicht zuverlässig umsetzbar: strukturelle
+  Schlüssel/Enum-Werte (z. B. `"CLOUDPLAYER"`) lassen sich innerhalb
+  desselben JSON nicht verlässlich von echtem, übersetzbarem Anzeigetext
+  unterscheiden - eine "intelligente" JSON-Teilübersetzung würde ebenso oft
+  falsch raten und stattdessen ein trügerisches Sicherheitsgefühl erzeugen.
+  Erkennt Simple Locale jetzt, dass ein Rohtext gültiges JSON ist (beginnt
+  mit `{` oder `[` UND lässt sich vollständig parsen - ein einzelnes Wort
+  oder eine Zahl wie "42"/"true" zählt bewusst NICHT als JSON, da das
+  weiterhin ganz normaler übersetzbarer Text sein kann), wird dieser
+  Rohtext von der Übersetzung komplett ausgenommen - für JEDE Gast-Sprache
+  bleibt automatisch der unveränderte Rohtext sichtbar (bestehender
+  Rohtext-Fallback, keine neue Logik nötig). Bereits VOR diesem Update
+  fehlerhaft übersetzte JSON-Zellen bleiben bestehen (wie bei jeder anderen
+  Fehlübersetzung, siehe unten) - einmalig die betroffene Zelle leeren,
+  "Übernehmen" klicken, dann erneut Rescan ausführen, danach bleibt sie
+  dauerhaft leer/unverändert (kein erneuter Übersetzungsversuch mehr).
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der

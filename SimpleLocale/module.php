@@ -4204,6 +4204,26 @@ private const LANGUAGE_FLAGS = [
         return $Rows;
     }
 
+    // Build 84 (Nutzer-Wunsch): erkennt, ob ein Rohtext gueltiges JSON ist (siehe
+    // FillLanguageColumn/FillLanguageColumnFromRawSource) - eine String-Variable im
+    // gescannten Baum kann statt echtem Gast-Anzeigetext auch Konfigurations-/
+    // Steuerdaten fuer ein ANDERES Modul enthalten (z.B. eine Favoriten-/Playlist-
+    // Liste). Bewusst zusaetzlich zum ersten Zeichen geprueft (muss "{" oder "["
+    // sein), nicht nur json_decode()'s Erfolg: ein einzelnes Wort/eine Zahl wie
+    // "42" oder "true" ist technisch ebenfalls gueltiges JSON (ein JSON-Skalar),
+    // aber ganz normaler, uebersetzbarer Text - nur echte Objekte/Arrays sollen
+    // von der Uebersetzung ausgenommen werden.
+    private function LooksLikeJson(string $Text): bool
+    {
+        $trimmed = trim($Text);
+        if ($trimmed === '' || !in_array($trimmed[0], ['{', '['], true)) {
+            return false;
+        }
+        json_decode($trimmed);
+
+        return json_last_error() === JSON_ERROR_NONE;
+    }
+
     // Übersetzt für alle Zeilen, bei denen $ToField noch leer ist, den Text aus
     // $FromField nach $ToField (gebatcht in einem API-Aufruf).
     // $ToField ist der Property-Feldname zum Speichern (kann präfixiert sein, z.B.
@@ -4243,7 +4263,20 @@ private const LANGUAGE_FLAGS = [
             }
             $row = $Rows[$index];
             $fromText = $row[$FromField] ?? '';
-            if ($fromText !== '' && !$this->IsRowLanguageTranslationCurrent($row, $ToField, $TargetLanguageCode)) {
+            // Build 84 (Nutzer-Wunsch): niemals uebersetzen, wenn der Rohtext gueltiges
+            // JSON ist (siehe LooksLikeJson) - kommt vor, wenn eine String-Variable im
+            // gescannten Baum eigentlich Konfigurations-/Steuerdaten fuer ein ANDERES
+            // Modul haelt (z.B. eine Favoriten-Liste mit {"musicProvider":"CLOUDPLAYER",
+            // "searchPhrase":"..."}) statt echten Gast-Anzeigetext. Google/DeepL
+            // uebersetzen so einen String wie gewoehnlichen Fliesstext und liefern dabei
+            // u.a. HTML-kodierte Anfuehrungszeichen (&quot; statt ") zurueck - das
+            // zerstoert die JSON-Struktur fuer das konsumierende Skript. Da sich
+            // strukturelle Schluessel/Enum-Werte (z.B. "CLOUDPLAYER") nicht zuverlaessig
+            // von echtem Anzeigetext innerhalb desselben JSON unterscheiden lassen, wird
+            // JSON-Inhalt komplett von der Uebersetzung ausgenommen - ResolveRowValue()
+            // liefert ueber den bestehenden Rohtext-Fallback ohnehin denselben
+            // unveraenderten Wert fuer jede Gast-Sprache.
+            if ($fromText !== '' && !$this->LooksLikeJson($fromText) && !$this->IsRowLanguageTranslationCurrent($row, $ToField, $TargetLanguageCode)) {
                 $pending[$index] = $fromText;
             }
         }
@@ -4307,7 +4340,14 @@ private const LANGUAGE_FLAGS = [
             }
             $row = $Rows[$index];
             $fromText = $row[$FromField] ?? '';
-            if ($fromText === '' || $this->IsRowLanguageTranslationCurrent($row, $ToField, $TargetLanguageCode)) {
+            // Build 84: JSON-Rohtext bleibt auch hier unangetastet (siehe LooksLikeJson/
+            // FillLanguageColumn) - selbst wenn Ziel- und Quellsprache identisch sind,
+            // wuerde ein Kopieren in eine eigene Spalte eine zweite Kopie des
+            // Konfigurationswerts anlegen, die bei einer kuenftigen Aenderung der
+            // Original-Daten nicht mehr automatisch mitgeht (MarkRowSourceChanged
+            // erkennt nur Aenderungen am Rohfeld selbst). Der Rohtext-Fallback in
+            // ResolveRowValue() liefert ohnehin denselben Wert.
+            if ($fromText === '' || $this->LooksLikeJson($fromText) || $this->IsRowLanguageTranslationCurrent($row, $ToField, $TargetLanguageCode)) {
                 continue;
             }
 
