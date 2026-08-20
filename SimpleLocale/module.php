@@ -4189,6 +4189,10 @@ private const LANGUAGE_FLAGS = [
             foreach ($indicesByRowSourceLanguage as $rowSourceLanguage => $indices) {
                 foreach ($TargetLanguages as $language) {
                     if ($language === $rowSourceLanguage) {
+                        // Build 82 (Nutzer-Wunsch): nichts zu uebersetzen - der Rohtext IST
+                        // bereits der korrekte Inhalt fuer diese Sprache. Direkt kopieren statt
+                        // die Zelle leer zu lassen (siehe FillLanguageColumnFromRawSource).
+                        $Rows = $this->FillLanguageColumnFromRawSource($Rows, $rawField, $group['prefix'] . $language, $language, $capitalizeFirst, $indices);
                         continue;
                     }
                     $Rows = $this->FillLanguageColumn($Rows, $rawField, $group['prefix'] . $language, $rowSourceLanguage, $language, $capitalizeFirst, $isHtml, $indices);
@@ -4277,6 +4281,37 @@ private const LANGUAGE_FLAGS = [
                 $this->MarkRowLanguageTranslated($Rows[$index], $TargetLanguageCode);
             }
             $i++;
+        }
+
+        return $Rows;
+    }
+
+    // Build 82 (Nutzer-Wunsch): Gegenstück zu FillLanguageColumn() für den Fall, dass
+    // die Zielsprache GENAU der eigenen Quellsprache der Zeile entspricht (siehe
+    // FillMissingTranslations) - es gibt nichts zu übersetzen, der Rohtext IST bereits
+    // der korrekte Inhalt. Bisher blieb die Zelle in diesem Fall einfach leer, was in
+    // der Admin-Ansicht wie eine fehlende/unvollständige Übersetzung aussah, obwohl
+    // ResolveRowValue() beim Anzeigen ohnehin per Fallback denselben Rohtext gezeigt
+    // hätte (siehe Build 81). Kopiert den Rohtext jetzt direkt hinein - kein
+    // API-Aufruf nötig, kein Übersetzungs-Kontingent verbraucht - aber nur, wenn die
+    // Zelle noch leer/veraltet ist (dieselbe IsRowLanguageTranslationCurrent-Prüfung
+    // wie bei einer echten Übersetzung), damit eine manuelle Korrektur des Admins (der
+    // Rohtext ist nur ein Vorschlag, jederzeit im Formular editierbar) nie
+    // überschrieben wird.
+    private function FillLanguageColumnFromRawSource(array $Rows, string $FromField, string $ToField, string $TargetLanguageCode, bool $CapitalizeFirst, ?array $RowIndices = null): array
+    {
+        foreach (($RowIndices ?? array_keys($Rows)) as $index) {
+            if (!isset($Rows[$index])) {
+                continue;
+            }
+            $row = $Rows[$index];
+            $fromText = $row[$FromField] ?? '';
+            if ($fromText === '' || $this->IsRowLanguageTranslationCurrent($row, $ToField, $TargetLanguageCode)) {
+                continue;
+            }
+
+            $Rows[$index][$ToField] = $CapitalizeFirst ? $this->CapitalizeFirstLetter($fromText) : $fromText;
+            $this->MarkRowLanguageTranslated($Rows[$index], $TargetLanguageCode);
         }
 
         return $Rows;
@@ -6326,7 +6361,7 @@ HTML;
             return '🌐';
         }
 
-        return '<img alt="" style="width:20px;height:20px;display:block;"'
+        return '<img alt="" style="height:100%;width:auto;display:block;"'
             . ' src="data:image/png;base64,' . base64_encode($iconData) . '">';
     }
 

@@ -890,6 +890,25 @@ Beschreibung des Moduls.
   bzw. die Quellsprache explizit ausgenommen - dieselbe Ausnahme wie in
   Build 80 für `EnforceLicensedLanguageLimit()`, konsistent an beiden
   Stellen angewendet.
+
+  **Build 82, auf Nutzer-Wunsch: die Spalte der Quellsprache bleibt beim
+  Rescan nicht mehr leer, sondern übernimmt direkt den Rohtext.** Trifft
+  eine Zeile beim Rescan auf eine Zielsprache, die genau ihrer eigenen
+  Quellsprache entspricht (siehe Build 79/81), gibt es nichts zu
+  übersetzen - der Rohtext IST bereits der korrekte Inhalt. Bisher blieb
+  die Zelle in diesem Fall trotzdem leer (kein API-Aufruf, aber auch kein
+  Kopiervorgang), was in der Admin-Ansicht wie eine fehlende Übersetzung
+  aussah. Die Zelle wird jetzt direkt mit dem Rohtext befüllt - ohne
+  API-Aufruf, ohne Übersetzungs-Kontingent zu verbrauchen - unter der
+  Annahme, dass dieser Text bereits gut genug ist; der Admin kann ihn wie
+  jede andere Zelle jederzeit manuell korrigieren, eine bereits gefüllte
+  oder korrigierte Zelle wird dabei nie überschrieben.
+
+  Außerdem, ebenfalls auf Nutzer-Wunsch: das Simple-Locale-Symbol links
+  neben dem Sprach-Dropdown skaliert jetzt in der Höhe exakt auf die Höhe
+  der Dropdown-Box, statt einer festen Pixelgröße - passt sich dadurch
+  automatisch an, falls Schriftgröße/Innenabstand des Dropdowns sich
+  künftig ändern (z. B. durch eigenes Kachel-HTML, siehe Abschnitt 7).
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
