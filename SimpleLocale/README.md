@@ -909,6 +909,40 @@ Beschreibung des Moduls.
   der Dropdown-Box, statt einer festen Pixelgröße - passt sich dadurch
   automatisch an, falls Schriftgröße/Innenabstand des Dropdowns sich
   künftig ändern (z. B. durch eigenes Kachel-HTML, siehe Abschnitt 7).
+
+  **Build 83, auf Nutzer-Wunsch: das Panel "Übersetzungsanbieter" spiegelt
+  jetzt wider, wie zuverlässig die angezeigte Pause-Zeit je Anbieter
+  tatsächlich ist, plus dieselbe Formatierungs-Korrektur wie bei der
+  Statistik.** Bisher zeigten alle drei Anbieter (Google, DeepL,
+  kostenfreier Anbieter/MyMemory) dieselbe generische, EXPONENTIELL
+  eskalierende Schätzung ("jetzt + 15min/30min/1h/2h/... bis maximal 24h",
+  siehe `RecordProviderPaused`) als "pausiert bis" an - unabhängig davon,
+  ob diese Schätzung für den jeweiligen Anbieter überhaupt etwas mit der
+  Realität zu tun hat:
+  - **MyMemory** setzt sein kostenfreies Tageskontingent nachweislich
+    zuverlässig um Mitternacht UTC zurück (fest, bekannt) - die generische
+    "jetzt + 24h"-Schätzung konnte dadurch je nach Tageszeit des
+    Fehlschlags um bis zu fast 24 Stunden danebenliegen. Wird jetzt exakt
+    auf die nächste UTC-Mitternacht berechnet (`GetNextUtcMidnightTimestamp`) -
+    sowohl beim eindeutigen `quotaFinished`-JSON-Signal als auch beim
+    generischen HTTP-429-Pfad, sofern dort ein Tageskontingent (nicht nur
+    ein kurzes Burst-Limit) erkannt wurde.
+  - **Google** liefert dagegen keine verlässliche Reset-Zeit (siehe
+    `RecordProviderPaused`: live beobachtet, dass ein erkanntes Rate-Limit
+    trotzdem über Stunden bestehen blieb) - die Zeile heißt jetzt
+    "voraussichtlich pausiert bis" statt schlicht "pausiert bis", um die
+    angezeigte Zeit klar als Schätzung statt als Zusage zu kennzeichnen.
+  - **DeepL** bekommt dieselbe "voraussichtlich"-Formulierung PLUS einen
+    zusätzlichen Hinweis darunter: bei DeepL ist ein aufgebrauchtes
+    Kontingent nicht garantiert automatisch zurückgesetzt - bloßes Warten
+    hilft dann nicht, nur ein Kauf bei DeepL oder ein neuer API-Key.
+
+  Außerdem, wie von der Statistik-Sektion bekannt: die bisher separat
+  schwebende ":" -Beschriftung (eigenes Label-Element, dadurch je nach
+  Länge des Anbieternamens unterschiedlich weit vom Text entfernt) ist
+  jetzt direkt an den Anbieternamen angehängt ("Google Cloud Translate:"
+  statt "Google Cloud Translate" + ":" als getrennte Elemente) - dieselbe
+  Technik wie bei "Stündlich:"/"Insgesamt:" im Statistik-Panel.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
