@@ -839,6 +839,12 @@ private const LANGUAGE_FLAGS = [
                 case self::propertyManualTranslations:
                     $element['columns'] = $this->BuildListColumns($sourceLanguage, $targetLanguages, 'manual');
                     $element['values'] = $this->DecodeRows(self::propertyManualTranslations);
+                    // Nutzer-Wunsch: ohne "manual_translations" (siehe HasLicenseFeature)
+                    // sind die Zellen bereits ueber BuildListColumns() schreibgeschuetzt -
+                    // der "Hinzufuegen"-Button selbst blieb davon bisher unberuehrt und
+                    // legte trotzdem eine neue, aber sofort wieder unbearbeitbare Zeile an.
+                    // Deaktiviert den Button jetzt zusaetzlich, wenn das Feature fehlt.
+                    $element['add'] = $this->HasLicenseFeature('manual_translations');
                     break;
 
                 // Erklaert an genau der Stelle, wo Nutzer intuitiv suchen ("Begrüßung"),
