@@ -1209,6 +1209,22 @@ Beschreibung des Moduls.
   stabilen Schlüssel erkannt werden) und danach einmal "Aufräumen"
   (entfernt die jetzt nicht mehr auffindbaren alten Dopplungs-Zeilen,
   siehe Build 76) klicken.
+
+  **Build 91, auf Nutzer-Wunsch: der "Hinzufügen"-Button der "Eigenen
+  Übersetzungstabelle" ist jetzt ebenfalls deaktiviert, wenn die Lizenz
+  das Feature `manual_translations` (Build 89) nicht enthält.** Die
+  Zellen selbst waren dafür bereits schreibgeschützt (siehe
+  `BuildListColumns`), der Button blieb bisher aber unabhängig davon
+  klickbar - ein Klick legte eine neue Zeile an, die sich anschließend
+  gar nicht mehr bearbeiten ließ, ein verwirrender Sackgassen-Zustand.
+  Außerdem ist `manual_translations` jetzt ab der Standard-Lizenz Teil
+  des offiziellen Feature-Sets (Standard UND Pro, siehe
+  `includes/products.php` im Shop-Repository) - bereits VOR diesem Update
+  ausgestellte Lizenzschlüssel enthalten dieses Feature naturgemäß noch
+  nicht (ein Lizenzschlüssel ist beim Ausstellen kryptografisch signiert
+  und lässt sich nicht nachträglich ändern) und benötigen einen neu
+  ausgestellten Schlüssel, um die "Eigene Übersetzungstabelle"
+  tatsächlich nutzen zu können.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
