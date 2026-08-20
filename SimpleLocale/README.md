@@ -860,6 +860,36 @@ Beschreibung des Moduls.
   Quellsprache ist jetzt explizit von der `allowedLanguages`-Einschränkung
   ausgenommen (das numerische Sprachlimit selbst bleibt davon unberührt -
   siehe oben, das ist weiterhin bewusst gewollt).
+
+  **Build 81 behebt zwei weitere Anzeige-Lücken, die erst nach Build 80 im
+  Live-Test auffielen - die Daten selbst waren zu diesem Zeitpunkt bereits
+  korrekt gespeichert (per Debug-Meldung bestätigt), es fehlte nur die
+  passende Darstellung.** Erstens übersprang `BuildLanguageColumnSet()`
+  (baut die Sprachspalten für "Objektnamen"/"Eigene Texte"/"Aufzählungs-
+  optionen"/"Automations"/"Begrüßung" auf) bislang grundsätzlich die Spalte
+  für die instanzweite Quellsprache - korrekt VOR Build 79, als ihr Inhalt
+  immer 1:1 identisch mit "Original import" war. Seitdem kann aber eine
+  EINZELNE Zeile eine abweichende eigene Quellsprache tragen (z. B. eine
+  ursprünglich englischsprachig gescannte Zeile in einem sonst deutschen
+  Baum) - für so eine Zeile zeigt "Original import" weiterhin den
+  englischen Rohtext, während die (bisher fehlende) "Deutsch"-Spalte die
+  tatsächliche deutsche Übersetzung zeigen sollte, also einen eigenen,
+  nicht-redundanten Wert. Die Spalte fehlte dadurch für den kompletten
+  Baum, unabhängig davon, ob überhaupt eine Zeile abweichende Quellsprachen
+  hatte. Für Zeilen mit einheitlicher Quellsprache bleibt der Spalteninhalt
+  weiterhin redundant zu "Original import" - bewusst in Kauf genommen,
+  keine Sonderlogik dafür.
+
+  Zweitens zeigte "Zielsprachen" nach dem automatischen Ergänzen der
+  Quellsprache (siehe Build 79) eine LEERE Zeile ohne sichtbaren
+  Sprachnamen: `BuildTargetLanguageOptions()` liefert nicht nur die Auswahl
+  für "Hinzufügen", sondern auch die Beschriftung, mit der die Liste jede
+  bereits gespeicherte Zeile anzeigt - und schloss die Quellsprache
+  ebenfalls grundsätzlich aus (plus, unter Testphase/`allowedLanguages`-
+  Einschränkung, ein zweites Mal). Beide Ausschlüsse sind jetzt entfernt
+  bzw. die Quellsprache explizit ausgenommen - dieselbe Ausnahme wie in
+  Build 80 für `EnforceLicensedLanguageLimit()`, konsistent an beiden
+  Stellen angewendet.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
