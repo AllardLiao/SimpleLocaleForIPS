@@ -571,8 +571,23 @@ Beschreibung des Moduls.
   auf das Ende der Ruhephase zu warten - ein Gast bekommt dadurch immer den
   aktuellsten Stand zu sehen. Das Konfigurationsformular zeigt zusätzlich
   oben einen Hinweis mit der voraussichtlichen Uhrzeit der nächsten
-  Persistierung an, solange etwas ansteht - rein informativ, da Speichern
-  jederzeit gefahrlos möglich ist.
+  Persistierung an, solange etwas ansteht.
+
+  **Wichtige Einschränkung dieses Schutzes:** Er bewahrt nur den externen
+  Puffer selbst davor, verworfen zu werden - er schützt NICHT eine eigene,
+  gleichzeitige Bearbeitung DERSELBEN Zelle. Beim "Übernehmen" liest
+  `ApplyChanges()` die gerade abgeschickten Zeilen (bereits mit dem eigenen
+  frischen Wert) und überschreibt darin gezielt genau die Felder, die im
+  Puffer stehen (Rohtext + Übersetzung der aktiven Sprache), mit dem
+  ÄLTEREN, gepufferten externen Wert. Bearbeitet man eine andere Zeile oder
+  eine andere Spalte derselben Zeile (z. B. eine nicht-aktive Zielsprache),
+  bleibt die eigene Änderung unangetastet. Korrigiert man dagegen manuell
+  genau die Zelle, die gerade auch extern (per `VM_UPDATE`) aktualisiert und
+  gepuffert wird, gewinnt beim Speichern der ältere externe Wert - die
+  eigene, frisch eingetippte Korrektur geht dabei ersatzlos verloren.
+  Bei einer häufig extern aktualisierten Variable also am besten zügig
+  speichern bzw. genau diese Zelle meiden, solange der Hinweis oben im
+  Formular eine anstehende Persistierung anzeigt.
 
   **Build 72 macht den Übersetzungs-Cache treffsicherer und größer:** Bisher
   war der lokale Cache (bis zu 500 Einträge) rein nach Einfügereihenfolge
@@ -966,7 +981,7 @@ Bewusst außerhalb von v1: Google und DeepL gleichzeitig für dieselbe Übersetz
 Name                            | Beschreibung
 -------------------------------- | ------------------
 Zielsprachen                    | Sprachen, in die übersetzt werden soll. Auswahl-Optionen kommen ab Werk aus der eingebauten Liste, mit konfiguriertem Google-/DeepL-Key aus deren dynamisch geladener Liste (siehe oben). Ausgegraut, wenn ein bezahlter Anbieter konfiguriert ist, aber noch keine Liste laden konnte, oder wenn das Sprachlimit einer "Spezialversion"-Lizenz erreicht ist (siehe Abschnitt 8). Wichtig: Nach dem Klick auf "Sprachliste aktualisieren" die Instanzkonfiguration einmal schließen und neu öffnen, bevor Häkchen gesetzt werden - sonst kann die Konsole falsche Sprachen speichern.
-Objektnamen / Eigene Texte / Beschriftungen | Listen der gefundenen Objekte mit Quelltext und je einer Spalte pro Zielsprache. Übersetzungen sind hier direkt editierbar; leere Zellen werden beim nächsten Rescan automatisch übersetzt. "Beschriftungen" siehe [Abschnitt 2](#2-bekannte-einschränkungen) (Fork-Mechanismus).
+Objektnamen / Eigene Texte / Beschriftungen | Listen der gefundenen Objekte mit Quelltext und je einer Spalte pro Zielsprache. Übersetzungen sind hier direkt editierbar; leere Zellen werden beim nächsten Rescan automatisch übersetzt. "Beschriftungen" siehe [Abschnitt 2](#2-bekannte-einschränkungen) (Fork-Mechanismus). **Hinweis:** Das Konfigurationsformular persistiert extern (per `VM_UPDATE`) automatisch geänderte Texte alle 12 Minuten, wenn es Änderungen gibt, was zu einem Refresh dieses Formulars führt - bitte speichere Deine eigene Arbeit rechtzeitig. Solange etwas ansteht, zeigt das Formular oben einen Hinweis mit der nächsten Refresh-Zeit an (siehe [Abschnitt 2](#2-bekannte-einschränkungen) für die genauen Details, was dabei geschützt ist und was nicht).
 Automations                     | Liste der gefundenen Automation-Einträge der oben unter "Kachel-Visualisierung" gewählten Instanz mit Quelltext und je einer Spalte pro Zielsprache - funktioniert genauso wie Objektnamen.
 Begrüßung                       | Übersetzt den Begrüßungstext der Kachel-Visualisierung, unabhängig davon, ob "Show Greeting" gerade "Automatic"/"Static" (freier Text, Feld "Name"/Property `GreetingName`) oder "Variable" (Live-Wert einer String-Variable) ist - beide landen in derselben einen Zeile hier, siehe eigenen Absatz unten. Ein Hinweistext direkt über der Liste zeigt an, welcher Modus gerade aktiv ist. Bei "Show Greeting" = "None" bleibt die Liste leer.
 
