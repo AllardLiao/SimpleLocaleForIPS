@@ -1158,6 +1158,57 @@ Beschreibung des Moduls.
   dieses Feature bleibt die Property zwar erhalten (kein Datenverlust bei
   einem Lizenz-Downgrade), wirkt sich aber gar nicht mehr aus, weder beim
   Bearbeiten noch bei der Anwendung bereits gespeicherter Zeilen.
+
+  **Build 90 behebt einen strukturellen Bug, live gefunden: ein
+  Sprachwechsel konnte in "Aufzählungsoptionen" ("Captions") Dopplungs-
+  Zeilen erzeugen, deren "Original import" tatsächlich die zuletzt
+  angezeigte ÜBERSETZUNG war, fälschlich als Quellsprache markiert.**
+  Zeigt eine Variable ihre Beschriftung über ein geteiltes Profil/Template
+  (z. B. "An"/"Aus"), kann Simple Locale beim Live-Anzeigen einer anderen
+  Sprache keine einzelnen Felder an einer WEITERHIN referenzierten
+  Quelle überschreiben - die Variable wird deshalb bewusst "geforkt"
+  (die Profil-/Template-Referenz entfernt, die Übersetzung stattdessen
+  direkt inline in die Variable geschrieben, siehe
+  `ApplyEnumerationOptionsToVariable`). Bis Build 90 verlor die Variable
+  dadurch aber auch dauerhaft die einzige Spur ihrer ursprünglichen,
+  geteilten Identität: ohne erkennbare Profil-/Template-Referenz fiel die
+  Zeilenerkennung beim nächsten Rescan auf einen Hash über den GERADE
+  angezeigten Text zurück (Build 75, für Variablen, die von Haus aus kein
+  geteiltes Profil/Template nutzen) - und dieser Hash änderte sich mit
+  JEDEM Sprachwechsel, weil sich der angezeigte Text änderte. Der nächste
+  Rescan erkannte die Zeile dadurch nicht wieder, hielt den gerade
+  angezeigten (oft längst übersetzten) Text für frischen Quelltext und
+  legte eine neue, falsch beschriftete Dopplungs-Zeile an - reproduzierbar
+  bei jedem automatischen Rescan, solange die Kachel auf einer anderen
+  als der Quellsprache stand. Der bereits vor dem allerersten Fork
+  gesicherte Rücksprung-Zustand
+  (`attributeEnumerationPresentationBackup`, ursprünglich nur fürs
+  Zurückschalten auf "Original" gedacht) kennt die echte, stabile
+  Profil-/Template-Referenz aber weiterhin - `GetPresentationSourceKey()`
+  leitet den Zeilen-Schlüssel jetzt bevorzugt daraus ab, sobald ein
+  Backup existiert, unabhängig davon, welche Sprache die Variable gerade
+  live anzeigt.
+
+  Zweiter, tieferer Teil desselben Bugs: Variablen OHNE jedes geteilte
+  Profil/Template (eigenständige, direkt vom Gerätetreiber gesetzte
+  Inline-Präsentation, siehe Build 75) verlieren durch den Fork nicht nur
+  eine Referenz, sondern ihren GESAMTEN stabilen Rohtext - für sie reicht
+  die stabile Referenz allein nicht, da der Rohtext selbst (nicht nur ein
+  Verweis darauf) in den Content-Hash einfließt. `ReadTranslatablePresentation()`
+  liest den zu extrahierenden Inhalt jetzt ebenfalls bevorzugt aus dem
+  Backup, sobald dieses selbst keine Profil-/Template-Referenz enthält -
+  hat der Backup dagegen eine Referenz (der häufigere Fall), bleibt es bei
+  der live aufgelösten Präsentation für den Inhalt (der Backup ist dort
+  nur eine dünne Referenz ohne eigene Beschriftungen), die
+  Zeilenerkennung ist für diesen Fall bereits über die Schlüssel-Ableitung
+  oben abgesichert.
+
+  **Bereits bestehende Installationen:** durch den Bug bereits entstandene
+  Dopplungs-Zeilen verschwinden nicht automatisch rückwirkend - einmal
+  "Baum neu einlesen" (damit die betroffenen Variablen wieder unter ihrem
+  stabilen Schlüssel erkannt werden) und danach einmal "Aufräumen"
+  (entfernt die jetzt nicht mehr auffindbaren alten Dopplungs-Zeilen,
+  siehe Build 76) klicken.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der

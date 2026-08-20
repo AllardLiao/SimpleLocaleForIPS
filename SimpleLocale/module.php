@@ -3837,7 +3837,33 @@ private const LANGUAGE_FLAGS = [
             return null;
         }
 
-        $presentation = @IPS_GetVariablePresentation($VariableID);
+        // Build 90-Nachbesserung: fuer eine bereits geforkte Variable OHNE geteilte
+        // Profil-/Template-Referenz (Build 75, siehe GetPresentationSourceKey) reicht
+        // die dort bereits gefixte stabile Referenz allein nicht aus - so eine
+        // Variable verliert durch den Fork nicht nur ihre Referenz, sondern IHREN
+        // GESAMTEN stabilen Rohtext: die live aufgeloeste Presentation zeigt ab dann
+        // nur noch den gerade angezeigten, u.U. laengst uebersetzten Stand, und GENAU
+        // DIESER Rohtext (nicht nur eine Referenz) fliesst in den Content-Hash ein.
+        // Der VOR dem allerersten Fork gesicherte Zustand
+        // (attributeEnumerationPresentationBackup) haelt in diesem Fall direkt den
+        // stabilen Original-Rohtext - wird deshalb hier bevorzugt genutzt. Hat der
+        // Backup dagegen eine geteilte Referenz (Profil/Template), bleibt es bei der
+        // LIVE aufgeloesten Presentation fuer die eigentlichen Feld-Inhalte (der
+        // Backup selbst ist dort nur eine duenne Referenz ohne eigene
+        // Caption-Inhalte, aus der sich keine Felder extrahieren liessen) - die
+        // Zeilenerkennung ist fuer DIESEN Fall bereits ueber
+        // GetPresentationSourceKey() abgesichert, und der Rohtext einer bereits
+        // bekannten (darüber erfolgreich zugeordneten) Zeile wird ohnehin nie erneut
+        // aus dem Scan uebernommen (siehe MergeEnumerationOptions).
+        $backups = json_decode($this->ReadAttributeString(self::attributeEnumerationPresentationBackup), true);
+        $backup = is_array($backups) ? ($backups[(string) $VariableID] ?? null) : null;
+        $backupHasSharedReference = is_array($backup)
+            && ((($backup['PRESENTATION'] ?? '') === VARIABLE_PRESENTATION_LEGACY && ($backup['PROFILE'] ?? '') !== '')
+                || ($backup['TEMPLATE'] ?? '') !== '');
+
+        $presentation = (is_array($backup) && $backup !== [] && !$backupHasSharedReference)
+            ? $backup
+            : @IPS_GetVariablePresentation($VariableID);
         if (!is_array($presentation) || $presentation === []) {
             return null;
         }
@@ -3864,7 +3890,7 @@ private const LANGUAGE_FLAGS = [
             return null;
         }
 
-        $sourceKey = $this->GetPresentationSourceKey($VariableID, $presentation, $fields);
+        $sourceKey = $this->GetPresentationSourceKey($VariableID, $presentation, $fields, $backup);
 
         return ['sourceKey' => $sourceKey, 'fields' => $fields];
     }
@@ -3882,8 +3908,44 @@ private const LANGUAGE_FLAGS = [
     // vollständig aufgelöste Ergebnis OHNE eigenen TEMPLATE-Schlüssel (live geprüft) -
     // die Referenz selbst ist daher nur über das rohe VariableCustomPresentation/
     // VariablePresentation-Feld sichtbar.
-    private function GetPresentationSourceKey(int $VariableID, array $ResolvedPresentation, array $Fields): string
+    // $Backup: der VOR dem allerersten Fork dieser Variable gesicherte Zustand
+    // (siehe attributeEnumerationPresentationBackup/ReadTranslatablePresentation,
+    // die ihn bereits decodiert hat - kein zweites Mal je Variable dekodieren),
+    // oder null, wenn die Variable nie geforkt wurde.
+    private function GetPresentationSourceKey(int $VariableID, array $ResolvedPresentation, array $Fields, ?array $Backup): string
     {
+        // Build 90 (Nutzer-Report, live gefunden): sobald eine Variable durch uns
+        // SELBST geforkt wurde (siehe ApplyEnumerationOptionsToVariable - sobald
+        // irgendeine Sprache != Original/Quellsprache je aktiv war), verliert sie
+        // ihre PROFILE-/TEMPLATE-Referenz UNWEIDERRUFLICH aus ihrem eigenen,
+        // aktuellen Zustand - sowohl $ResolvedPresentation als auch die rohen
+        // Variable-Felder unten zeigen dann nur noch die geforkte (u.U. gerade
+        // uebersetzt angezeigte) Inline-Kopie, nie mehr die urspruengliche
+        // Referenz. Ohne diese Pruefung fiele der Schluessel fuer eine bereits
+        // geforkte Variable IMMER auf den instabilen Content-Hash unten zurueck -
+        // und da dessen Inhalt von der GERADE AKTIVEN Gast-Sprache abhaengt,
+        // aendert sich dieser Hash bei jedem Sprachwechsel. Der naechste Rescan
+        // erkennt die Zeile dadurch nicht wieder, haelt den aktuell angezeigten
+        // (u.U. laengst uebersetzten) Text faelschlich fuer frischen Quelltext und
+        // legt eine neue, falsch beschriftete Dopplungs-Zeile an. Die vor dem
+        // allerersten Fork gesicherte Backup-Referenz kennt die WIRKLICHE, stabile
+        // Identitaet weiterhin - daraus laesst sich derselbe Schluessel wie vor
+        // dem Fork ableiten, unabhaengig davon, welche Sprache aktuell angezeigt
+        // wird.
+        if (is_array($Backup)) {
+            if (($Backup['PRESENTATION'] ?? '') === VARIABLE_PRESENTATION_LEGACY && ($Backup['PROFILE'] ?? '') !== '') {
+                return 'profile:' . $Backup['PROFILE'];
+            }
+            $backupTemplateGUID = $Backup['TEMPLATE'] ?? '';
+            if ($backupTemplateGUID !== '') {
+                return 'template:' . $backupTemplateGUID;
+            }
+            // Backup selbst schon eine eigene, referenzlose VariableCustomPresentation
+            // (z.B. von einem anderen Modul/Admin VOR unserem ersten Fork gesetzt) -
+            // dafuer gibt es keine stabile geteilte Identitaet, faellt unten auf den
+            // variablenspezifischen Content-Hash zurueck wie im Nie-geforkt-Fall.
+        }
+
         if (($ResolvedPresentation['PRESENTATION'] ?? '') === VARIABLE_PRESENTATION_LEGACY) {
             $profileName = $ResolvedPresentation['PROFILE'] ?? '';
             if ($profileName !== '') {
