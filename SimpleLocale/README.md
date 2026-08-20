@@ -759,6 +759,44 @@ Beschreibung des Moduls.
   Name `ShowGlobeIcon` und CSS-Klasse `ipssl-globe` bleiben aus
   Kompatibilitätsgründen unverändert - siehe Abschnitt 7 für eigene,
   darauf aufbauende Kachel-Anpassungen).
+
+  **Build 78 macht die festen Gast-Oberflächentexte komplett unabhängig von
+  Anbieter-Pausen, ergänzt den Pause-Grund und weitere kleinere
+  Verbesserungen.** Der eigentliche Kern dieses Builds, direkte Folge des
+  in Build 77 gefundenen Bugs: die festen Gast-Oberflächentexte
+  ("Übersetzung pausiert bis", die Statistik-Beschriftungen, der
+  Info-Popup-Hinweistext, ...) laufen ab sofort NICHT mehr über einen
+  24h-Live-Übersetzungs-Cache (`EnsureGuestLanguageNamesFresh`), der -
+  genau dann, wenn er ausgerechnet während einer Anbieter-Pause aktualisiert
+  wird - für den Rest des Tages auf Deutsch hängen bleiben konnte. Diese
+  Texte werden jetzt genau wie Objektnamen/Automations beim Rescan EINMALIG
+  in alle konfigurierten Zielsprachen übersetzt und dauerhaft in einer
+  eigenen, neuen Property (`OwnUiTexts`) gespeichert - da sie fest im
+  PHP-Code stehen und sich nur mit einem künftigen Modul-Update überhaupt
+  ändern können, liegt die Übersetzung dadurch strukturell IMMER schon vor,
+  bevor eine Pause je eine Rolle spielen könnte. Bewusst OHNE eigene Liste
+  im Konfigurationsformular und ausdrücklich NICHT von "Aufräumen" (Build
+  76) betroffen - der Admin kann diese Zeilen weder versehentlich löschen
+  noch verändern, sie gehören zu keinem Symcon-Objekt und sollen dauerhaft,
+  unabhängig von jeder Admin-Aktion, vorhanden bleiben. Ändert ein
+  künftiges Modul-Update den deutschen Wortlaut eines dieser Texte, wird
+  das beim nächsten Rescan automatisch erkannt und neu übersetzt (die alte
+  Übersetzung bleibt bis dahin als Fallback sichtbar, statt sofort zu
+  verschwinden).
+
+  Zusätzlich, alles auf Nutzer-Wunsch: das Info-Popup nennt jetzt auch den
+  GRUND einer laufenden Anbieter-Pause ("Grund: Alle konfigurierten
+  Übersetzungsanbieter melden aktuell ihr Limit erreicht."), nicht mehr
+  nur "bis wann". Die Überschrift des Info-Popups wird jetzt fett
+  dargestellt - technisch über die "Mathematical Sans-Serif Bold"-Zeichen
+  aus dem Unicode-Block "Mathematical Alphanumeric Symbols" (U+1D5D4 ff.),
+  da `alert()` reiner Text ist und keine HTML-/Markdown-Formatierung
+  kennt; sehen in praktisch jedem modernen Browser/Betriebssystem
+  fettgedruckt aus, sind aber technisch eigene Zeichen statt eines
+  Formatierungsattributs (deckt nur A-Z/a-z/0-9 ab, Leerzeichen/
+  Sonderzeichen bleiben unverändert). Und: der graue Kreis-Hintergrund
+  hinter dem Simple-Locale-Symbol in der Kachel (Build 77) wurde entfernt -
+  nur noch das reine Symbol, ohne umschließende Form.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
