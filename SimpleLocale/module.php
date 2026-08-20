@@ -465,6 +465,31 @@ private const LANGUAGE_FLAGS = [
         // Problem längst behoben ist.
         $this->ClearPauseOnCredentialChange();
 
+        // Build 79 (Nutzer-Wunsch): "ORIGINAL_IMPORT" ist ab jetzt keine waehlbare
+        // Gast-Sprache mehr (siehe GetSelectableLanguageCodes) - eine Instanz, die vor
+        // diesem Update zuletzt auf "Original" stand, wird EINMALIG auf die
+        // tatsaechliche Quellsprache umgeschrieben, damit propertyCurrentLanguage
+        // weiterhin ein echter, in GetSelectableLanguageCodes() enthaltener Code
+        // bleibt. Greift identisch fuer brandneue Instanzen (RegisterPropertyString-
+        // Default ist ebenfalls "ORIGINAL_IMPORT", siehe Create()) wie fuer bereits
+        // bestehende - kein separater Migrationscode noetig.
+        if ($this->ReadPropertyString(self::propertyCurrentLanguage) === self::langOriginalImport) {
+            IPS_SetProperty($this->InstanceID, self::propertyCurrentLanguage, $this->ReadPropertyString(self::propertySourceLanguage));
+            IPS_ApplyChanges($this->InstanceID);
+        }
+
+        // Build 79: die Quellsprache ist ab jetzt IMMER ein echter, persistierter
+        // Eintrag in propertyTargetLanguages, statt separat ueber die Pseudo-Sprache
+        // "ORIGINAL_IMPORT" verfuegbar zu sein (siehe GetSelectableLanguageCodes) -
+        // damit verschwindet eine Quellsprache nicht mehr aus der Gast-Auswahl, nur
+        // weil propertySourceLanguage zwischenzeitlich auf eine andere Sprache
+        // umgestellt wurde. Bewusst VOR EnforceLicensedLanguageLimit() aufgerufen: der
+        // neu ergaenzte Eintrag unterliegt dadurch exakt derselben Lizenz-Kuerzung wie
+        // jeder andere Zielsprachen-Eintrag auch - verhindert, dass sich ein Nutzer
+        // durch wiederholtes Wechseln der Quellsprache unbegrenzt viele "kostenlose"
+        // Zielsprachen an einer lizenzierten Sprachobergrenze vorbei ergaenzt.
+        $this->EnsureSourceLanguageIsTarget();
+
         // Testphase startet mit der allerersten Einrichtung der Instanz, nicht erst
         // beim ersten Rescan - sonst könnte man den Ablauf durch einfaches Nichtstun
         // beliebig hinauszögern.
@@ -1846,6 +1871,37 @@ private const LANGUAGE_FLAGS = [
         return in_array($Feature, $info['features'] ?? [], true);
     }
 
+    // Build 79: stellt sicher, dass propertySourceLanguage IMMER als echter Eintrag
+    // in propertyTargetLanguages vorhanden ist (siehe ApplyChanges - bewusst VOR
+    // EnforceLicensedLanguageLimit() aufgerufen, damit ein frisch ergaenzter Eintrag
+    // exakt derselben Kuerzung unterliegt wie jeder manuell hinzugefuegte). Reines
+    // No-Op, wenn der Code bereits enthalten ist (haeufigster Fall) - der
+    // IPS_SetProperty+IPS_ApplyChanges-Reentry passiert also nur genau dann, wenn
+    // sich propertySourceLanguage tatsaechlich geaendert hat oder die Instanz neu
+    // angelegt wurde.
+    private function EnsureSourceLanguageIsTarget(): void
+    {
+        $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
+        if ($sourceLanguage === '') {
+            return;
+        }
+
+        $rows = json_decode($this->ReadPropertyString(self::propertyTargetLanguages), true);
+        if (!is_array($rows)) {
+            $rows = [];
+        }
+
+        foreach ($rows as $row) {
+            if (($row['code'] ?? '') === $sourceLanguage) {
+                return;
+            }
+        }
+
+        $rows[] = ['code' => $sourceLanguage];
+        IPS_SetProperty($this->InstanceID, self::propertyTargetLanguages, json_encode($rows));
+        IPS_ApplyChanges($this->InstanceID);
+    }
+
     // Defensive Absicherung gegen ein Downgrade (z.B. eine zeitlich befristete
     // "Spezialversion"-Lizenz läuft ab und der Schlüssel wird gegen eine mit
     // kleinerem languageLimit/anderen allowedLanguages ausgetauscht) oder eine
@@ -1854,7 +1910,11 @@ private const LANGUAGE_FLAGS = [
     // danach auf die ersten N verbleibenden - statt mehr/andere zuzulassen als
     // lizenziert. Die Admin-Oberfläche verhindert das Hinzufügen unpassender
     // Sprachen zusätzlich schon vorher (siehe BuildTargetLanguageOptions), das
-    // hier ist nur das serverseitige Netz.
+    // hier ist nur das serverseitige Netz. Seit Build 79 kann diese Kuerzung auch
+    // den (von EnsureSourceLanguageIsTarget soeben ergaenzten) Quellsprachen-Eintrag
+    // selbst treffen, wenn eine bereits am Limit stehende Lizenz die Quellsprache
+    // wechselt - bewusst so gewollt (siehe README Build 79): verhindert, dass
+    // wiederholtes Wechseln der Quellsprache das Sprachlimit einer Lizenz umgeht.
     private function EnforceLicensedLanguageLimit(): void
     {
         $rows = json_decode($this->ReadPropertyString(self::propertyTargetLanguages), true);
@@ -1923,17 +1983,19 @@ private const LANGUAGE_FLAGS = [
     }
 
     // Ob ein Sprachwechsel-Versuch des Gasts an der abgelaufenen Testphase scheitert.
-    // Die Basissprache und "Original" sind nie blockiert (das ist ja gerade der
-    // Rückfall-Zustand), ebenso jede aktuell kostenfreie Sprache (siehe
-    // GetFreeLanguageCodes) - auch dann, wenn die eigene 30-Tage-Testphase dieser
-    // Instanz für sich genommen längst abgelaufen ist (Marketing-Aktionen wirken
-    // unabhängig vom individuellen Testphase-Ablauf, siehe PROMOTIONAL_LANGUAGE_CAMPAIGNS).
+    // Die Basissprache ist nie blockiert (das ist ja gerade der Rückfall-Zustand -
+    // seit Build 79 gibt es "Original" als eigene waehlbare Pseudo-Sprache nicht mehr,
+    // siehe GetSelectableLanguageCodes), ebenso jede aktuell kostenfreie Sprache
+    // (siehe GetFreeLanguageCodes) - auch dann, wenn die eigene 30-Tage-Testphase
+    // dieser Instanz für sich genommen längst abgelaufen ist (Marketing-Aktionen
+    // wirken unabhängig vom individuellen Testphase-Ablauf, siehe
+    // PROMOTIONAL_LANGUAGE_CAMPAIGNS).
     private function IsLanguageBlockedByTrial(string $Language): bool
     {
         if (!$this->IsTrialLocked()) {
             return false;
         }
-        if ($Language === self::langOriginalImport || $Language === $this->ReadPropertyString(self::propertySourceLanguage)) {
+        if ($Language === $this->ReadPropertyString(self::propertySourceLanguage)) {
             return false;
         }
 
@@ -1948,14 +2010,21 @@ private const LANGUAGE_FLAGS = [
     // eigener Timer nötig.
     private function ResetToOriginalLanguageIfNeeded(): void
     {
-        // Absichtlich IsLanguageBlockedByTrial() statt nur "!= ORIGINAL_IMPORT": eine
+        // Absichtlich IsLanguageBlockedByTrial() statt nur "!= Quellsprache": eine
         // gerade aktive, kostenfreie Sprache (Testphase-Sprache oder laufende
         // Marketing-Aktion, siehe GetFreeLanguageCodes) soll bei abgelaufener
         // Testphase bestehen bleiben, nicht bei jedem ApplyChanges/Rescan erneut
         // zurückgesetzt werden.
+        //
+        // Build 79: schwenkt auf die ECHTE Quellsprache zurück, nicht mehr auf die
+        // Pseudo-Sprache "ORIGINAL_IMPORT" (die ist seit diesem Build kein waehlbarer
+        // Gast-Sprachcode mehr, siehe GetSelectableLanguageCodes) - ApplyLanguage()
+        // findet ueber ResolveRowValue() fuer jede Zeile ohnehin denselben unbearbeiteten
+        // Rohtext, sobald der uebergebene Code der (instanzweiten oder zeilenindividuellen)
+        // Quellsprache entspricht.
         $currentLanguage = $this->ReadPropertyString(self::propertyCurrentLanguage);
         if ($this->IsLanguageBlockedByTrial($currentLanguage)) {
-            $this->ApplyLanguage(self::langOriginalImport);
+            $this->ApplyLanguage($this->ReadPropertyString(self::propertySourceLanguage));
         }
     }
 
@@ -5986,17 +6055,15 @@ private const LANGUAGE_FLAGS = [
         return $response;
     }
 
-    // Gewählte Zielsprachen + die "Original"-Werkseinstellung, in dieser Reihenfolge -
-    // gemeinsam genutzt von der Kachel und vom Konfigurationsformular. Die Basissprache
-    // erscheint bewusst NICHT zusätzlich als eigener Eintrag: ihr Inhalt ist ohnehin
-    // identisch mit "Original" (siehe ResolveRowValue), ein separater Eintrag wäre
-    // nur eine verwirrende Dopplung im Dropdown.
+    // Gewählte Zielsprachen - gemeinsam genutzt von der Kachel und vom
+    // Konfigurationsformular. Build 79: keine separate "Original"-Pseudo-Sprache mehr
+    // (siehe README Build 79) - EnsureSourceLanguageIsTarget() (siehe ApplyChanges)
+    // stellt stattdessen sicher, dass die tatsächliche Quellsprache IMMER selbst als
+    // echter Eintrag in propertyTargetLanguages steckt, wodurch sie hier automatisch
+    // mit auftaucht, ohne einen separaten Pseudo-Code zu brauchen.
     private function GetSelectableLanguageCodes(): array
     {
-        $languages = $this->GetSelectedTargetLanguages();
-        $languages[] = self::langOriginalImport;
-
-        return $languages;
+        return $this->GetSelectedTargetLanguages();
     }
 
     // Symcon ruft diese Methode auf, sobald die Instanz selbst als Kachel in die

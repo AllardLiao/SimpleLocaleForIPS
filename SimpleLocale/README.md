@@ -797,6 +797,45 @@ Beschreibung des Moduls.
   Sonderzeichen bleiben unverändert). Und: der graue Kreis-Hintergrund
   hinter dem Simple-Locale-Symbol in der Kachel (Build 77) wurde entfernt -
   nur noch das reine Symbol, ohne umschließende Form.
+
+  **Build 79 behebt eine Lücke bei unterschiedlichen Quellsprachen: die
+  Basissprache verschwindet nicht mehr aus der Gast-Auswahl, wenn die
+  Scan-Sprache später geändert wird.** Bisher gab es neben den echten
+  Zielsprachen eine separate Pseudo-Sprache "Original" (`ORIGINAL_IMPORT`),
+  die sich immer auf die AKTUELL eingestellte Scan-Sprache
+  (`SourceLanguage`) bezog. Das führte zu einer Lücke: wurde z. B. zuerst
+  mit Deutsch gescannt und die Scan-Sprache danach auf Englisch
+  umgestellt, verschwand Deutsch komplett aus der Gast-Auswahl - obwohl
+  bereits gescannte Objekte weiterhin ihre deutsche Zeilen-Quellsprache
+  trugen und für sie gar keine Übersetzung "zurück" nach Deutsch existierte
+  (siehe `fieldRowSourceLanguage`, eingeführt in Build 57). "Original" gibt
+  es ab jetzt nicht mehr als eigene wählbare Sprache: stattdessen sorgt
+  eine neue Methode (`EnsureSourceLanguageIsTarget()`, aufgerufen am Anfang
+  jedes `ApplyChanges()`-Laufs) dafür, dass die jeweils AKTUELLE
+  Quellsprache immer als ganz normaler, dauerhafter Eintrag in den
+  Zielsprachen (`TargetLanguages`) steht - ändert sich die Scan-Sprache
+  später erneut, bleibt der alte Eintrag als normale Zielsprache stehen,
+  statt zu verschwinden.
+
+  **Wichtig für Lizenzen mit begrenzter Sprachanzahl** (z. B. die
+  "Spezialversion"): der automatisch ergänzte Quellsprachen-Eintrag
+  unterliegt exakt derselben Lizenz-Sprachobergrenze wie jede manuell
+  hinzugefügte Zielsprache (`EnforceLicensedLanguageLimit()`, läuft direkt
+  im Anschluss). Das ist bewusst so: ohne diese Kopplung könnte man durch
+  wiederholtes Umstellen der Scan-Sprache beliebig viele "kostenlose"
+  Zielsprachen an einer lizenzierten Obergrenze vorbei ansammeln. In der
+  Praxis bedeutet das: bei einer Lizenz mit z. B. Sprachlimit 1, die
+  bereits eine Zielsprache konfiguriert hat, verbraucht ein Wechsel der
+  Scan-Sprache selbst einen Platz in dieser Obergrenze - im Zweifel wird
+  dabei sogar eine zuvor konfigurierte Zielsprache automatisch verdrängt
+  (dieselbe Kappungs-Logik wie bisher schon bei einem Lizenz-Downgrade).
+  Unlimitierte Lizenzen sind davon nicht betroffen.
+
+  Bereits bestehende Installationen: eine Instanz, deren aktive
+  Gast-Sprache (`CurrentLanguage`) noch auf der alten Pseudo-Sprache
+  "Original" stand, wird beim ersten `ApplyChanges()` nach diesem Update
+  automatisch, einmalig auf die tatsächliche Quellsprache umgeschrieben -
+  keine manuelle Nacharbeit nötig.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
