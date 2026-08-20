@@ -2515,16 +2515,32 @@ private const LANGUAGE_FLAGS = [
     // zusätzlich robust gegen eine (noch) fehlende Zeile (z.B. ganz frisch
     // installierte Instanz vor dem allerersten ApplyChanges/Rescan) - dann greift
     // $Fallback, dieselbe deutsche PHP-Konstante wie vor Build 78.
+    // Build 86 (Nutzer-Wunsch, live gefundener Bug): das mitgelieferte
+    // OWN_UI_TEXT_BUNDLED_TRANSLATIONS (Build 85) landete bisher NUR ueber
+    // MergeOwnUiTextRows() in der Zeile - und diese Funktion laeuft ausschliesslich
+    // innerhalb ScanRootTree(), also nur bei einem tatsaechlichen Rescan. Vor dem
+    // allerersten Rescan (oder direkt nach einem frischen Modul-Update, bevor ein
+    // neuer Rescan lief) blieb propertyOwnUiTexts also leer/veraltet, und eine
+    // bereits als Zielsprache aktive, eigentlich mitgelieferte Sprache zeigte
+    // trotzdem den deutschen Rohtext - genau das Gegenteil des in Build 85
+    // versprochenen "sofort bereit, kein Rescan noetig". Greift jetzt zusaetzlich
+    // HIER, im eigentlichen Lesepfad, direkt auf die mitgelieferte Uebersetzung
+    // zurueck, WENN weder die persistierte Zeile noch eine Zelle darin etwas
+    // liefert - unabhaengig davon, ob/wann je ein Rescan lief. Die persistierte
+    // Zeile (falls vorhanden) hat weiterhin Vorrang, damit eine echte Provider-
+    // Uebersetzung oder ein zwischenzeitlich per Rescan eingetragener Bundled-Wert
+    // nicht durch diesen Fallback verdeckt wird.
     private function GetOwnUiText(array $OwnUiTextRowsByKey, string $Key, string $Language, string $Fallback): string
     {
         $row = $OwnUiTextRowsByKey[$Key] ?? null;
-        if ($row === null) {
-            return $Fallback;
+        if ($row !== null) {
+            $value = $this->ResolveRowValue($row, $Language, $Language, 'de', self::langOriginalImport);
+            if ($value !== '') {
+                return $value;
+            }
         }
 
-        $value = $this->ResolveRowValue($row, $Language, $Language, 'de', self::langOriginalImport);
-
-        return $value !== '' ? $value : $Fallback;
+        return self::OWN_UI_TEXT_BUNDLED_TRANSLATIONS[$Language][$Key] ?? $Fallback;
     }
 
     private function BuildOwnUiTextRowsByKey(): array
