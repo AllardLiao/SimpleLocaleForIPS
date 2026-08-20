@@ -2240,6 +2240,189 @@ private const LANGUAGE_FLAGS = [
         ];
     }
 
+    // Build 85 (Nutzer-Wunsch): fest im Modul mitgelieferte Uebersetzungen der
+    // eigenen Gast-Oberflaechentexte (siehe GetOwnUiTextDefinitions/
+    // MergeOwnUiTextRows) fuer die Sprachen, die praktisch jede Installation
+    // ohnehin nutzt (en/es/it/fr/nl) sowie fuer alle TRIAL_LANGUAGE_CODES - so
+    // steht die Uebersetzung dieser Texte in genau diesen Sprachen SOFORT bereit,
+    // ganz ohne einen einzigen API-Aufruf bei irgendeinem Provider zu verbrauchen,
+    // selbst direkt nach einer frischen Installation. en/es/it/fr uebernehmen
+    // bewusst denselben Wortlaut wie die bereits vorhandenen locale.json-
+    // Uebersetzungen derselben deutschen Quelltexte (z.B. "Stündlich:" ->
+    // "Hourly:"), damit Konsolen- und Gast-Oberflaeche konsistent klingen.
+    //
+    // Qualitaets-Hinweis: fuer is/cy/zu/mi/la (die TRIAL_LANGUAGE_CODES) gibt es
+    // KEINE Konsolensprachen-Referenz zum Abgleich, und die Uebersetzungsqualitaet
+    // fuer diese eher selten unterstuetzten Sprachen (insbesondere zu/mi) ist
+    // spuerbar weniger zuverlaessig als fuer die grossen Sprachen - eine Pruefung
+    // durch Muttersprachler vor produktivem Live-Einsatz wird empfohlen. Diese
+    // Zeilen sind (wie alle propertyOwnUiTexts-Zeilen, siehe dort) bewusst NICHT
+    // ueber das Konfigurationsformular editierbar - eine Korrektur kann aktuell
+    // nur ueber ein kuenftiges Modul-Update erfolgen.
+    private const OWN_UI_TEXT_BUNDLED_TRANSLATIONS = [
+        'en' => [
+            'infoText0'            => 'The selected language applies to all visitors of this page at the same time - not individually for each person.',
+            'trialNoticePrefix'    => 'Trial license valid until',
+            'pausedNoticePrefix'   => 'Translation paused until',
+            'pausedReason'         => 'Reason: All configured translation providers currently report their limit reached.',
+            'pausedReassurance'    => 'Existing translations remain usable.',
+            'statsRequestsLabel'   => 'translations/h',
+            'statsCharactersLabel' => 'characters/h',
+            'statsSincePrefix'     => 'In operation since',
+            'statsDaysSuffix'      => 'day(s).',
+            'statsHourlyLabel'     => 'Hourly:',
+            'statsRequestsUnit'    => 'request(s),',
+            'statsCharsUnit'       => 'character(s).',
+            'statsTotalLabel'      => 'Total:',
+            'statsCacheSavedLabel' => 'Saved by the cache:',
+        ],
+        'es' => [
+            'infoText0'            => 'El idioma seleccionado se aplica a todos los visitantes de esta página al mismo tiempo, no individualmente para cada persona.',
+            'trialNoticePrefix'    => 'Licencia de prueba válida hasta',
+            'pausedNoticePrefix'   => 'Traducción en pausa hasta',
+            'pausedReason'         => 'Motivo: todos los proveedores de traducción configurados indican actualmente haber alcanzado su límite.',
+            'pausedReassurance'    => 'Las traducciones existentes siguen siendo utilizables.',
+            'statsRequestsLabel'   => 'traducciones/h',
+            'statsCharactersLabel' => 'caracteres/h',
+            'statsSincePrefix'     => 'En funcionamiento desde el',
+            'statsDaysSuffix'      => 'día(s).',
+            'statsHourlyLabel'     => 'Por hora:',
+            'statsRequestsUnit'    => 'solicitud(es),',
+            'statsCharsUnit'       => 'signo(s).',
+            'statsTotalLabel'      => 'En total:',
+            'statsCacheSavedLabel' => 'Ahorrado gracias a la caché:',
+        ],
+        'it' => [
+            'infoText0'            => 'La lingua selezionata vale contemporaneamente per tutti i visitatori di questa pagina, non individualmente per ogni persona.',
+            'trialNoticePrefix'    => 'Licenza di prova valida fino al',
+            'pausedNoticePrefix'   => 'Traduzione in pausa fino alle',
+            'pausedReason'         => 'Motivo: tutti i provider di traduzione configurati segnalano attualmente di aver raggiunto il proprio limite.',
+            'pausedReassurance'    => 'Le traduzioni esistenti restano utilizzabili.',
+            'statsRequestsLabel'   => 'traduzioni/h',
+            'statsCharactersLabel' => 'caratteri/h',
+            'statsSincePrefix'     => 'In funzione dal',
+            'statsDaysSuffix'      => 'giorno/i.',
+            'statsHourlyLabel'     => 'Ogni ora:',
+            'statsRequestsUnit'    => 'richiest(a/e),',
+            'statsCharsUnit'       => 'caratter(e/i).',
+            'statsTotalLabel'      => 'In totale:',
+            'statsCacheSavedLabel' => 'Risparmiato grazie alla cache:',
+        ],
+        'fr' => [
+            'infoText0'            => 'La langue sélectionnée s\'applique en même temps à tous les visiteurs de cette page, et non individuellement pour chaque personne.',
+            'trialNoticePrefix'    => 'Licence d\'essai valable jusqu\'au',
+            'pausedNoticePrefix'   => 'Traduction en pause jusqu\'à',
+            'pausedReason'         => 'Raison : tous les fournisseurs de traduction configurés signalent actuellement avoir atteint leur limite.',
+            'pausedReassurance'    => 'Les traductions existantes restent utilisables.',
+            'statsRequestsLabel'   => 'traductions/h',
+            'statsCharactersLabel' => 'caractères/h',
+            'statsSincePrefix'     => 'En service depuis le',
+            'statsDaysSuffix'      => 'jour(s).',
+            'statsHourlyLabel'     => 'Par heure:',
+            'statsRequestsUnit'    => 'requête(s),',
+            'statsCharsUnit'       => 'caractère(s).',
+            'statsTotalLabel'      => 'Au total:',
+            'statsCacheSavedLabel' => 'Économisé grâce au cache:',
+        ],
+        'nl' => [
+            'infoText0'            => 'De gekozen taal geldt voor alle bezoekers van deze pagina tegelijk - niet individueel per persoon.',
+            'trialNoticePrefix'    => 'Proeflicentie geldig tot',
+            'pausedNoticePrefix'   => 'Vertaling gepauzeerd tot',
+            'pausedReason'         => 'Reden: alle geconfigureerde vertaalproviders melden momenteel hun limiet te hebben bereikt.',
+            'pausedReassurance'    => 'Bestaande vertalingen blijven bruikbaar.',
+            'statsRequestsLabel'   => 'vertalingen/u',
+            'statsCharactersLabel' => 'tekens/u',
+            'statsSincePrefix'     => 'In gebruik sinds',
+            'statsDaysSuffix'      => 'dag(en).',
+            'statsHourlyLabel'     => 'Per uur:',
+            'statsRequestsUnit'    => 'verzoek(en),',
+            'statsCharsUnit'       => 'teken(s).',
+            'statsTotalLabel'      => 'Totaal:',
+            'statsCacheSavedLabel' => 'Bespaard door de cache:',
+        ],
+        // TRIAL_LANGUAGE_CODES - siehe Qualitaets-Hinweis oben.
+        'is' => [
+            'infoText0'            => 'Valið tungumál gildir fyrir alla gesti þessarar síðu samtímis - ekki fyrir hvern og einn einstakling.',
+            'trialNoticePrefix'    => 'Prufuleyfi gildir til',
+            'pausedNoticePrefix'   => 'Þýðing í bið til',
+            'pausedReason'         => 'Ástæða: Allir stilltir þýðingaraðilar tilkynna nú að hámarki þeirra sé náð.',
+            'pausedReassurance'    => 'Núverandi þýðingar eru áfram nothæfar.',
+            'statsRequestsLabel'   => 'þýðingar/klst',
+            'statsCharactersLabel' => 'stafir/klst',
+            'statsSincePrefix'     => 'Í notkun frá',
+            'statsDaysSuffix'      => 'dag(ar).',
+            'statsHourlyLabel'     => 'Á klukkustund:',
+            'statsRequestsUnit'    => 'beiðni(r),',
+            'statsCharsUnit'       => 'stafir.',
+            'statsTotalLabel'      => 'Samtals:',
+            'statsCacheSavedLabel' => 'Sparað með skyndiminni:',
+        ],
+        'cy' => [
+            'infoText0'            => 'Mae\'r iaith a ddewiswyd yn berthnasol i bob ymwelydd â\'r dudalen hon ar yr un pryd - nid yn unigol i bob unigolyn.',
+            'trialNoticePrefix'    => 'Trwydded brawf yn ddilys tan',
+            'pausedNoticePrefix'   => 'Cyfieithu wedi\'i oedi tan',
+            'pausedReason'         => 'Rheswm: Mae pob darparwr cyfieithu a ffurfweddwyd yn nodi ar hyn o bryd eu bod wedi cyrraedd eu terfyn.',
+            'pausedReassurance'    => 'Mae cyfieithiadau presennol yn parhau i fod ar gael.',
+            'statsRequestsLabel'   => 'cyfieithiad(au)/awr',
+            'statsCharactersLabel' => 'nod(au)/awr',
+            'statsSincePrefix'     => 'Mewn gwasanaeth ers',
+            'statsDaysSuffix'      => 'diwrnod.',
+            'statsHourlyLabel'     => 'Bob awr:',
+            'statsRequestsUnit'    => 'cais/ceisiadau,',
+            'statsCharsUnit'       => 'nod(au).',
+            'statsTotalLabel'      => 'Cyfanswm:',
+            'statsCacheSavedLabel' => 'Arbedwyd gan y storfa ddata:',
+        ],
+        'zu' => [
+            'infoText0'            => 'Ulimi olukhethiwe lusebenza kubo bonke abavakashi bale khasi ngesikhathi esifanayo - hhayi ngamunye kumuntu ngamunye.',
+            'trialNoticePrefix'    => 'Ilayisensi yokuhlola isebenza kuze kube',
+            'pausedNoticePrefix'   => 'Ukuhumusha kumisiwe kuze kube',
+            'pausedReason'         => 'Isizathu: Bonke abahlinzeki bokuhumusha abamisiwe manje babika ukuthi bafinyelele emkhawulweni wabo.',
+            'pausedReassurance'    => 'Ukuhumusha okukhona kuyaqhubeka nokusetshenziswa.',
+            'statsRequestsLabel'   => 'ukuhumusha/ihora',
+            'statsCharactersLabel' => 'izinhlamvu/ihora',
+            'statsSincePrefix'     => 'Kusebenza kusukela',
+            'statsDaysSuffix'      => 'usuku/izinsuku.',
+            'statsHourlyLabel'     => 'Ngehora:',
+            'statsRequestsUnit'    => 'isicelo/izicelo,',
+            'statsCharsUnit'       => 'izinhlamvu.',
+            'statsTotalLabel'      => 'Isamba:',
+            'statsCacheSavedLabel' => 'Kongiwe yi-cache:',
+        ],
+        'mi' => [
+            'infoText0'            => 'Ka pā te reo kua tīpakohia ki ngā manuhiri katoa o tēnei whārangi i te wā kotahi - kāore mō ia tangata takitahi.',
+            'trialNoticePrefix'    => 'E whai mana ana te raihana whakamātau tae noa ki',
+            'pausedNoticePrefix'   => 'Kua whakatārewahia te whakamāoritanga tae noa ki',
+            'pausedReason'         => 'Take: Kei te kī ngā kaiwhakarato whakamāori katoa kua whakaritea ināianei kua tae ki tō rātou rohe.',
+            'pausedReassurance'    => 'Ka noho whai take tonu ngā whakamāoritanga o mua.',
+            'statsRequestsLabel'   => 'whakamāoritanga/haora',
+            'statsCharactersLabel' => 'pūāhua/haora',
+            'statsSincePrefix'     => 'E mahi ana mai i',
+            'statsDaysSuffix'      => 'rā.',
+            'statsHourlyLabel'     => 'Ia haora:',
+            'statsRequestsUnit'    => 'tono,',
+            'statsCharsUnit'       => 'pūāhua.',
+            'statsTotalLabel'      => 'Katoa:',
+            'statsCacheSavedLabel' => 'I penapenatia e te kāhe:',
+        ],
+        'la' => [
+            'infoText0'            => 'Lingua selecta omnibus huius paginae visitatoribus simul valet - non singillatim cuique personae.',
+            'trialNoticePrefix'    => 'Licentia experimentalis valida usque ad',
+            'pausedNoticePrefix'   => 'Translatio suspensa usque ad',
+            'pausedReason'         => 'Causa: omnes translationis provisores configurati nunc finem suum attigisse nuntiant.',
+            'pausedReassurance'    => 'Translationes iam factae etiam nunc utiles manent.',
+            'statsRequestsLabel'   => 'translationes/h',
+            'statsCharactersLabel' => 'litterae/h',
+            'statsSincePrefix'     => 'In usu ab',
+            'statsDaysSuffix'      => 'die(bus).',
+            'statsHourlyLabel'     => 'Per horam:',
+            'statsRequestsUnit'    => 'petitio/petitiones,',
+            'statsCharsUnit'       => 'litterae.',
+            'statsTotalLabel'      => 'Summa:',
+            'statsCacheSavedLabel' => 'Per cache servatum:',
+        ],
+    ];
+
     // Build 78: zentrale, einzige Quelle der festen Gast-Oberflächentexte (siehe
     // propertyOwnUiTexts) - Schlüssel => aktueller deutscher Wortlaut. Aendert sich
     // der deutsche Text eines Schlüssels hier (z.B. in einem künftigen Modul-
@@ -2299,6 +2482,26 @@ private const LANGUAGE_FLAGS = [
             // Immer Deutsch, unabhängig von propertySourceLanguage - diese Texte
             // stehen fest im PHP-Code, nicht in der vom Admin gescannten Sprache.
             $row[self::fieldRowSourceLanguage] = 'de';
+
+            // Build 85: mitgelieferte Uebersetzungen (siehe OWN_UI_TEXT_BUNDLED_TRANSLATIONS)
+            // fuellen NUR eine noch leere Spalte - eine bereits vorhandene (echte
+            // Provider-)Uebersetzung wird nie ueberschrieben. Unabhaengig von den
+            // aktuell konfigurierten Zielsprachen befuellt, damit die Uebersetzung
+            // sofort bereitsteht, sobald eine dieser Sprachen jemals als Zielsprache
+            // gewaehlt wird - kein Rescan noetig, um sie erstmalig zu "verdienen".
+            // WICHTIG: MarkRowLanguageTranslated() muss hier ebenfalls laufen - sonst
+            // haelt IsRowLanguageTranslationCurrent() die frisch mitgelieferte
+            // Uebersetzung faelschlich fuer veraltet (kein eigener Zeitstempel, siehe
+            // MarkRowSourceChanged oben) und FillMissingTranslations() wuerde sie beim
+            // naechsten Rescan trotzdem per Live-API neu uebersetzen - genau der
+            // API-Aufruf, den dieses Feature vermeiden soll.
+            foreach (self::OWN_UI_TEXT_BUNDLED_TRANSLATIONS as $language => $translationsByKey) {
+                if (($row[$language] ?? '') === '' && isset($translationsByKey[$key])) {
+                    $row[$language] = $translationsByKey[$key];
+                    $this->MarkRowLanguageTranslated($row, $language);
+                }
+            }
+
             $result[] = $row;
         }
 
@@ -4534,12 +4737,52 @@ private const LANGUAGE_FLAGS = [
     // Build 83: MyMemorys kostenfreies Tageskontingent wird nachweislich zuverlässig
     // um Mitternacht UTC zurückgesetzt (im Gegensatz zu Google/DeepL, wo keine feste
     // Reset-Zeit bekannt ist) - liefert den Unix-Timestamp der naechsten UTC-
-    // Mitternacht NACH jetzt (nie 0 Sekunden in der Zukunft).
+    // Mitternacht NACH jetzt (nie 0 Sekunden in der Zukunft). Build 85: dient jetzt
+    // nur noch als Rueckfallwert, siehe ParseMyMemoryNextAvailableTimestamp/
+    // ResolveMyMemoryPauseUntil - die tatsaechliche Antwort von MyMemory nennt den
+    // Reset-Zeitpunkt meist direkt und praeziser.
     private function GetNextUtcMidnightTimestamp(): int
     {
         $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
 
         return $now->setTime(0, 0, 0)->modify('+1 day')->getTimestamp();
+    }
+
+    // Build 85 (Nutzer-Wunsch, live beobachtet): MyMemorys Antworttext nennt bei
+    // erschoepftem Tageskontingent die verbleibende Wartezeit direkt und praezise,
+    // z.B. "NEXT AVAILABLE IN  02 HOURS 51 MINUTES 23 SECONDS" - genauer als die
+    // (nur angenommene) UTC-Mitternacht aus GetNextUtcMidnightTimestamp(), da
+    // MyMemorys Kontingentfenster offenbar nicht zwingend exakt auf Mitternacht UTC
+    // faellt, sondern ab dem ersten Verbrauch rollierend laeuft. Alle drei
+    // Zeiteinheiten sind einzeln optional (falls z.B. "0 HOURS" weggelassen wird) -
+    // liefert null, wenn das Muster gar nicht gefunden wird oder auf 0 Sekunden
+    // gesamt hinausliefe (Aufrufer faellt dann auf GetNextUtcMidnightTimestamp()
+    // zurueck, siehe ResolveMyMemoryPauseUntil).
+    private function ParseMyMemoryNextAvailableTimestamp(?string $Response): ?int
+    {
+        if ($Response === null) {
+            return null;
+        }
+        if (preg_match('/NEXT AVAILABLE IN\s+(?:(\d+)\s*HOURS?\s*)?(?:(\d+)\s*MINUTES?\s*)?(?:(\d+)\s*SECONDS?\s*)?/i', $Response, $matches) !== 1) {
+            return null;
+        }
+
+        $totalSeconds = ((int) ($matches[1] ?? 0)) * 3600 + ((int) ($matches[2] ?? 0)) * 60 + ((int) ($matches[3] ?? 0));
+        if ($totalSeconds <= 0) {
+            return null;
+        }
+
+        return time() + $totalSeconds;
+    }
+
+    // Gemeinsame Stelle fuer beide MyMemory-Pause-Auslöser (das eindeutige
+    // quotaFinished-JSON-Feld in TranslateChunkFree UND den generischen HTTP-429-Pfad
+    // in CallFreeTranslateAPI) - versucht zuerst den praezisen Countdown aus der
+    // Antwort selbst (siehe ParseMyMemoryNextAvailableTimestamp), faellt nur mangels
+    // erkennbarem Muster auf die UTC-Mitternacht-Schaetzung zurueck.
+    private function ResolveMyMemoryPauseUntil(?string $Response): int
+    {
+        return $this->ParseMyMemoryNextAvailableTimestamp($Response) ?? $this->GetNextUtcMidnightTimestamp();
     }
 
     // Gegenstück zu RecordProviderPaused: nach einem ECHTEN Übersetzungserfolg
@@ -5856,14 +6099,17 @@ private const LANGUAGE_FLAGS = [
             // auch die bezahlten Anbieter bereits pausiert waren, weil 'free' als
             // letztes Kettenglied fälschlich als verfügbar galt. Direkt auf die
             // volle Tagessperre gesetzt (kein Eskalations-Ratespiel nötig, das
-            // JSON-Feld ist eindeutig). Build 83 (Nutzer-Wunsch): statt einer reinen
-            // "jetzt + 24h"-Schätzung wird der TATSÄCHLICHE Reset-Zeitpunkt genutzt
-            // (MyMemory setzt nachweislich zuverlässig um Mitternacht UTC zurück,
-            // siehe GetNextUtcMidnightTimestamp) - genauer als die generische
-            // Eskalationsschätzung, die für Google/DeepL mangels bekannter Reset-Zeit
-            // weiterhin zum Einsatz kommt.
-            $this->RecordProviderPaused('free', self::DAILY_QUOTA_COOLDOWN_SECONDS, $this->GetNextUtcMidnightTimestamp());
-            $this->LogTranslateMessage('MyMemory: Tageskontingent erschöpft (quotaFinished) - pausiert bis zum automatischen Reset um Mitternacht UTC.');
+            // JSON-Feld ist eindeutig). Build 83/85 (Nutzer-Wunsch): statt einer
+            // reinen "jetzt + 24h"-Schätzung wird der TATSÄCHLICHE Reset-Zeitpunkt
+            // genutzt - live beobachtet, dass MyMemorys Antworttext den genauen
+            // Countdown selbst nennt ("NEXT AVAILABLE IN 02 HOURS 51 MINUTES 23
+            // SECONDS"), siehe ParseMyMemoryNextAvailableTimestamp/
+            // ResolveMyMemoryPauseUntil - genauer als sowohl die generische
+            // Eskalationsschätzung (weiterhin für Google/DeepL im Einsatz) als auch
+            // die reine UTC-Mitternacht-Annahme, die nur noch als letzter
+            // Rückfallwert dient.
+            $this->RecordProviderPaused('free', self::DAILY_QUOTA_COOLDOWN_SECONDS, $this->ResolveMyMemoryPauseUntil($response));
+            $this->LogTranslateMessage('MyMemory: Tageskontingent erschöpft (quotaFinished) - pausiert bis zum automatischen Reset.');
 
             return null;
         }
@@ -6180,15 +6426,15 @@ private const LANGUAGE_FLAGS = [
 
             $cooldown = $this->DetectRateLimitCooldown($httpCode, (string) $response);
             if ($cooldown !== null) {
-                // Build 83: dieselbe MyMemory-spezifische Präzisierung wie beim
+                // Build 83/85: dieselbe MyMemory-spezifische Präzisierung wie beim
                 // quotaFinished-Signal (siehe TranslateChunkFree/
-                // GetNextUtcMidnightTimestamp) - ein hier als Tageskontingent
-                // erkannter Fehlschlag (siehe DetectRateLimitCooldown) endet
-                // nachweislich zuverlässig um Mitternacht UTC, nicht erst
-                // "jetzt + 24h". Ein bloßes kurzes Burst-Limit (RATE_LIMIT_COOLDOWN_SECONDS)
-                // ist dagegen NICHT an die Tagesgrenze gebunden, bleibt bei der
-                // generischen Schätzung.
-                $exactUntil = $cooldown === self::DAILY_QUOTA_COOLDOWN_SECONDS ? $this->GetNextUtcMidnightTimestamp() : null;
+                // ResolveMyMemoryPauseUntil) - ein hier als Tageskontingent erkannter
+                // Fehlschlag (siehe DetectRateLimitCooldown) nennt den genauen
+                // Reset-Countdown meist direkt in der Antwort ("NEXT AVAILABLE IN...");
+                // nur ersatzweise die UTC-Mitternacht-Schätzung. Ein bloßes kurzes
+                // Burst-Limit (RATE_LIMIT_COOLDOWN_SECONDS) ist dagegen NICHT an die
+                // Tagesgrenze gebunden, bleibt bei der generischen Schätzung.
+                $exactUntil = $cooldown === self::DAILY_QUOTA_COOLDOWN_SECONDS ? $this->ResolveMyMemoryPauseUntil((string) $response) : null;
                 $this->RecordProviderPaused('free', $cooldown, $exactUntil);
             }
 
