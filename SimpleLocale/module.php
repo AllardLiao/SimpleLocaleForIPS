@@ -851,6 +851,7 @@ private const LANGUAGE_FLAGS = [
                 case 'ProviderPausePartialLabel':
                 case 'ProviderPauseGoogleRow':
                 case 'ProviderPauseDeepLRow':
+                case 'ProviderPauseDeepLFollowupLabel':
                 case 'ProviderPauseFreeRow':
                     $this->PopulateProviderPauseStatusElement($element['name'], $element);
                     break;
@@ -4460,20 +4461,45 @@ private const LANGUAGE_FLAGS = [
     // Ein bereits als Tageskontingent erkannter Fehlschlag (siehe
     // DetectRateLimitCooldown) startet direkt bei der vollen Sperrdauer, keine
     // weitere Eskalation nötig.
-    private function RecordProviderPaused(string $Provider, int $BaseCooldownSeconds): void
+    //
+    // Build 83 (Nutzer-Wunsch): $ExactUntil (optional) umgeht die Eskalations-
+    // Schätzung komplett und setzt 'until' auf einen KONKRET BEKANNTEN Zeitpunkt -
+    // aktuell nur für MyMemory genutzt (siehe TranslateChunkFree/
+    // GetNextUtcMidnightTimestamp), dessen kostenfreies Tageskontingent
+    // nachweislich zuverlässig um Mitternacht UTC zurückgesetzt wird. Für Google/
+    // DeepL bleibt es bei der Schätzung, da dort keine verlässliche Reset-Zeit
+    // bekannt ist (siehe Formular-Panel "Übersetzungsanbieter" - deren Anzeige
+    // wird deshalb bewusst als "voraussichtlich" gekennzeichnet).
+    private function RecordProviderPaused(string $Provider, int $BaseCooldownSeconds, ?int $ExactUntil = null): void
     {
         $state = $this->GetRawProviderPauseState();
         $streak = (int) ($state[$Provider]['streak'] ?? 0) + 1;
 
-        $escalated = $BaseCooldownSeconds >= self::DAILY_QUOTA_COOLDOWN_SECONDS
-            ? self::DAILY_QUOTA_COOLDOWN_SECONDS
-            : min(self::RATE_LIMIT_COOLDOWN_SECONDS * (2 ** ($streak - 1)), self::DAILY_QUOTA_COOLDOWN_SECONDS);
+        if ($ExactUntil !== null) {
+            $until = max((int) ($state[$Provider]['until'] ?? 0), $ExactUntil);
+        } else {
+            $escalated = $BaseCooldownSeconds >= self::DAILY_QUOTA_COOLDOWN_SECONDS
+                ? self::DAILY_QUOTA_COOLDOWN_SECONDS
+                : min(self::RATE_LIMIT_COOLDOWN_SECONDS * (2 ** ($streak - 1)), self::DAILY_QUOTA_COOLDOWN_SECONDS);
+            $until = max((int) ($state[$Provider]['until'] ?? 0), time() + $escalated);
+        }
 
         $state[$Provider] = [
-            'until'  => max((int) ($state[$Provider]['until'] ?? 0), time() + $escalated),
+            'until'  => $until,
             'streak' => $streak,
         ];
         $this->WriteAttributeString(self::attributeProviderPausedUntil, json_encode($state));
+    }
+
+    // Build 83: MyMemorys kostenfreies Tageskontingent wird nachweislich zuverlässig
+    // um Mitternacht UTC zurückgesetzt (im Gegensatz zu Google/DeepL, wo keine feste
+    // Reset-Zeit bekannt ist) - liefert den Unix-Timestamp der naechsten UTC-
+    // Mitternacht NACH jetzt (nie 0 Sekunden in der Zukunft).
+    private function GetNextUtcMidnightTimestamp(): int
+    {
+        $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+
+        return $now->setTime(0, 0, 0)->modify('+1 day')->getTimestamp();
     }
 
     // Gegenstück zu RecordProviderPaused: nach einem ECHTEN Übersetzungserfolg
@@ -4779,6 +4805,7 @@ private const LANGUAGE_FLAGS = [
                 break;
 
             case 'ProviderPauseDeepLRow':
+            case 'ProviderPauseDeepLFollowupLabel':
                 $Element['visible'] = isset($paused['deepl']);
                 break;
 
@@ -5789,9 +5816,14 @@ private const LANGUAGE_FLAGS = [
             // auch die bezahlten Anbieter bereits pausiert waren, weil 'free' als
             // letztes Kettenglied fälschlich als verfügbar galt. Direkt auf die
             // volle Tagessperre gesetzt (kein Eskalations-Ratespiel nötig, das
-            // JSON-Feld ist eindeutig).
-            $this->RecordProviderPaused('free', self::DAILY_QUOTA_COOLDOWN_SECONDS);
-            $this->LogTranslateMessage('MyMemory: Tageskontingent erschöpft (quotaFinished) - pausiert bis zum automatischen Reset.');
+            // JSON-Feld ist eindeutig). Build 83 (Nutzer-Wunsch): statt einer reinen
+            // "jetzt + 24h"-Schätzung wird der TATSÄCHLICHE Reset-Zeitpunkt genutzt
+            // (MyMemory setzt nachweislich zuverlässig um Mitternacht UTC zurück,
+            // siehe GetNextUtcMidnightTimestamp) - genauer als die generische
+            // Eskalationsschätzung, die für Google/DeepL mangels bekannter Reset-Zeit
+            // weiterhin zum Einsatz kommt.
+            $this->RecordProviderPaused('free', self::DAILY_QUOTA_COOLDOWN_SECONDS, $this->GetNextUtcMidnightTimestamp());
+            $this->LogTranslateMessage('MyMemory: Tageskontingent erschöpft (quotaFinished) - pausiert bis zum automatischen Reset um Mitternacht UTC.');
 
             return null;
         }
@@ -6108,7 +6140,16 @@ private const LANGUAGE_FLAGS = [
 
             $cooldown = $this->DetectRateLimitCooldown($httpCode, (string) $response);
             if ($cooldown !== null) {
-                $this->RecordProviderPaused('free', $cooldown);
+                // Build 83: dieselbe MyMemory-spezifische Präzisierung wie beim
+                // quotaFinished-Signal (siehe TranslateChunkFree/
+                // GetNextUtcMidnightTimestamp) - ein hier als Tageskontingent
+                // erkannter Fehlschlag (siehe DetectRateLimitCooldown) endet
+                // nachweislich zuverlässig um Mitternacht UTC, nicht erst
+                // "jetzt + 24h". Ein bloßes kurzes Burst-Limit (RATE_LIMIT_COOLDOWN_SECONDS)
+                // ist dagegen NICHT an die Tagesgrenze gebunden, bleibt bei der
+                // generischen Schätzung.
+                $exactUntil = $cooldown === self::DAILY_QUOTA_COOLDOWN_SECONDS ? $this->GetNextUtcMidnightTimestamp() : null;
+                $this->RecordProviderPaused('free', $cooldown, $exactUntil);
             }
 
             return null;

@@ -229,10 +229,8 @@
                             "name": "ProviderPauseGoogleRow",
                             "visible": false,
                             "items": [
-                                {"type": "Label", "caption": "-", "color": 16711680},
-                                {"type": "Label", "caption": "Google Cloud Translate", "color": 16711680},
-                                {"type": "Label", "caption": ":", "color": 16711680},
-                                {"type": "Label", "caption": "pausiert bis", "color": 16711680},
+                                {"type": "Label", "caption": "- Google Cloud Translate:", "color": 16711680},
+                                {"type": "Label", "caption": "voraussichtlich pausiert bis", "color": 16711680},
                                 {"type": "Label", "name": "ProviderPauseGoogleUntilLabel", "caption": "", "color": 16711680}
                             ]
                         },
@@ -241,21 +239,24 @@
                             "name": "ProviderPauseDeepLRow",
                             "visible": false,
                             "items": [
-                                {"type": "Label", "caption": "-", "color": 16711680},
-                                {"type": "Label", "caption": "DeepL", "color": 16711680},
-                                {"type": "Label", "caption": ":", "color": 16711680},
-                                {"type": "Label", "caption": "pausiert bis", "color": 16711680},
+                                {"type": "Label", "caption": "- DeepL:", "color": 16711680},
+                                {"type": "Label", "caption": "voraussichtlich pausiert bis", "color": 16711680},
                                 {"type": "Label", "name": "ProviderPauseDeepLUntilLabel", "caption": "", "color": 16711680}
                             ]
+                        },
+                        {
+                            "type": "Label",
+                            "name": "ProviderPauseDeepLFollowupLabel",
+                            "caption": "Hilft das Warten nicht, bei DeepL prüfen oder einen neuen API-Key eintragen - ein automatischer Reset ist dort nicht garantiert.",
+                            "visible": false,
+                            "color": 16711680
                         },
                         {
                             "type": "RowLayout",
                             "name": "ProviderPauseFreeRow",
                             "visible": false,
                             "items": [
-                                {"type": "Label", "caption": "-", "color": 16711680},
-                                {"type": "Label", "caption": "Kostenfreier Anbieter (MyMemory)", "color": 16711680},
-                                {"type": "Label", "caption": ":", "color": 16711680},
+                                {"type": "Label", "caption": "- Kostenfreier Anbieter (MyMemory):", "color": 16711680},
                                 {"type": "Label", "caption": "pausiert bis", "color": 16711680},
                                 {"type": "Label", "name": "ProviderPauseFreeUntilLabel", "caption": "", "color": 16711680}
                             ]
