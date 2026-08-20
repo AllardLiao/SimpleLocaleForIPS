@@ -9,7 +9,16 @@
            überschreiben nur bei echtem Bedarf, dann bewusst nur links/rechts (siehe
            offizielles Symcon-Beispielmodul "DuckCounters"), nie oben/unten. */
 
+        /* --ipssl-control-height: EINZIGE Quelle fuer die Hoehe von Dropdown UND
+           Icon - bewusst NICHT ueber align-self:stretch/height:100% relativ zur
+           Zeile geloest (erster Versuch, siehe Git-Historie): in der echten Kachel
+           bekommt .ipssl-select-row selbst mehr Hoehe zugewiesen, als das Dropdown
+           tatsaechlich braucht (vermutlich durch die umgebende WebFront-Kachel-
+           Darstellung) - das Icon wurde dadurch sichtbar groesser als das
+           Dropdown, obwohl es exakt auf die (zu grosse) Zeilenhoehe gestreckt war.
+           Ein fester, gemeinsamer Wert fuer beide Elemente ist immun dagegen. */
         .ipssl-select-row {
+            --ipssl-control-height: 38px;
             display: flex;
             align-items: center;
             gap: 10px;
@@ -17,7 +26,7 @@
 
         .ipssl-select-row .ipssl-globe {
             flex: none;
-            align-self: stretch;
+            height: var(--ipssl-control-height);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -33,7 +42,9 @@
         .ipssl-select-row select {
             flex: 1;
             min-width: 0;
-            padding: 8px 10px;
+            height: var(--ipssl-control-height);
+            box-sizing: border-box;
+            padding: 0 10px;
             font-size: 15px;
             font-family: inherit;
             color: inherit;
