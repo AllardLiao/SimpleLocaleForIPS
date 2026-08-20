@@ -1134,6 +1134,30 @@ Beschreibung des Moduls.
   `ReloadForm()` auf, das Ausblenden darf deshalb nicht daran hängen -
   sonst genau dieselbe Art von hängenbleibender Anzeige wie der in
   Build 87 behobene Pause-Hinweis).
+
+  **Build 89, auf Nutzer-Wunsch: neue Liste "Eigene Übersetzungstabelle" -
+  ein admin-gepflegtes Glossar, das jeder automatischen Übersetzung
+  (Google/DeepL/MyMemory) vorgezogen wird.** Aufbau wie "Objektnamen"
+  (eine Quellsprachen-Spalte + eine Spalte je Zielsprache), aber komplett
+  eigenständig admin-editierbar statt aus dem Objektbaum gescannt - über
+  den "Hinzufügen"-Button der Liste selbst legt der Admin eine neue Zeile
+  an, wählt die Quellsprache, trägt den Quelltext ein und füllt beliebig
+  viele Zielsprachen-Zellen aus. Trifft der Quelltext einer Zeile hier
+  (zeichengenau, kein Fuzzy-Matching) auf den Rohtext IRGENDEINER anderen
+  Zeile in dieser Instanz zu (Objektnamen, Eigene Texte,
+  Aufzählungsoptionen, Automatisierungen, Begrüßung), wird für jede
+  ausgefüllte Zielsprachen-Zelle diese Übersetzung verwendet statt eines
+  Anbieter-Aufrufs - und zwar mit höherer Priorität als sogar der interne
+  Übersetzungs-Cache. Bewusst zellenweise: eine ansonsten passende Zeile
+  mit einer noch LEEREN Zelle für eine bestimmte Zielsprache blockiert die
+  automatische Übersetzung NUR für andere, bereits ausgefüllte Sprachen
+  nicht - für diese eine Sprache läuft die automatische Übersetzung ganz
+  normal weiter. Neues Lizenz-Feature `manual_translations` (ab
+  Standard-Lizenz, unabhängig vom bestehenden `edit_translations` für das
+  nachträgliche Korrigieren einzelner Auto-Übersetzungszellen) - ohne
+  dieses Feature bleibt die Property zwar erhalten (kein Datenverlust bei
+  einem Lizenz-Downgrade), wirkt sich aber gar nicht mehr aus, weder beim
+  Bearbeiten noch bei der Anwendung bereits gespeicherter Zeilen.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der

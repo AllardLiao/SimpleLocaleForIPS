@@ -303,6 +303,7 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterPropertyString(self::propertyObjectAutomations, '[]');
         $this->RegisterPropertyString(self::propertyObjectGreeting, '[]');
         $this->RegisterPropertyString(self::propertyOwnUiTexts, '[]');
+        $this->RegisterPropertyString(self::propertyManualTranslations, '[]');
 
         // Bewusst eine Property statt Variable/Profil für die aktive Sprache: Profile
         // sind in Symcon immer global, nicht instanzgebunden - bei mehreren Instanzen
@@ -835,6 +836,11 @@ private const LANGUAGE_FLAGS = [
                     $element['values'] = $this->DecodeRows(self::propertyObjectGreeting);
                     break;
 
+                case self::propertyManualTranslations:
+                    $element['columns'] = $this->BuildListColumns($sourceLanguage, $targetLanguages, 'manual');
+                    $element['values'] = $this->DecodeRows(self::propertyManualTranslations);
+                    break;
+
                 // Erklaert an genau der Stelle, wo Nutzer intuitiv suchen ("Begrüßung"),
                 // welcher Modus gerade aktiv ist - siehe ScanGreetingText.
                 case 'GreetingModeHint':
@@ -1128,6 +1134,10 @@ private const LANGUAGE_FLAGS = [
 
                 case 'LicenseInfoFeatureEditTranslations':
                     $element['visible'] = $licenseValid && in_array('edit_translations', $licenseInfo['features'] ?? [], true);
+                    break;
+
+                case 'LicenseInfoFeatureManualTranslations':
+                    $element['visible'] = $licenseValid && in_array('manual_translations', $licenseInfo['features'] ?? [], true);
                     break;
 
                 case 'LicenseInfoFeatureAutoRescan':
@@ -1878,6 +1888,14 @@ private const LANGUAGE_FLAGS = [
     //     öffentlichen Funktionen IPSSL_GetAvailableLanguages/IPSSL_SetLanguage
     //     für eine komplett eigenständige, separat gebaute Kachel - beide Wege
     //     werfen ohne dieses Feature eine Exception bzw. bleiben wirkungslos.
+    //   - "manual_translations" (Build 89, ab Standard-Lizenz) schaltet die "Eigene
+    //     Übersetzungstabelle" komplett frei - sowohl das Hinzufügen/Bearbeiten von
+    //     Zeilen (siehe BuildListColumns) als auch die Anwendung bereits
+    //     gespeicherter Zeilen (siehe GetManualTranslation/TranslateBatch). Ohne
+    //     dieses Feature bleibt die Property zwar erhalten (kein Datenverlust bei
+    //     Downgrade), wirkt sich aber gar nicht mehr aus - konsistent mit
+    //     "custom_tile"/"auto_rescan" oben (kein Feature = ganz oder gar nicht,
+    //     kein Zwischenzustand), unabhängig von "edit_translations".
     // Fehlt das Feature-Array (z.B. "Light"-Edition ohne Zusatz-Features), gelten
     // alle Features als NICHT freigeschaltet - konservativer Default, siehe README
     // Abschnitt 8. Während der Testphase selbst (keine/noch keine Lizenz) bleiben
@@ -5276,6 +5294,33 @@ private const LANGUAGE_FLAGS = [
     // wieder herausdraengt, sobald der Cache erneut voll wird.
     private const TRANSLATION_CACHE_SCHEMA_VERSION = 4;
 
+    // Build 89 ("Eigene Übersetzungstabelle"): sucht in den bereits dekodierten
+    // Glossar-Zeilen (siehe TranslateBatch) nach einer Zeile, deren EIGENE
+    // Quellsprache UND Quelltext exakt zu diesem Uebersetzungsversuch passen, und
+    // liefert deren Zelle fuer $Target - oder null, wenn keine Zeile passt ODER die
+    // passende Zelle fuer genau diese Zielsprache (noch) leer ist (dann greift
+    // ganz normal Cache/Anbieter fuer NUR diese eine Sprache, andere bereits
+    // gefuellte Sprachen dieser Zeile bleiben davon unberuehrt). Absichtlich
+    // exakter (nicht getrimmter) String-Vergleich - ein Leerzeichen-Unterschied
+    // soll den Admin nicht durch einen scheinbar wirkungslosen Glossar-Eintrag
+    // verwirren, sondern sichtbar zum Nicht-Treffer fuehren.
+    private function FindManualTranslation(array $ManualTranslationRows, string $SourceLanguage, string $TargetLanguage, string $Text): ?string
+    {
+        foreach ($ManualTranslationRows as $row) {
+            $rowSourceLanguage = (string) ($row[self::fieldRowSourceLanguage] ?? '');
+            $rowSourceText = (string) ($row[self::langOriginalImport] ?? '');
+            if ($rowSourceLanguage !== $SourceLanguage || $rowSourceText !== $Text) {
+                continue;
+            }
+            $translation = (string) ($row[$TargetLanguage] ?? '');
+            if ($translation !== '') {
+                return $translation;
+            }
+        }
+
+        return null;
+    }
+
     // Uebersetzt (Quelle, Ziel, Text) IMMER zuerst gegen den lokalen Cache
     // (attributeTranslationCache, siehe GetCachedTranslation/StoreCachedTranslation)
     // - identischer Text + identisches Sprachpaar liefert deterministisch dasselbe
@@ -5295,10 +5340,24 @@ private const LANGUAGE_FLAGS = [
             return $Texts;
         }
 
+        // Build 89 ("Eigene Übersetzungstabelle", Nutzer-Wunsch): admin-gepflegte
+        // manuelle Übersetzungen haben Vorrang vor ALLEM anderen - vor dem Cache
+        // UND vor jedem Anbieter-Aufruf. Einmal pro TranslateBatch()-Aufruf
+        // dekodiert (nicht je Text einzeln) - das Glossar ist typischerweise klein
+        // genug, dass eine lineare Suche je Text keine spuerbare Last erzeugt.
+        $manualTranslations = $this->HasLicenseFeature('manual_translations')
+            ? $this->DecodeRows(self::propertyManualTranslations)
+            : [];
+
         $results = [];
         $freshIndexes = [];
         $freshTexts = [];
         foreach ($Texts as $i => $text) {
+            $manual = $this->FindManualTranslation($manualTranslations, $Source, $Target, $text);
+            if ($manual !== null) {
+                $results[$i] = $manual;
+                continue;
+            }
             $cached = $this->GetCachedTranslation($Source, $Target, $text);
             if ($cached !== null) {
                 $results[$i] = $cached;
@@ -7156,6 +7215,32 @@ HTML;
     // wären ObjectID/Path/Original-Import bei jedem Übernehmen verloren.
     private function BuildListColumns(string $SourceLanguage, array $TargetLanguages, string $Kind): array
     {
+        // Build 89 ("Eigene Übersetzungstabelle", Nutzer-Wunsch): anders als bei
+        // allen anderen Listen ist hier NICHT nur die Zielsprachen-Spalte, sondern
+        // auch der Quelltext selbst admin-editierbar (kein Scan, keine ObjectID -
+        // der Admin gibt Quelltext UND Übersetzungen direkt ein). Gate ueber das
+        // eigene "manual_translations"-Feature statt "edit_translations" (siehe
+        // BuildLanguageColumnSet/BuildRowSourceLanguageColumn - beide nehmen dafuer
+        // seit Build 89 einen $LicenseFeature-Parameter).
+        if ($Kind === 'manual') {
+            $editable = $this->HasLicenseFeature('manual_translations');
+            $sourceTextColumn = [
+                'caption' => $this->Translate('Quelltext'),
+                'name'    => self::langOriginalImport,
+                'width'   => '220px',
+                'add'     => '',
+                'save'    => true,
+            ];
+            if ($editable) {
+                $sourceTextColumn['edit'] = ['type' => 'ValidationTextBox'];
+            }
+
+            return array_merge(
+                [$this->BuildRowSourceLanguageColumn($SourceLanguage, $TargetLanguages, 'manual_translations'), $sourceTextColumn],
+                $this->BuildLanguageColumnSet('', '', $SourceLanguage, $TargetLanguages, 'manual_translations')
+            );
+        }
+
         if ($Kind === 'automations') {
             $columns = [
                 ['caption' => 'AutomationID', 'name' => 'AutomationID', 'width' => '100px', 'save' => true],
@@ -7282,9 +7367,11 @@ HTML;
     // Übersetzungsspalten nötig. Optionen bewusst auf die bereits konfigurierten
     // Sprachen (Scan-Sprache + Zielsprachen) beschränkt (siehe
     // BuildRowSourceLanguageOptions) - nur für die existieren auch tatsächlich
-    // Spalten in dieser Liste. Nur mit "edit_translations" (Pro) editierbar,
-    // sonst rein informativ (wie die 'Pfad'-Spalte).
-    private function BuildRowSourceLanguageColumn(string $InstanceSourceLanguage, array $TargetLanguages): array
+    // Spalten in dieser Liste. Editierbar nur mit dem übergebenen Lizenz-Feature
+    // (Standard: "edit_translations"/Pro; Build 89 übergibt "manual_translations"
+    // für die "Eigene Übersetzungstabelle"), sonst rein informativ (wie die
+    // 'Pfad'-Spalte).
+    private function BuildRowSourceLanguageColumn(string $InstanceSourceLanguage, array $TargetLanguages, string $LicenseFeature = 'edit_translations'): array
     {
         $column = [
             'caption' => $this->Translate('Quellsprache'),
@@ -7294,7 +7381,7 @@ HTML;
             'save'    => true,
         ];
 
-        if ($this->HasLicenseFeature('edit_translations')) {
+        if ($this->HasLicenseFeature($LicenseFeature)) {
             $column['edit'] = [
                 'type'    => 'Select',
                 'options' => $this->BuildRowSourceLanguageOptions($InstanceSourceLanguage, $TargetLanguages),
@@ -7323,14 +7410,16 @@ HTML;
     // FillMissingTranslations - keine eigene Basissprachen-Spalte). $Label
     // unterscheidet bei "Eigene Texte" zwischen Name- und Text-Spalten (leer für
     // Objektnamen, die nur eine Feldgruppe haben). Editierbar (Spalte 'edit'
-    // gesetzt) nur mit dem Feature-Flag "edit_translations" (siehe
-    // HasLicenseFeature) - ohne das Flag rein lesend, wie z.B. die 'Pfad'-Spalte.
-    private function BuildLanguageColumnSet(string $Prefix, string $Label, string $SourceLanguage, array $TargetLanguages): array
+    // gesetzt) nur mit dem übergebenen Lizenz-Feature (siehe HasLicenseFeature) -
+    // Standard: "edit_translations"/Pro; Build 89 übergibt "manual_translations"
+    // für die "Eigene Übersetzungstabelle" - ohne das jeweilige Feature rein
+    // lesend, wie z.B. die 'Pfad'-Spalte.
+    private function BuildLanguageColumnSet(string $Prefix, string $Label, string $SourceLanguage, array $TargetLanguages, string $LicenseFeature = 'edit_translations'): array
     {
         $withLabel = function (string $Text) use ($Label): string {
             return $Label !== '' ? sprintf('%s %s', $Label, $Text) : $Text;
         };
-        $editable = $this->HasLicenseFeature('edit_translations');
+        $editable = $this->HasLicenseFeature($LicenseFeature);
 
         $columns = [];
 

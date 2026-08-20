@@ -476,7 +476,7 @@
                     "caption": "Automations",
                     "add": false,
                     "delete": true,
-                    "rowCount": 10,
+                    "rowCount": 5,
                     "columns": [
                         {
                             "caption": "AutomationID",
@@ -509,6 +509,36 @@
                             "caption": "Original-Import",
                             "name": "ORIGINAL_IMPORT",
                             "width": "250px",
+                            "save": true
+                        }
+                    ]
+                },
+                {
+                    "type": "Label",
+                    "caption": "Eigene Übersetzungstabelle"
+                },
+                {
+                    "type": "Label",
+                    "caption": "Eigenes Glossar, das jeder automatischen Übersetzung vorgezogen wird - über \"Hinzufügen\" eine Zeile anlegen, Quellsprache wählen, Quelltext eintragen und beliebig viele Zielsprachen-Zellen ausfüllen. Trifft der Quelltext einer Zeile hier exakt (zeichengenau) auf den Rohtext irgendeiner anderen Liste in dieser Instanz zu, wird für jede ausgefüllte Zielsprachen-Zelle diese Übersetzung verwendet statt eines Anbieter-Aufrufs - leere Zellen werden weiterhin normal automatisch übersetzt."
+                },
+                {
+                    "type": "List",
+                    "name": "ManualTranslations",
+                    "caption": "Eigene Übersetzungstabelle",
+                    "add": true,
+                    "delete": true,
+                    "rowCount": 8,
+                    "columns": [
+                        {
+                            "caption": "Quellsprache",
+                            "name": "Quellsprache",
+                            "width": "140px",
+                            "save": true
+                        },
+                        {
+                            "caption": "Quelltext",
+                            "name": "ORIGINAL_IMPORT",
+                            "width": "220px",
                             "save": true
                         }
                     ]
@@ -663,6 +693,12 @@
                     "type": "Label",
                     "name": "LicenseInfoFeatureEditTranslations",
                     "caption": "✓ Manuelles Editieren von Übersetzungen",
+                    "visible": false
+                },
+                {
+                    "type": "Label",
+                    "name": "LicenseInfoFeatureManualTranslations",
+                    "caption": "✓ Eigene Übersetzungstabelle",
                     "visible": false
                 },
                 {
