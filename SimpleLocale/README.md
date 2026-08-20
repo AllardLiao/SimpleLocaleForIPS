@@ -1023,6 +1023,25 @@ Beschreibung des Moduls.
   aus MyMemorys Antworttext; die UTC-Mitternacht-Berechnung aus Build 83
   bleibt als Rückfallwert bestehen, falls das Muster einmal nicht gefunden
   wird (z. B. bei einer künftig geänderten Formulierung).
+
+  **Build 86 behebt einen Bug in Build 85, live gefunden: eine bereits als
+  Gast-Sprache aktive, mitgelieferte Sprache (z. B. Englisch) zeigte
+  trotzdem den deutschen Rohtext.** Ursache: die neuen mitgelieferten
+  Übersetzungen (`OWN_UI_TEXT_BUNDLED_TRANSLATIONS`) landeten bisher NUR
+  über `MergeOwnUiTextRows()` in der jeweiligen Zeile - und diese Funktion
+  läuft ausschließlich innerhalb `ScanRootTree()`, also nur bei einem
+  tatsächlichen Rescan. Vor dem allerersten Rescan (oder direkt nach dem
+  Update auf Build 85, bevor ein neuer Rescan lief) blieb
+  `propertyOwnUiTexts` für diese Sprache leer, und `GetOwnUiText()` fiel
+  auf den deutschen Rohtext zurück - genau das Gegenteil des in Build 85
+  versprochenen "sofort bereit, kein Rescan nötig". `GetOwnUiText()` (der
+  eigentliche Lesepfad, den jeder Gast-Text-Baustein nutzt) greift jetzt
+  zusätzlich direkt auf die mitgelieferte Übersetzungstabelle zurück, wenn
+  weder eine persistierte Zeile noch eine Zelle darin etwas liefert -
+  unabhängig davon, ob/wann je ein Rescan lief. Eine bereits persistierte
+  Zeile (echte Provider-Übersetzung, manuelle Korrektur oder ein durch
+  einen späteren Rescan eingetragener Bundled-Wert) hat weiterhin Vorrang
+  vor diesem Fallback.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
