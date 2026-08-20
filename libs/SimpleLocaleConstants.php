@@ -284,6 +284,10 @@ trait SimpleLocaleConstants
     // welchen Wert eine EINZELNE Zeile gerade puffert.
     private const attributePendingRowUpdateFlushAt = 'PendingRowUpdateFlushAt';
 
+    // Build 88: aktuell laufender Rescan-Verarbeitungsschritt (siehe
+    // SetRescanProgress/RescanProgressBar) - '' = kein Rescan aktiv.
+    private const attributeRescanProgressMessage = 'RescanProgressMessage';
+
     // Zustand der VariableCustomPresentation (JSON, roh - genau das Array, das
     // IPS_GetVariable($id)['VariableCustomPresentation'] vor dem allerersten eigenen
     // Fork-Schreibvorgang zurückgegeben hat) je ValueObjectID, unmittelbar bevor
