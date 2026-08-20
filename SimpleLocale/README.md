@@ -1110,6 +1110,30 @@ Beschreibung des Moduls.
   diese umstellen - dann schreibt die externe Quelle nie direkt in eine
   gast-sichtbare Variable, nur Simple Locales bereits übersetztes
   Ergebnis erreicht sie.
+
+  **Build 88, auf Nutzer-Wunsch: "Baum neu einlesen" zeigt jetzt einen
+  Fortschrittsbalken im Konfigurationsformular, solange der Rescan
+  läuft.** Bisher war ein länger laufender Rescan (viele neue
+  Übersetzungen, mehrere API-Aufrufe) im Formular selbst nicht von einem
+  eingefrorenen/nicht reagierenden Modul zu unterscheiden - erkennbar war
+  das bislang nur über die Debug-Meldungen-Konsole, die kaum ein
+  gewöhnlicher Nutzer je öffnet. Neues `ProgressBar`-Formularelement
+  (`indeterminate`, also eine laufende Animation statt eines exakten
+  Prozentwerts - eine echte Prozentanzeige würde eine deutlich tiefere
+  Umstrukturierung der Übersetzungs-Batches erfordern, für vergleichsweise
+  wenig zusätzlichen Nutzen), dessen Beschriftung während `ScanRootTree()`
+  bei jedem Verarbeitungsschritt per `UpdateFormField()` live aktualisiert
+  wird ("Baum wird eingelesen…" → "Objektnamen und Texte werden
+  übersetzt…" → "Weitere Inhalte werden übersetzt…" → "Ergebnis wird
+  gespeichert…") - nach demselben Prinzip, nach dem auch die
+  Debug-Konsole schon während eines laufenden Skripts live neue Einträge
+  zeigt, nicht erst nach Skriptende. Wird sowohl beim Abbruch (unbenannte
+  Objekte gefunden) als auch beim regulären Abschluss zuverlässig wieder
+  ausgeblendet - unabhängig davon, ob es sich um einen manuellen oder
+  einen automatischen Hintergrund-Rescan handelt (letzterer ruft nie
+  `ReloadForm()` auf, das Ausblenden darf deshalb nicht daran hängen -
+  sonst genau dieselbe Art von hängenbleibender Anzeige wie der in
+  Build 87 behobene Pause-Hinweis).
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der

@@ -708,6 +708,13 @@
             "caption": "Durchsucht den Root der Visualisierung erneut nach neuen/verschobenen Objekten und übersetzt nur noch leere Zellen in Objektnamen, Eigene Texte und Beschriftungen. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben."
         },
         {
+            "type": "ProgressBar",
+            "name": "RescanProgressBar",
+            "indeterminate": true,
+            "caption": "",
+            "visible": false
+        },
+        {
             "type": "Button",
             "caption": "Übersetzungen gelöschter Elemente in der Visualisierung entfernen",
             "onClick": "IPS_RequestAction($id, 'CleanupOrphanedRows', true);"

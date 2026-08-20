@@ -366,6 +366,12 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterAttributeString(self::attributeLastSelfWrittenValues, '{}');
         $this->RegisterAttributeString(self::attributePendingTrackedRowUpdates, '{}');
         $this->RegisterAttributeInteger(self::attributePendingRowUpdateFlushAt, 0);
+        // Build 88 (Nutzer-Wunsch): '' = kein Rescan aktiv, sonst der aktuell laufende
+        // Verarbeitungsschritt (siehe SetRescanProgress) - persistiert, damit ein NACH
+        // Rescan-Start neu geoeffnetes Formular (z.B. waehrend ein laenger laufender
+        // Auto-Rescan noch aktiv ist) sofort den korrekten Zustand zeigt, statt erst auf
+        // den naechsten UpdateFormField()-Push warten zu muessen.
+        $this->RegisterAttributeString(self::attributeRescanProgressMessage, '');
         $this->RegisterAttributeString(self::attributeEnumerationPresentationBackup, '{}');
         $this->RegisterAttributeInteger(self::attributeEffectiveRootCategoryID, 0);
         $this->RegisterAttributeString(self::attributeLastRowSourceLanguageFingerprint, '');
@@ -883,6 +889,17 @@ private const LANGUAGE_FLAGS = [
                 case 'PendingRowUpdateFlushAtLabel':
                     $flushAt = $this->ReadAttributeInteger(self::attributePendingRowUpdateFlushAt);
                     $element['caption'] = $flushAt > time() ? date('H:i', $flushAt) : '';
+                    break;
+
+                // Build 88 (Nutzer-Wunsch): sichtbar, solange ein Rescan (manuell oder
+                // Auto-Rescan) tatsaechlich laeuft (siehe SetRescanProgress/ScanRootTree) -
+                // macht bei laengeren Scans mit vielen neuen Uebersetzungen sichtbar, dass
+                // die Instanz aktiv arbeitet, statt scheinbar eingefroren zu wirken (bisher
+                // nur im Debug-Log erkennbar, das der durchschnittliche Nutzer nie oeffnet).
+                case 'RescanProgressBar':
+                    $message = $this->ReadAttributeString(self::attributeRescanProgressMessage);
+                    $element['caption'] = $message;
+                    $element['visible'] = $message !== '';
                     break;
 
                 // Direkt unter der Erläuterung des "Aktiv"-Schalters (siehe Nutzer-
@@ -3374,6 +3391,21 @@ private const LANGUAGE_FLAGS = [
         return $rootID;
     }
 
+    // Build 88 (Nutzer-Wunsch): schreibt den aktuellen Rescan-Verarbeitungsschritt
+    // (siehe RescanProgressBar/PopulateFormElements) UND pusht ihn sofort per
+    // UpdateFormField() an ein evtl. bereits geoeffnetes Konfigurationsformular -
+    // funktioniert nach demselben Prinzip wie SendDebug() waehrend eines laufenden
+    // Skripts (siehe Nutzer-Beobachtung: die Debug-Konsole zeigt neue Eintraege live,
+    // nicht erst nach Skriptende) und die bereits bestehenden UpdateFormField()-Aufrufe
+    // in CheckProviders()/BufferPendingTrackedRowUpdate. $Message = '' blendet die
+    // Anzeige wieder aus (Rescan beendet/abgebrochen).
+    private function SetRescanProgress(string $Message): void
+    {
+        $this->WriteAttributeString(self::attributeRescanProgressMessage, $Message);
+        $this->UpdateFormField('RescanProgressBar', 'caption', $Message);
+        $this->UpdateFormField('RescanProgressBar', 'visible', $Message !== '');
+    }
+
     // $ReloadFormAfterward: siehe Rescan()/AutoRescan() - false unterdrückt beide
     // ReloadForm()-Aufrufe unten (Abbruch wegen unbenannter Objekte UND regulärer
     // Abschluss), damit ein automatischer Hintergrund-Rescan ein GERADE OFFENES
@@ -3419,6 +3451,14 @@ private const LANGUAGE_FLAGS = [
         // GetSelectedTargetLanguages() gleich danach garantiert den aktuellen Stand sieht.
         $this->EnsureSourceLanguageIsTarget();
 
+        // Build 88: bewusst der ROHE, feste String, NICHT $this->Translate() - dieselbe
+        // Systemsprache-statt-Konsolensprache-Einschraenkung wie bei
+        // ProviderPauseGoogleRow/PendingRowUpdateFlushAtLabel (siehe dortige
+        // Kommentare) - der Konsolen-Client uebersetzt diese feste, in locale.json
+        // hinterlegte Zeichenkette selbst anhand der individuellen Konsolensprache
+        // JEDES Betrachters, nicht nur der (instanzweiten) Symcon-Systemsprache.
+        $this->SetRescanProgress('Baum wird eingelesen…');
+
         $scannedNames = [];
         $scannedTexts = [];
         $scannedOptions = [];
@@ -3450,6 +3490,7 @@ private const LANGUAGE_FLAGS = [
         if ($unnamedObjects !== []) {
             $this->SendDebug('IPSSL_Debug', 'ScanRootTree: abort - unnamed objects found: ' . json_encode($unnamedObjects), 0);
             $this->SetStatus(self::STATUS_UNNAMED_OBJECTS);
+            $this->SetRescanProgress('');
             if ($ReloadFormAfterward) {
                 $this->ReloadForm();
             }
@@ -3516,6 +3557,11 @@ private const LANGUAGE_FLAGS = [
         // tatsächlichen Änderung nicht erneut anfällt.
         $targetLanguages = $this->GetSelectedTargetLanguages();
 
+        // Build 88: Objektnamen/Eigene Texte sind erfahrungsgemaess der groesste
+        // (und damit am laengsten laufende) Teil eines Rescans - eigene
+        // Fortschritts-Meldung dafuer, siehe SetRescanProgress.
+        $this->SetRescanProgress('Objektnamen und Texte werden übersetzt…');
+
         $objectNames = $this->FillMissingTranslations($objectNames, [
             ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],
         ], $sourceLanguage, $targetLanguages);
@@ -3528,6 +3574,8 @@ private const LANGUAGE_FLAGS = [
             // Textfeldern wie Namen/Beschriftungen.
             ['raw' => self::langOriginalImportText, 'prefix' => self::fieldTextPrefix, 'capitalizeFirst' => false, 'isHtml' => true],
         ], $sourceLanguage, $targetLanguages);
+
+        $this->SetRescanProgress('Weitere Inhalte werden übersetzt…');
 
         $objectOptions = $this->FillMissingTranslations($objectOptions, [
             ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => false],
@@ -3552,6 +3600,8 @@ private const LANGUAGE_FLAGS = [
             $targetLanguages
         );
 
+        $this->SetRescanProgress('Ergebnis wird gespeichert…');
+
         IPS_SetProperty($this->InstanceID, self::propertyObjectNames, json_encode(array_values($objectNames)));
         IPS_SetProperty($this->InstanceID, self::propertyObjectTexts, json_encode(array_values($objectTexts)));
         IPS_SetProperty($this->InstanceID, self::propertyEnumerationOptions, json_encode(array_values($objectOptions)));
@@ -3560,6 +3610,14 @@ private const LANGUAGE_FLAGS = [
         IPS_SetProperty($this->InstanceID, self::propertyOwnUiTexts, json_encode(array_values($ownUiTexts)));
         IPS_ApplyChanges($this->InstanceID);
         $this->SendDebug('IPSSL_Debug', 'ScanRootTree: persisted, ObjectGreeting now=' . IPS_GetProperty($this->InstanceID, self::propertyObjectGreeting), 0);
+
+        // Build 88: unabhaengig von $ReloadFormAfterward geleert - ein automatischer
+        // Hintergrund-Rescan (siehe AutoRescan(), $ReloadFormAfterward=false) ruft
+        // ReloadForm() unten NICHT auf, wuerde die Fortschrittsanzeige also sonst auf
+        // dem letzten Stand ("...wird gespeichert") einfrieren, obwohl laengst nichts
+        // mehr laeuft - dieselbe Art von Stale-Anzeige-Bug wie der zuvor behobene
+        // haengenbleibende Pause-Hinweis (siehe Build 87).
+        $this->SetRescanProgress('');
 
         // Kompletter Formular-Neuaufbau statt UpdateFormField: ein offenes Formular hat
         // sonst noch den alten (leeren) Stand im Speicher und würde ihn bei "Übernehmen"
