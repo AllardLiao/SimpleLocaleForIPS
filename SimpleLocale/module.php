@@ -6886,10 +6886,20 @@ HTML;
 
         $columns = [];
 
+        // Build 81-Nachbesserung: frueher wurde hier die Spalte fuer die instanzweite
+        // Quellsprache uebersprungen, weil ihr Inhalt IMMER identisch mit "Original
+        // import" war. Seit Build 79/79-Nachbesserungen kann eine EINZELNE Zeile aber
+        // eine ABWEICHENDE eigene Quellsprache tragen (fieldRowSourceLanguage, siehe
+        // ResolveRowValue) - fuer so eine Zeile zeigt "Original import" den Rohtext
+        // IHRER Quellsprache, waehrend die Spalte der (instanzweiten) $SourceLanguage
+        // die tatsaechliche UEBERSETZUNG dorthin zeigt, also etwas ANDERES. Die
+        // fruehere Sonderbehandlung wuerde diese Spalte fuer den kompletten Baum
+        // unterdruecken, nur weil SIE zufaellig auch als Zielsprache konfiguriert ist -
+        // fuer Zeilen mit einheitlicher Quellsprache bleibt der Inhalt zwar weiterhin
+        // redundant zu "Original import" (bewusst in Kauf genommen, keine Sonderlogik
+        // dafuer - siehe README Build 81), aber die Spalte selbst darf nicht mehr
+        // grundsaetzlich fehlen.
         foreach ($TargetLanguages as $language) {
-            if ($language === $SourceLanguage) {
-                continue;
-            }
             $column = [
                 'caption' => $withLabel($this->GetLanguageDisplayName($language)),
                 'name'    => $Prefix . $language,
@@ -6967,9 +6977,19 @@ HTML;
         // Nikolaus") - [] = keine Einschränkung, siehe GetLicensedAllowedLanguages.
         $allowedLanguages = $this->GetLicensedAllowedLanguages();
 
+        // Build 81-Nachbesserung: die Quellsprache selbst nicht mehr grundsaetzlich
+        // ausschliessen (siehe BuildLanguageColumnSet fuer denselben Hintergrund) - sie
+        // ist seit EnsureSourceLanguageIsTarget() (ApplyChanges/ScanRootTree) immer ein
+        // echter Eintrag in TargetLanguages, und diese Options-Liste liefert nicht nur
+        // die "Hinzufuegen"-Auswahl, sondern auch die Beschriftung, mit der die List
+        // JEDE bereits gespeicherte Zeile anzeigt - fehlt hier ein passender Eintrag,
+        // erscheint die Zeile ohne sichtbaren Sprachnamen (leere Zeile). Von der
+        // Testphasen-/allowedLanguages-Einschraenkung bleibt die Quellsprache aus
+        // demselben Grund wie in EnforceLicensedLanguageLimit() ausgenommen.
         $options = [];
         foreach ($this->BuildLanguageOptions() as $option) {
             if ($option['value'] === $SourceLanguage) {
+                $options[] = $option;
                 continue;
             }
             if ($restrictToTrialLanguages && !in_array($option['value'], $freeLanguageCodes, true)) {
