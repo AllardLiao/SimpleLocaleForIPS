@@ -1883,6 +1883,7 @@ private const LANGUAGE_FLAGS = [
     {
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
         if ($sourceLanguage === '') {
+            $this->SendDebug('IPSSL_Debug', 'EnsureSourceLanguageIsTarget: propertySourceLanguage is empty, nothing to do', 0);
             return;
         }
 
@@ -1893,13 +1894,16 @@ private const LANGUAGE_FLAGS = [
 
         foreach ($rows as $row) {
             if (($row['code'] ?? '') === $sourceLanguage) {
+                $this->SendDebug('IPSSL_Debug', "EnsureSourceLanguageIsTarget: '$sourceLanguage' already present in TargetLanguages, no-op", 0);
                 return;
             }
         }
 
         $rows[] = ['code' => $sourceLanguage];
+        $this->SendDebug('IPSSL_Debug', "EnsureSourceLanguageIsTarget: adding '$sourceLanguage' to TargetLanguages -> " . json_encode($rows), 0);
         IPS_SetProperty($this->InstanceID, self::propertyTargetLanguages, json_encode($rows));
         IPS_ApplyChanges($this->InstanceID);
+        $this->SendDebug('IPSSL_Debug', 'EnsureSourceLanguageIsTarget: after ApplyChanges, TargetLanguages now=' . $this->ReadPropertyString(self::propertyTargetLanguages), 0);
     }
 
     // Defensive Absicherung gegen ein Downgrade (z.B. eine zeitlich befristete
@@ -1915,6 +1919,15 @@ private const LANGUAGE_FLAGS = [
     // selbst treffen, wenn eine bereits am Limit stehende Lizenz die Quellsprache
     // wechselt - bewusst so gewollt (siehe README Build 79): verhindert, dass
     // wiederholtes Wechseln der Quellsprache das Sprachlimit einer Lizenz umgeht.
+    //
+    // Build 79-Nachbesserung: die AKTUELLE Quellsprache ist von der allowedLanguages-
+    // EINSCHRAENKUNG (nicht vom numerischen Limit, siehe oben) explizit ausgenommen -
+    // ohne diese Ausnahme wuerde eine gezielte Promo-Lizenz mit fester Sprachliste
+    // (z.B. "Finnisch zu Nikolaus", allowedLanguages: ["fi"]) den gerade erst von
+    // EnsureSourceLanguageIsTarget() ergaenzten Quellsprachen-Eintrag in JEDEM
+    // ApplyChanges()-Durchlauf sofort wieder entfernen (die eigene Basissprache steht
+    // ja fast nie in einer thematisch engen allowedLanguages-Liste) - Build 79 haette
+    // fuer genau diese Lizenzen dauerhaft keine Wirkung gezeigt.
     private function EnforceLicensedLanguageLimit(): void
     {
         $rows = json_decode($this->ReadPropertyString(self::propertyTargetLanguages), true);
@@ -1922,11 +1935,14 @@ private const LANGUAGE_FLAGS = [
             return;
         }
 
+        $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
         $allowed = $this->GetLicensedAllowedLanguages();
         $filtered = $allowed === []
             ? $rows
-            : array_values(array_filter($rows, function ($row) use ($allowed) {
-                return in_array($row['code'] ?? '', $allowed, true);
+            : array_values(array_filter($rows, function ($row) use ($allowed, $sourceLanguage) {
+                $code = $row['code'] ?? '';
+
+                return $code === $sourceLanguage || in_array($code, $allowed, true);
             }));
 
         $limit = $this->GetLicensedLanguageLimit();
@@ -3163,6 +3179,17 @@ private const LANGUAGE_FLAGS = [
 
             return;
         }
+
+        // Build 79-Nachbesserung: MUSS hier (vor dem gleich folgenden
+        // GetSelectedTargetLanguages()) laufen, nicht erst passiv ueber
+        // ApplyChanges() - sonst liest dieser Rescan-Durchlauf noch die ALTE
+        // Zielsprachenliste (ohne die Quellsprache) und uebersetzt keine einzige
+        // Zeile in die gerade erst ergaenzte Spalte; das wuerde erst beim naechsten
+        // Rescan sichtbar. IPS_ApplyChanges() innerhalb von EnsureSourceLanguageIsTarget()
+        // committet den neuen Eintrag synchron (reentranter ApplyChanges()-Lauf,
+        // dasselbe etablierte Muster wie z.B. EnforceLicensedLanguageLimit()), sodass
+        // GetSelectedTargetLanguages() gleich danach garantiert den aktuellen Stand sieht.
+        $this->EnsureSourceLanguageIsTarget();
 
         $scannedNames = [];
         $scannedTexts = [];

@@ -836,6 +836,30 @@ Beschreibung des Moduls.
   "Original" stand, wird beim ersten `ApplyChanges()` nach diesem Update
   automatisch, einmalig auf die tatsächliche Quellsprache umgeschrieben -
   keine manuelle Nacharbeit nötig.
+
+  **Build 80 behebt zwei Nachbesserungen an Build 79, die erst beim
+  direkten Live-Test auffielen.** Erstens: ein reiner Rescan-Klick zeigte
+  die Quellsprache weder in "Zielsprachen" noch als neue Spalte bei
+  "Objektnamen"/"Eigene Texte" - `ScanRootTree()` liest die aktuelle
+  Zielsprachenliste ganz am Anfang eines Durchlaufs, WEIT BEVOR
+  `EnsureSourceLanguageIsTarget()` (das bisher nur in `ApplyChanges()`
+  hing) überhaupt zum Zug kam - der neu ergänzte Eintrag kam dadurch immer
+  einen ganzen Rescan-Durchlauf zu spät. `ScanRootTree()` ruft
+  `EnsureSourceLanguageIsTarget()` jetzt selbst, ganz am Anfang, auf - ein
+  einzelner Rescan reicht ab jetzt aus.
+
+  Zweitens, unabhängig vom ersten Fund: bei einer Lizenz mit einer
+  eingeschränkten `allowedLanguages`-Liste (nur bei gezielten
+  Promo-Lizenzen wie "Finnisch zu Nikolaus" oder der
+  "Nachbarländer"-Aktion, siehe `GetLicensedAllowedLanguages`) wurde der
+  gerade erst ergänzte Quellsprachen-Eintrag von genau dieser Prüfung in
+  JEDEM `ApplyChanges()`-Durchlauf sofort wieder entfernt, da die eigene
+  Basissprache so gut wie nie in einer thematisch engen Promo-Sprachliste
+  auftaucht - für diese Lizenzen hätte Build 79 dauerhaft überhaupt keine
+  Wirkung gezeigt, egal wie oft man "Übernehmen" klickt. Die aktuelle
+  Quellsprache ist jetzt explizit von der `allowedLanguages`-Einschränkung
+  ausgenommen (das numerische Sprachlimit selbst bleibt davon unberührt -
+  siehe oben, das ist weiterhin bewusst gewollt).
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
