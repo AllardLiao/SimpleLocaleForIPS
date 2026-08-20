@@ -982,6 +982,47 @@ Beschreibung des Moduls.
   Fehlübersetzung, siehe unten) - einmalig die betroffene Zelle leeren,
   "Übernehmen" klicken, dann erneut Rescan ausführen, danach bleibt sie
   dauerhaft leer/unverändert (kein erneuter Übersetzungsversuch mehr).
+
+  **Build 85, auf Nutzer-Wunsch: die eigenen Gast-Oberflächentexte (siehe
+  Build 78) bringen jetzt feste Standard-Übersetzungen fürs Ausliefern mit
+  - für de/en/es/it/fr/nl sowie alle `TRIAL_LANGUAGE_CODES` (isländisch,
+  walisisch, zulu, māori, latein) steht die Übersetzung dieser Texte sofort
+  bereit, ganz ohne einen einzigen API-Aufruf bei irgendeinem Provider zu
+  verbrauchen - selbst direkt nach einer frischen Installation.** Neue
+  Konstante `OWN_UI_TEXT_BUNDLED_TRANSLATIONS`, eingebunden in
+  `MergeOwnUiTextRows()`: füllt beim Rescan JEDE noch leere Sprachspalte
+  einer dieser mitgelieferten Sprachen direkt mit dem fest hinterlegten
+  Text - unabhängig von den aktuell konfigurierten Zielsprachen, damit die
+  Übersetzung sofort bereitsteht, sobald eine dieser Sprachen jemals als
+  Zielsprache gewählt wird. Eine bereits vorhandene (echte, per Provider
+  erzeugte) Übersetzung wird dabei nie überschrieben. en/es/it/fr
+  übernehmen bewusst denselben Wortlaut wie die längst vorhandenen
+  Konsolensprachen-Übersetzungen derselben deutschen Texte (z. B.
+  "Stündlich:" → "Hourly:"), damit Konsolen- und Gast-Oberfläche
+  konsistent klingen.
+
+  **Qualitäts-Hinweis:** für die fünf Testphasen-Sprachen (is/cy/zu/mi/la)
+  gibt es keine Konsolensprachen-Referenz zum Abgleich, und die
+  Übersetzungsqualität für diese seltener unterstützten Sprachen -
+  insbesondere Zulu und Māori - ist spürbar weniger zuverlässig
+  einzuschätzen als für die verbreiteten Sprachen. Vor produktivem
+  Live-Einsatz wird eine Prüfung durch Muttersprachler empfohlen. Diese
+  Zeilen sind (wie alle `propertyOwnUiTexts`-Zeilen) bewusst NICHT über das
+  Konfigurationsformular editierbar - eine Korrektur kann aktuell nur über
+  ein künftiges Modul-Update erfolgen.
+
+  Außerdem, ebenfalls auf Nutzer-Wunsch: das Panel "Übersetzungsanbieter"
+  nutzt für MyMemory jetzt den WIRKLICH genauen Reset-Zeitpunkt statt der
+  Build-83-Annahme "nächste UTC-Mitternacht" - MyMemorys Fehlermeldung
+  nennt die verbleibende Wartezeit meist direkt und exakt (z. B. "NEXT
+  AVAILABLE IN 02 HOURS 51 MINUTES 23 SECONDS"), live beobachtet und
+  spürbar präziser als die reine Mitternachts-Annahme (das Kontingentfenster
+  scheint nicht zwingend exakt auf UTC-Mitternacht zu fallen, sondern eher
+  rollierend ab dem ersten Verbrauch zu laufen). Neue
+  `ParseMyMemoryNextAvailableTimestamp()` extrahiert diesen Countdown direkt
+  aus MyMemorys Antworttext; die UTC-Mitternacht-Berechnung aus Build 83
+  bleibt als Rückfallwert bestehen, falls das Muster einmal nicht gefunden
+  wird (z. B. bei einer künftig geänderten Formulierung).
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
