@@ -1225,6 +1225,13 @@ Beschreibung des Moduls.
   und lässt sich nicht nachträglich ändern) und benötigen einen neu
   ausgestellten Schlüssel, um die "Eigene Übersetzungstabelle"
   tatsächlich nutzen zu können.
+
+  **Build 92:** die Überschrift der Liste selbst ("Eigene
+  Übersetzungstabelle", live gemeldet) fehlte noch in `locale.json` und
+  blieb dadurch bei jeder Konsolensprache auf Deutsch stehen, obwohl die
+  Spalten-/Beschreibungstexte bereits korrekt übersetzt wurden - Build 89
+  hatte nur Letztere ergänzt, den kurzen Listentitel selbst aber
+  übersehen. Ergänzt für en/es/it/fr.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
