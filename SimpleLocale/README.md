@@ -1042,6 +1042,74 @@ Beschreibung des Moduls.
   Zeile (echte Provider-Übersetzung, manuelle Korrektur oder ein durch
   einen späteren Rescan eingetragener Bundled-Wert) hat weiterhin Vorrang
   vor diesem Fallback.
+
+  **Build 87 behebt zwei weitere, live gefundene Probleme und dokumentiert
+  eine strukturelle Einschränkung.**
+
+  Erstens: eine korrekte, mit hoher Konfidenz bestätigte Übersetzung, die
+  zufällig identisch zum Ausgangstext blieb (z. B. "Cover" bleibt auch auf
+  Spanisch "Cover" - ein echtes Lehnwort, von MyMemory selbst mit
+  `match: 1` bestätigt), wurde bisher fälschlich als gescheiterter
+  Übersetzungsversuch gewertet und dauerhaft verworfen - die Zelle blieb
+  leer UND wurde bei JEDEM weiteren Rescan erneut angefragt, ohne je
+  "fertig" zu werden (treffend als drohender Deadlock beschrieben: Zellen,
+  deren korrekte Übersetzung zufällig gleich dem Rohtext bleibt, wie auch
+  technische, gar nicht übersetzbare Bezeichner wie `SetVisibilityOff`
+  innerhalb von Automatisierungs-Aktionsnamen, konnten so nie einen
+  stabilen, gecachten Endzustand erreichen). Ursache war eine
+  Unterscheidungslücke: `TranslateBatchUncached()` fällt bei einem
+  ECHTEN Anbieter-Fehlschlag bewusst auf den unübersetzten Rohtext zurück
+  (verhindert eine leere/kaputte HTML-Struktur, siehe Build-70-Historie),
+  aber das Ergebnis sah für die aufrufende Stelle identisch aus wie eine
+  ECHTE, zufällig gleichbleibende Übersetzung - beide wurden bisher über
+  einen reinen Textvergleich ("Ergebnis == Rohtext?") auseinandergehalten,
+  einer strukturell unzuverlässigen Heuristik. `TranslateBatchUncached()`
+  liefert jetzt zusätzlich ein echtes, aus `TranslateChunk()` stammendes
+  `failed`-Flag pro Text mit - kein Rätselraten mehr nötig: eine echte
+  Übersetzung (auch wenn zufällig identisch) gilt jetzt korrekt als
+  erfolgreich und wird gecacht, nur ein wirklicher Fehlschlag bleibt leer
+  und offen für den nächsten Versuch.
+
+  Zweitens: der rote "Übersetzung pausiert bis..."-Hinweis auf der Kachel
+  blieb nach Ende einer Anbieter-Pause teils MINUTENLANG stehen, obwohl
+  `GetGlobalPauseUntil()` selbst jederzeit korrekt (nicht
+  zwischengespeichert) den aktuellen Zustand lieferte und ein manueller
+  Anbieter-Test im Formular längst wieder Erfolg meldete - reines
+  Anzeigeproblem, keine fehlerhafte Übersetzungs-Entscheidung dahinter.
+  `ClearProviderPause()` (läuft bei jedem echten Übersetzungserfolg)
+  aktualisiert zwar sofort den gespeicherten Pause-Zustand, pusht aber nie
+  von sich aus eine aktualisierte Anzeige an bereits geöffnete
+  Gast-Kacheln - und auch ein rein zeitliches Ablaufen der Pause (ganz
+  ohne neuen Übersetzungsversuch) hat dafür ohnehin keinen eigenen
+  Auslöser. Der bisher nur für die Statistik-Zeile gedachte periodische
+  Kachel-Refresh (`RefreshTranslationStatsTile`, zuvor an
+  `propertyShowTranslationStats` gekoppelt und alle 10 Minuten) läuft ab
+  jetzt IMMER (unabhängig von dieser Einstellung) und alle 2 statt 10
+  Minuten - er aktualisiert ohnehin die komplette Gast-Anzeige in einem
+  Rutsch (Statistik UND Pause-/Testphase-Hinweis), verursacht dabei
+  weiterhin keinen einzigen API-Aufruf (reine `PushVisualizationUpdate()`-
+  Neuberechnung).
+
+  **Bekannte, strukturelle Einschränkung (dokumentiert, kein Code-Fix
+  möglich): live per VM_UPDATE nachübersetzte "Eigene Texte" können für
+  einen kurzen Moment unübersetzt sichtbar sein**, wenn eine externe
+  Quelle (z. B. ein Wetter-/Sensor-Modul) denselben Wert schreibt, den es
+  auch selbst anzeigt (Objekt-ID = Wert-Objekt-ID, der Normalfall ohne
+  gesonderte Anzeige-Variable). Symcons WebFront pusht JEDEN
+  Schreibvorgang sofort an verbundene Gast-Browser - inklusive des
+  externen Rohtext-Schreibvorgangs selbst, BEVOR Simple Locale reagieren
+  und die Übersetzung zurückschreiben kann. Wie lange dieses Fenster
+  offen bleibt, hängt direkt von der Antwortzeit des jeweiligen
+  Übersetzungsanbieters ab (spürbar kürzer bei einem Cache-Treffer, siehe
+  `TranslateBatch`/`GetCachedTranslation`, ansonsten vom echten
+  API-Antwortverhalten abhängig) - keine feste, garantierbare Ober- oder
+  Untergrenze. Wer das vollständig ausschließen möchte, kann dem
+  betroffenen "Eigene Texte"-Eintrag eine EIGENE, separate
+  Anzeige-Variable zuweisen (`ValueObjectID` abweichend von der
+  eigentlich getrackten Quellvariable) und das anzeigende Widget auf
+  diese umstellen - dann schreibt die externe Quelle nie direkt in eine
+  gast-sichtbare Variable, nur Simple Locales bereits übersetztes
+  Ergebnis erreicht sie.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der

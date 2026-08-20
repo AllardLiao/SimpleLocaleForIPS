@@ -529,17 +529,25 @@ private const LANGUAGE_FLAGS = [
         $interval = $this->HasLicenseFeature('auto_rescan') ? $this->ReadPropertyInteger(self::propertyAutoRescanInterval) : 0;
         $this->SetTimerInterval($this->GetAutoRescanTimerIdent(), $interval > 0 ? $interval * 60 * 1000 : 0);
 
-        // Nur aktiv, wenn der Statistik-Hinweis in der Kachel ueberhaupt eingeblendet
-        // wird (siehe propertyShowTranslationStats) - sonst gaebe es fuer bereits
-        // offene Gast-Kacheln nichts periodisch zu aktualisieren. Feste 10-Minuten-
-        // Taktung (kein eigenes Konfigurationsfeld dafuer noetig) - haeufig genug,
-        // dass die Anzeige nicht spuerbar veraltet wirkt, selten genug, um keine
-        // spuerbare Last zu erzeugen (reine PushVisualizationUpdate()-Neuberechnung,
-        // kein API-Aufruf).
-        $this->SetTimerInterval(
-            $this->GetTranslationStatsTimerIdent(),
-            $this->ReadPropertyBoolean(self::propertyShowTranslationStats) ? 10 * 60 * 1000 : 0
-        );
+        // Build 87 (Nutzer-Wunsch, live gefunden): laeuft ab jetzt IMMER, nicht mehr
+        // nur wenn propertyShowTranslationStats aktiv ist. Grund: dieser Timer ist die
+        // EINZIGE Stelle, die bereits offenen Gast-Kacheln ueberhaupt jemals von sich
+        // aus eine frisch berechnete Anzeige schickt (PushVisualizationUpdate) - trifft
+        // also nicht nur die Statistik-Zeile, sondern genauso den Pause-/Testphase-
+        // Hinweis (BuildPausedNoticeHtml/BuildTrialNoticeHtml, siehe dort - beide OHNE
+        // eigenen Auslöser bei einer Zustandsaenderung). ClearProviderPause() (auf
+        // jedem echten Uebersetzungserfolg) aktualisiert zwar sofort den gespeicherten
+        // Pause-Zustand, pusht aber selbst NIE eine Aktualisierung an schon geoeffnete
+        // Kacheln - live beobachtet: der rote "pausiert bis..."-Hinweis blieb dadurch
+        // MINUTENLANG sichtbar, obwohl der zugrunde liegende Anbieter laengst wieder
+        // erfolgreich uebersetzte (GetGlobalPauseUntil() selbst liefert dabei jederzeit
+        // den korrekten, nicht zwischengespeicherten Wert - nur die BEREITS
+        // GERENDERTE Kachel-HTML kannte davon nichts). Intervall von 10 auf 2 Minuten
+        // verkuerzt, da ein haengenbleibender Pause-Hinweis deutlich staerker auffaellt
+        // als eine leicht veraltete Statistikzeile - weiterhin reine
+        // PushVisualizationUpdate()-Neuberechnung ohne jeden API-Aufruf, also auch bei
+        // dieser Taktung keine spuerbare Last.
+        $this->SetTimerInterval($this->GetTranslationStatsTimerIdent(), 2 * 60 * 1000);
 
         $this->SyncValueUpdateRegistrations();
 
@@ -5246,38 +5254,28 @@ private const LANGUAGE_FLAGS = [
         if ($freshTexts !== []) {
             $freshlyTranslated = $this->TranslateBatchUncached($freshTexts, $Source, $Target, $DebugContext, $IsHtml);
             foreach ($freshIndexes as $position => $originalIndex) {
-                $translated = $freshlyTranslated[$position] ?? '';
-                // TranslateBatchUncached faellt bei einem fehlgeschlagenen/pausierten
-                // Anbieter bewusst NIE auf einen leeren String zurueck, sondern auf den
-                // unuebersetzten Quelltext (siehe dortiger Kommentar zum
-                // HTML-Text-Knoten-Fallback) - richtig fuer die dortige
-                // Wiederzusammensetzung (nie eine kaputte/leere HTML-Struktur), aber
-                // HIER faelschlich als "erfolgreich uebersetzt" interpretierbar: JEDER
-                // Aufrufer von TranslateBatch() (FillLanguageColumn,
-                // ApplyTrackedVariableUpdate, ReconcileRowFields) entscheidet anhand
-                // eines Leerstrings, ob eine Zelle als "fertig, nicht erneut
-                // versuchen" oder "fehlgeschlagen, bitte spaeter erneut versuchen"
-                // gilt - ein still durchgereichter Fallback wuerde dort DAUERHAFT als
-                // erledigt gelten. Live beobachtet (2026-08-19): "Automations" und
-                // "Begrüßung" komplett auf den deutschen Rohtext eingefroren, nachdem
-                // waehrend eines Rescans alle Anbieter pausiert waren - jede
-                // Zielsprachen-Spalte einer NEUEN Zeile wurde beim allerersten
-                // Fuellversuch mit dem (fuer diesen einen Versuch unuebersetzten)
-                // Rohtext dauerhaft "erledigt" markiert, ein spaeterer Rescan
-                // erkannte sie nie wieder als offen. Ein Ergebnis, das EXAKT dem
-                // unuebersetzten Quelltext entspricht (bei unterschiedlicher
-                // Quell-/Zielsprache so gut wie sicher nur durch diesen Fallback
-                // moeglich - echte, zufaellig identisch bleibende Uebersetzungen,
-                // z.B. Eigennamen, sind die seltene Ausnahme und lassen sich bei
-                // Bedarf manuell im Formular eintragen), wird deshalb HIER wieder in
-                // einen echten Leerstring zurueckverwandelt, bevor er an irgendeinen
-                // Aufrufer weitergereicht wird - das schuetzt gleichzeitig auch den
-                // Cache (siehe StoreCachedTranslation unten): ohne diese Korrektur
-                // wuerde der Fallback dauerhaft als "echte Uebersetzung" gecacht und
-                // auch nach Ende der Pause nie mehr neu versucht.
-                if ($translated !== '' && $translated === $freshTexts[$position]) {
-                    $translated = '';
-                }
+                $item = $freshlyTranslated[$position] ?? ['text' => '', 'failed' => true];
+                // Build 87-Nachbesserung (Nutzer-Wunsch, live gefunden): TranslateBatchUncached
+                // faellt bei einem fehlgeschlagenen/pausierten Anbieter bewusst NIE auf
+                // einen leeren String zurueck, sondern auf den unuebersetzten Quelltext
+                // (siehe dortiger Kommentar zum HTML-Text-Knoten-Fallback) - richtig fuer
+                // die dortige Wiederzusammensetzung (nie eine kaputte/leere HTML-Struktur).
+                // Bis Build 87 wurde ein Ergebnis, das exakt dem unuebersetzten Quelltext
+                // entsprach, HIER pauschal als "das war nur der Fallback" gewertet und
+                // wieder in einen Leerstring zurueckverwandelt - fuer eine ECHTE,
+                // gueltige Uebersetzung, die zufaellig identisch zum Quelltext bleibt
+                // (Lehnwoerter wie "Cover"->"Cover" [es], technische Bezeichner wie
+                // "SetVisibilityOff", die MyMemory selbst mit hoher Konfidenz bestaetigt),
+                // war das aber ein FALSE POSITIVE: die Zelle blieb dauerhaft leer UND
+                // wurde bei JEDEM weiteren Rescan erneut angefragt, ohne je "fertig" zu
+                // werden - live beobachtet, vom Nutzer treffend als drohender "Deadlock"
+                // beschrieben. TranslateBatchUncached liefert seit Build 87 stattdessen
+                // ($result[N]['failed']) das TATSAECHLICHE, zuverlaessige Signal direkt
+                // aus TranslateChunk() mit (kein Text-Vergleich mehr noetig) - eine echte
+                // Uebersetzung, die zufaellig gleich bleibt, gilt jetzt korrekt als
+                // erfolgreich UND wird gecacht; nur ein wirklicher Fehlschlag bleibt leer
+                // und bleibt fuer den naechsten Versuch offen.
+                $translated = $item['failed'] ? '' : $item['text'];
                 $results[$originalIndex] = $translated;
                 if ($translated !== '') {
                     $this->StoreCachedTranslation($Source, $Target, $freshTexts[$position], $translated);
@@ -5539,8 +5537,9 @@ private const LANGUAGE_FLAGS = [
         // Tippfehlerkorrektur zu nutzen, scheitert also schon an der API selbst, nicht
         // erst an der (in einem früheren Fix bereits verworfenen) Fehlerkennungsgefahr.
         // Es gibt in diesem Fall ohnehin nichts zu übersetzen - Text unverändert zurück.
+        // 'failed' => false: kein API-Aufruf noetig, also auch kein Fehlschlag moeglich.
         if ($Source === $Target) {
-            return $Texts;
+            return array_map(static fn (string $text): array => ['text' => $text, 'failed' => false], $Texts);
         }
 
         // Kein Key-Check mehr hier: die Anbieter-Kette enthaelt IMMER mindestens
@@ -5643,6 +5642,13 @@ private const LANGUAGE_FLAGS = [
         $cursor = 0;
         foreach ($segmentsPerText as $segments) {
             $rebuilt = '';
+            // Build 87 (Nutzer-Wunsch, live gefunden): pro Text-Item mitgefuehrt, ob
+            // WENIGSTENS EIN Knoten/Segment auf den unuebersetzten Rohtext zurueckfiel,
+            // weil TranslateChunk() dafuer ein leeres (=echtes Fehlschlag-)Ergebnis
+            // lieferte - siehe Rueckgabewert unten sowie TranslateBatch(), das anhand
+            // dieses Flags statt eines unzuverlaessigen Text-Vergleichs entscheidet, ob
+            // ein Ergebnis als "fertig uebersetzt" gilt.
+            $anyNodeFailed = false;
             foreach ($segments as $segment) {
                 if ($segment['protected']) {
                     $rebuilt .= $segment['text'];
@@ -5674,6 +5680,9 @@ private const LANGUAGE_FLAGS = [
                             // vollständig leeren Text-Knoten (Prozentwerte,
                             // Windgeschwindigkeit, Temperaturen) statt der erwarteten
                             // unübersetzten Originalwerte.
+                            if ($apiResult === '') {
+                                $anyNodeFailed = true;
+                            }
                             $translatedNodes[] = $apiResult !== '' ? $apiResult : $segment['nodes'][$index];
                             $apiPosition++;
                         }
@@ -5685,16 +5694,19 @@ private const LANGUAGE_FLAGS = [
                     // Objektnamen/Enum-Beschriftungen) - ein einzelnes Segment ohne
                     // Knoten-Zerlegung.
                     $apiResult = $translatedFlat[$cursor] ?? '';
+                    if ($apiResult === '') {
+                        $anyNodeFailed = true;
+                    }
                     $rebuilt .= $apiResult !== '' ? $apiResult : $segment['text'];
                     $cursor++;
                 } else {
                     // Wurde oben beim Aufbau von $translatable bewusst übersprungen
                     // (kein Buchstabe im Segment) - kein API-Ergebnis zu konsumieren,
-                    // $cursor bleibt unverändert.
+                    // $cursor bleibt unverändert, kein Fehlschlag moeglich.
                     $rebuilt .= $this->ResolveNonTranslatableText($segment['text'], $Source, $Target);
                 }
             }
-            $result[] = $rebuilt;
+            $result[] = ['text' => $rebuilt, 'failed' => $anyNodeFailed];
         }
 
         return $result;
@@ -7466,11 +7478,15 @@ HTML;
     }
 
     // Timer-Callback (siehe RegisterTimer in Create()) - schickt bereits offenen
-    // Kacheln lediglich eine frisch berechnete Anzeige (siehe
-    // PushVisualizationUpdate/BuildTranslationStatsNoticeHtml), rührt NIE das
-    // Konfigurationsformular an (kein ReloadForm(), keinerlei
-    // Formular-Interaktion) - komplett unabhängig vom Auto-Rescan-Timer/
-    // AutoRescan().
+    // Kacheln lediglich eine frisch berechnete Anzeige (siehe PushVisualizationUpdate),
+    // rührt NIE das Konfigurationsformular an (kein ReloadForm(), keinerlei
+    // Formular-Interaktion) - komplett unabhängig vom Auto-Rescan-Timer/AutoRescan().
+    // Build 87: trotz des Namens (historisch, noch aus der reinen Statistik-Zeit)
+    // aktualisiert dieser Refresh inzwischen JEDE dynamische Gast-Anzeige der Kachel in
+    // einem Rutsch (BuildTranslationStatsNoticeHtml UND BuildPausedNoticeHtml/
+    // BuildTrialNoticeHtml, siehe BuildLanguageSelectHtml) - eine Umbenennung wurde
+    // bewusst vermieden, um Ident/Attribut-Namen (siehe GetTranslationStatsTimerIdent)
+    // nicht unnoetig anzufassen.
     public function RefreshTranslationStatsTile(): void
     {
         $this->PushVisualizationUpdate();
