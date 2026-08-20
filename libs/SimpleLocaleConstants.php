@@ -97,6 +97,15 @@ trait SimpleLocaleConstants
     // "Verwaistes".
     private const propertyOwnUiTexts = 'OwnUiTexts';
 
+    // Build 89 (Nutzer-Wunsch, "Eigene Übersetzungstabelle"): admin-gepflegtes
+    // Glossar, das JEDER automatischen Übersetzung (Google/DeepL/MyMemory)
+    // vorgezogen wird - siehe GetManualTranslation/TranslateBatch. Zeilenform wie
+    // Objektnamen (fieldRowSourceLanguage + langOriginalImport als Quelltext-Feld +
+    // eine Spalte je Zielsprache), aber vollständig admin-editierbar (kein Scan,
+    // keine ObjectID) - der Admin fügt Zeilen selbst über den "Hinzufügen"-Button
+    // der Liste hinzu.
+    private const propertyManualTranslations = 'ManualTranslations';
+
     // Feldnamen, die IPS_GetVariablePresentation()/IPS_GetTemplate() für
     // menschenlesbaren Anzeigetext verwendet (siehe IsTranslatableFieldName) -
     // Groß-/Kleinschreibung wird beim Vergleich ignoriert. Symcon ist hier leider
