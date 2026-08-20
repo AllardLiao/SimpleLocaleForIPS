@@ -571,8 +571,23 @@ Beschreibung des Moduls.
   auf das Ende der Ruhephase zu warten - ein Gast bekommt dadurch immer den
   aktuellsten Stand zu sehen. Das Konfigurationsformular zeigt zusätzlich
   oben einen Hinweis mit der voraussichtlichen Uhrzeit der nächsten
-  Persistierung an, solange etwas ansteht - rein informativ, da Speichern
-  jederzeit gefahrlos möglich ist.
+  Persistierung an, solange etwas ansteht.
+
+  **Wichtige Einschränkung dieses Schutzes:** Er bewahrt nur den externen
+  Puffer selbst davor, verworfen zu werden - er schützt NICHT eine eigene,
+  gleichzeitige Bearbeitung DERSELBEN Zelle. Beim "Übernehmen" liest
+  `ApplyChanges()` die gerade abgeschickten Zeilen (bereits mit dem eigenen
+  frischen Wert) und überschreibt darin gezielt genau die Felder, die im
+  Puffer stehen (Rohtext + Übersetzung der aktiven Sprache), mit dem
+  ÄLTEREN, gepufferten externen Wert. Bearbeitet man eine andere Zeile oder
+  eine andere Spalte derselben Zeile (z. B. eine nicht-aktive Zielsprache),
+  bleibt die eigene Änderung unangetastet. Korrigiert man dagegen manuell
+  genau die Zelle, die gerade auch extern (per `VM_UPDATE`) aktualisiert und
+  gepuffert wird, gewinnt beim Speichern der ältere externe Wert - die
+  eigene, frisch eingetippte Korrektur geht dabei ersatzlos verloren.
+  Bei einer häufig extern aktualisierten Variable also am besten zügig
+  speichern bzw. genau diese Zelle meiden, solange der Hinweis oben im
+  Formular eine anstehende Persistierung anzeigt.
 
   **Build 72 macht den Übersetzungs-Cache treffsicherer und größer:** Bisher
   war der lokale Cache (bis zu 500 Einträge) rein nach Einfügereihenfolge
@@ -744,6 +759,44 @@ Beschreibung des Moduls.
   Name `ShowGlobeIcon` und CSS-Klasse `ipssl-globe` bleiben aus
   Kompatibilitätsgründen unverändert - siehe Abschnitt 7 für eigene,
   darauf aufbauende Kachel-Anpassungen).
+
+  **Build 78 macht die festen Gast-Oberflächentexte komplett unabhängig von
+  Anbieter-Pausen, ergänzt den Pause-Grund und weitere kleinere
+  Verbesserungen.** Der eigentliche Kern dieses Builds, direkte Folge des
+  in Build 77 gefundenen Bugs: die festen Gast-Oberflächentexte
+  ("Übersetzung pausiert bis", die Statistik-Beschriftungen, der
+  Info-Popup-Hinweistext, ...) laufen ab sofort NICHT mehr über einen
+  24h-Live-Übersetzungs-Cache (`EnsureGuestLanguageNamesFresh`), der -
+  genau dann, wenn er ausgerechnet während einer Anbieter-Pause aktualisiert
+  wird - für den Rest des Tages auf Deutsch hängen bleiben konnte. Diese
+  Texte werden jetzt genau wie Objektnamen/Automations beim Rescan EINMALIG
+  in alle konfigurierten Zielsprachen übersetzt und dauerhaft in einer
+  eigenen, neuen Property (`OwnUiTexts`) gespeichert - da sie fest im
+  PHP-Code stehen und sich nur mit einem künftigen Modul-Update überhaupt
+  ändern können, liegt die Übersetzung dadurch strukturell IMMER schon vor,
+  bevor eine Pause je eine Rolle spielen könnte. Bewusst OHNE eigene Liste
+  im Konfigurationsformular und ausdrücklich NICHT von "Aufräumen" (Build
+  76) betroffen - der Admin kann diese Zeilen weder versehentlich löschen
+  noch verändern, sie gehören zu keinem Symcon-Objekt und sollen dauerhaft,
+  unabhängig von jeder Admin-Aktion, vorhanden bleiben. Ändert ein
+  künftiges Modul-Update den deutschen Wortlaut eines dieser Texte, wird
+  das beim nächsten Rescan automatisch erkannt und neu übersetzt (die alte
+  Übersetzung bleibt bis dahin als Fallback sichtbar, statt sofort zu
+  verschwinden).
+
+  Zusätzlich, alles auf Nutzer-Wunsch: das Info-Popup nennt jetzt auch den
+  GRUND einer laufenden Anbieter-Pause ("Grund: Alle konfigurierten
+  Übersetzungsanbieter melden aktuell ihr Limit erreicht."), nicht mehr
+  nur "bis wann". Die Überschrift des Info-Popups wird jetzt fett
+  dargestellt - technisch über die "Mathematical Sans-Serif Bold"-Zeichen
+  aus dem Unicode-Block "Mathematical Alphanumeric Symbols" (U+1D5D4 ff.),
+  da `alert()` reiner Text ist und keine HTML-/Markdown-Formatierung
+  kennt; sehen in praktisch jedem modernen Browser/Betriebssystem
+  fettgedruckt aus, sind aber technisch eigene Zeichen statt eines
+  Formatierungsattributs (deckt nur A-Z/a-z/0-9 ab, Leerzeichen/
+  Sonderzeichen bleiben unverändert). Und: der graue Kreis-Hintergrund
+  hinter dem Simple-Locale-Symbol in der Kachel (Build 77) wurde entfernt -
+  nur noch das reine Symbol, ohne umschließende Form.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
@@ -966,7 +1019,7 @@ Bewusst außerhalb von v1: Google und DeepL gleichzeitig für dieselbe Übersetz
 Name                            | Beschreibung
 -------------------------------- | ------------------
 Zielsprachen                    | Sprachen, in die übersetzt werden soll. Auswahl-Optionen kommen ab Werk aus der eingebauten Liste, mit konfiguriertem Google-/DeepL-Key aus deren dynamisch geladener Liste (siehe oben). Ausgegraut, wenn ein bezahlter Anbieter konfiguriert ist, aber noch keine Liste laden konnte, oder wenn das Sprachlimit einer "Spezialversion"-Lizenz erreicht ist (siehe Abschnitt 8). Wichtig: Nach dem Klick auf "Sprachliste aktualisieren" die Instanzkonfiguration einmal schließen und neu öffnen, bevor Häkchen gesetzt werden - sonst kann die Konsole falsche Sprachen speichern.
-Objektnamen / Eigene Texte / Beschriftungen | Listen der gefundenen Objekte mit Quelltext und je einer Spalte pro Zielsprache. Übersetzungen sind hier direkt editierbar; leere Zellen werden beim nächsten Rescan automatisch übersetzt. "Beschriftungen" siehe [Abschnitt 2](#2-bekannte-einschränkungen) (Fork-Mechanismus).
+Objektnamen / Eigene Texte / Beschriftungen | Listen der gefundenen Objekte mit Quelltext und je einer Spalte pro Zielsprache. Übersetzungen sind hier direkt editierbar; leere Zellen werden beim nächsten Rescan automatisch übersetzt. "Beschriftungen" siehe [Abschnitt 2](#2-bekannte-einschränkungen) (Fork-Mechanismus). **Hinweis:** Das Konfigurationsformular persistiert extern (per `VM_UPDATE`) automatisch geänderte Texte alle 12 Minuten, wenn es Änderungen gibt, was zu einem Refresh dieses Formulars führt - bitte speichere Deine eigene Arbeit rechtzeitig. Solange etwas ansteht, zeigt das Formular oben einen Hinweis mit der nächsten Refresh-Zeit an (siehe [Abschnitt 2](#2-bekannte-einschränkungen) für die genauen Details, was dabei geschützt ist und was nicht).
 Automations                     | Liste der gefundenen Automation-Einträge der oben unter "Kachel-Visualisierung" gewählten Instanz mit Quelltext und je einer Spalte pro Zielsprache - funktioniert genauso wie Objektnamen.
 Begrüßung                       | Übersetzt den Begrüßungstext der Kachel-Visualisierung, unabhängig davon, ob "Show Greeting" gerade "Automatic"/"Static" (freier Text, Feld "Name"/Property `GreetingName`) oder "Variable" (Live-Wert einer String-Variable) ist - beide landen in derselben einen Zeile hier, siehe eigenen Absatz unten. Ein Hinweistext direkt über der Liste zeigt an, welcher Modus gerade aktiv ist. Bei "Show Greeting" = "None" bleibt die Liste leer.
 

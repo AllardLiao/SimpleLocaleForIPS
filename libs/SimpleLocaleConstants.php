@@ -78,6 +78,25 @@ trait SimpleLocaleConstants
     // Einschränkungen).
     private const propertyObjectGreeting = 'ObjectGreeting';
 
+    // Build 78 (Nutzer-Wunsch): die festen, im PHP-Code hart hinterlegten
+    // Gast-Oberflächentexte (siehe GetOwnUiTextDefinitions - "Übersetzung pausiert
+    // bis", die Statistik-Beschriftungen, der Info-Popup-Hinweistext, ...) werden
+    // jetzt genau wie Objektnamen/Automations beim Rescan EINMALIG in alle
+    // konfigurierten Zielsprachen übersetzt und dauerhaft in dieser Property
+    // gespeichert - NICHT mehr live bei jedem Kachel-Aufruf über einen 24h-
+    // Attribut-Cache (siehe EnsureGuestLanguageNamesFresh), der wegen genau dieses
+    // Live-Aufrufs während einer Anbieter-Pause leer blieb (siehe Build 77). Da
+    // diese Texte für immer feststehen (bis ein künftiges Modul-Update den
+    // deutschen Quelltext ändert), liegt die Übersetzung damit VOR jeder Pause
+    // bereits vor und ist von ihr komplett unabhängig - klassischer Fall von
+    // "einmal übersetzen, für immer nutzen" statt "bei jedem Bedarf neu anfragen".
+    // Zeilen-Schlüssel ist bewusst KEIN ObjectID (diese Texte gehören zu keinem
+    // Symcon-Objekt), sondern ein fester, im Code vergebener String (siehe
+    // fieldOwnUiTextKey) - dadurch nutzt "Aufräumen" (siehe identCleanupOrphanedRows)
+    // diese Property gar nicht erst an, sie enthaelt strukturell nichts
+    // "Verwaistes".
+    private const propertyOwnUiTexts = 'OwnUiTexts';
+
     // Feldnamen, die IPS_GetVariablePresentation()/IPS_GetTemplate() für
     // menschenlesbaren Anzeigetext verwendet (siehe IsTranslatableFieldName) -
     // Groß-/Kleinschreibung wird beim Vergleich ignoriert. Symcon ist hier leider
@@ -373,6 +392,10 @@ trait SimpleLocaleConstants
     private const langOriginalImport = 'ORIGINAL_IMPORT';
     private const fieldOriginalImportName = 'ORIGINAL_IMPORT_Name';
     private const langOriginalImportText = 'ORIGINAL_IMPORT_Text';
+
+    // Build 78: Zeilen-Schlüssel für propertyOwnUiTexts (siehe dort) - ein fester,
+    // im Code vergebener String (z.B. "pausedNoticePrefix"), kein ObjectID.
+    private const fieldOwnUiTextKey = 'Key';
 
     // Präfixe für die Übersetzungsspalten von "Eigene Texte" - dort gibt es sowohl
     // Name- als auch Inhalts-Übersetzungen, die Sprachcodes allein wären sonst

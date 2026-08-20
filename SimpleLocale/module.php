@@ -59,8 +59,10 @@ class SimpleLocale extends IPSModuleStrict
     // BuildPausedNoticeHtml/GetGlobalPauseUntil) - wie oben live in die aktive
     // Gast-Sprache übersetzt. Build 77: dieselben zwei Texte werden zusaetzlich im
     // Info-Popup wiederverwendet (siehe BuildGuestPauseInfoText), ergaenzt um die
-    // Bestaetigung, dass bereits vorhandene Uebersetzungen weiterhin nutzbar bleiben.
+    // Bestaetigung, dass bereits vorhandene Uebersetzungen weiterhin nutzbar bleiben,
+    // und (Build 78, Nutzer-Wunsch) um den GRUND der Pause.
     private const PAUSED_NOTICE_PREFIX_TEXT = 'Übersetzung pausiert bis';
+    private const PAUSED_POPUP_REASON_TEXT = 'Grund: Alle konfigurierten Übersetzungsanbieter melden aktuell ihr Limit erreicht.';
     private const PAUSED_POPUP_REASSURANCE_TEXT = 'Bereits vorhandene Übersetzungen bleiben nutzbar.';
 
     // Guest-facing Label-Texte fuer die Uebersetzungs-Statistik in der Kachel (siehe
@@ -300,6 +302,7 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterPropertyInteger(self::propertyWebFrontVisuInstanceID, 0);
         $this->RegisterPropertyString(self::propertyObjectAutomations, '[]');
         $this->RegisterPropertyString(self::propertyObjectGreeting, '[]');
+        $this->RegisterPropertyString(self::propertyOwnUiTexts, '[]');
 
         // Bewusst eine Property statt Variable/Profil für die aktive Sprache: Profile
         // sind in Symcon immer global, nicht instanzgebunden - bei mehreren Instanzen
@@ -2151,6 +2154,103 @@ private const LANGUAGE_FLAGS = [
         ];
     }
 
+    // Build 78: zentrale, einzige Quelle der festen Gast-Oberflächentexte (siehe
+    // propertyOwnUiTexts) - Schlüssel => aktueller deutscher Wortlaut. Aendert sich
+    // der deutsche Text eines Schlüssels hier (z.B. in einem künftigen Modul-
+    // Update), erkennt MergeOwnUiTextRows() das automatisch und stösst eine
+    // Neuübersetzung an (siehe dort) - anders als bei Objektnamen wird der Rohtext
+    // hier NIE eingefroren, sondern folgt immer dem aktuellen Code-Stand.
+    private function GetOwnUiTextDefinitions(): array
+    {
+        $definitions = [];
+        foreach (self::INFO_LIMITATION_TEXTS as $i => $text) {
+            $definitions["infoText$i"] = $text;
+        }
+
+        return $definitions + [
+            'trialNoticePrefix'    => self::TRIAL_NOTICE_PREFIX_TEXT,
+            'pausedNoticePrefix'   => self::PAUSED_NOTICE_PREFIX_TEXT,
+            'pausedReason'         => self::PAUSED_POPUP_REASON_TEXT,
+            'pausedReassurance'    => self::PAUSED_POPUP_REASSURANCE_TEXT,
+            'statsRequestsLabel'   => self::STATS_NOTICE_REQUESTS_LABEL_TEXT,
+            'statsCharactersLabel' => self::STATS_NOTICE_CHARACTERS_LABEL_TEXT,
+            'statsSincePrefix'     => self::STATS_POPUP_SINCE_PREFIX_TEXT,
+            'statsDaysSuffix'      => self::STATS_POPUP_DAYS_SUFFIX_TEXT,
+            'statsHourlyLabel'     => self::STATS_POPUP_HOURLY_LABEL_TEXT,
+            'statsRequestsUnit'    => self::STATS_POPUP_REQUESTS_UNIT_TEXT,
+            'statsCharsUnit'       => self::STATS_POPUP_CHARACTERS_UNIT_TEXT,
+            'statsTotalLabel'      => self::STATS_POPUP_TOTAL_LABEL_TEXT,
+            'statsCacheSavedLabel' => self::STATS_POPUP_CACHE_SAVED_LABEL_TEXT,
+        ];
+    }
+
+    // Build 78: wie MergeRows, aber Schlüssel ist der feste String aus
+    // GetOwnUiTextDefinitions() statt einer ObjectID, und der deutsche Rohtext wird
+    // NIE eingefroren (siehe dort) - stattdessen bei jedem Rescan gegen den
+    // aktuellen Code-Stand abgeglichen; weicht er ab, gilt die Zeile ab sofort als
+    // veraltet (MarkRowSourceChanged, siehe Build 70) und wird im selben Rescan neu
+    // übersetzt. Bewusst KEIN UI-Zugriff für den Admin (keine Liste im
+    // Konfigurationsformular, kein Papierkorb-Symbol) - diese Zeilen gehören zu
+    // keinem Objekt, das er absichtlich löschen/verschieben könnte, und sollen
+    // dauerhaft, unabhängig von jeder Admin-Aktion, vorhanden bleiben.
+    private function MergeOwnUiTextRows(array $ExistingRows): array
+    {
+        $existingByKey = [];
+        foreach ($ExistingRows as $row) {
+            $key = (string) ($row[self::fieldOwnUiTextKey] ?? '');
+            if ($key !== '') {
+                $existingByKey[$key] = $row;
+            }
+        }
+
+        $result = [];
+        foreach ($this->GetOwnUiTextDefinitions() as $key => $germanText) {
+            $row = $existingByKey[$key] ?? [self::fieldOwnUiTextKey => $key];
+            if (($row[self::langOriginalImport] ?? null) !== $germanText) {
+                $row[self::langOriginalImport] = $germanText;
+                $this->MarkRowSourceChanged($row);
+            }
+            // Immer Deutsch, unabhängig von propertySourceLanguage - diese Texte
+            // stehen fest im PHP-Code, nicht in der vom Admin gescannten Sprache.
+            $row[self::fieldRowSourceLanguage] = 'de';
+            $result[] = $row;
+        }
+
+        return $result;
+    }
+
+    // Build 78: Nachschlagen EINES übersetzten Gast-Oberflächentexts aus einer
+    // bereits per BuildOwnUiTextRowsByKey() indizierten Zeilen-Map - reine
+    // Fallback-Kette wie ResolveRowValue (weil die Zeilen genau deren Struktur
+    // haben: bare Sprachcode-Spalten, langOriginalImport als Rohtext-Feld), nur
+    // zusätzlich robust gegen eine (noch) fehlende Zeile (z.B. ganz frisch
+    // installierte Instanz vor dem allerersten ApplyChanges/Rescan) - dann greift
+    // $Fallback, dieselbe deutsche PHP-Konstante wie vor Build 78.
+    private function GetOwnUiText(array $OwnUiTextRowsByKey, string $Key, string $Language, string $Fallback): string
+    {
+        $row = $OwnUiTextRowsByKey[$Key] ?? null;
+        if ($row === null) {
+            return $Fallback;
+        }
+
+        $value = $this->ResolveRowValue($row, $Language, $Language, 'de', self::langOriginalImport);
+
+        return $value !== '' ? $value : $Fallback;
+    }
+
+    private function BuildOwnUiTextRowsByKey(): array
+    {
+        $rowsByKey = [];
+        foreach ($this->DecodeRows(self::propertyOwnUiTexts) as $row) {
+            $key = (string) ($row[self::fieldOwnUiTextKey] ?? '');
+            if ($key !== '') {
+                $rowsByKey[$key] = $row;
+            }
+        }
+
+        return $rowsByKey;
+    }
+
     private function StagePendingLanguageTranslations(string $Language): bool
     {
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
@@ -3118,11 +3218,22 @@ private const LANGUAGE_FLAGS = [
         ], $sourceLanguage, $targetLanguages);
         $this->SendDebug('IPSSL_Debug', 'ScanRootTree: filledGreeting=' . json_encode($objectGreeting) . ' -> persisting now', 0);
 
+        // Build 78: feste Gast-Oberflächentexte (siehe GetOwnUiTextDefinitions) -
+        // IMMER Deutsch als Quellsprache (diese Texte stehen fest im PHP-Code,
+        // unabhängig von der vom Admin gewählten Scan-Sprache $sourceLanguage).
+        $ownUiTexts = $this->FillMissingTranslations(
+            $this->MergeOwnUiTextRows($this->DecodeRows(self::propertyOwnUiTexts)),
+            [['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => false]],
+            'de',
+            $targetLanguages
+        );
+
         IPS_SetProperty($this->InstanceID, self::propertyObjectNames, json_encode(array_values($objectNames)));
         IPS_SetProperty($this->InstanceID, self::propertyObjectTexts, json_encode(array_values($objectTexts)));
         IPS_SetProperty($this->InstanceID, self::propertyEnumerationOptions, json_encode(array_values($objectOptions)));
         IPS_SetProperty($this->InstanceID, self::propertyObjectAutomations, json_encode(array_values($objectAutomations)));
         IPS_SetProperty($this->InstanceID, self::propertyObjectGreeting, json_encode(array_values($objectGreeting)));
+        IPS_SetProperty($this->InstanceID, self::propertyOwnUiTexts, json_encode(array_values($ownUiTexts)));
         IPS_ApplyChanges($this->InstanceID);
         $this->SendDebug('IPSSL_Debug', 'ScanRootTree: persisted, ObjectGreeting now=' . IPS_GetProperty($this->InstanceID, self::propertyObjectGreeting), 0);
 
@@ -4408,15 +4519,15 @@ private const LANGUAGE_FLAGS = [
     // unter dem Dropdown in der Kachel, siehe propertyShowTranslationStats -
     // standardmäßig aus. Aufbau bewusst analog zu BuildTrialNoticeHtml/
     // BuildPausedNoticeHtml, nur mit neutraler statt roter Farbe.
-    private function BuildTranslationStatsNoticeHtml(array $GuestCache): string
+    private function BuildTranslationStatsNoticeHtml(array $OwnUiTextRows, string $Language): string
     {
         if (!$this->ReadPropertyBoolean(self::propertyShowTranslationStats)) {
             return '';
         }
 
         $stats = $this->ComputeTranslationStats();
-        $requestsLabel = $GuestCache['statsRequestsLabel'] ?? self::STATS_NOTICE_REQUESTS_LABEL_TEXT;
-        $charsLabel = $GuestCache['statsCharactersLabel'] ?? self::STATS_NOTICE_CHARACTERS_LABEL_TEXT;
+        $requestsLabel = $this->GetOwnUiText($OwnUiTextRows, 'statsRequestsLabel', $Language, self::STATS_NOTICE_REQUESTS_LABEL_TEXT);
+        $charsLabel = $this->GetOwnUiText($OwnUiTextRows, 'statsCharactersLabel', $Language, self::STATS_NOTICE_CHARACTERS_LABEL_TEXT);
 
         $text = htmlspecialchars(
             $this->FormatStatsCount($stats['requestsPerHour']) . ' ' . $requestsLabel
@@ -6135,6 +6246,11 @@ HTML;
     {
         $currentLanguage = $this->ReadPropertyString(self::propertyCurrentLanguage);
         $guestCache = $this->EnsureGuestLanguageNamesFresh();
+        // Build 78: einmal pro Kachel-Aufbau dekodiert und an alle Bausteine
+        // unten durchgereicht (siehe GetOwnUiText) - vermeidet, dieselbe kleine
+        // Property mehrfach zu dekodieren, und ersetzt den bisherigen 24h-Live-
+        // Übersetzungs-Cache für diese festen Texte (siehe EnsureGuestLanguageNamesFresh).
+        $ownUiTextRows = $this->BuildOwnUiTextRowsByKey();
 
         $codes = $this->GetSelectableLanguageCodes();
         $names = [];
@@ -6163,7 +6279,7 @@ HTML;
 
         $infoIconHtml = $this->ReadPropertyBoolean(self::propertyShowInfoIcon)
             ? '<span class="ipssl-info-icon" aria-hidden="true"'
-                . ' onclick="alert(' . $this->BuildInfoAlertJs($guestCache) . ');">ⓘ</span>'
+                . ' onclick="alert(' . $this->BuildInfoAlertJs($ownUiTextRows, $currentLanguage) . ');">ⓘ</span>'
             : '';
 
         return '<div class="ipssl-select-row">'
@@ -6173,9 +6289,9 @@ HTML;
             . '</select>'
             . $infoIconHtml
             . '</div>'
-            . $this->BuildTrialNoticeHtml($guestCache)
-            . $this->BuildPausedNoticeHtml($guestCache)
-            . $this->BuildTranslationStatsNoticeHtml($guestCache);
+            . $this->BuildTrialNoticeHtml($ownUiTextRows, $currentLanguage)
+            . $this->BuildPausedNoticeHtml($ownUiTextRows, $currentLanguage)
+            . $this->BuildTranslationStatsNoticeHtml($ownUiTextRows, $currentLanguage);
     }
 
     // Kleiner roter Hinweis unter dem Dropdown, solange diese Instanz auf einer
@@ -6186,7 +6302,7 @@ HTML;
     // Lizenz aktiv ist, die Testphase noch nicht gestartet wurde (kein
     // Ablaufdatum) oder bereits abgelaufen ist (dafür sorgt bereits der
     // Revert-auf-Original + die Alert-Meldung beim Sprachwechselversuch).
-    private function BuildTrialNoticeHtml(array $GuestCache): string
+    private function BuildTrialNoticeHtml(array $OwnUiTextRows, string $Language): string
     {
         if (!self::IS_TRIAL_BUILD || $this->HasFullLicense() || $this->IsTrialLocked()) {
             return '';
@@ -6197,7 +6313,7 @@ HTML;
             return '';
         }
 
-        $prefix = $GuestCache['trialNoticePrefix'] ?? self::TRIAL_NOTICE_PREFIX_TEXT;
+        $prefix = $this->GetOwnUiText($OwnUiTextRows, 'trialNoticePrefix', $Language, self::TRIAL_NOTICE_PREFIX_TEXT);
         $text = htmlspecialchars($prefix . ' ' . date('d.m.Y', $expiresAt), ENT_QUOTES, 'UTF-8');
 
         return '<div class="ipssl-trial-notice" style="font-size:11px; color:#c0392b; text-align:center;">' . $text . '</div>';
@@ -6210,14 +6326,14 @@ HTML;
     // nur eine leere/unübersetzte Kachel ohne Erklärung sehen. Aufbau bewusst
     // identisch zu BuildTrialNoticeHtml. Leerer String, solange mindestens ein
     // Anbieter noch verfügbar ist.
-    private function BuildPausedNoticeHtml(array $GuestCache): string
+    private function BuildPausedNoticeHtml(array $OwnUiTextRows, string $Language): string
     {
         $pausedUntil = $this->GetGlobalPauseUntil();
         if ($pausedUntil === null) {
             return '';
         }
 
-        $prefix = $GuestCache['pausedNoticePrefix'] ?? self::PAUSED_NOTICE_PREFIX_TEXT;
+        $prefix = $this->GetOwnUiText($OwnUiTextRows, 'pausedNoticePrefix', $Language, self::PAUSED_NOTICE_PREFIX_TEXT);
         // Datum + Uhrzeit statt nur Uhrzeit (Nutzer-Anfrage) - eine Pause kann durch
         // die Eskalation (siehe RecordProviderPaused, bis zu 24h) über Mitternacht
         // hinausreichen; eine reine Uhrzeit ("bis 12:58") wäre dann mehrdeutig
@@ -6267,12 +6383,44 @@ HTML;
     {
         $edition = trim((string) ($this->GetLicenseInfo()['edition'] ?? ''));
 
-        return 'Simple Locale' . ($edition !== '' ? ' - ' . $edition . ' Edition' : '');
+        return $this->ToBoldUnicode('Simple Locale' . ($edition !== '' ? ' - ' . $edition . ' Edition' : ''));
     }
 
-    private function BuildInfoAlertJs(array $GuestCache): string
+    // Build 78 (Nutzer-Wunsch "Überschrift fett"): alert() ist reiner Text, kein
+    // HTML/Markdown - <b>/**...**</b> würden wörtlich als Zeichen erscheinen statt
+    // formatiert zu werden. Ersatzweise auf die "Mathematical Sans-Serif Bold"-
+    // Zeichen aus dem Unicode-Block "Mathematical Alphanumeric Symbols" (U+1D5D4 ff.)
+    // ausgewichen - sehen in praktisch jedem modernen Browser/Betriebssystem
+    // fettgedruckt aus, obwohl es technisch gesehen eigene Zeichen sind, kein
+    // Formatierungsattribut. Nur A-Z/a-z/0-9 werden abgebildet (die einzigen
+    // Zeichen, die dieser Unicode-Block abdeckt) - Leerzeichen/Bindestrich/Umlaute
+    // etc. bleiben unveraendert stehen, fallen aber optisch kaum auf, da sie
+    // zwischen bereits fett wirkenden Zeichen stehen.
+    private function ToBoldUnicode(string $Text): string
     {
-        $texts = $GuestCache['infoTexts'] ?? self::INFO_LIMITATION_TEXTS;
+        $result = '';
+        foreach (preg_split('//u', $Text, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $char) {
+            $codepoint = mb_ord($char, 'UTF-8');
+            if ($codepoint >= 0x41 && $codepoint <= 0x5A) {
+                $result .= mb_chr(0x1D5D4 + ($codepoint - 0x41), 'UTF-8');
+            } elseif ($codepoint >= 0x61 && $codepoint <= 0x7A) {
+                $result .= mb_chr(0x1D5EE + ($codepoint - 0x61), 'UTF-8');
+            } elseif ($codepoint >= 0x30 && $codepoint <= 0x39) {
+                $result .= mb_chr(0x1D7EC + ($codepoint - 0x30), 'UTF-8');
+            } else {
+                $result .= $char;
+            }
+        }
+
+        return $result;
+    }
+
+    private function BuildInfoAlertJs(array $OwnUiTextRows, string $Language): string
+    {
+        $texts = [];
+        foreach (self::INFO_LIMITATION_TEXTS as $i => $originalText) {
+            $texts[] = $this->GetOwnUiText($OwnUiTextRows, "infoText$i", $Language, $originalText);
+        }
 
         // alert() zeigt reinen Text, kein HTML - Absätze also nur per Leerzeile
         // trennen, keine Tags/Aufzählungszeichen (beides würde wörtlich erscheinen
@@ -6285,8 +6433,8 @@ HTML;
             [$this->BuildInfoAlertHeading()],
             $texts,
             array_filter([
-                $this->BuildGuestStatsInfoText($GuestCache),
-                $this->BuildGuestPauseInfoText($GuestCache),
+                $this->BuildGuestStatsInfoText($OwnUiTextRows, $Language),
+                $this->BuildGuestPauseInfoText($OwnUiTextRows, $Language),
             ], fn (string $p): bool => $p !== '')
         );
         $alertText = implode("\n\n", $paragraphs);
@@ -6300,7 +6448,7 @@ HTML;
     // anzeigen" aktiviert hat (dieselbe Bedingung wie beim kleinen Hinweis unter
     // dem Dropdown, siehe BuildTranslationStatsNoticeHtml) und seit Inbetriebnahme
     // bereits irgendetwas übersetzt wurde. Leerer String = kein eigener Absatz.
-    private function BuildGuestStatsInfoText(array $GuestCache): string
+    private function BuildGuestStatsInfoText(array $OwnUiTextRows, string $Language): string
     {
         if (!$this->ReadPropertyBoolean(self::propertyShowTranslationStats)) {
             return '';
@@ -6312,13 +6460,13 @@ HTML;
         }
 
         $daysSince = max(0, (int) floor((time() - $stats['since']) / 86400));
-        $sincePrefix = $GuestCache['statsSincePrefix'] ?? self::STATS_POPUP_SINCE_PREFIX_TEXT;
-        $daysSuffix = $GuestCache['statsDaysSuffix'] ?? self::STATS_POPUP_DAYS_SUFFIX_TEXT;
-        $hourlyLabel = $GuestCache['statsHourlyLabel'] ?? self::STATS_POPUP_HOURLY_LABEL_TEXT;
-        $requestsUnit = $GuestCache['statsRequestsUnit'] ?? self::STATS_POPUP_REQUESTS_UNIT_TEXT;
-        $charsUnit = $GuestCache['statsCharsUnit'] ?? self::STATS_POPUP_CHARACTERS_UNIT_TEXT;
-        $totalLabel = $GuestCache['statsTotalLabel'] ?? self::STATS_POPUP_TOTAL_LABEL_TEXT;
-        $cacheSavedLabel = $GuestCache['statsCacheSavedLabel'] ?? self::STATS_POPUP_CACHE_SAVED_LABEL_TEXT;
+        $sincePrefix = $this->GetOwnUiText($OwnUiTextRows, 'statsSincePrefix', $Language, self::STATS_POPUP_SINCE_PREFIX_TEXT);
+        $daysSuffix = $this->GetOwnUiText($OwnUiTextRows, 'statsDaysSuffix', $Language, self::STATS_POPUP_DAYS_SUFFIX_TEXT);
+        $hourlyLabel = $this->GetOwnUiText($OwnUiTextRows, 'statsHourlyLabel', $Language, self::STATS_POPUP_HOURLY_LABEL_TEXT);
+        $requestsUnit = $this->GetOwnUiText($OwnUiTextRows, 'statsRequestsUnit', $Language, self::STATS_POPUP_REQUESTS_UNIT_TEXT);
+        $charsUnit = $this->GetOwnUiText($OwnUiTextRows, 'statsCharsUnit', $Language, self::STATS_POPUP_CHARACTERS_UNIT_TEXT);
+        $totalLabel = $this->GetOwnUiText($OwnUiTextRows, 'statsTotalLabel', $Language, self::STATS_POPUP_TOTAL_LABEL_TEXT);
+        $cacheSavedLabel = $this->GetOwnUiText($OwnUiTextRows, 'statsCacheSavedLabel', $Language, self::STATS_POPUP_CACHE_SAVED_LABEL_TEXT);
 
         return $sincePrefix . ' ' . date('d.m.Y', $stats['since']) . ', ' . $daysSince . ' ' . $daysSuffix . "\n"
             . $hourlyLabel . ' ' . $this->FormatStatsCount($stats['requestsPerHour']) . ' ' . $requestsUnit
@@ -6329,24 +6477,25 @@ HTML;
                 . ' ' . $stats['cacheSavedCharacterCount'] . ' ' . $charsUnit;
     }
 
-    // Build 77: Kurzfassung des admin-seitigen Pause-Panels ("Übersetzungsanbieter"),
+    // Build 77/78: Kurzfassung des admin-seitigen Pause-Panels ("Übersetzungsanbieter"),
     // als eigener Absatz im Gast-Info-Popup, nur solange TATSÄCHLICH gerade
     // pausiert ist (leerer String sonst = kein eigener Absatz). Bewusst OHNE
     // Anbieter-Einzelaufschlüsselung (Google/DeepL/MyMemory je mit eigener Uhrzeit,
     // siehe PopulateProviderPauseStatusElement) - das ist Admin-Diagnosedetail, für
-    // einen Gast zählt nur "bis wann" und "meine bisherige Sprache funktioniert
-    // trotzdem weiter".
-    private function BuildGuestPauseInfoText(array $GuestCache): string
+    // einen Gast zählen nur der GRUND (Build 78, Nutzer-Wunsch), "bis wann" und
+    // "meine bisherige Sprache funktioniert trotzdem weiter".
+    private function BuildGuestPauseInfoText(array $OwnUiTextRows, string $Language): string
     {
         $globalPauseUntil = $this->GetGlobalPauseUntil();
         if ($globalPauseUntil === null) {
             return '';
         }
 
-        $pausedPrefix = $GuestCache['pausedNoticePrefix'] ?? self::PAUSED_NOTICE_PREFIX_TEXT;
-        $reassurance = $GuestCache['pausedReassurance'] ?? self::PAUSED_POPUP_REASSURANCE_TEXT;
+        $pausedPrefix = $this->GetOwnUiText($OwnUiTextRows, 'pausedNoticePrefix', $Language, self::PAUSED_NOTICE_PREFIX_TEXT);
+        $reason = $this->GetOwnUiText($OwnUiTextRows, 'pausedReason', $Language, self::PAUSED_POPUP_REASON_TEXT);
+        $reassurance = $this->GetOwnUiText($OwnUiTextRows, 'pausedReassurance', $Language, self::PAUSED_POPUP_REASSURANCE_TEXT);
 
-        return $pausedPrefix . ' ' . date('d.m. H:i', $globalPauseUntil) . "\n" . $reassurance;
+        return $pausedPrefix . ' ' . date('d.m. H:i', $globalPauseUntil) . "\n" . $reason . "\n" . $reassurance;
     }
 
     // "Original" liefert seit dem Wegfall der separaten Basissprachspalte exakt
@@ -6428,103 +6577,24 @@ HTML;
         // GetGlobalPauseUntil), lohnt sich kein frischer Versuch - identische
         // Kurzschluss-Pruefung wie in TranslateChunk(). Der bestehende, ggf. veraltete,
         // aber zuletzt ECHT erfolgreich uebersetzte Cache bleibt dabei unangetastet
-        // stehen, STATT durch einen waehrend der Pause zwangslaeufig fehlschlagenden
-        // Versuch (Rueckfall auf rohes Deutsch fuer JEDEN Text) ueberschrieben und
-        // dann faelschlich fuer bis zu 24h als "frisch" markiert zu werden. Live
-        // gemeldet (2026-08-20): Pausiert-Hinweis und Statistik-Hinweis blieben auch
-        // bei aktiv gewaehlter englischer Gast-Sprache auf Deutsch stehen, weil genau
-        // dieser Fall eintrat - ein Cache-Refresh lief waehrend einer Anbieter-Pause,
-        // der komplette Fehlschlag wurde aber trotzdem als "erledigt" verbucht und
-        // dadurch fuer den Rest des Tages nie erneut versucht.
+        // stehen.
         if ($this->GetGlobalPauseUntil() !== null) {
             return $cache;
         }
 
         $names = $this->FetchLanguageNames($language) ?? ($cache['names'] ?? []);
 
-        // Info-Hinweistexte + Testphasen-/Pause-Präfixe + Statistik-Beschriftungen in
-        // einem gemeinsamen Aufruf übersetzen (statt je einem eigenen) - alles feste,
-        // kurze Texte, die ohnehin nur bei Sprachwechsel/Cache-Ablauf einmal
-        // aktualisiert werden. Build 77: über parallele Schlüssel-/Text-Listen
-        // zugeordnet (statt fest verdrahteter Index-Arithmetik wie vor diesem Build) -
-        // robust gegen künftig weitere hinzukommende Texte, ohne jeden nachfolgenden
-        // Offset von Hand nachzuführen.
-        $ownTextKeys = [];
-        $ownTexts = [];
-        foreach (self::INFO_LIMITATION_TEXTS as $i => $text) {
-            $ownTextKeys[] = "infoText$i";
-            $ownTexts[] = $text;
-        }
-        foreach ([
-            'trialNoticePrefix'    => self::TRIAL_NOTICE_PREFIX_TEXT,
-            'pausedNoticePrefix'   => self::PAUSED_NOTICE_PREFIX_TEXT,
-            'pausedReassurance'    => self::PAUSED_POPUP_REASSURANCE_TEXT,
-            'statsRequestsLabel'   => self::STATS_NOTICE_REQUESTS_LABEL_TEXT,
-            'statsCharactersLabel' => self::STATS_NOTICE_CHARACTERS_LABEL_TEXT,
-            'statsSincePrefix'     => self::STATS_POPUP_SINCE_PREFIX_TEXT,
-            'statsDaysSuffix'      => self::STATS_POPUP_DAYS_SUFFIX_TEXT,
-            'statsHourlyLabel'     => self::STATS_POPUP_HOURLY_LABEL_TEXT,
-            'statsRequestsUnit'    => self::STATS_POPUP_REQUESTS_UNIT_TEXT,
-            'statsCharsUnit'       => self::STATS_POPUP_CHARACTERS_UNIT_TEXT,
-            'statsTotalLabel'      => self::STATS_POPUP_TOTAL_LABEL_TEXT,
-            'statsCacheSavedLabel' => self::STATS_POPUP_CACHE_SAVED_LABEL_TEXT,
-        ] as $key => $text) {
-            $ownTextKeys[] = $key;
-            $ownTexts[] = $text;
-        }
-
-        if ($language === 'de') {
-            $translatedOwnTexts = $ownTexts;
-        } else {
-            $translatedOwnTexts = $this->TranslateBatch($ownTexts, 'de', $language);
-        }
-        $translatedByKey = array_combine($ownTextKeys, $translatedOwnTexts);
-
-        // "?? $fallback" allein reicht nicht: TranslateBatch() liefert bei einem
-        // fehlgeschlagenen/pausierten Anbieter einen LEEREN STRING zurück (kein
-        // fehlender Array-Index, siehe TranslateChunk) - "??" greift nur bei
-        // fehlendem/null-Index, ein leerer String besteht den Test bereits und
-        // würde ohne diese explizite Prüfung als "erfolgreich übersetzt, aber
-        // leer" durchgehen. Live beobachtet (2026-08-18): der Pausiert-Hinweis
-        // zeigte dadurch nur noch die Uhrzeit ohne den Text davor an.
-        $orFallback = fn ($value, string $fallback): string => ($value ?? '') !== '' ? $value : $fallback;
-
-        $infoTexts = [];
-        foreach (self::INFO_LIMITATION_TEXTS as $i => $originalText) {
-            $infoTexts[] = $orFallback($translatedByKey["infoText$i"] ?? null, $originalText);
-        }
-
-        // Build 77: zweite Verteidigungslinie zusaetzlich zur Pause-Kurzschluss-
-        // Pruefung oben - deckt auch einen Fehlschlag ab, der NICHT auf eine globale
-        // Pause zurueckgeht (z.B. ein einzelner, voruebergehender Anbieter-Fehler).
-        // "Erfolg" heisst: WENIGSTENS ein Text wurde tatsaechlich uebersetzt (nicht
-        // komplett leer geblieben) - ein Totalausfall soll NICHT als "fuer den ganzen
-        // Tag erledigt" gelten, sonst bliebe der Gast-Hinweistext bis zu 24h auf
-        // Deutsch eingefroren. Deutsch selbst braucht keine Uebersetzung (zaehlt immer
-        // als Erfolg).
-        $anyOwnTextTranslated = $language === 'de' || array_filter($translatedOwnTexts, fn (string $t): bool => $t !== '') !== [];
-
+        // Build 78: die festen Gast-Oberflächentexte (Info-Hinweise, Pause-/
+        // Testphasen-Präfixe, Statistik-Beschriftungen) laufen NICHT mehr über
+        // diesen 24h-Live-Cache - sie werden jetzt beim Rescan dauerhaft in
+        // propertyOwnUiTexts übersetzt/persistiert (siehe MergeOwnUiTextRows/
+        // GetOwnUiText) und sind dadurch von einer Anbieter-Pause komplett
+        // unabhängig (siehe Build-77-Kommentar oben - genau das war vorher das
+        // Problem: dieser Cache lief AUSGERECHNET während einer Pause leer).
         $cache = [
-            'language'             => $language,
-            'names'                => $names,
-            'infoTexts'            => $infoTexts,
-            'trialNoticePrefix'    => $orFallback($translatedByKey['trialNoticePrefix'] ?? null, self::TRIAL_NOTICE_PREFIX_TEXT),
-            'pausedNoticePrefix'   => $orFallback($translatedByKey['pausedNoticePrefix'] ?? null, self::PAUSED_NOTICE_PREFIX_TEXT),
-            'pausedReassurance'    => $orFallback($translatedByKey['pausedReassurance'] ?? null, self::PAUSED_POPUP_REASSURANCE_TEXT),
-            'statsRequestsLabel'   => $orFallback($translatedByKey['statsRequestsLabel'] ?? null, self::STATS_NOTICE_REQUESTS_LABEL_TEXT),
-            'statsCharactersLabel' => $orFallback($translatedByKey['statsCharactersLabel'] ?? null, self::STATS_NOTICE_CHARACTERS_LABEL_TEXT),
-            'statsSincePrefix'     => $orFallback($translatedByKey['statsSincePrefix'] ?? null, self::STATS_POPUP_SINCE_PREFIX_TEXT),
-            'statsDaysSuffix'      => $orFallback($translatedByKey['statsDaysSuffix'] ?? null, self::STATS_POPUP_DAYS_SUFFIX_TEXT),
-            'statsHourlyLabel'     => $orFallback($translatedByKey['statsHourlyLabel'] ?? null, self::STATS_POPUP_HOURLY_LABEL_TEXT),
-            'statsRequestsUnit'    => $orFallback($translatedByKey['statsRequestsUnit'] ?? null, self::STATS_POPUP_REQUESTS_UNIT_TEXT),
-            'statsCharsUnit'       => $orFallback($translatedByKey['statsCharsUnit'] ?? null, self::STATS_POPUP_CHARACTERS_UNIT_TEXT),
-            'statsTotalLabel'      => $orFallback($translatedByKey['statsTotalLabel'] ?? null, self::STATS_POPUP_TOTAL_LABEL_TEXT),
-            'statsCacheSavedLabel' => $orFallback($translatedByKey['statsCacheSavedLabel'] ?? null, self::STATS_POPUP_CACHE_SAVED_LABEL_TEXT),
-            // Nur bei echtem (Teil-)Erfolg als "heute schon frisch" verbuchen - bei
-            // einem Totalausfall bleibt der alte fetchedAt-Wert stehen, damit der
-            // naechste Aufruf (nach Ende der Pause/des Fehlers) sofort erneut
-            // versucht, statt bis zum naechsten natuerlichen Ablauf zu warten.
-            'fetchedAt'            => $anyOwnTextTranslated ? time() : ($cache['fetchedAt'] ?? 0),
+            'language'  => $language,
+            'names'     => $names,
+            'fetchedAt' => time(),
         ];
 
         $this->WriteAttributeString(self::attributeGuestLanguageNamesCache, json_encode($cache));
