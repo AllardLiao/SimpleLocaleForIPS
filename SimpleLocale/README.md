@@ -1368,6 +1368,29 @@ Beschreibung des Moduls.
   `ApplyEnumerationOptionsToVariable()` denselben Schutz wie die Lese-Seite.
   Der ursprünglich für Symcon 7.1 dokumentierte Kompatibilitätsanspruch bleibt
   damit korrekt, ohne Einschränkung.
+
+  **Build 98 behebt einen live gemeldeten Bug: das Ergebnis-Popup von
+  "Aufräumen" verschwand direkt wieder, weil der dafür nötige
+  Formular-Reload (`ReloadForm()`) im selben Aufruf lief.** `ReloadForm()`
+  ist bei "Aufräumen" nicht verzichtbar - ein bereits offenes
+  Konfigurationsformular hätte sonst weiterhin den alten (längeren)
+  Listen-Stand im "Übernehmen"-Puffer und würde ihn beim nächsten Speichern
+  über das gerade bereinigte Ergebnis zurückschreiben (dieselbe Begründung
+  gilt für den manuellen Rescan, siehe dortiger Kommentar) - aber genau
+  dieser komplette Formular-Neuaufbau riss auch das gerade erst über
+  `UpdateFormField()` gezeigte `CleanupResultPopup` sofort wieder mit aus dem
+  DOM, bevor der Nutzer die Meldung lesen konnte. Fix: `CleanupOrphanedRows()`
+  ruft `ReloadForm()` nicht mehr synchron im selben Durchlauf auf, sondern
+  blendet das Ergebnis-Popup zuerst live auf dem noch offenen Formular ein
+  (derselbe bereits bewährte Mechanismus wie bei `CacheClearedPopup`/
+  `ProviderCheckResultPopup`, die beide ganz ohne Reload auskommen) und
+  startet dann einen einmaligen, um `CLEANUP_RELOAD_DELAY_SECONDS` (5s)
+  verzögerten Timer (`ProcessDeferredCleanupReload()`), der den eigentlichen
+  Reload erst danach nachholt - genug Zeit, die Meldung zu lesen, bevor die
+  Liste im Hintergrund aktualisiert wird. Das Popup bleibt dabei nahtlos
+  sichtbar: der zugrunde liegende Zähler-Wert wird weiterhin erst beim
+  tatsächlichen Reload (in `PopulateFormElements()`) einmalig verbraucht,
+  nicht schon beim Live-Einblenden.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
