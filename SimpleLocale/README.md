@@ -1407,6 +1407,32 @@ Beschreibung des Moduls.
   reine Zahl", da Nutzer sich daraus eigenen Text/JS/CSS bauen; ein
   Trennzeichen hätte dort z. B. ein eigenes `parseInt()` stillschweigend
   brechen können.
+
+  **Build 100, rein diagnostisch: temporäres `SendDebug`-Logging (Kategorie
+  `IPSSL_TranslateGapDiag`) in `FillLanguageColumn()`.** Live gemeldet: nach
+  einem vollständigen Rescan blieben viele "Eigene Texte"-Zellen für eine
+  einzelne Zielsprache (hier: Spanisch) leer, obwohl weder eine Anbieter-Pause
+  aktiv war noch der Rohtext als JSON erkannt wurde (das wäre erwartetes
+  Verhalten, siehe Build 84) - ein per Debug-Log bestätigter kompletter
+  Rescan-Durchlauf zeigte für die betroffenen Zeilen ueberhaupt KEINEN
+  `FreeTranslate_Request`/`GoogleTranslate_Mapping`-Eintrag für
+  `Text_es`, obwohl die Original-Zelle sichtbar nicht-leeren, echten Text
+  enthielt. Reine Code-Analyse von `IsRowLanguageTranslationCurrent()` (der
+  einzige Ort, an dem eine Zeile hier übersprungen werden kann, wenn
+  `$fromText` nicht leer und kein JSON ist) zeigt keinen offensichtlichen
+  Fehler - der Kernverdacht ist daher, dass die betroffene Zielsprachen-Zelle
+  entgegen dem Anschein in der Formular-Ansicht in Wahrheit NICHT den leeren
+  String `''` enthält (z. B. ein einzelnes Leerzeichen, übrig von einer
+  manuellen Lösch-Aktion im Formular) - der strikte `===''`-Vergleich würde
+  das fälschlich als "bereits übersetzt" werten. Das neue Logging macht den
+  tatsächlichen Zellenwert per `json_encode()` eindeutig sichtbar (deckt auch
+  unsichtbare Whitespace-/Sonderzeichen auf) und protokolliert für jede nicht
+  als JSON erkannte Zeile mit nicht-leerem Rohtext die vollständige
+  Entscheidungsgrundlage (aktueller Zellenwert, JSON-Erkennung,
+  "bereits aktuell"-Ergebnis, Zeitstempel). Rein additiv, keine
+  Verhaltensänderung (volle Regressionssuite unverändert grün) - wird
+  entfernt bzw. durch die eigentliche Korrektur ersetzt, sobald die Logs den
+  Mechanismus bestätigt haben.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
