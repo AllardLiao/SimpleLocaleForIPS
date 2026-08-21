@@ -1232,6 +1232,34 @@ Beschreibung des Moduls.
   Spalten-/Beschreibungstexte bereits korrekt übersetzt wurden - Build 89
   hatte nur Letztere ergänzt, den kurzen Listentitel selbst aber
   übersehen. Ergänzt für en/es/it/fr.
+
+  **Build 93 behebt einen wichtigen Bug in der "Eigenen
+  Übersetzungstabelle" (Build 89): ein Glossar-Eintrag wirkte bisher nur
+  auf noch LEERE Zellen, nicht auf bereits (ggf. falsch) automatisch
+  übersetzte.** Live gefunden: "SSW" (Windrichtung Süd-Südwest) wurde von
+  Google fälschlich als Abkürzung für "Schwangerschaftswoche" erkannt und
+  mit "week of pregnancy" "übersetzt" - ein extra dafür angelegter
+  Glossar-Eintrag ("SSW" → "SSW") blieb trotzdem komplett wirkungslos,
+  weil die betroffene Zielsprachen-Zelle bereits (falsch) befüllt war und
+  die Glossar-Prüfung bisher nur innerhalb `TranslateBatch()` lief - dort
+  aber nur für noch unübersetzte ("pending") Zellen erreichbar ist, exakt
+  wie bei jeder anderen Zelle auch (schützt normalerweise echte manuelle
+  Korrekturen vor versehentlichem Überschreiben). Das widersprach aber der
+  ursprünglichen Anfrage wörtlich: ein Glossar-Eintrag soll "immer
+  Vorrang vor Online-Übersetzungen" haben - was nur funktionieren kann,
+  wenn er auch eine bereits gefüllte Zelle überschreiben darf. Neue
+  `ApplyManualTranslationOverrides()` läuft jetzt bei JEDEM Rescan VOR der
+  normalen Fülllogik und prüft JEDE Zelle jeder Zeile gegen das Glossar -
+  unabhängig davon, ob sie bereits befüllt ist -, und überschreibt sie,
+  sobald ein passender Eintrag mit abweichendem Wert existiert. Eine
+  bereits korrekte Zelle (Wert entspricht bereits dem Glossar-Eintrag)
+  bleibt dabei unverändert (kein unnötiges Neu-Markieren). Betrifft
+  bewusst auch die Quellsprachen-Spalte selbst (z. B. um einen Tippfehler
+  im gescannten Rohtext gezielt zu korrigieren, ohne den eigentlichen
+  Objektnamen anzufassen). Die bisherige Prüfung innerhalb
+  `TranslateBatch()` bleibt zusätzlich bestehen - notwendig für die live
+  nachübersetzten "Eigenen Texte" (siehe `ApplyTrackedVariableUpdate`),
+  die nicht über den normalen Rescan-Pfad laufen.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
