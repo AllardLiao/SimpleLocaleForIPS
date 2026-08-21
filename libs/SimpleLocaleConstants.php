@@ -78,6 +78,20 @@ trait SimpleLocaleConstants
     // Einschränkungen).
     private const propertyObjectGreeting = 'ObjectGreeting';
 
+    // Build 108 (Nutzer-Wunsch): Legenden-Beschriftungen von Symcons eingebautem
+    // Chart-Element (ObjectType 5 "Media", MediaType 4 "MEDIATYPE_CHART", z.B.
+    // aus "Add Chart" im Kachel-Visualisierungs-Editor). Anders als "Beschriftungen"
+    // (Variablen-Profile/-Presentations) sitzen diese Titel NICHT in einer
+    // Variablen-Presentation, sondern direkt in der Chart-eigenen Konfiguration
+    // (IPS_GetMediaContent/IPS_SetMediaContent, base64-kodiertes JSON mit einem
+    // "datasets"-Array, je Eintrag "variableID" + "title") - eigener Lese-/
+    // Schreibmechanismus, siehe ScanChartsByKey/ApplyChartsLanguage. Ein Chart
+    // sitzt (anders als Automations) normal im Root-Baum und wird daher direkt
+    // von WalkTree() mit erfasst, nicht separat wie Automations/Begrüßung.
+    // Eindeutiger Schlüssel je Zeile ist die Kombination ChartID+VariableID (ein
+    // Chart kann mehrere Datenreihen/Titel gleichzeitig haben).
+    private const propertyObjectCharts = 'ObjectCharts';
+
     // Build 78 (Nutzer-Wunsch): die festen, im PHP-Code hart hinterlegten
     // Gast-Oberflächentexte (siehe GetOwnUiTextDefinitions - "Übersetzung pausiert
     // bis", die Statistik-Beschriftungen, der Info-Popup-Hinweistext, ...) werden
