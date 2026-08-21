@@ -315,6 +315,7 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterPropertyString(self::propertyEnumerationOptions, '[]');
         $this->RegisterPropertyInteger(self::propertyWebFrontVisuInstanceID, 0);
         $this->RegisterPropertyString(self::propertyObjectAutomations, '[]');
+        $this->RegisterPropertyString(self::propertyObjectCharts, '[]');
         $this->RegisterPropertyString(self::propertyObjectGreeting, '[]');
         $this->RegisterPropertyString(self::propertyOwnUiTexts, '[]');
         $this->RegisterPropertyString(self::propertyManualTranslations, '[]');
@@ -864,6 +865,11 @@ private const LANGUAGE_FLAGS = [
                     $element['values'] = $this->DecodeRows(self::propertyObjectAutomations);
                     break;
 
+                case self::propertyObjectCharts:
+                    $element['columns'] = $this->BuildListColumns($sourceLanguage, $targetLanguages, 'charts');
+                    $element['values'] = $this->DecodeRows(self::propertyObjectCharts);
+                    break;
+
                 case self::propertyObjectGreeting:
                     $element['columns'] = $this->BuildListColumns($sourceLanguage, $targetLanguages, 'greeting');
                     $element['values'] = $this->DecodeRows(self::propertyObjectGreeting);
@@ -1378,17 +1384,18 @@ private const LANGUAGE_FLAGS = [
 
     // Build 76: "Aufräumen" (Nutzer-Wunsch, analog zur gleichnamigen Funktion in
     // Symcons eigener Lösung) - entfernt Zeilen aus "Objektnamen"/"Eigene Texte"/
-    // "Beschriftungen"/"Automations", die bei einem FRISCHEN Scan der aktuell
-    // konfigurierten Visualisierung nicht mehr gefunden werden (Objekt gelöscht,
-    // aus dem Root-Baum entfernt/verschoben, oder - bei Automations - in der
-    // Kachel-Visu selbst gelöscht). Bewusst NUR über einen expliziten Button
-    // ausgelöst, NIE automatisch während eines normalen Rescans: Rescan/
-    // Auto-Rescan behalten verwaiste Zeilen ganz bewusst bei (siehe MergeRows/
-    // MergeEnumerationOptions/MergeAutomationRows) - eine übersehene falsche
-    // Root-Kategorie oder ein Objekt, das nur VORÜBERGEHEND fehlt, soll keine
-    // bereits geleistete Übersetzungsarbeit unwiederbringlich löschen. "Aufräumen"
-    // ist der bewusste Gegenpol dazu, für den Fall, dass der Admin selbst
-    // bestätigt hat, dass die Löschung/Verschiebung endgültig ist.
+    // "Beschriftungen"/"Automations"/"Charts" (Build 108), die bei einem FRISCHEN
+    // Scan der aktuell konfigurierten Visualisierung nicht mehr gefunden werden
+    // (Objekt gelöscht, aus dem Root-Baum entfernt/verschoben, oder - bei
+    // Automations - in der Kachel-Visu selbst gelöscht). Bewusst NUR über einen
+    // expliziten Button ausgelöst, NIE automatisch während eines normalen
+    // Rescans: Rescan/Auto-Rescan behalten verwaiste Zeilen ganz bewusst bei
+    // (siehe MergeRows/MergeEnumerationOptions/MergeAutomationRows/
+    // MergeChartRows) - eine übersehene falsche Root-Kategorie oder ein Objekt,
+    // das nur VORÜBERGEHEND fehlt, soll keine bereits geleistete
+    // Übersetzungsarbeit unwiederbringlich löschen. "Aufräumen" ist der bewusste
+    // Gegenpol dazu, für den Fall, dass der Admin selbst bestätigt hat, dass die
+    // Löschung/Verschiebung endgültig ist.
     //
     // "Begrüßung" wird bewusst NICHT bereinigt - anders als die anderen vier
     // Properties ist das keine wachsende, aus dem Baum gescannte Liste, sondern
@@ -1430,8 +1437,9 @@ private const LANGUAGE_FLAGS = [
         $liveNames = [];
         $liveTexts = [];
         $liveOptions = [];
+        $liveCharts = [];
         $visitedIDs = [$rootID => true];
-        $this->WalkTree($rootID, $liveNames, $liveTexts, $liveOptions, $visitedIDs, []);
+        $this->WalkTree($rootID, $liveNames, $liveTexts, $liveOptions, $liveCharts, $visitedIDs, []);
         $liveNames += $this->ScanFavoriteObjectsOutsideRootTree($liveNames);
         $liveAutomationIDs = $this->ScanAutomationsByID();
 
@@ -1478,10 +1486,22 @@ private const LANGUAGE_FLAGS = [
             }
         ));
 
+        $objectCharts = array_values(array_filter(
+            $this->DecodeRows(self::propertyObjectCharts),
+            function (array $row) use ($liveCharts, &$removedCount): bool {
+                $key = ($row['ChartID'] ?? 0) . ':' . ($row['VariableID'] ?? 0);
+                $keep = isset($liveCharts[$key]);
+                $removedCount += $keep ? 0 : 1;
+
+                return $keep;
+            }
+        ));
+
         IPS_SetProperty($this->InstanceID, self::propertyObjectNames, json_encode($objectNames));
         IPS_SetProperty($this->InstanceID, self::propertyObjectTexts, json_encode($objectTexts));
         IPS_SetProperty($this->InstanceID, self::propertyEnumerationOptions, json_encode($enumerationOptions));
         IPS_SetProperty($this->InstanceID, self::propertyObjectAutomations, json_encode($objectAutomations));
+        IPS_SetProperty($this->InstanceID, self::propertyObjectCharts, json_encode($objectCharts));
         IPS_ApplyChanges($this->InstanceID);
 
         // Fürs Anzeigen im CleanupResultPopup NACH dem verzögerten ReloadForm() (siehe
@@ -2343,6 +2363,7 @@ private const LANGUAGE_FLAGS = [
         }
 
         $this->ApplyAutomationsLanguage($Language, $sourceLanguage);
+        $this->ApplyChartsLanguage($Language, $sourceLanguage);
         $this->ApplyGreetingLanguage($Language, $sourceLanguage, $writtenValueObjectIDs);
     }
 
@@ -2363,7 +2384,7 @@ private const LANGUAGE_FLAGS = [
     // IPS_ApplyChanges() für propertyCurrentLanguage zu einem einzigen Reentry
     // verschmolzen zu werden. Liefert true, wenn mindestens eine Property geändert wurde.
     // Gemeinsame Feldgruppen-Definition (raw/prefix/capitalizeFirst/isHtml je Zeilen-
-    // Property) fuer alle Stellen, die FillMissingTranslations() ueber ALLE fuenf
+    // Property) fuer alle Stellen, die FillMissingTranslations() ueber ALLE sechs
     // Zeilen-haltenden Properties hinweg aufrufen (siehe StagePendingLanguageTranslations,
     // ReconcileRowSourceLanguageChanges) - ScanRootTree() selbst behaelt bewusst seine
     // eigenen, einzelnen Aufrufe (dort zusaetzlich mit Debug-Logging pro Property
@@ -2383,6 +2404,9 @@ private const LANGUAGE_FLAGS = [
                 ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => false],
             ],
             self::propertyObjectAutomations => [
+                ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],
+            ],
+            self::propertyObjectCharts => [
                 ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],
             ],
             self::propertyObjectGreeting => [
@@ -2779,6 +2803,64 @@ private const LANGUAGE_FLAGS = [
         if ($changed) {
             @IPS_SetProperty($webFrontID, 'Automations', json_encode($liveAutomations));
             @IPS_ApplyChanges($webFrontID);
+        }
+    }
+
+    // Build 108 (Nutzer-Wunsch): schreibt übersetzte Chart-Legenden-Titel zurück in
+    // den LIVE Medien-Inhalt jedes betroffenen Charts (IPS_GetMediaContent/
+    // IPS_SetMediaContent, kein IPS_ApplyChanges nötig - Medien-Objekte kennen
+    // keine ApplyChanges()-Persistierung). Bewusst frisch gelesen statt vom
+    // letzten Rescan übernommen, damit eine seither manuell in der Kachel-Visu
+    // geänderte Farbe/Sichtbarkeit nicht überschrieben wird - nur "title" je
+    // Datenreihe wird ersetzt, alles andere bleibt unangetastet. Kein Fehler,
+    // wenn kein Chart getrackt ist, das Objekt gelöscht wurde, oder der
+    // Medien-Inhalt kein gültiges Chart-JSON (mehr) ist.
+    private function ApplyChartsLanguage(string $Language, string $SourceLanguage): void
+    {
+        $rowsByChartID = [];
+        foreach ($this->DecodeRows(self::propertyObjectCharts) as $row) {
+            $chartID = (int) ($row['ChartID'] ?? 0);
+            $variableID = (int) ($row['VariableID'] ?? 0);
+            if ($chartID !== 0 && $variableID !== 0) {
+                $rowsByChartID[$chartID][$variableID] = $row;
+            }
+        }
+
+        foreach ($rowsByChartID as $chartID => $rowsByVariableID) {
+            if (!@IPS_ObjectExists($chartID)) {
+                continue;
+            }
+
+            $content = json_decode(base64_decode((string) @IPS_GetMediaContent($chartID)), true);
+            if (!is_array($content) || !is_array($content['datasets'] ?? null)) {
+                continue;
+            }
+
+            $changed = false;
+            foreach ($content['datasets'] as &$dataset) {
+                $variableID = (int) ($dataset['variableID'] ?? 0);
+                $row = $rowsByVariableID[$variableID] ?? null;
+                if ($row === null) {
+                    continue;
+                }
+
+                $resolvedTitle = $this->ResolveRowValue(
+                    $row,
+                    $Language,
+                    $Language,
+                    $this->GetRowSourceLanguage($row, $SourceLanguage),
+                    self::langOriginalImport
+                );
+                if (($dataset['title'] ?? null) !== $resolvedTitle) {
+                    $dataset['title'] = $resolvedTitle;
+                    $changed = true;
+                }
+            }
+            unset($dataset);
+
+            if ($changed) {
+                @IPS_SetMediaContent($chartID, base64_encode(json_encode($content)));
+            }
         }
     }
 
@@ -3518,7 +3600,7 @@ private const LANGUAGE_FLAGS = [
     }
 
     // Guenstiger Fingerabdruck ueber die fieldRowSourceLanguage-Werte ALLER Zeilen in
-    // ALLEN fuenf Zeilen-Properties (keine Uebersetzungsspalten, keine API-Aufrufe -
+    // ALLEN sechs Zeilen-Properties (keine Uebersetzungsspalten, keine API-Aufrufe -
     // reines Lesen der bereits gespeicherten Property-Strings) - siehe Aufrufer in
     // ApplyChanges() fuer den Grund (Kurzschluss-Pruefung vor dem teuren
     // ReconcileRowSourceLanguageChanges-Scan). Reihenfolge ist stabil (immer dieselbe
@@ -3535,6 +3617,7 @@ private const LANGUAGE_FLAGS = [
             self::propertyObjectTexts,
             self::propertyEnumerationOptions,
             self::propertyObjectAutomations,
+            self::propertyObjectCharts,
             self::propertyObjectGreeting,
         ] as $property) {
             foreach ($this->DecodeRows($property) as $row) {
@@ -3547,7 +3630,7 @@ private const LANGUAGE_FLAGS = [
 
     // Build 104 (Nutzer-Wunsch): Gegenstueck zu ComputeRowSourceLanguageFingerprint,
     // aber fuer den eigentlichen ZELLINHALT statt der Zeilen-Quellsprache - fasst
-    // fuer jede Zeile aller fuenf Zeilen-haltenden Properties genau den Wert
+    // fuer jede Zeile aller sechs Zeilen-haltenden Properties genau den Wert
     // zusammen, den ResolveRowValue() fuer $CurrentLanguage tatsaechlich anzeigen
     // wuerde (also inklusive des Rohtext-Fallbacks, falls die Zelle fuer diese
     // Sprache noch leer ist) - identisch zu der Aufloesung, die ApplyLanguage()
@@ -3579,7 +3662,7 @@ private const LANGUAGE_FLAGS = [
         return md5(implode("\x00", $parts));
     }
 
-    // Läuft über alle fünf Zeilen-haltenden Properties und markiert für jede Zeile mit
+    // Läuft über alle sechs Zeilen-haltenden Properties und markiert für jede Zeile mit
     // geänderter Quellsprache (siehe ReconcileRowFields) alle Zielsprachen-Zellen als
     // veraltet - Gegenstück zum "Quellsprache änderbar"-Wunsch: ändert der Admin die
     // Quellsprache EINER Zeile im Formular und klickt "Übernehmen", sind die
@@ -3733,8 +3816,9 @@ private const LANGUAGE_FLAGS = [
         $scannedNames = [];
         $scannedTexts = [];
         $scannedOptions = [];
+        $scannedCharts = [];
         $visitedIDs = [$rootID => true];
-        $this->WalkTree($rootID, $scannedNames, $scannedTexts, $scannedOptions, $visitedIDs, []);
+        $this->WalkTree($rootID, $scannedNames, $scannedTexts, $scannedOptions, $scannedCharts, $visitedIDs, []);
 
         // Favoriten der Kachel-Visualisierung (siehe propertyWebFrontVisuInstanceID)
         // zeigen nur den echten Objektnamen an, keine eigene Namens-Überschreibung -
@@ -3790,6 +3874,13 @@ private const LANGUAGE_FLAGS = [
         $objectAutomations = $this->MergeAutomationRows(
             $this->DecodeRows(self::propertyObjectAutomations),
             $this->ScanAutomationsByID()
+        );
+
+        // Charts (Build 108): anders als Automations kein separater Scan - $scannedCharts
+        // kommt bereits fertig aus WalkTree() oben (Charts sitzen normal im Root-Baum).
+        $objectCharts = $this->MergeChartRows(
+            $this->DecodeRows(self::propertyObjectCharts),
+            $scannedCharts
         );
 
         // Begrüßungstext, alle drei Modi (siehe ScanGreetingText) - ebenfalls
@@ -3856,6 +3947,10 @@ private const LANGUAGE_FLAGS = [
             ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],
         ], $sourceLanguage, $targetLanguages);
 
+        $objectCharts = $this->FillMissingTranslations($objectCharts, [
+            ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],
+        ], $sourceLanguage, $targetLanguages);
+
         $objectGreeting = $this->FillMissingTranslations($objectGreeting, [
             ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],
         ], $sourceLanguage, $targetLanguages);
@@ -3877,6 +3972,7 @@ private const LANGUAGE_FLAGS = [
         IPS_SetProperty($this->InstanceID, self::propertyObjectTexts, json_encode(array_values($objectTexts)));
         IPS_SetProperty($this->InstanceID, self::propertyEnumerationOptions, json_encode(array_values($objectOptions)));
         IPS_SetProperty($this->InstanceID, self::propertyObjectAutomations, json_encode(array_values($objectAutomations)));
+        IPS_SetProperty($this->InstanceID, self::propertyObjectCharts, json_encode(array_values($objectCharts)));
         IPS_SetProperty($this->InstanceID, self::propertyObjectGreeting, json_encode(array_values($objectGreeting)));
         IPS_SetProperty($this->InstanceID, self::propertyOwnUiTexts, json_encode(array_values($ownUiTexts)));
         IPS_ApplyChanges($this->InstanceID);
@@ -3917,7 +4013,7 @@ private const LANGUAGE_FLAGS = [
     // $ParentPath enthält die Namen der Vorfahren ab dem Root der Visualisierung
     // (ohne den Namen des Objekts selbst), damit gleichnamige Texte an
     // unterschiedlichen Stellen im Baum unterscheidbar bleiben.
-    private function WalkTree(int $ID, array &$ScannedNames, array &$ScannedTexts, array &$ScannedOptions, array &$VisitedIDs, array $ParentPath): void
+    private function WalkTree(int $ID, array &$ScannedNames, array &$ScannedTexts, array &$ScannedOptions, array &$ScannedCharts, array &$VisitedIDs, array $ParentPath): void
     {
         // Nur relevant für Zeilen, die sich hieraus als NEU herausstellen (siehe
         // MergeRows/MergeEnumerationOptions) - bereits bekannte Zeilen behalten ihre
@@ -3993,6 +4089,63 @@ private const LANGUAGE_FLAGS = [
                 }
             }
 
+            // Build 108 (Nutzer-Wunsch): Symcons eingebautes Chart-Element (ObjectType
+            // OBJECTTYPE_MEDIA, MediaType MEDIATYPE_CHART) sitzt als normales Objekt im
+            // Root-Baum - anders als Automations braucht es also keinen separaten,
+            // WebFront-gebundenen Scan, sondern wird hier direkt mit erfasst. Die
+            // Konfiguration (welche Variable mit welchem Legenden-Titel je Datenreihe)
+            // steckt NICHT in einer Property, sondern im Medien-Inhalt selbst
+            // (IPS_GetMediaContent, base64-kodiertes JSON mit einem "datasets"-Array).
+            // Ein Chart kann mehrere Datenreihen gleichzeitig zeigen - Schlüssel ist
+            // daher ChartID+VariableID, nicht ChartID allein.
+            if ($object['ObjectType'] === OBJECTTYPE_MEDIA) {
+                $media = @IPS_GetMedia($childID);
+                if (is_array($media) && ($media['MediaType'] ?? null) === MEDIATYPE_CHART) {
+                    $chartContent = json_decode(base64_decode((string) @IPS_GetMediaContent($childID)), true);
+                    if (is_array($chartContent) && is_array($chartContent['datasets'] ?? null)) {
+                        foreach ($chartContent['datasets'] as $dataset) {
+                            $datasetVariableID = (int) ($dataset['variableID'] ?? 0);
+                            $datasetTitle = (string) ($dataset['title'] ?? '');
+                            if ($datasetVariableID === 0 || $datasetTitle === '') {
+                                continue;
+                            }
+
+                            // Live gefunden (2026-08-21): entspricht der Titel exakt dem
+                            // AKTUELLEN Live-Namen der zugrunde liegenden Variable, hält
+                            // Symcon selbst beide automatisch synchron - beobachtet an
+                            // einer Variable, die zusätzlich als eigene Anzeige im
+                            // Root-Baum liegt und dadurch bereits über "Objektnamen"
+                            // umbenannt wird (IPS_SetName): ihr neuer Name zog automatisch
+                            // in die Chart-Legende nach, OHNE dass dieses Modul den
+                            // Chart-Inhalt je angefasst hätte. Für diesen Fall wäre eine
+                            // eigene Übersetzung hier doppelte (und potenziell mit Symcons
+                            // eigener Synchronisierung konkurrierende) Arbeit - keine
+                            // Zeile anlegen. Weicht der Titel dagegen vom aktuellen
+                            // Variablennamen ab (bewusst im Chart selbst manuell
+                            // umbenannt/überschrieben), ist es ein echter, eigenständiger
+                            // Text - ganz normal tracken/übersetzen. Reine Momentaufnahme
+                            // beim Scan: wird die Variable ERST NACH dem Scan zusätzlich
+                            // separat im Baum platziert, bleibt eine bereits angelegte
+                            // Zeile bestehen (dieselbe Übergangs-Toleranz wie bei
+                            // ExcludeGreetingVariableFromTextRows) - regelt sich beim
+                            // nächsten "Aufräumen".
+                            if ($datasetTitle === @IPS_GetName($datasetVariableID)) {
+                                continue;
+                            }
+
+                            $ScannedCharts[$childID . ':' . $datasetVariableID] = [
+                                'ChartID'                                   => $childID,
+                                'VariableID'                                => $datasetVariableID,
+                                'Path'                                      => $path,
+                                self::langOriginalImport                    => $datasetTitle,
+                                self::fieldRowSourceLanguage                => $currentScanSourceLanguage,
+                                self::fieldTranslatedAgainstSourceLanguage  => $currentScanSourceLanguage,
+                            ];
+                        }
+                    }
+                }
+            }
+
             // Verlinkte Kategorien (übliche Praxis, um denselben Inhalt - z.B. eine
             // "Wetter"-Kategorie - per Verknüpfung in mehrere Visus einzubinden, ohne
             // ihn zu duplizieren) werden gefolgt: die Variablen/Objekte DARIN sind
@@ -4013,7 +4166,7 @@ private const LANGUAGE_FLAGS = [
             }
             $VisitedIDs[$recurseID] = true;
 
-            $this->WalkTree($recurseID, $ScannedNames, $ScannedTexts, $ScannedOptions, $VisitedIDs, array_merge($ParentPath, [$name]));
+            $this->WalkTree($recurseID, $ScannedNames, $ScannedTexts, $ScannedOptions, $ScannedCharts, $VisitedIDs, array_merge($ParentPath, [$name]));
         }
     }
 
@@ -4626,6 +4779,35 @@ private const LANGUAGE_FLAGS = [
         }
 
         foreach ($ScannedByID as $newRow) {
+            $result[] = $newRow;
+        }
+
+        return $result;
+    }
+
+    // Wie MergeAutomationRows, aber Schlüssel ist ChartID+VariableID statt
+    // AutomationID (ein Chart kann mehrere Datenreihen/Titel gleichzeitig haben,
+    // siehe WalkTree/propertyObjectCharts) - anders als Automations aktualisiert
+    // dies hier zusätzlich "Path" für bereits bekannte Zeilen (Charts sitzen im
+    // Root-Baum und können sich wie Objektnamen/Eigene Texte verschieben);
+    // ORIGINAL_IMPORT und alle Übersetzungen bleiben unangetastet.
+    private function MergeChartRows(array $ExistingRows, array $ScannedByKey): array
+    {
+        $instanceSourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
+
+        $result = [];
+        foreach ($ExistingRows as $row) {
+            $key = ($row['ChartID'] ?? 0) . ':' . ($row['VariableID'] ?? 0);
+            $fallback = $ScannedByKey[$key][self::fieldRowSourceLanguage] ?? $instanceSourceLanguage;
+            $row = $this->BackfillRowSourceLanguage($row, $fallback);
+            if (isset($ScannedByKey[$key])) {
+                $row['Path'] = $ScannedByKey[$key]['Path'];
+            }
+            unset($ScannedByKey[$key]);
+            $result[] = $row;
+        }
+
+        foreach ($ScannedByKey as $newRow) {
             $result[] = $newRow;
         }
 
@@ -7721,6 +7903,27 @@ HTML;
                 'save'    => true,
             ];
             $columns[] = $this->BuildRowSourceLanguageColumn($SourceLanguage, $TargetLanguages);
+
+            return array_merge($columns, $this->BuildLanguageColumnSet('', '', $SourceLanguage, $TargetLanguages));
+        }
+
+        // Charts (Build 108): eindeutiger Schlüssel ist ChartID+VariableID (ein
+        // Chart kann mehrere Datenreihen/Titel gleichzeitig haben) - "Pfad" kommt
+        // wie bei Objektnamen/Eigene Texte direkt aus WalkTree, da ein Chart (anders
+        // als Automations) ein normales Objekt im Root-Baum ist.
+        if ($Kind === 'charts') {
+            $columns = [
+                ['caption' => 'Chart-Objekt-ID', 'name' => 'ChartID', 'width' => '100px', 'save' => true],
+                ['caption' => $this->Translate('Variablen-ID'), 'name' => 'VariableID', 'width' => '90px', 'save' => true],
+                ['caption' => $this->Translate('Pfad'), 'name' => 'Path', 'width' => '200px', 'save' => true],
+            ];
+            $columns[] = $this->BuildRowSourceLanguageColumn($SourceLanguage, $TargetLanguages);
+            $columns[] = [
+                'caption' => $this->Translate('Original-Import'),
+                'name'    => self::langOriginalImport,
+                'width'   => '200px',
+                'save'    => true,
+            ];
 
             return array_merge($columns, $this->BuildLanguageColumnSet('', '', $SourceLanguage, $TargetLanguages));
         }

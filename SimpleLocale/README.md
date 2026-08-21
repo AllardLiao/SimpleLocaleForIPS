@@ -102,6 +102,20 @@ Beschreibung des Moduls.
   zugrunde liegende Profil/Template selbst wird dabei **nie** verändert,
   siehe den Fork-Mechanismus in
   [Abschnitt 2](#2-bekannte-einschränkungen).
+* Übersetzt zusätzlich die Legenden-Titel von Symcons eingebautem
+  Chart-Element (WebFront-Visualisierung → "Add Chart") - jede Datenreihe
+  kann dort einen eigenen, frei editierbaren Titel tragen (z. B.
+  "Außentemperatur", "Wohnzimmer"). Ein Chart liegt normal im Root-Baum und
+  wird daher automatisch mit erfasst, kein separater Scan nötig. Entspricht
+  der Titel einer Datenreihe genau dem aktuellen Live-Namen ihrer
+  zugrunde liegenden Variable (Symcon-Standard, solange der Titel nie
+  manuell im Chart selbst überschrieben wurde), hält Symcon beide
+  automatisch synchron - wird diese Variable also ohnehin an anderer Stelle
+  im Root-Baum verwendet (z. B. als eigene Anzeige-Kachel) und damit über
+  die normale Objektnamen-Übersetzung umbenannt, übersetzt sich die Legende
+  bereits automatisch mit, ganz ohne eigene Chart-Zeile. Weicht der Titel
+  bewusst vom Variablennamen ab, wird er wie jeder andere Text eigenständig
+  getrackt und übersetzt.
 
 ### 2. Bekannte Einschränkungen
 
@@ -456,6 +470,7 @@ Name                            | Beschreibung
 Zielsprachen                    | Sprachen, in die übersetzt werden soll. Auswahl-Optionen kommen ab Werk aus der eingebauten Liste, mit konfiguriertem Google-/DeepL-Key aus deren dynamisch geladener Liste (siehe oben). Ausgegraut, wenn ein bezahlter Anbieter konfiguriert ist, aber noch keine Liste laden konnte, oder wenn das Sprachlimit einer "Spezialversion"-Lizenz erreicht ist (siehe Abschnitt 8). Wichtig: Nach dem Klick auf "Sprachliste aktualisieren" die Instanzkonfiguration einmal schließen und neu öffnen, bevor Häkchen gesetzt werden - sonst kann die Konsole falsche Sprachen speichern.
 Objektnamen / Eigene Texte / Beschriftungen | Listen der gefundenen Objekte mit Quelltext und je einer Spalte pro Zielsprache. Übersetzungen sind hier direkt editierbar; leere Zellen werden beim nächsten Rescan automatisch übersetzt. "Beschriftungen" siehe [Abschnitt 2](#2-bekannte-einschränkungen) (Fork-Mechanismus). **Hinweis:** Das Konfigurationsformular persistiert extern (per `VM_UPDATE`) automatisch geänderte Texte alle 12 Minuten, wenn es Änderungen gibt, was zu einem Refresh dieses Formulars führt - bitte speichere Deine eigene Arbeit rechtzeitig. Solange etwas ansteht, zeigt das Formular oben einen Hinweis mit der nächsten Refresh-Zeit an (siehe [Abschnitt 2](#2-bekannte-einschränkungen) für die genauen Details, was dabei geschützt ist und was nicht).
 Automations                     | Liste der gefundenen Automation-Einträge der oben unter "Kachel-Visualisierung" gewählten Instanz mit Quelltext und je einer Spalte pro Zielsprache - funktioniert genauso wie Objektnamen.
+Charts                          | Liste der Legenden-Titel gefundener Chart-Elemente (Symcons eingebautes Chart-Widget) im Root-Baum, je Datenreihe eine Zeile (Schlüssel Chart-Objekt-ID + Variablen-ID) - funktioniert genauso wie Objektnamen. Entspricht der Titel einer Datenreihe beim Scan exakt dem aktuellen Live-Namen ihrer Variable, taucht dafür **keine** Zeile hier auf - Symcon hält Titel und Variablenname in diesem Fall selbst automatisch synchron, eine eigene Übersetzung wäre doppelte Arbeit. Nur bewusst vom Variablennamen abweichende (individuell gesetzte) Titel erscheinen in dieser Liste.
 Begrüßung                       | Übersetzt den Begrüßungstext der Kachel-Visualisierung, unabhängig davon, ob "Show Greeting" gerade "Automatic"/"Static" (freier Text, Feld "Name"/Property `GreetingName`) oder "Variable" (Live-Wert einer String-Variable) ist - beide landen in derselben einen Zeile hier, siehe eigenen Absatz unten. Ein Hinweistext direkt über der Liste zeigt an, welcher Modus gerade aktiv ist. Bei "Show Greeting" = "None" bleibt die Liste leer.
 
 **Wann sollte ein Rescan ausgeführt werden?**
@@ -464,6 +479,7 @@ Inhaltstyp        | Neue/verschobene Objekte | Inhaltliche Änderungen
 ------------------ | ------------------------- | ------------------------
 Objektnamen        | Nur per Rescan (manuell/Timer) erkannt. | Ändert sich ein Name selten spontan; falls doch, Zelle im Formular leeren + Rescan.
 Eigene Texte (Werte) | Nur per Rescan erkannt. | Automatisch (siehe Abschnitt 1, `VM_UPDATE`) - **kein** Rescan nötig, solange die Scan-Sprache stimmt.
+Charts              | Nur per Rescan erkannt. | Ändert sich ein im Chart selbst gesetzter Titel selten spontan; falls doch, Zelle im Formular leeren + Rescan. Kein `VM_UPDATE`, da der Titel eine feste Chart-Konfiguration ist, kein Variablenwert.
 Begrüßung           | Nur per Rescan erkannt (auch ein Moduswechsel zwischen "Automatic"/"Static"/"Variable"). | Modus "Variable": automatisch, genau wie Eigene Texte (Werte). Modi "Automatic"/"Static" (freier Text im Feld "Name"): nur per Rescan.
 Beschriftungen      | Nur per Rescan erkannt. | **Kein** automatisches Erkennen von Änderungen am zugrunde liegenden Profil/Template - Symcon liefert dafür keine Update-Benachrichtigung. Ändert ein anderes Modul/der Admin die Beschriftungen eines Profils, das eine bereits geforkte Variable nutzt, wird das erst nach manuellem Löschen der betroffenen Original-Import-Zelle + Rescan übernommen.
 
@@ -473,17 +489,18 @@ Ein Rescan (siehe Tabelle oben) erkennt zwar neue/verschobene Objekte, entfernt
 aber **nie** von sich aus eine bereits vorhandene Zeile, auch wenn das
 zugehörige Objekt inzwischen gelöscht oder aus der Visualisierung entfernt
 wurde - das ist Absicht (siehe `MergeRows`/`MergeEnumerationOptions`/
-`MergeAutomationRows`): eine versehentlich falsche oder unvollständige
-"Kachel-Visualisierung"-Auswahl soll niemals bereits geleistete
-Übersetzungsarbeit stillschweigend vernichten. Solche verwaisten Zeilen
-sammeln sich über die Zeit an und mussten bisher manuell einzeln über das
-Papierkorb-Symbol gelöscht werden.
+`MergeAutomationRows`/`MergeChartRows`): eine versehentlich falsche oder
+unvollständige "Kachel-Visualisierung"-Auswahl soll niemals bereits
+geleistete Übersetzungsarbeit stillschweigend vernichten. Solche verwaisten
+Zeilen sammeln sich über die Zeit an und mussten bisher manuell einzeln über
+das Papierkorb-Symbol gelöscht werden.
 
 Der Button **"Übersetzungen gelöschter Elemente in der Visualisierung
 entfernen"** (unterhalb von "Visualisierung neu einlesen") macht genau das in
 einem Schritt: er führt intern denselben frischen Scan wie ein Rescan durch
 und löscht anschließend **alle** Zeilen in "Objektnamen", "Eigene Texte",
-"Beschriftungen" und "Automations", die dabei nicht mehr gefunden wurden -
+"Beschriftungen", "Automations" und "Charts", die dabei nicht mehr gefunden
+wurden -
 unwiederbringlich (regenerieren sich automatisch neu, falls das Objekt später
 wieder auftaucht). Ein Popup nach dem Klick meldet, wie viele Zeilen entfernt
 wurden. **"Begrüßung" ist bewusst ausgenommen** - anders als die anderen vier
@@ -2530,3 +2547,47 @@ der ursprünglichen Fassung übernommen.
   einzige denkbare Überschneidungsfall (Begrüßung im Variable-Modus teilt
   sich eine `ValueObjectID` mit einer "Eigene Texte"-Zeile) war bereits vor
   Build 107 über denselben `$writtenValueObjectIDs`-Mechanismus abgesichert.
+* **Build 108 (Nutzer-Wunsch): übersetzt zusätzlich die Legenden-Titel von
+  Symcons eingebautem Chart-Element.** Ein per "Add Chart" in der
+  Kachel-Visualisierung angelegtes Diagramm zeigt pro Datenreihe einen
+  eigenen Titel (z. B. "Außentemperatur", "Wohnzimmer") - diese Titel lagen
+  bisher außerhalb jeder Übersetzung und blieben bei jedem Sprachwechsel
+  fest Deutsch, während alles andere um sie herum (inkl. des Objektnamens
+  des Charts selbst, der bereits über "Objektnamen" lief) korrekt
+  wechselte. Konfiguriert ist ein Chart NICHT über eine normale Property,
+  sondern als eigenes Symcon-Medienobjekt (`ObjectType` 5, `MediaType` 4 =
+  `MEDIATYPE_CHART`) mit dem gesamten Aufbau (Datenreihen, Farben, Titel)
+  als base64-kodiertes JSON im Medien-Inhalt selbst
+  (`IPS_GetMediaContent()`/`IPS_SetMediaContent()`, kein `IPS_ApplyChanges()`
+  nötig - Medienobjekte kennen diesen Mechanismus nicht). Ein Chart sitzt
+  (anders als "Automations", die separat über die Kachel-Visualisierungs-
+  Instanz gescannt werden) als ganz normales Objekt im Root-Baum und wird
+  daher direkt von `WalkTree()` mit erfasst - neue Property
+  `ObjectCharts`/Liste "Charts", eindeutiger Zeilen-Schlüssel ist
+  ChartID+VariableID (ein Chart kann mehrere Datenreihen gleichzeitig
+  zeigen). Schreiben passiert über die neue `ApplyChartsLanguage()`, nach
+  demselben Muster wie `ApplyAutomationsLanguage()`.
+
+  **Live gefundener Nachtrag, noch während derselben Anfrage:** ein zweiter
+  vom Nutzer getesteter Chart übersetzte seine Legenden-Titel bereits VOR
+  diesem Fix scheinbar von selbst korrekt - ohne dass Simple Locale je
+  dessen Medien-Inhalt angefasst hätte. Ursache, per Screenshot des
+  "Configure Graph"-Dialogs bestätigt: Symcon hält den Titel einer
+  Datenreihe automatisch synchron mit dem LIVE-Namen ihrer zugrunde
+  liegenden Variable, solange der Titel nie manuell im Chart selbst davon
+  abweichend gesetzt wurde. Ist diese Variable zusätzlich an anderer Stelle
+  im Root-Baum als eigenes Objekt platziert (z. B. eine eigene
+  Anzeige-Kachel), wird sie ohnehin schon über "Objektnamen" umbenannt -
+  und Symcon zieht diesen neuen Namen automatisch auch in die
+  Chart-Legende nach. Eine eigene Übersetzung wäre in diesem Fall doppelte
+  (und potenziell mit Symcons eigener Synchronisierung konkurrierende)
+  Arbeit. `WalkTree()` vergleicht daher beim Scan jeden Datenreihen-Titel
+  gegen `IPS_GetName()` der zugehörigen Variable: stimmen beide exakt
+  überein, wird keine Charts-Zeile angelegt (Symcon synct selbst weiter);
+  weicht der Titel bewusst davon ab, ist es ein echter, eigenständiger Text
+  und wird ganz normal getrackt/übersetzt. Reine Momentaufnahme beim Scan -
+  wird eine Variable erst NACH dem Scan zusätzlich separat im Baum
+  platziert, bleibt eine bereits angelegte Charts-Zeile zunächst bestehen
+  (dieselbe Übergangs-Toleranz wie bei
+  `ExcludeGreetingVariableFromTextRows()`), regelt sich spätestens beim
+  nächsten "Aufräumen".

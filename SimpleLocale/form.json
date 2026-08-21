@@ -494,6 +494,40 @@
                 },
                 {
                     "type": "List",
+                    "name": "ObjectCharts",
+                    "caption": "Charts",
+                    "add": false,
+                    "delete": true,
+                    "rowCount": 5,
+                    "columns": [
+                        {
+                            "caption": "Chart-Objekt-ID",
+                            "name": "ChartID",
+                            "width": "100px",
+                            "save": true
+                        },
+                        {
+                            "caption": "Variablen-ID",
+                            "name": "VariableID",
+                            "width": "90px",
+                            "save": true
+                        },
+                        {
+                            "caption": "Pfad",
+                            "name": "Path",
+                            "width": "200px",
+                            "save": true
+                        },
+                        {
+                            "caption": "Original-Import",
+                            "name": "ORIGINAL_IMPORT",
+                            "width": "200px",
+                            "save": true
+                        }
+                    ]
+                },
+                {
+                    "type": "List",
                     "name": "ObjectGreeting",
                     "caption": "Begrüßung",
                     "add": false,
@@ -737,7 +771,7 @@
         },
         {
             "type": "Label",
-            "caption": "Durchsucht den Root der Visualisierung erneut nach neuen/verschobenen Objekten und übersetzt nur noch leere Zellen in Objektnamen, Eigene Texte und Beschriftungen. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben."
+            "caption": "Durchsucht den Root der Visualisierung erneut nach neuen/verschobenen Objekten und übersetzt nur noch leere Zellen in Objektnamen, Eigene Texte, Beschriftungen und Charts. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben."
         },
         {
             "type": "ProgressBar",
@@ -753,7 +787,7 @@
         },
         {
             "type": "Label",
-            "caption": "Entfernt dauerhaft alle Zeilen aus Objektnamen, Eigenen Texten, Beschriftungen und Automations, die bei einem frischen Scan der aktuell konfigurierten Visualisierung nicht mehr gefunden werden - z.B. weil das zugehörige Objekt gelöscht oder aus der Visualisierung entfernt/verschoben wurde. Anders als ein normaler Rescan (der solche Zeilen bewusst unangetastet lässt, siehe oben) werden sie hier komplett gelöscht, nicht nur übersprungen - bereits geleistete Übersetzungsarbeit für diese Zeilen geht dabei verloren (regeneriert sich automatisch, falls das Objekt später wieder auftaucht). Vor dem Klick prüfen, ob die \"Kachel-Visualisierung\"-Auswahl oben wirklich korrekt und vollständig ist - eine versehentlich falsche oder unvollständige Root-Kategorie würde sonst auch noch gültige Übersetzungen unwiederbringlich löschen. \"Begrüßung\" ist von dieser Funktion nicht betroffen (keine aus dem Baum gescannte Liste, sondern eine einzelne, direkt konfigurierte Einstellung)."
+            "caption": "Entfernt dauerhaft alle Zeilen aus Objektnamen, Eigenen Texten, Beschriftungen, Automations und Charts, die bei einem frischen Scan der aktuell konfigurierten Visualisierung nicht mehr gefunden werden - z.B. weil das zugehörige Objekt gelöscht oder aus der Visualisierung entfernt/verschoben wurde. Anders als ein normaler Rescan (der solche Zeilen bewusst unangetastet lässt, siehe oben) werden sie hier komplett gelöscht, nicht nur übersprungen - bereits geleistete Übersetzungsarbeit für diese Zeilen geht dabei verloren (regeneriert sich automatisch, falls das Objekt später wieder auftaucht). Vor dem Klick prüfen, ob die \"Kachel-Visualisierung\"-Auswahl oben wirklich korrekt und vollständig ist - eine versehentlich falsche oder unvollständige Root-Kategorie würde sonst auch noch gültige Übersetzungen unwiederbringlich löschen. \"Begrüßung\" ist von dieser Funktion nicht betroffen (keine aus dem Baum gescannte Liste, sondern eine einzelne, direkt konfigurierte Einstellung)."
         },
         {
             "type": "ProgressBar",
