@@ -2714,6 +2714,8 @@ private const LANGUAGE_FLAGS = [
             // Inhalt ueber die gerade frisch geschriebene "Eigene Texte"-
             // Uebersetzung schreiben (exakt dasselbe Muster wie bei zwei
             // "Eigene Texte"-Zeilen, siehe ApplyLanguage()).
+            // TEMP-DIAG (Greeting-Rescan-Sprachbug, siehe README).
+            $this->SendDebug('IPSSL_GreetingDiag', 'ApplyGreetingLanguage: Language=' . $Language . ' resolvedName=' . json_encode($resolvedName) . ' valueObjectID=' . $valueObjectID . ' alreadyWrittenByObjectTextsPass=' . (isset($WrittenValueObjectIDs[$valueObjectID]) ? 'yes' : 'no'), 0);
             if (!isset($WrittenValueObjectIDs[$valueObjectID])) {
                 $this->WriteTrackedValueString($valueObjectID, $resolvedName);
             }
@@ -2874,7 +2876,13 @@ private const LANGUAGE_FLAGS = [
             return;
         }
 
+        // TEMP-DIAG (Greeting-Rescan-Sprachbug, siehe README): Reihenfolge um
+        // SetValueString() herum ist der Kernverdacht - wenn Symcon VM_UPDATE synchron
+        // reentrant ausliefert, wuerde HandleTrackedVariableUpdate() zwischen diesen
+        // beiden Debug-Zeilen laufen und noch den ALTEN Attribut-Stand vorfinden.
+        $this->SendDebug('IPSSL_GreetingDiag', 'WriteTrackedValueString: BEFORE SetValueString ValueObjectID=' . $ValueObjectID . ' Value=' . json_encode($Value), 0);
         @SetValueString($ValueObjectID, $Value);
+        $this->SendDebug('IPSSL_GreetingDiag', 'WriteTrackedValueString: AFTER SetValueString, about to write attributeLastSelfWrittenValues', 0);
 
         $lastWritten = json_decode($this->ReadAttributeString(self::attributeLastSelfWrittenValues), true);
         if (!is_array($lastWritten)) {
@@ -2950,12 +2958,19 @@ private const LANGUAGE_FLAGS = [
         if (!is_array($lastSelfWritten)) {
             $lastSelfWritten = [];
         }
+        // TEMP-DIAG (Greeting-Rescan-Sprachbug, siehe README): pinnen, ob dieser Aufruf
+        // fuer den eigenen WriteTrackedValueString()-Schreibvorgang reentrant (noch VOR
+        // dessen abschliessendem attributeLastSelfWrittenValues-Update) hereinkommt - dann
+        // wuerde der Self-Write-Guard direkt darunter faelschlich NICHT greifen.
+        $this->SendDebug('IPSSL_GreetingDiag', 'HandleTrackedVariableUpdate: ValueObjectID=' . $ValueObjectID . ' newValue=' . json_encode($newValue) . ' lastSelfWrittenForThisID=' . json_encode($lastSelfWritten[(string) $ValueObjectID] ?? null) . ' propertyCurrentLanguage=' . $this->ReadPropertyString(self::propertyCurrentLanguage), 0);
         if (($lastSelfWritten[(string) $ValueObjectID] ?? null) === $newValue) {
             // Eigener Schreibvorgang von weiter unten in dieser Methode oder aus
             // ApplyLanguage()/ApplyGreetingLanguage() - sonst würde sich die Instanz
             // selbst in eine Endlosschleife übersetzen.
+            $this->SendDebug('IPSSL_GreetingDiag', 'HandleTrackedVariableUpdate: self-write guard matched, skipping', 0);
             return;
         }
+        $this->SendDebug('IPSSL_GreetingDiag', 'HandleTrackedVariableUpdate: self-write guard did NOT match - treating as external update', 0);
 
         $textRows = $this->DecodeRows(self::propertyObjectTexts);
         foreach ($textRows as $i => $row) {
@@ -2978,6 +2993,7 @@ private const LANGUAGE_FLAGS = [
 
         $greetingRows = $this->DecodeRows(self::propertyObjectGreeting);
         if ($greetingRows !== [] && (int) ($greetingRows[0]['ValueObjectID'] ?? 0) === $ValueObjectID) {
+            $this->SendDebug('IPSSL_GreetingDiag', 'HandleTrackedVariableUpdate: matched Begruessung row, current ORIGINAL_IMPORT=' . json_encode($greetingRows[0][self::langOriginalImport] ?? null), 0);
             $this->ApplyTrackedVariableUpdate(
                 self::propertyObjectGreeting,
                 $greetingRows,
@@ -3015,6 +3031,8 @@ private const LANGUAGE_FLAGS = [
         string $NewValue,
         bool $IsHtml = false
     ): void {
+        // TEMP-DIAG (Greeting-Rescan-Sprachbug, siehe README).
+        $this->SendDebug('IPSSL_GreetingDiag', 'ApplyTrackedVariableUpdate: Property=' . $Property . ' RowIndex=' . $RowIndex . ' RawField=' . $RawField . ' oldRawValue=' . json_encode($Rows[$RowIndex][$RawField] ?? null) . ' NewValue=' . json_encode($NewValue), 0);
         $Rows[$RowIndex][$RawField] = $NewValue;
         // Build 70: der Rohtext hat sich JETZT nachweislich geändert - macht alle
         // bisher übersetzten Zielsprachen-Zellen dieser Zeile rückwirkend als
@@ -3086,6 +3104,10 @@ private const LANGUAGE_FLAGS = [
         if ($displayText !== $NewValue) {
             $fieldUpdates[$TranslatedPrefix . $currentLanguage] = $Rows[$RowIndex][$TranslatedPrefix . $currentLanguage];
         }
+        // TEMP-DIAG (Greeting-Rescan-Sprachbug, siehe README): zeigt genau, was gerade
+        // (verzoegert, siehe BufferPendingTrackedRowUpdate) in die Property geschrieben
+        // wird - also den vermuteten Korruptions-Zeitpunkt fuer $RawField.
+        $this->SendDebug('IPSSL_GreetingDiag', 'ApplyTrackedVariableUpdate: currentLanguage=' . $currentLanguage . ' rowSourceLanguage=' . $rowSourceLanguage . ' -> buffering fieldUpdates=' . json_encode($fieldUpdates) . ' displayText=' . json_encode($displayText), 0);
         $this->BufferPendingTrackedRowUpdate($Property, (string) $ValueObjectID, $fieldUpdates);
 
         if ($displayText !== $NewValue) {
@@ -3561,6 +3583,8 @@ private const LANGUAGE_FLAGS = [
         $sourceLanguageForGreetingMerge = $this->ReadPropertyString(self::propertySourceLanguage);
         $isSourceLanguageActiveForGreeting = $currentLanguageForGreetingMerge === $sourceLanguageForGreetingMerge
             || $currentLanguageForGreetingMerge === self::langOriginalImport;
+        // TEMP-DIAG (Greeting-Rescan-Sprachbug, siehe README).
+        $this->SendDebug('IPSSL_GreetingDiag', 'ScanRootTree: currentLanguageForGreetingMerge=' . $currentLanguageForGreetingMerge . ' sourceLanguageForGreetingMerge=' . $sourceLanguageForGreetingMerge . ' isSourceLanguageActiveForGreeting=' . ($isSourceLanguageActiveForGreeting ? 'true' : 'false'), 0);
         $objectGreeting = $this->MergeGreetingRows($existingGreeting, $scannedGreeting, $isSourceLanguageActiveForGreeting);
         $this->SendDebug('IPSSL_Debug', 'ScanRootTree: mergedGreeting=' . json_encode($objectGreeting), 0);
 
