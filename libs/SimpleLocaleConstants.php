@@ -459,6 +459,18 @@ trait SimpleLocaleConstants
     // API-Kontingent in kuerzester Zeit aufbrauchen koennen.
     private const attributeLastRowSourceLanguageFingerprint = 'LastRowSourceLanguageFingerprint';
 
+    // Build 104 (Nutzer-Wunsch): guenstiger Kurzschluss-Vergleich (kein API-Aufruf,
+    // reiner md5() ueber die bereits gespeicherten Zellwerte), damit ApplyChanges()
+    // erkennt, ob sich der fuer die AKTUELL AKTIVE Gast-Sprache relevante Zellinhalt
+    // seit dem letzten Durchlauf geaendert hat - z.B. weil der Admin eine
+    // Uebersetzungszelle manuell im Formular korrigiert und "Uebernehmen" geklickt
+    // hat. Ohne diesen Abgleich blieb so eine Korrektur zwar gespeichert, aber
+    // unsichtbar: ApplyLanguage() (das den Namen/Wert tatsaechlich ans lebende
+    // Objekt schreibt) lief bisher NUR bei einem tatsaechlichen Sprachwechsel oder
+    // einer Zeilen-Quellsprachen-Aenderung erneut, nicht bei einer reinen
+    // Zellkorrektur.
+    private const attributeLastActiveLanguageContentFingerprint = 'LastActiveLanguageContentFingerprint';
+
     // Timer: Präfix als Salt auf den Namen, falls im jeweiligen IPS-System
     // bereits ein Timer/Objekt mit demselben Basisnamen existieren sollte.
     private const timerPrefix = 'IPSSL_TIMER_';

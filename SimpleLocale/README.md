@@ -1531,6 +1531,28 @@ Beschreibung des Moduls.
   wieder verfügbaren bezahlten Anbieter ohne diese Längenbegrenzung) - alle
   anderen Texte desselben Aufrufs werden jetzt aber sofort korrekt gefüllt,
   statt unnötig auf den nächsten Rescan warten zu müssen.
+* **Build 104, auf Nutzer-Nachfrage: eine manuell im Formular korrigierte
+  Übersetzungszelle wurde bislang nicht sofort in der Visualisierung
+  sichtbar.** Nicht wie zunächst vermutet die für externe VM_UPDATE-
+  Schreibvorgänge gedachte 12-Minuten-Debounce
+  (`PENDING_ROW_UPDATE_DEBOUNCE_SECONDS`, siehe `BufferPendingTrackedRowUpdate`
+  weiter unten) - die betrifft ausschließlich fremde Schreibzugriffe, nicht
+  eine manuelle Bearbeitung im Konfigurationsformular. Der tatsächliche Grund:
+  `ApplyLanguage()` (die Funktion, die Namen/Wert tatsächlich ans lebende
+  Objekt schreibt) lief in `ApplyChanges()` bisher NUR erneut, wenn sich
+  entweder die aktuell aktive Gast-Sprache selbst geändert hatte oder eine
+  Zeilen-Quellsprache reconciled wurde - eine reine Korrektur einer
+  Übersetzungszelle löst keines von beidem aus. Die Korrektur landete zwar
+  sofort gespeichert in der Property, wurde aber erst beim nächsten
+  tatsächlichen Sprachwechsel ans Objekt gepusht. Neue, güns­tige
+  Fingerprint-Prüfung (`ComputeActiveLanguageContentFingerprint()`, kein
+  API-Aufruf, reiner `md5()`-Vergleich über die für die aktuell aktive
+  Sprache aufgelösten Zellwerte, analog zur bereits bestehenden
+  `ComputeRowSourceLanguageFingerprint()` für Zeilen-Quellsprachen) stößt
+  `ApplyLanguage()` jetzt zusätzlich an, sobald sich irgendein für die aktuell
+  aktive Sprache relevanter Zellinhalt seit dem letzten Durchlauf geändert
+  hat - eine Korrektur an einer GERADE NICHT aktiven Zielsprache löst dabei
+  bewusst nichts aus (für den aktuellen Gast ändert sich ja nichts sichtbar).
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der

@@ -390,6 +390,7 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterAttributeString(self::attributeEnumerationPresentationBackup, '{}');
         $this->RegisterAttributeInteger(self::attributeEffectiveRootCategoryID, 0);
         $this->RegisterAttributeString(self::attributeLastRowSourceLanguageFingerprint, '');
+        $this->RegisterAttributeString(self::attributeLastActiveLanguageContentFingerprint, '');
         $this->RegisterAttributeString(self::attributeProviderPausedUntil, '{}');
         $this->RegisterAttributeString(self::attributeLastSeenProviderCredentialsHash, '{}');
         $this->RegisterAttributeInteger(self::attributeStatsSince, 0);
@@ -627,10 +628,23 @@ private const LANGUAGE_FLAGS = [
             }
         }
 
+        // Build 104 (Nutzer-Wunsch, live gemeldet): eine manuell im Formular
+        // korrigierte Uebersetzungszelle blieb bislang bis zum naechsten echten
+        // Sprachwechsel/Rescan unsichtbar - gespeichert, aber nie an das lebende
+        // Objekt gepusht, da weder die aktuell aktive Sprache noch eine
+        // Zeilen-Quellsprache sich dabei aendert (siehe die beiden Bedingungen
+        // unten). Guenstiger Fingerprint-Vergleich (kein API-Aufruf) schliesst
+        // diese Luecke: aendert sich der fuer die aktuell aktive Sprache
+        // aufgeloeste Zellinhalt irgendeiner Zeile, wird ApplyLanguage() jetzt
+        // ebenfalls direkt angestossen.
         $currentLanguage = $this->ReadPropertyString(self::propertyCurrentLanguage);
-        if ($rowSourceLanguagesReconciled || $currentLanguage !== $this->ReadAttributeString(self::attributeLastAppliedLanguage)) {
+        $activeLanguageContentFingerprint = $this->ComputeActiveLanguageContentFingerprint($currentLanguage);
+        $activeLanguageContentChanged = $activeLanguageContentFingerprint !== $this->ReadAttributeString(self::attributeLastActiveLanguageContentFingerprint);
+
+        if ($rowSourceLanguagesReconciled || $activeLanguageContentChanged || $currentLanguage !== $this->ReadAttributeString(self::attributeLastAppliedLanguage)) {
             $this->ApplyLanguage($currentLanguage);
         }
+        $this->WriteAttributeString(self::attributeLastActiveLanguageContentFingerprint, $activeLanguageContentFingerprint);
     }
 
     // Reagiert live auf Wertänderungen von *anderen* Modulen/Skripten an den in
@@ -3461,6 +3475,40 @@ private const LANGUAGE_FLAGS = [
         }
 
         return md5(implode('|', $parts));
+    }
+
+    // Build 104 (Nutzer-Wunsch): Gegenstueck zu ComputeRowSourceLanguageFingerprint,
+    // aber fuer den eigentlichen ZELLINHALT statt der Zeilen-Quellsprache - fasst
+    // fuer jede Zeile aller fuenf Zeilen-haltenden Properties genau den Wert
+    // zusammen, den ResolveRowValue() fuer $CurrentLanguage tatsaechlich anzeigen
+    // wuerde (also inklusive des Rohtext-Fallbacks, falls die Zelle fuer diese
+    // Sprache noch leer ist) - identisch zu der Aufloesung, die ApplyLanguage()
+    // gleich anschliessend fuer jede Zeile vornimmt. Aendert sich seit dem letzten
+    // ApplyChanges()-Durchlauf auch nur EIN einziger dieser Werte (z.B. weil der
+    // Admin eine Uebersetzungszelle manuell korrigiert hat), unterscheidet sich der
+    // Fingerprint - der Aufrufer (ApplyChanges) nutzt das, um ApplyLanguage() direkt
+    // im Anschluss erneut anzustossen, statt auf den naechsten echten
+    // Sprachwechsel/Rescan warten zu muessen.
+    private function ComputeActiveLanguageContentFingerprint(string $CurrentLanguage): string
+    {
+        $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
+        $parts = [];
+        foreach ($this->GetTranslatableFieldGroupsByProperty() as $property => $fieldGroups) {
+            foreach ($this->DecodeRows($property) as $row) {
+                $rowSourceLanguage = $this->GetRowSourceLanguage($row, $sourceLanguage);
+                foreach ($fieldGroups as $group) {
+                    $parts[] = $this->ResolveRowValue(
+                        $row,
+                        $CurrentLanguage,
+                        $group['prefix'] . $CurrentLanguage,
+                        $rowSourceLanguage,
+                        $group['raw']
+                    );
+                }
+            }
+        }
+
+        return md5(implode("\x00", $parts));
     }
 
     // Läuft über alle fünf Zeilen-haltenden Properties und markiert für jede Zeile mit
