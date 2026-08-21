@@ -105,15 +105,18 @@ Beschreibung des Moduls.
 * Übersetzt zusätzlich die Legenden-Titel von Symcons eingebautem
   Chart-Element (WebFront-Visualisierung → "Add Chart") - jede Datenreihe
   kann dort einen eigenen, frei editierbaren Titel tragen (z. B.
-  "Außentemperatur", "Wohnzimmer"). Ein Chart liegt normal im Root-Baum und
-  wird daher automatisch mit erfasst, kein separater Scan nötig. Steht die
-  zugrunde liegende Variable einer Datenreihe zusätzlich als eigenständiges
-  Objekt im Root-Baum (z. B. als eigene Anzeige-Kachel), wird sie ohnehin
-  über die normale Objektnamen-Übersetzung umbenannt - Symcon übernimmt
-  diesen neuen Namen nachweislich automatisch in die Chart-Legende, ganz
-  ohne eigene Chart-Zeile. Für alle anderen Datenreihen (die überwiegende
-  Mehrheit - eine Variable, die nur vom Chart selbst referenziert wird, aber
-  sonst nirgends eigenständig im Baum steht) übernimmt Simple Locale die
+  "Außentemperatur", "Wohnzimmer"); lässt man das Titel-Feld leer, zeigt
+  Symcon selbst live den aktuellen Namen der zugrunde liegenden Variable in
+  der Legende an. Ein Chart liegt normal im Root-Baum und wird daher
+  automatisch mit erfasst, kein separater Scan nötig - als Quelltext gilt
+  der explizite Titel, falls gesetzt, sonst der aktuelle Variablenname.
+  Steht die zugrunde liegende Variable einer Datenreihe zusätzlich als
+  eigenständiges Objekt im Root-Baum (z. B. als eigene Anzeige-Kachel), wird
+  sie ohnehin über die normale Objektnamen-Übersetzung umbenannt - Symcon
+  übernimmt diesen neuen Namen nachweislich automatisch in die
+  Chart-Legende, ganz ohne eigene Chart-Zeile. Für alle anderen Datenreihen
+  (eine Variable, die nur vom Chart selbst referenziert wird, aber sonst
+  nirgends eigenständig im Baum steht) übernimmt Simple Locale die
   Übersetzung des Titels selbst.
 
 ### 2. Bekannte Einschränkungen
@@ -469,7 +472,7 @@ Name                            | Beschreibung
 Zielsprachen                    | Sprachen, in die übersetzt werden soll. Auswahl-Optionen kommen ab Werk aus der eingebauten Liste, mit konfiguriertem Google-/DeepL-Key aus deren dynamisch geladener Liste (siehe oben). Ausgegraut, wenn ein bezahlter Anbieter konfiguriert ist, aber noch keine Liste laden konnte, oder wenn das Sprachlimit einer "Spezialversion"-Lizenz erreicht ist (siehe Abschnitt 8). Wichtig: Nach dem Klick auf "Sprachliste aktualisieren" die Instanzkonfiguration einmal schließen und neu öffnen, bevor Häkchen gesetzt werden - sonst kann die Konsole falsche Sprachen speichern.
 Objektnamen / Eigene Texte / Beschriftungen | Listen der gefundenen Objekte mit Quelltext und je einer Spalte pro Zielsprache. Übersetzungen sind hier direkt editierbar; leere Zellen werden beim nächsten Rescan automatisch übersetzt. "Beschriftungen" siehe [Abschnitt 2](#2-bekannte-einschränkungen) (Fork-Mechanismus). **Hinweis:** Das Konfigurationsformular persistiert extern (per `VM_UPDATE`) automatisch geänderte Texte alle 12 Minuten, wenn es Änderungen gibt, was zu einem Refresh dieses Formulars führt - bitte speichere Deine eigene Arbeit rechtzeitig. Solange etwas ansteht, zeigt das Formular oben einen Hinweis mit der nächsten Refresh-Zeit an (siehe [Abschnitt 2](#2-bekannte-einschränkungen) für die genauen Details, was dabei geschützt ist und was nicht).
 Automations                     | Liste der gefundenen Automation-Einträge der oben unter "Kachel-Visualisierung" gewählten Instanz mit Quelltext und je einer Spalte pro Zielsprache - funktioniert genauso wie Objektnamen.
-Charts                          | Liste der Legenden-Titel gefundener Chart-Elemente (Symcons eingebautes Chart-Widget) im Root-Baum, je Datenreihe eine Zeile (Schlüssel Chart-Objekt-ID + Variablen-ID) - funktioniert genauso wie Objektnamen. Steht die zugrunde liegende Variable einer Datenreihe zusätzlich als eigenständiges Objekt im Root-Baum (z. B. als eigene Anzeige-Kachel), taucht dafür **keine** Zeile hier auf - diese Variable wird ohnehin über "Objektnamen" übersetzt, und Symcon übernimmt diesen Namen nachweislich automatisch in die Chart-Legende. Alle anderen Datenreihen (die überwiegende Mehrheit) erscheinen normal in dieser Liste und werden hier übersetzt.
+Charts                          | Liste der Legenden-Titel gefundener Chart-Elemente (Symcons eingebautes Chart-Widget) im Root-Baum, je Datenreihe eine Zeile (Schlüssel Chart-Objekt-ID + Variablen-ID) - funktioniert genauso wie Objektnamen. Als Quelltext gilt der im Chart selbst gesetzte Titel, oder - falls das Titel-Feld leer gelassen wurde - ersatzweise der aktuelle Name der zugrunde liegenden Variable (genau das zeigt Symcon in diesem Fall selbst in der Legende an). Steht diese Variable zusätzlich als eigenständiges Objekt im Root-Baum (z. B. als eigene Anzeige-Kachel), taucht dafür **keine** Zeile hier auf - diese Variable wird ohnehin über "Objektnamen" übersetzt, und Symcon übernimmt diesen Namen nachweislich automatisch in die Chart-Legende.
 Begrüßung                       | Übersetzt den Begrüßungstext der Kachel-Visualisierung, unabhängig davon, ob "Show Greeting" gerade "Automatic"/"Static" (freier Text, Feld "Name"/Property `GreetingName`) oder "Variable" (Live-Wert einer String-Variable) ist - beide landen in derselben einen Zeile hier, siehe eigenen Absatz unten. Ein Hinweistext direkt über der Liste zeigt an, welcher Modus gerade aktiv ist. Bei "Show Greeting" = "None" bleibt die Liste leer.
 
 **Wann sollte ein Rescan ausgeführt werden?**
@@ -2615,3 +2618,30 @@ der ursprünglichen Fassung übernommen.
   genau gegenteiligen Fall ergänzt (keine der Variablen eigenständig im
   Baum → alle Zeilen müssen erhalten bleiben), damit dieser konkrete Fehler
   nicht erneut einschleicht.
+* **Build 110 (live gefunden, direkt im Anschluss an Build 109): Build 109
+  behob den Ausschluss-Fehler, aber "Humedad del aire" tauchte danach
+  IMMER NOCH nicht in "Charts" auf.** Ein direkter `IPS_GetMediaContent()`-
+  Rohdump dieses Charts brachte die eigentliche Ursache zutage: alle drei
+  Datenreihen hatten `"title":""` - einen komplett LEEREN Titel, nicht
+  einen mit dem Variablennamen übereinstimmenden (die Annahme aus Build
+  109, "Symcon füllt title beim Anlegen standardmäßig", war selbst
+  ebenfalls falsch - Symcon lässt das Feld schlicht leer). Der
+  ursprüngliche Scan-Code (`if ($datasetVariableID === 0 || $datasetTitle
+  === '') continue;`, unverändert seit Build 108) übersprang jede Zeile mit
+  leerem Titel von Anfang an - unabhängig von Build 109s Filterung kam für
+  "Humedad del aire" also nie auch nur eine Zeile zustande. Die Kachel
+  zeigte dabei nachweislich (Screenshot) weiterhin unübersetzt
+  "Luftfeuchtigkeit" in der Legende: Symcon rendert bei leerem Titel live
+  den AKTUELLEN Namen der Variable - bei "Irradiación luminosa" (ebenfalls
+  vermutlich leere Titel, nie direkt geprüft) funktionierte das nur, WEIL
+  die Variablen zusätzlich eigenständig im Baum standen und dadurch
+  bereits übersetzt waren; bei "Humedad del aire" standen sie das nicht,
+  weshalb ihr roher, nie übersetzter Name für immer stehen geblieben wäre.
+  Fix: der Quelltext einer Datenreihe ist jetzt der explizite Titel, falls
+  gesetzt, sonst ersatzweise der aktuelle Name der Variable
+  (`$sourceText = $datasetTitle !== '' ? $datasetTitle : (string)
+  @IPS_GetName($datasetVariableID);`) - genau das, was Symcon selbst in
+  diesem Fall in der Legende anzeigen würde. Der bereits in Build 109
+  eingeführte `ExcludeChartRowsForIndependentlyNamedVariables()`-Filter
+  bleibt unverändert bestehen und greift weiterhin zuverlässig für
+  eigenständig im Baum stehende Variablen wie bei "Irradiación luminosa".

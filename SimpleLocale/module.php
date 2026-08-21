@@ -4113,22 +4113,33 @@ private const LANGUAGE_FLAGS = [
                     if (is_array($chartContent) && is_array($chartContent['datasets'] ?? null)) {
                         foreach ($chartContent['datasets'] as $dataset) {
                             $datasetVariableID = (int) ($dataset['variableID'] ?? 0);
+                            if ($datasetVariableID === 0) {
+                                continue;
+                            }
                             $datasetTitle = (string) ($dataset['title'] ?? '');
-                            if ($datasetVariableID === 0 || $datasetTitle === '') {
+
+                            // Build 110 (live per Rohdump bestätigt, korrigiert eine
+                            // falsche Annahme aus Build 108/109): ein LEERER Titel ist
+                            // der Symcon-Regelfall, nicht die Ausnahme - Symcon füllt
+                            // "title" beim Anlegen einer Datenreihe NICHT automatisch mit
+                            // dem damaligen Variablennamen (das war die falsche Annahme
+                            // aus Build 109). Ist "title" leer, rendert die Chart-Legende
+                            // stattdessen live den AKTUELLEN Namen der Variable
+                            // (IPS_GetName) - exakt das, was ein Gast ohne dieses Modul
+                            // sehen würde. Als Quelltext gilt daher: der explizite Titel,
+                            // falls gesetzt, sonst ersatzweise der aktuelle Variablenname.
+                            $sourceText = $datasetTitle !== '' ? $datasetTitle : (string) @IPS_GetName($datasetVariableID);
+                            if ($sourceText === '') {
                                 continue;
                             }
 
-                            // Build 109 (live korrigiert): NICHT hier gegen IPS_GetName()
-                            // vergleichen - Symcon füllt "title" beim Anlegen einer
-                            // Datenreihe standardmäßig mit dem damaligen Variablennamen,
-                            // unabhängig davon, ob diese Variable später irgendwo sonst im
-                            // Baum eigenständig steht. Ein Titel, der zufällig (noch) dem
-                            // Live-Namen entspricht, heißt also NICHT automatisch "Symcon
-                            // synct das schon selbst" - das gilt nur, wenn die Variable
-                            // TATSÄCHLICH zusätzlich als eigenes Objekt im Root-Baum liegt
-                            // (dann bekommt sie über "Objektnamen" ihren übersetzten Namen,
-                            // den Symcon nachweislich in die Chart-Legende übernimmt).
-                            // Dieser Fall wird deshalb erst NACH Abschluss des kompletten
+                            // Build 109 weiterhin gültig: steht die Variable zusätzlich
+                            // als eigenständiges Objekt im Root-Baum, bekommt sie über
+                            // "Objektnamen" ohnehin ihren übersetzten Namen - und Symcon
+                            // rendert genau diesen Namen live in die Chart-Legende
+                            // (derselbe Leer-Titel-Fallback wie oben, nur mit bereits
+                            // übersetztem statt rohem Namen). Eine eigene Zeile wäre hier
+                            // überflüssig. Dieser Fall wird deshalb erst NACH Abschluss des kompletten
                             // Baum-Durchlaufs entschieden (siehe Aufrufer:
                             // ExcludeChartRowsForIndependentlyNamedVariables) - zum
                             // jetzigen Zeitpunkt könnte $ScannedNames die betroffene
@@ -4139,7 +4150,7 @@ private const LANGUAGE_FLAGS = [
                                 'ChartID'                                   => $childID,
                                 'VariableID'                                => $datasetVariableID,
                                 'Path'                                      => $path,
-                                self::langOriginalImport                    => $datasetTitle,
+                                self::langOriginalImport                    => $sourceText,
                                 self::fieldRowSourceLanguage                => $currentScanSourceLanguage,
                                 self::fieldTranslatedAgainstSourceLanguage  => $currentScanSourceLanguage,
                             ];
