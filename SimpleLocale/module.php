@@ -4539,6 +4539,21 @@ private const LANGUAGE_FLAGS = [
     // nicht zwangsläufig ein Satzanfang).
     private function FillMissingTranslations(array $Rows, array $FieldGroups, string $SourceLanguage, array $TargetLanguages): array
     {
+        // Build 93 (Nutzer-Report, "immer Vorrang vor Online-Übersetzungen" - siehe
+        // Build-89-Anfrage woertlich): laeuft VOR der normalen, nur-leere-Zellen-
+        // fuellenden Logik unten und ueberschreibt gezielt JEDE Zelle, fuer die ein
+        // passender Glossar-Eintrag existiert - auch eine bereits gefuellte, ggf.
+        // falsch automatisch uebersetzte Zelle. Ohne diesen Schritt haette ein neu
+        // angelegter Glossar-Eintrag NIE auf einer Zeile gewirkt, die schon VOR dem
+        // Eintrag einmal (moeglicherweise falsch) automatisch uebersetzt wurde - die
+        // normale FillLanguageColumn()-Logik ruehrt eine bereits gefuellte Zelle
+        // grundsaetzlich nie an (schuetzt echte manuelle Korrekturen). Live gefunden:
+        // "SSW" (Windrichtung Suedsuedwest) wurde von Google als Abkuerzung fuer
+        // "Schwangerschaftswoche" fehluebersetzt ("week of pregnancy") - ein exakt
+        // dafuer angelegter Glossar-Eintrag ("SSW"->"SSW") blieb trotzdem wirkungslos,
+        // weil die Zielsprachen-Zelle bereits (falsch) befuellt war.
+        $Rows = $this->ApplyManualTranslationOverrides($Rows, $FieldGroups, $SourceLanguage, $TargetLanguages);
+
         // Zeilen nach ihrer EIGENEN Quellsprache gruppieren (siehe GetRowSourceLanguage) -
         // seit der pro-Zeile editierbaren Quellsprache (fieldRowSourceLanguage) kann das
         // innerhalb ein und derselben Liste variieren (z.B. ein Fremdmodul, das
@@ -4570,6 +4585,55 @@ private const LANGUAGE_FLAGS = [
                     $Rows = $this->FillLanguageColumn($Rows, $rawField, $group['prefix'] . $language, $rowSourceLanguage, $language, $capitalizeFirst, $isHtml, $indices);
                 }
             }
+        }
+
+        return $Rows;
+    }
+
+    // Build 93: Gegenstueck zu FindManualTranslation() (siehe TranslateBatch, dort
+    // NUR fuer noch leere/pending Zellen relevant, z.B. beim Live-Nachuebersetzen
+    // via ApplyTrackedVariableUpdate) - HIER laeuft die Glossar-Pruefung fuer JEDE
+    // Zelle jeder Zeile, unabhaengig davon, ob sie bereits (moeglicherweise falsch
+    // automatisch) befuellt ist. Ueberschreibt gezielt nur Zellen, deren aktueller
+    // Wert vom Glossar-Eintrag abweicht - eine bereits korrekte Zelle (Glossar-Wert
+    // == aktueller Wert) wird nicht unnoetig neu markiert. Absichtlich OHNE
+    // "language === rowSourceLanguage"-Ausnahme wie beim Rest von
+    // FillMissingTranslations: ein Glossar-Eintrag darf explizit auch die
+    // Quellsprachen-Spalte selbst ueberschreiben (z.B. um einen Tippfehler im
+    // urspruenglich gescannten Rohtext gezielt zu korrigieren, ohne den Rohtext
+    // selbst - der beim naechsten Rescan ohnehin wieder aus dem Objekt gelesen
+    // wird - anzufassen).
+    private function ApplyManualTranslationOverrides(array $Rows, array $FieldGroups, string $SourceLanguage, array $TargetLanguages): array
+    {
+        if (!$this->HasLicenseFeature('manual_translations')) {
+            return $Rows;
+        }
+        $manualTranslations = $this->DecodeRows(self::propertyManualTranslations);
+        if ($manualTranslations === []) {
+            return $Rows;
+        }
+
+        foreach ($Rows as $index => $row) {
+            $rowSourceLanguage = $this->GetRowSourceLanguage($row, $SourceLanguage);
+            foreach ($FieldGroups as $group) {
+                $sourceText = (string) ($row[$group['raw']] ?? '');
+                if ($sourceText === '') {
+                    continue;
+                }
+                foreach ($TargetLanguages as $language) {
+                    $manual = $this->FindManualTranslation($manualTranslations, $rowSourceLanguage, $language, $sourceText);
+                    if ($manual === null) {
+                        continue;
+                    }
+                    $toField = $group['prefix'] . $language;
+                    if (($row[$toField] ?? '') === $manual) {
+                        continue;
+                    }
+                    $row[$toField] = $manual;
+                    $this->MarkRowLanguageTranslated($row, $language);
+                }
+            }
+            $Rows[$index] = $row;
         }
 
         return $Rows;
