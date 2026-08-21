@@ -765,6 +765,7 @@ private const LANGUAGE_FLAGS = [
         if ($cleanupResultCount >= 0) {
             $this->WriteAttributeInteger(self::attributeLastCleanupRemovedCount, -1);
         }
+        $this->SendDebug('IPSSL_CleanupCountDiag', 'GetConfigurationForm() called at ' . microtime(true) . ' - read cleanupResultCount=' . $cleanupResultCount . ' (now reset to -1: ' . ($cleanupResultCount >= 0 ? 'yes' : 'no, was already -1') . ')', 0);
 
         $form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
         $this->PopulateFormElements($form['elements'], $cleanupResultCount);
@@ -1378,6 +1379,7 @@ private const LANGUAGE_FLAGS = [
     // wieder ab (SetTimerInterval(...,0)), analog zu ProcessPendingRowUpdateFlush.
     public function ProcessDeferredCleanupReload(): void
     {
+        $this->SendDebug('IPSSL_CleanupCountDiag', 'ProcessDeferredCleanupReload() fired at ' . microtime(true) . ' - about to call ReloadForm()', 0);
         $this->SetTimerInterval($this->GetCleanupReloadTimerIdent(), 0);
         $this->ReloadForm();
     }
@@ -1513,6 +1515,7 @@ private const LANGUAGE_FLAGS = [
         // ProcessDeferredCleanupReload weiter unten) - PopulateFormElements liest und
         // verbraucht diesen Wert einmalig, siehe dort.
         $this->WriteAttributeInteger(self::attributeLastCleanupRemovedCount, $removedCount);
+        $this->SendDebug('IPSSL_CleanupCountDiag', 'CleanupOrphanedRows() finished at ' . microtime(true) . ' - removedCount=' . $removedCount . ', wrote attribute, about to push UpdateFormField', 0);
         $this->SetButtonProgress('CleanupProgressBar', '');
 
         // Build 98 (live gemeldeter Bug): das Ergebnis-Popup SOFORT auf dem noch
