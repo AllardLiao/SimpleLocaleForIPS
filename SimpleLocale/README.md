@@ -13,6 +13,7 @@ Beschreibung des Moduls.
 8. [Lizenz und Testversion](#8-lizenz-und-testversion)
 9. [PHP-Befehlsreferenz](#9-php-befehlsreferenz)
 10. [Integration für Modulentwickler](#10-integration-für-modulentwickler)
+11. [Change-Log](#11-change-log)
 
 ### 1. Funktionsumfang
 
@@ -132,27 +133,13 @@ Beschreibung des Moduls.
   Jede externe Aktualisierung einer verfolgten "Eigene Texte"-Variable löst
   eine eigene Live-Nachübersetzung aus (siehe oben) - bei einer Variable, die
   sich mehrmals pro Minute ändert (z. B. ein sehr aktives Sensor-/Wetter-Skript),
-  kann das entsprechend oft passieren. Ein interner Fehler (behoben mit Build 53)
-  ließ diesen Live-Pfad zusätzlich bei JEDER dieser Aktualisierungen einen
-  kompletten, eigentlich nur nach einer Quellsprachen-Änderung nötigen
-  Zeilen-Abgleich (siehe "Quellsprache: pro Zeile individuell änderbar" in
-  Abschnitt 7) erneut anstoßen und dabei in kurzer Zeit die Tageskontingente
-  mehrerer Übersetzungsanbieter gleichzeitig aufbrauchen können - seit Build 53
-  läuft dieser Abgleich nur noch, wenn sich seit dem letzten Mal tatsächlich
-  eine Quellsprache geändert hat (Fingerprint-Vergleich, kein API-Aufruf). Für
-  genau diesen Fall (Anbieter melden Rate-Limits/aufgebrauchte Kontingente)
-  gibt es außerdem den Notaus-Schalter "Aktiv" (siehe Konfigurationstabelle
-  oben) - sofort per Formular umschaltbar, kein Warten auf ein Modul-Update
-  nötig. Fehlerdetails zu jedem fehlgeschlagenen Übersetzungsversuch (welcher
-  Anbieter, HTTP-Code, Antwort) landen seit Build 53 zusätzlich im normalen
-  Symcon-Meldungen-Log der Instanz (nicht mehr nur im Debug-Panel). **Build 54**
-  korrigiert dabei einen Fehler in Build 53 selbst: die von IPSModule geerbte
-  `LogMessage()`-Methode löste, aus dem über `MessageSink()`/`VM_UPDATE`
-  erreichbaren Übersetzungs-Fehlerpfad heraus aufgerufen, zuverlässig eine
-  "InstanceInterface is not available"-Warnung aus (die Methode scheint eine im
-  MessageSink-Ausführungskontext nicht existierende Interface-Instanz
-  vorauszusetzen) - seit Build 54 wird stattdessen die kontextunabhängige globale
-  `IPS_LogMessage()`-Funktion verwendet.
+  kann das entsprechend oft passieren. Für genau diesen Fall (Anbieter melden
+  Rate-Limits/aufgebrauchte Kontingente) gibt es den Notaus-Schalter "Aktiv"
+  (siehe Konfigurationstabelle oben) - sofort per Formular umschaltbar, kein
+  Warten auf ein Modul-Update nötig. Fehlerdetails zu jedem fehlgeschlagenen
+  Übersetzungsversuch (welcher Anbieter, HTTP-Code, Antwort) landen
+  zusätzlich im normalen Symcon-Meldungen-Log der Instanz (nicht nur im
+  Debug-Panel).
 * **Automatische Pause bei Rate-Limit/Tageskontingent (Build 55).** Meldet ein
   einzelner Übersetzungsanbieter ein Rate-Limit oder ein aufgebrauchtes
   Tageskontingent (erkannt an HTTP 429/456 bzw. HTTP 403 mit "rate limit" in
@@ -173,407 +160,14 @@ Beschreibung des Moduls.
   abgelaufener API-Key oder ein Netzwerkfehler lösen dagegen NIE eine Pause
   aus (die würde sich ja nie von selbst erledigen) - nur ein tatsächlich als
   Rate-Limit/Kontingent erkannter Fehler.
-
-  **Build 57** korrigiert zwei live beobachtete Inkonsistenzen aus Build 55/56:
-  (1) Googles "User Rate Limit Exceeded" enthält keines der Tageskontingent-
-  Schlüsselwörter und bekam daher immer nur die kurze 15-Minuten-Basissperre -
-  blieb der Fehler aber über Stunden bestehen, führte das zu einem
-  "Flackern" (Google fiel nach jeder abgelaufenen Sperre wieder aus der
-  Pause-Übersicht heraus, obwohl der Fehler weiter auftrat). Jeder ERNEUTE
-  Fehlschlag ohne zwischenzeitlichen Erfolg verdoppelt die Sperrdauer jetzt
-  automatisch (15min, 30min, 1h, ... gedeckelt auf 24h) - ein tatsächlich nur
-  kurz blockierter Anbieter erholt sich weiterhin schnell, ein andauernd
-  fehlschlagender wandert automatisch Richtung Tagessperre. (2) Der
-  Instanz-Status "Aktiv, aber pausiert" wurde bisher nur GESETZT, wenn gerade
-  tatsächlich ein Übersetzungsversuch lief - fand seitdem keiner mehr statt,
-  blieb die Statuszeile veraltet stehen, obwohl die Panel-Übersicht (die
-  immer frisch berechnet wird) bereits alle Anbieter als pausiert zeigte.
-  Seit Build 57 wird der Status zusätzlich bei jedem Öffnen des
-  Konfigurationsformulars und bei jedem "Übernehmen" neu bewertet.
-
-  **Build 58 behebt den bisher schwerwiegendsten Fund dieser Reihe:** ein
-  HTML-Widget (z. B. das Wetter-Beispiel aus Abschnitt 1) konnte bei
-  pausierter/fehlgeschlagener Übersetzung komplett LEER erscheinen - Struktur
-  (Rahmen, Icons, Tagesüberschriften) intakt, aber jeder einzelne dynamische
-  Wert (Prozentzahlen, Windgeschwindigkeit, Temperaturen) leer, statt wie
-  erwartet auf die unübersetzte Originalsprache zurückzufallen. Ursache: die
-  Text-Knoten-Zerlegung für HTML-Inhalte (siehe Abschnitt 7, Build 47) setzte
-  ein leeres Übersetzungsergebnis je Knoten direkt in die wiederzusammengesetzte
-  HTML-Struktur ein, statt bei einem fehlgeschlagenen/pausierten
-  Übersetzungsversuch auf den unübersetzten Original-Knoten zurückzufallen -
-  betraf dadurch praktisch jedes mehrsprachige HTML-Widget, sobald auch nur
-  EIN einzelner Übersetzungsversuch fehlschlug (nicht nur während einer
-  Pause). Zusätzlich zeigte der kleine rote "Übersetzung pausiert bis"-Hinweis
-  unter dem Dropdown teils nur die Uhrzeit ohne den Text davor (derselbe
-  Grundfehler: ein leeres statt eines fehlenden Übersetzungsergebnisses wurde
-  nicht als "fehlgeschlagen, bitte Original verwenden" erkannt).
-
-  **Build 59 behebt dieselbe Fehlerklasse an zwei weiteren, deutlich
-  schwerwiegenderen Stellen - dem eigentlichen DATENVERLUST-Bug dieser
-  Serie:** sowohl `ReconcileRowSourceLanguageChanges()` (läuft für ALLE fünf
-  Zeilen-Properties: Objektnamen, Eigene Texte, Beschriftungen, Automations,
-  Begrüßung) als auch der `VM_UPDATE`-Live-Übersetzungspfad überschrieben eine
-  bereits vorhandene, funktionierende Übersetzungsspalte bedingungslos mit dem
-  Ergebnis eines erneuten Übersetzungsversuchs - auch dann, wenn dieser wegen
-  einer pausierten/ausgefallenen Anbieter-Kette leer zurückkam. Live
-  beobachtet: nach einer längeren Pause-Phase waren in "Objektnamen" und
-  teilweise "Eigene Texte"/"Beschriftungen"/"Automations" sämtliche
-  Zielsprachen-Spalten leer, obwohl vorher funktionierende Übersetzungen
-  vorhanden waren - nur "Original-Import" blieb erhalten. Seit Build 59 wird
-  eine bestehende Spalte bei einem fehlgeschlagenen Übersetzungsversuch NIE
-  mehr überschrieben (die zuletzt bekannte gute Übersetzung bleibt stehen,
-  bis ein neuer Versuch tatsächlich erfolgreich war), und die interne
-  Buchführung wird nur bei VOLLSTÄNDIGEM Erfolg aller Zielsprachen
-  fortgeschrieben - schlägt auch nur eine einzige fehl, bleibt die betroffene
-  Zeile für einen späteren erneuten Versuch vorgemerkt, statt fälschlich als
-  "erledigt" zu gelten. Zusätzlich überspringt `ApplyChanges()` den kompletten
-  Quellsprachen-Abgleich jetzt schon im Vorfeld, solange die Anbieter-Kette
-  komplett pausiert ist (siehe oben) - der zugehörige interne Fingerprint
-  bleibt dabei bewusst unverändert, damit der Abgleich zuverlässig nachgeholt
-  wird, sobald mindestens ein Anbieter wieder verfügbar ist. Der eigentliche
-  Übersetzungs-Cache (`GetCachedTranslation`/`StoreCachedTranslation`, siehe
-  Abschnitt 1) war von diesem Bug nie betroffen - ein fehlgeschlagenes/leeres
-  Ergebnis wurde dort schon immer bewusst NICHT zwischengespeichert (siehe
-  `TranslateBatch`: nur tatsächlich übersetzte, nicht-leere Ergebnisse landen
-  im Cache), sodass ein erneuter Versuch für denselben Text nie an einem
-  fälschlich gecachten leeren Ergebnis scheitert.
-
-  **Build 60** ergänzt drei Wünsche und behebt einen weiteren, unabhängigen
-  Datenverlust-Bug: (1) Ein neuer/geänderter API-Key (Google/DeepL) oder eine
-  geänderte MyMemory-Kontakt-E-Mail beendet die Pause des betroffenen
-  Anbieters jetzt sofort, statt auf den Ablauf der ggf. bereits eskalierten
-  Sperrfrist zu warten - erkannt über einen SHA-256-Hash der zuletzt
-  gesehenen Zugangsdaten (nie der Klartext-Wert selbst); beim allerersten
-  `ApplyChanges()` einer Instanz (noch kein Vergleichswert vorhanden) wird
-  das nie fälschlich als Änderung gewertet. (2) Der rote Testphase-/
-  Pausiert-Hinweis unter dem Dropdown ist jetzt mittig statt linksbündig
-  ausgerichtet. (3) Ein neuer Nutzungs-Zähler zeigt die durchschnittliche
-  Anzahl an Übersetzungsanfragen und übersetzten Zeichen pro Stunde seit der
-  allerersten Einrichtung der Instanz (nicht seit der ersten tatsächlichen
-  Übersetzung) - als Satz direkt unter der Erläuterung des "Aktiv"-Schalters
-  im Konfigurationsformular (nur bei natürlichem Öffnen/Neuaufbau des
-  Formulars berechnet, löst NIE einen erzwungenen Refresh aus - siehe
-  unten), und optional (Checkbox "Übersetzungsstatistik in der Kachel
-  anzeigen", standardmäßig aus) auch als kleiner Hinweistext in der Kachel
-  selbst, dort alle 10 Minuten aktualisiert über `PushVisualizationUpdate()`
-  (nicht über einen Formular-Reload). Für eigene Kacheln stehen dafür zwei
-  Platzhalter bereit, siehe [Abschnitt 7](#7-visualisierung).
-
-  **Zusätzlich behebt Build 60 einen weiteren, unabhängigen und
-  schwerwiegenden Bug:** Der automatische Hintergrund-Rescan (Timer, siehe
-  "Automatischer Rescan (Minuten)") teilte sich bisher denselben internen
-  Code-Pfad wie der manuelle "Baum neu einlesen"-Button - inklusive dessen
-  abschließendem `ReloadForm()`. Das bedeutete: war das
-  Konfigurationsformular gerade geöffnet und wurden dort z. B. Übersetzungen
-  von Hand bearbeitet, konnte der Hintergrund-Timer JEDERZEIT dazwischen-
-  funken und das gesamte Formular neu laden - alle noch nicht mit
-  "Übernehmen" gespeicherten Änderungen gingen dabei kommentarlos verloren.
-  Seit Build 60 lädt ausschließlich der manuelle Button das Formular neu;
-  der automatische Hintergrund-Rescan aktualisiert die Objektliste weiterhin
-  normal im Hintergrund, rührt ein gerade geöffnetes Formular aber nicht
-  mehr an.
-
-  **Build 61** ergänzt den Nutzungs-Zähler aus Build 60 um eine zweite
-  Statistik und einen neuen Diagnose-Button: (1) Zusätzlich zu den
-  tatsächlich gestellten Anfragen zählt die Instanz jetzt auch mit, wie viele
-  Übersetzungsanfragen und Zeichen dank des Caches (siehe oben,
-  `GetCachedTranslation`/`StoreCachedTranslation`) gar nicht erst an einen
-  Anbieter geschickt werden mussten - als reine Gesamtsumme seit
-  Inbetriebnahme (keine Pro-Stunde-Rate wie beim Hauptzähler), direkt
-  angehängt an den Statistik-Satz unter der Erläuterung des "Aktiv"-Schalters
-  im Konfigurationsformular. Für eigene Kacheln stehen dafür zwei weitere
-  Platzhalter bereit, `<!--COUNT_CACHE_TRANSLATIONS-->` und
-  `<!--COUNT_CACHE_SIGNES-->` (ebenfalls reine Ganzzahl ohne Einheit), siehe
-  [Abschnitt 7](#7-visualisierung). (2) Ein neuer Button "Übersetzungsanbieter
-  prüfen" ganz unten im Konfigurationsformular schickt eine einzelne
-  Testanfrage ("Testabfrage" -> Englisch) DIREKT an jeden gerade
-  eingerichteten Anbieter (Google/DeepL, falls ein API-Key eingetragen ist,
-  sowie immer MyMemory) - bewusst am Cache vorbei (immer eine echte, frische
-  Antwort) und unabhängig von einer eventuell laufenden Pause (die würde
-  einen normalen Übersetzungsversuch sonst überspringen, hier soll aber
-  gerade geprüft werden, ob der Anbieter TROTZ Pause inzwischen wieder
-  funktioniert). Meldet für jeden Anbieter einzeln zurück, ob die Antwort
-  angekommen ist, und beendet dabei automatisch eine noch laufende Pause,
-  sobald ein Anbieter wieder erfolgreich antwortet - nützlich z. B. direkt
-  nach einem Kontingent-/Abo-Upgrade beim Anbieter, ohne auf das
-  automatische Ablaufen der (ggf. bereits mehrfach eskalierten, siehe Build
-  57) Pause warten zu müssen.
-
-  **Build 62 behebt zwei live gefundene Bugs:** (1) **Der eigentlich
-  schwerwiegendere:** Der kostenfreie Anbieter (MyMemory) meldet ein
-  erschöpftes Tageskontingent NICHT über einen HTTP-Fehlercode wie Google/
-  DeepL, sondern ausschließlich über das JSON-Feld `quotaFinished` bei
-  weiterhin HTTP 200 - `DetectRateLimitCooldown`/`RecordProviderPaused`
-  (siehe oben) wurden dadurch für diesen Fall bisher NIE ausgelöst: 'free'
-  blieb in der Panel-Übersicht dauerhaft als "nicht pausiert" sichtbar,
-  obwohl JEDER weitere Versuch für den Rest des Tages ebenfalls scheiterte.
-  Live beobachtet: Google/DeepL waren bereits (durch intensives Testen)
-  pausiert, MyMemory zusätzlich fälschlich als verfügbar geführt - jeder
-  weitere Rescan-Versuch schlug dadurch für ALLE drei Anbieter fehl, ohne
-  dass die Instanz das als Pause/Fehler erkannte oder meldete: Rescan lief
-  zwar technisch durch, aber ohne jede neue Übersetzung und ohne
-  Statusänderung - wirkte dadurch nach außen wie "Rescan tut gar nichts".
-  MyMemorys `quotaFinished` löst jetzt direkt die volle Tagessperre aus,
-  genau wie ein per HTTP erkanntes Tageskontingent bei Google/DeepL. (2) Die
-  in Build 60/61 eingeführte Pro-Stunde-Hochrechnung des Nutzungs-Zählers
-  konnte kurz nach der Inbetriebnahme (oder nach einem kurzen Anfragen-
-  Ansturm, z. B. über den "Übersetzungsanbieter prüfen"-Button) eine Rate
-  zeigen, die HÖHER als der tatsächliche Gesamtzähler war (z. B. "1698
-  Anfragen/h" bei nur "783 Anfragen insgesamt", da erst 28 Minuten seit
-  Inbetriebnahme vergangen waren) - wirkte wie ein Rechenfehler, war aber
-  nur eine Hochrechnung aus einem sehr kurzen Zeitfenster. Die Rate wird
-  jetzt auf mindestens eine volle Stunde gedeckelt: innerhalb der ersten
-  Stunde nach Inbetriebnahme zeigt sie exakt den bisherigen Gesamtwert (nie
-  mehr), erst danach weicht sie als echte Rate vom Gesamtwert ab.
-
-  **Build 63 korrigiert die Farbcodierung im Symcon-"Meldungen"-Log (englisch
-  "Status Log"):** Übersetzungs-Fehler/-Warnungen (`LogTranslateMessage()`,
-  siehe oben "MyMemorys quotaFinished" und die Anbieter-Fehlermeldungen)
-  erschienen dort bisher grau als generischer "Custom"-Eintrag mit einem
-  Text-Präfix "[FEHLER]"/"[WARNUNG]", statt in der eigentlich vorgesehenen
-  roten/gelben Farbcodierung für "Error"/"Warning". Grund: die global
-  aufgerufene `IPS_LogMessage()`-Funktion kennt gar keinen Schweregrad-
-  Parameter - nur die von `IPSModule` geerbte, INSTANZ-gebundene
-  `LogMessage($Message, $Type)`-Methode (mit `KL_ERROR`/`KL_WARNING`) liefert
-  die echte Farbcodierung, wurde hier aber bewusst gemieden, weil sie
-  nachweislich abstürzt, sobald sie aus dem `MessageSink()`/`VM_UPDATE`-
-  Ausführungskontext heraus aufgerufen wird (siehe Build 54). Seit Build 63
-  unterscheidet die Instanz beide Kontexte: außerhalb von `MessageSink()`
-  (Rescan, "Übersetzungsanbieter prüfen", `ApplyChanges()`, ...) wird jetzt
-  die typisierte `LogMessage()`-Methode verwendet - Fehler erscheinen dadurch
-  korrekt rot als "Error", Warnungen gelb als "Warning". Nur innerhalb der
-  einen bekannten Absturz-Situation (`MessageSink()`/`VM_UPDATE`) greift
-  weiterhin die alte, sichere `IPS_LogMessage()`-Variante mit Text-Präfix,
-  da dort echte Instabilität nachgewiesen wurde.
-
-  **Build 64 behebt eine fehlende Ein-/Mehrzahl-Behandlung im
-  Nutzungs-Zähler-Satz** (siehe oben, Build 60/61): "Anfragen"/"Zeichen" (und
-  deren Übersetzungen) standen dort bisher IMMER in der Mehrzahl fest
-  codiert, auch wenn der tatsächliche Wert 1 war (z. B. "1 Anfragen" statt
-  korrekt "1 Anfrage", ebenso in den anderen 4 Sprachen). Behoben nach genau
-  demselben, bereits bei der Testphasen-Anzeige bewährten Muster
-  (`BuildTrialInfoText()`, "Tag(e)"/"day(s)"/"día(s)"/"giorno/i"/"jour(s)"):
-  EIN einzelner, nicht konjugierender Anzeige-String pro Sprache, der für
-  jede Anzahl passt - kein Laufzeit-Unterschied zwischen Einzahl/Mehrzahl
-  nötig. Die betroffenen `locale.json`-Schlüssel heißen jetzt "Anfrage(n)"/
-  "Anfrage(n)/h" (vorher "Anfragen"/"Anfragen/h") und liefern in jeder
-  Sprache eine passende Kurzform (z. B. "request(s)/h" statt nur "requests/h";
-  fürs unregelmäßige Spanisch "carácter"/"caracteres" wurde stattdessen
-  bewusst auf das regelmäßig pluralisierende Synonym "signo(s)" ausgewichen,
-  um die im Plural verschwindende Betonungs-Markierung "á" nicht falsch
-  darzustellen; Italienisch nutzt statt eines Suffixes einen Klammer-Wechsel
-  der letzten Buchstaben, z. B. "richiest(a/e)", "caratter(e/i)", passend zum
-  bereits bestehenden "giorno/i").
-
-  **Build 65 behebt den bisher schwerwiegendsten Fund dieser gesamten
-  Serie:** Live beobachtet wurden "Automations" und "Begrüßung" nach einem
-  Rescan während einer Anbieter-Pause komplett auf den unübersetzten
-  deutschen Rohtext eingefroren - in JEDER Zielsprachen-Spalte, dauerhaft,
-  auch nachdem die Pause längst vorbei war. Ursache: `TranslateBatchUncached()`
-  fällt bei einem fehlgeschlagenen Übersetzungsversuch bewusst NIE auf einen
-  leeren String zurück, sondern auf den unübersetzten Quelltext (siehe Build
-  58 - richtig für die dortige Wiederzusammensetzung von HTML-Widgets, die
-  sonst mit leeren dynamischen Werten dastünden). Das Problem: `TranslateBatch()`
-  ist der EINE zentrale Durchgangspunkt, über den ALLE anderen Funktionen
-  laufen (`FillLanguageColumn` beim Rescan, `ApplyTrackedVariableUpdate` bei
-  der VM_UPDATE-Live-Nachübersetzung, `ReconcileRowFields` beim
-  Quellsprachen-Abgleich) - und JEDE von ihnen entscheidet ausschließlich
-  anhand eines LEEREN Strings, ob eine Zelle als "fertig übersetzt, nicht
-  erneut versuchen" oder "fehlgeschlagen, bitte später erneut versuchen"
-  gilt. Da dieses leere Signal wegen des Fallbacks nie ankam, wurde JEDE
-  Zelle, deren allererster Übersetzungsversuch während einer Pause
-  stattfand, fälschlich als "erledigt" verbucht - inklusive einer
-  Cache-Vergiftung (der unübersetzte Rohtext wurde als "echte Übersetzung"
-  zwischengespeichert und dadurch nie wieder neu versucht, selbst nach Ende
-  der Pause). Behoben an der EINEN zentralen Stelle (`TranslateBatch()`):
-  ein Ergebnis, das exakt dem unübersetzten Quelltext entspricht, wird dort
-  wieder in einen echten Leerstring zurückverwandelt, bevor es an
-  irgendeinen Aufrufer weitergereicht oder gecacht wird - `TranslateBatchUncached()`
-  selbst (und damit die HTML-Wiederzusammensetzung) bleibt unverändert.
-  **Bereits vorhandene, auf diese Weise eingefrorene Zellen werden davon
-  nicht rückwirkend erkannt** (der gespeicherte deutsche Text ist nicht mehr
-  von einer "zufällig identischen" echten Übersetzung unterscheidbar) -
-  betroffene Zellen müssen einmalig manuell im Formular geleert werden,
-  danach übersetzt sie der nächste Rescan/die nächste Anbieter-Erholung
-  normal nach.
-
-  **Build 66 schließt dieselbe Lücke zusätzlich im Übersetzungs-Cache:**
-  Live beobachtet direkt nach Build 65 - Zellen leeren + Rescan füllte
-  "Automations" trotzdem wieder mit Deutsch, obwohl "Begrüßung" im selben
-  Test korrekt übersetzt wurde. Ursache: der interne Übersetzungs-Cache
-  (siehe Abschnitt 1, `GetCachedTranslation`/`StoreCachedTranslation`) hatte
-  denselben unübersetzten Rohtext bereits VOR Build 65 unter genau diesem
-  Schlüssel als "echte Übersetzung" zwischengespeichert (z. B. "Gehen" für
-  Deutsch->Englisch) - ein Cache-TREFFER läuft komplett an `TranslateBatch()`s
-  frischem Übersetzungspfad (und damit am Build-65-Schutz) vorbei, liefert
-  also weiterhin den vergifteten alten Eintrag. Im Debug-Log erkennbar an
-  einem "..._Mapping"-Eintrag ganz ohne jeden nachfolgenden
-  "..._Request"/"..._Response" - der sichere Hinweis auf einen Cache-Treffer
-  statt eines echten (und damit geschützten) neuen Versuchs. Behoben wie
-  beim strukturell identischen Vorfall vom 2026-08-15 (siehe
-  `TRANSLATION_CACHE_SCHEMA_VERSION`): die Cache-Version wurde erneut erhöht
-  (2 → 3) - macht JEDEN vor Build 66 gecachten Eintrag unerreichbar (die
-  Version steckt im Cache-Schlüssel) und erzwingt für jeden betroffenen Text
-  einmalig einen frischen, jetzt korrekt geschützten Übersetzungsversuch.
-  **Mit Build 66 reicht das Leeren betroffener Zellen im Formular + Rescan
-  wieder allein aus** - ein zusätzliches manuelles "Übersetzungs-Cache
-  leeren" ist NICHT mehr nötig (macht aber ebenfalls nichts kaputt, falls
-  bereits geklickt).
-
-  **Build 67 behebt eine Konsolensprachen-Einschränkung, die zwei
-  dynamische Textbereiche im Konfigurationsformular betraf** - den
-  Nutzungs-Zähler-Satz unter "Aktiv" (siehe oben) und die
-  Pause-Übersicht im Panel "Übersetzungsanbieter": beide blieben live
-  beobachtet dauerhaft auf Deutsch stehen, selbst bei englischer
-  (oder jeder anderen) Konsolensprache des Betrachters - obwohl fest
-  eingebaute Formular-Beschriftungen ("Aktiv", "Notaus-Schalter: ...")
-  im selben Formular korrekt übersetzt erschienen. Ursache: `$this->Translate()`
-  ist an die Symcon-SYSTEMSPRACHE gebunden (eine einzelne, installationsweite
-  Kernel-Einstellung), NICHT an die individuelle Konsolensprache der gerade
-  betrachtenden Admin-Sitzung - die tatsächliche, per-Betrachter korrekte
-  Übersetzung von `GetConfigurationForm()`-Beschriftungen übernimmt
-  stattdessen der Konsolen-Client selbst, per exaktem Textabgleich einer
-  KOMPLETTEN Beschriftung gegen `locale.json` - unabhängig davon, ob diese
-  Beschriftung ursprünglich statisch in `form.json` stand oder von PHP
-  gesetzt wurde. Eine zur Laufzeit aus mehreren `Translate()`-Fragmenten und
-  eingefügten Werten (Datum, Uhrzeit, Zahlen) ZUSAMMENGESETZTE Zeichenkette
-  matcht dadurch NIE einen `locale.json`-Eintrag als Ganzes und bleibt
-  unabhängig von der tatsächlichen Konsolensprache stehen - exakt dieselbe,
-  bereits beim Lizenz-Infobereich gefundene und dort erfolgreich behobene
-  Einschränkung (siehe die vielen einzelnen `LicenseInfoXxx`-Formularelemente).
-  Beide betroffenen Bereiche wurden nach demselben, bereits bewährten Muster
-  umgebaut: viele einzelne, kleine `RowLayout`/Label-Formularelemente statt
-  eines zusammengesetzten Fließtexts - jedes Element trägt entweder eine
-  feste, unveränderte deutsche Zeichenkette (die der Konsolen-Client korrekt
-  je nach Betrachter übersetzt) oder einen rohen, nicht zu übersetzenden Wert
-  (Datum/Uhrzeit/Zahl), nie beides zusammengesetzt in einer Caption. Kein
-  `$this->Translate()`-Aufruf mehr in `FormatTranslationStatsValue()`/
-  `PopulateProviderPauseStatusElement()`/`FormatProviderPauseUntil()`.
-  Zusätzlich zeigt die Pause-Übersicht im Panel "Übersetzungsanbieter"
-  jetzt auch in der Kachel selbst (roter Hinweis unter dem Dropdown) das
-  Datum zusätzlich zur Uhrzeit (z. B. "18.08. 21:34" statt nur "21:34") -
-  eine reine Uhrzeit war bei einer über Mitternacht hinausreichenden Pause
-  (durch die Eskalation, siehe Build 57, bis zu 24h) mehrdeutig.
-
-  **Build 68 rundet die Build-67-Umstellung ab:** Live beobachtet blieben
-  zwei einzelne Textbausteine trotz Build 67 weiterhin unübersetzt -
-  "Tag(e):" und "Zeichen." -, obwohl das bloße "Tag(e)"/"Zeichen" an anderer
-  Stelle im selben Formular korrekt übersetzte. Ursache: an genau diesen
-  beiden Stellen war ein Satzzeichen DIREKT an das deutsche Wort angehängt
-  ("Tag(e):" statt "Tag(e)", "Zeichen." statt "Zeichen") - eine Zeichenkette,
-  die dadurch nicht mehr EXAKT dem registrierten `locale.json`-Schlüssel
-  entspricht, bleibt beim Abgleich unübersetzt stehen (siehe Build 67).
-  Jedes Satzzeichen, das zu keinem eigenen Textbaustein gehört, sitzt jetzt
-  in einem eigenen, unbenannten Element (kein `locale.json`-Eintrag nötig -
-  ein Satzzeichen ohne Übersetzungstreffer wird ohnehin unverändert
-  angezeigt). Zusätzlich fehlte "Kostenfreier Anbieter (MyMemory)" bisher
-  komplett als registrierter Übersetzungstext (nicht falsch zusammengesetzt,
-  sondern schlicht nie übersetzbar gemacht) - jetzt in allen 4 Sprachen
-  ergänzt und sowohl in der Pause-Übersicht als auch im
-  "Übersetzungsanbieter prüfen"-Ergebnis verwendet. Der Nutzungs-Zähler
-  wurde dabei gleich klarer strukturiert: statt der bisherigen ".../h"-Suffixe
-  zeigt eine neue, eigene Zeile "Stündlich" (übersetzbar) die
-  Pro-Stunde-Werte, "Insgesamt" (vormals klein geschrieben "insgesamt")
-  startet jetzt ebenfalls eine eigene Zeile - vier klar getrennte,
-  vollständig lokalisierte Zeilen (Seit Inbetriebnahme / Stündlich /
-  Insgesamt / Durch den Cache eingespart) statt eines einzigen, dichten
-  Absatzes. Nach demselben Muster wurden außerdem der Testphasen-Hinweis
-  (`TrialInfoFreshLabel`/`TrialInfoRunningRow`/`TrialInfoExpiredRow`, je
-  nach Testphasen-Status genau eine sichtbare Variante) und das Ergebnis-
-  Popup von "Übersetzungsanbieter prüfen" umgebaut (ein `RowLayout` je
-  geprüftem Anbieter, per `UpdateFormField()` einzeln befüllt statt eines
-  einzigen zusammengesetzten Texts) - beide hatten dieselbe Systemsprache-
-  statt-Konsolensprache-Einschränkung, waren bisher aber nur noch nicht
-  gemeldet worden.
-
-  **Build 69 behebt einen unsichtbaren Zeichen-Artefakt aus MyMemory:** Live
-  im Debug-Log beobachtet lieferte MyMemory bei einem Treffer aus seiner
-  Übersetzungsspeicher-Datenbank ein zusätzliches, unsichtbares Zeichen direkt
-  am Ende der Übersetzung mit ("Position" wurde tatsächlich als
-  "Position " - mit einem geschützten Leerzeichen (U+00A0) dahinter -
-  zurückgegeben). PHPs `trim()` entfernt nur ASCII-Leerraum (Leerzeichen, Tab,
-  Zeilenumbruch), niemals Unicode-Zeichen wie ein geschütztes Leerzeichen oder
-  ein Zero-Width-Space (U+200B) - ein solches Ergebnis wurde daher unverändert
-  gespeichert/gecacht und sah in den allermeisten Ansichten optisch identisch
-  zum sauberen Text aus, obwohl es ihm nicht exakt entsprach. Behoben an der
-  einen zentralen Stelle, durch die die Ergebnisse aller drei Anbieter
-  (Google/DeepL/MyMemory) laufen (`TranslateChunk()`): am Anfang und Ende
-  werden jetzt gezielt nur geschützte Leerzeichen und Zero-Width-Spaces
-  entfernt - bewusst NIE ein normales ASCII-Leerzeichen, da ein einzelner
-  HTML-Textknoten (siehe Build 63/`SplitHtmlIntoTextNodes`) am Rand
-  absichtlich ein Leerzeichen tragen kann, das für den korrekten Abstand
-  zwischen zwei benachbarten Inline-Elementen gebraucht wird.
-
-  **Build 70 übersetzt live nur noch die aktuell aktive Gast-Sprache, holt
-  alle anderen bei Bedarf nach, und filtert reine Zahlen/Symbole komplett
-  heraus:** Live beobachtet lief ein täglich verfügbares Übersetzungs-
-  Kontingent innerhalb weniger Stunden vollständig leer (77.000 Zeichen an
-  einem einzigen Tag), obwohl die Übersetzungs-Anbieter zwischenzeitlich
-  sogar pausiert waren. Ursache: eine häufig extern aktualisierte "Eigene
-  Texte"-Variable (z. B. ein Wetter-/Sensor-Widget, mehrmals pro Minute
-  über `VM_UPDATE` aktualisiert) hat bei JEDER Änderung sofort ALLE
-  konfigurierten Zielsprachen neu übersetzt, obwohl zu keinem Zeitpunkt
-  mehr als eine Sprache gleichzeitig angezeigt wurde. Ab Build 70
-  übersetzen der Rescan, die `VM_UPDATE`-Live-Nachübersetzung und der
-  Quellsprachen-Abgleich (siehe Build 57) sofort nur noch die AKTUELL
-  aktive Gast-Sprache - alle anderen Zielsprachen-Zellen bleiben dabei
-  bewusst auf ihrem letzten bekannten (ggf. jetzt veralteten) Stand stehen,
-  statt geleert zu werden. Ein neuer Zeitstempel-Abgleich je Zeile (wann
-  wurde der Rohtext zuletzt geändert, wann wurde jede Sprache zuletzt
-  tatsächlich übersetzt) erkennt zuverlässig, welche Zelle veraltet ist,
-  ohne den bisherigen Fallback-Wert zu löschen. Wechselt ein Gast
-  tatsächlich auf eine bisher nur lazy behandelte Sprache, holt ein neuer
-  Nachhol-Mechanismus GENAU die betroffenen Zeilen gebündelt (ein
-  API-Aufruf je Zeilen-Property statt einzeln je Zeile) nach, bevor die
-  Sprache angezeigt wird - danach ist sie normal gecacht. Bereits vor
-  diesem Build gespeicherte Zeilen ohne die neue Zeitstempel-Buchführung
-  gelten dabei bewusst als "aktuell" (keine Massen-Neuübersetzung des
-  kompletten Bestands nach dem Update). Zusätzlich geht ein Text-Fragment
-  ganz ohne jeden Buchstaben (reine Zahlen, "%", "°", Uhrzeiten,
-  Satzzeichen - besonders häufig bei der feingranularen HTML-Text-Knoten-
-  Zerlegung eines Live-Widgets, siehe Build 63) gar nicht mehr an eine
-  Übersetzungs-API: eine erkannte einzelne Zahl wird stattdessen über
-  PHPs eingebaute `NumberFormatter`-Klasse (Intl-Erweiterung) rein lokal
-  in die landesübliche Schreibweise der Zielsprache umgerechnet (z. B.
-  deutsches "1.234,56" → englisches "1,234.56"), ohne dabei eine
-  ungruppierte Zahl (z. B. eine Jahreszahl oder Zimmernummer wie "2026")
-  fälschlich mit einem künstlich eingefügten Tausendertrennzeichen zu
-  versehen. Fehlt die Intl-Erweiterung auf einer Installation, wird der
-  Text stattdessen unverändert durchgereicht (kein Fehler). Einziger,
-  bewusst in Kauf genommener Nebeneffekt: eine reine Zahl wird nie mehr
-  durch eine Übersetzungs-API-Anfrage geschickt und kann deshalb auch
-  keine darüber hinausgehende, kontextabhängige Umformatierung mehr
-  erhalten, die Google/DeepL gelegentlich mitgeliefert haben.
-
-  **Build 71 entkoppelt die Live-Übersetzung von der Formular-Persistierung
-  einer häufig aktualisierten Variable:** Live gemeldet - trotz Build 70
-  konnte ein Admin praktisch keine eigene Änderung im Konfigurationsformular
-  mehr speichern, wenn eine "Eigene Texte"-Variable mehrmals pro Minute von
-  außen aktualisiert wurde (z. B. ein Wetter-/Sensor-Widget). Ursache: jede
-  externe Änderung hat weiterhin sofort per `IPS_SetProperty()` + `IPS_
-  ApplyChanges()` genau die Property umgeschrieben, die im offenen Formular
-  als bearbeitbare "Eigene Texte"-Liste angezeigt wird - kein `ReloadForm()`
-  nötig, das reine Überschreiben der zugrunde liegenden Property unter einer
-  live gebundenen Formularliste reichte bereits, um eine laufende Bearbeitung
-  zu stören. Ab Build 71 sind zwei Schreibvorgänge, die bislang immer
-  gemeinsam sofort passierten, sauber entkoppelt: die **Live-Variable**
-  (das, was der Gast in der Kachel sieht) wird weiterhin komplett
-  unverändert/unverzögert geschrieben; nur die **Property-Persistierung**
-  (die Buchführung, die ausschließlich für einen späteren, seltenen
-  Sprachwechsel gebraucht wird) wird jetzt gepuffert und erst nach 12
-  Minuten Ruhe auf der jeweiligen Variable tatsächlich committet (Debounce -
-  jede neue Änderung schiebt den Zeitpunkt weiter nach hinten). Speichert
-  der Admin währenddessen im Formular ("Übernehmen"), wird der noch
-  wartende Puffer automatisch VORHER eingespielt, bevor die eigene Änderung
-  verarbeitet wird - die zuletzt gepufferte externe Änderung geht dabei
-  nicht verloren, unabhängig vom Timing. Ein tatsächlicher Sprachwechsel
-  (selten, aber jederzeit möglich) leert den Puffer ebenfalls sofort, statt
-  auf das Ende der Ruhephase zu warten - ein Gast bekommt dadurch immer den
-  aktuellsten Stand zu sehen. Das Konfigurationsformular zeigt zusätzlich
-  oben einen Hinweis mit der voraussichtlichen Uhrzeit der nächsten
-  Persistierung an, solange etwas ansteht.
-
-  **Wichtige Einschränkung dieses Schutzes:** Er bewahrt nur den externen
+* **Änderungen, die eine häufig extern aktualisierte Variable auslöst,
+  werden für die Formular-Persistierung bis zu 12 Minuten lang gepuffert
+  (Debounce).** Der Rohtext, den ein anderes Modul/Skript mehrmals pro
+  Minute in einer verfolgten "Eigene Texte"-Variable schreibt, erscheint in
+  der Kachel immer sofort und unverzögert; nur die Property-Persistierung
+  dieser Änderung (die Buchführung für einen späteren Sprachwechsel) wird
+  gepuffert und normalerweise erst nach dieser Ruhezeit tatsächlich
+  geschrieben. Er bewahrt nur den externen
   Puffer selbst davor, verworfen zu werden - er schützt NICHT eine eigene,
   gleichzeitige Bearbeitung DERSELBEN Zelle. Beim "Übernehmen" liest
   `ApplyChanges()` die gerade abgeschickten Zeilen (bereits mit dem eigenen
@@ -588,420 +182,7 @@ Beschreibung des Moduls.
   Bei einer häufig extern aktualisierten Variable also am besten zügig
   speichern bzw. genau diese Zelle meiden, solange der Hinweis oben im
   Formular eine anstehende Persistierung anzeigt.
-
-  **Build 72 macht den Übersetzungs-Cache treffsicherer und größer:** Bisher
-  war der lokale Cache (bis zu 500 Einträge) rein nach Einfügereihenfolge
-  organisiert (FIFO) - wurde er voll, flog immer der ZUERST gespeicherte
-  Eintrag zuerst raus, unabhängig davon, wie oft er seitdem tatsächlich
-  wiederverwendet wurde. Ein Schwung einmaliger, nie wieder vorkommender
-  Texte konnte dadurch theoretisch einen häufig wiederverwendeten Kern-
-  Eintrag (z. B. einen festen Objektnamen) verdrängen, nur weil dieser
-  zufällig zuerst im Cache landete. Jeder Eintrag führt jetzt zusätzlich
-  einen Hit-Zähler und den Zeitpunkt seines letzten Zugriffs - wird der
-  Cache voll, fliegt der Eintrag mit dem NIEDRIGSTEN Hit-Zähler zuerst raus
-  (bei Gleichstand der am längsten nicht mehr genutzte). Ein Eintrag, der
-  seit über 24 Stunden nicht mehr gelesen wurde, gilt beim nächsten Zugriff
-  als "neu wieder aufgewärmt" (Zähler-Reset auf 1) statt seinen alten
-  Zähler für immer fortzuschreiben - verhindert, dass ein früher einmal
-  populärer, inzwischen längst nicht mehr gebrauchter Eintrag einen frisch
-  aktiven verdrängt. Die Kapazität wurde gleichzeitig von 500 auf 1000
-  Einträge angehoben. Da sich dabei die gespeicherte FORM eines Eintrags
-  ändert (von einem reinen String zu einem kleinen Objekt mit Hit-Zähler/
-  Zeitstempel), wurde `TRANSLATION_CACHE_SCHEMA_VERSION` erhöht (4) - macht
-  den kompletten, bis dahin aufgewärmten Cache einmalig unerreichbar (jeder
-  Text wird beim nächsten Bedarf einmal frisch übersetzt, alte Einträge
-  bleiben als toter Ballast stehen, bis die neue Verdrängungslogik sie -
-  mangels jedes Hit-Zählers - als Erstes wieder herausdrängt).
-
-  **Build 73 stellt klar, dass "nur aktive Sprache" ausschließlich für den
-  automatischen Live-Trigger gilt, nicht für Rescan, und macht den
-  Persistierungs-Hinweis live sichtbar:** Zwei Nachbesserungen nach dem
-  ersten Praxistest von Build 70/71. Erstens: Rescan (manuell wie
-  Auto-Rescan) und der Quellsprachen-Abgleich (siehe Build 57) übersetzen
-  ab sofort wieder ALLE konfigurierten Zielsprachen in einem Durchgang,
-  nicht mehr nur die aktuell aktive - live gemeldet, nachdem gelöschte
-  Objekte per Rescan zurückkehrten (bzw. eine Zelle manuell geleert wurde),
-  aber keine ihrer Zielsprachen nachübersetzt wurde, solange sie nicht
-  gerade aktiv war. Ein Nutzer, der "Baum neu einlesen" klickt oder eine
-  Zelle absichtlich leert, erwartet zu Recht, dass JEDE fehlende
-  Übersetzung nachgeholt wird, nicht nur die gerade angezeigte Sprache -
-  das war ursprünglich zu weit gefasst: die eigentliche
-  Kontingent-Ursache (siehe Build 70) war ausschließlich die automatische
-  Live-Nachübersetzung bei externen Variablenänderungen
-  (`ApplyTrackedVariableUpdate`, mehrmals pro Minute bei einer aktiven
-  Wetter-/Sensor-Variable), NICHT ein einmaliger Rescan. Diese eine Stelle
-  bleibt weiterhin bewusst auf die aktive Sprache beschränkt - der
-  Nachhol-Mechanismus beim Sprachwechsel bleibt für sie zusätzlich als
-  Backstop bestehen. Zweitens: der in Build 71 eingeführte
-  Persistierungs-Hinweis im Formular wurde bislang nur beim (Neu-)Öffnen
-  des Formulars berechnet - ein bereits offenes Formular zeigte ihn
-  deshalb nie an, egal wie lange man wartete (folgerichtig, da Build 71
-  bewusst kein `ReloadForm()` mehr bei externen Schreibvorgängen auslöst).
-  Der Hinweis wird jetzt zusätzlich per `UpdateFormField()` direkt aus dem
-  Puffer-Mechanismus heraus live in ein bereits offenes Formular
-  eingeblendet bzw. wieder ausgeblendet - ohne jede Störung der laufenden
-  Bearbeitung, exakt wie die bereits bestehenden `UpdateFormField()`-
-  Aufrufe in anderen Formular-Popups.
-
-  **Build 74 behebt eingeschleuste Platzhalter-Tags bei DeepL-Übersetzungen
-  reiner Objektnamen:** Live gemeldet (Screenshot, zweimal beobachtet): ein
-  völlig einfacher Objektname ohne jedes HTML ("N-JOY") kam auf Spanisch als
-  `<g id="1">N-JOY</g>                    <g id="2"><g id="3"/></g>` zurück
-  - sichtbare, kaputte Auszeichnungs-Reste mitten im Klartext. Ursache:
-  `TranslateChunkDeepL()` hat bei JEDER Anfrage unterschiedslos
-  `"tag_handling": "html"` an DeepL geschickt, unabhängig davon, ob der Text
-  tatsächlich HTML enthielt (kopiert vom analogen, aber harmloseren Muster
-  bei Google, siehe unten). Anders als Googles `format`-Parameter (der nur
-  steuert, ob Sonderzeichen als HTML-Entity zurückkommen) schaltet DeepLs
-  `tag_handling` seine komplette Markup-Verarbeitung ein - und kann dabei
-  auch bei komplett taglosem Eingabetext eigene, synthetische
-  Platzhalter-Tags in die Ausgabe einschleusen. `$IsHtml` wird jetzt bis zu
-  `TranslateChunkGoogle()`/`TranslateChunkDeepL()` durchgereicht:
-  `tag_handling` wird bei DeepL nur noch für echte "Eigene Texte"-HTML-
-  Inhalte überhaupt gesetzt (sonst fehlt der Schlüssel im Request komplett -
-  DeepLs Standardmodus ohne jede Markup-Erkennung, strukturell
-  ausgeschlossen, dass so ein Platzhalter-Tag je entstehen kann). Bei dieser
-  Gelegenheit auch Google angepasst: `format` steht jetzt nur noch bei
-  echtem HTML auf `"html"`, sonst auf `"text"` - vermeidet nicht nur den
-  bisher nötigen `html_entity_decode()`-Umweg für reinen Text, sondern
-  schließt auch aus, dass ein wörtliches "&"/"<" in einem Objektnamen (z. B.
-  "Bad & WC") im html-Modus fälschlich als Beginn einer HTML-Entity/eines
-  Tags interpretiert wird.
-
-  **Build 75 fasst inhaltlich identische Beschriftungen ohne geteiltes
-  Profil/Template zu einer Zeile zusammen:** Live gemeldet (Screenshot):
-  mehrere Variablen mit exakt identischem Beschriftungs-Inhalt (z. B. eine
-  ganze Reihe "Ja"/"Nein"-Variablen) erschienen als komplett getrennte
-  Zeilen in "Captions", obwohl über ein geteiltes Profil oder Template
-  verknüpfte Variablen bereits korrekt zu einer Zeile zusammengefasst
-  wurden. Ursache: `GetPresentationSourceKey()` fiel auf einen rein
-  variablenspezifischen Schlüssel zurück, sobald eine Variable ihre
-  `VariableCustomPresentation` INLINE trägt (kein Profilname, keine
-  Template-GUID) - ein sehr verbreitetes Muster, da viele Symcon-
-  Gerätetreiber dieselbe JSON-Struktur direkt in jede einzelne Variable
-  schreiben, statt ein gemeinsames Template-Objekt zu referenzieren. Fällt
-  jetzt zusätzlich auf einen Hash über den tatsächlich extrahierten,
-  übersetzbaren Inhalt (Feldpfad + Text) zurück, wenn weder Profil noch
-  Template vorliegen - zwei Variablen mit identischem Inhalt landen jetzt
-  automatisch in derselben Zeile, auch ganz ohne eine geteilte Symcon-
-  Objektidentität dahinter. Profil-/Template-basierte Gruppierung (bereits
-  korrekt) bleibt davon komplett unberührt und hat weiterhin Vorrang - das
-  ist bewusst so: verweisen zwei Variablen auf ein ECHTES, aber (durch ein
-  fremdes Modul, z. B. Echo/Alexa) je Geräteinstanz eigenes Profil, bleiben
-  sie zurecht getrennte Zeilen, selbst wenn ihr Inhalt gerade zufällig
-  übereinstimmt - sonst würde eine spätere, unabhängige Änderung an EINEM
-  der beiden Profile fälschlich beide Zeilen gemeinsam betreffen. Hinweis:
-  nach dem ersten Rescan mit diesem Build bleiben die alten,
-  variablenspezifischen Zeilen als verwaiste Duplikate bestehen (wie bei
-  jedem entfernten/veränderten Objekt, siehe Abschnitt "Bekannte
-  Einschränkungen") - können nach Prüfung der neuen, zusammengeführten
-  Zeile manuell gelöscht werden.
-
-  **Build 76 ergänzt "Aufräumen": verwaiste Zeilen künftig per Klick statt
-  einzeln von Hand entfernbar.** Nutzer-Wunsch nach einem Feature-Vergleich
-  mit Symcons eigener, konkurrierender Lösung - die hat eine entsprechende
-  Funktion, Simple Locale bislang nicht. Bereits mit Build 51 (Root-Baum-
-  Merge) bewusst als Designentscheidung eingeführt: Rescan/Auto-Rescan
-  lassen Zeilen, deren Objekt inzwischen gelöscht oder aus der
-  Visualisierung entfernt wurde, absichtlich unangetastet stehen (siehe
-  `MergeRows`/`MergeEnumerationOptions`/`MergeAutomationRows`) - ein
-  Sicherheitsnetz gegen eine versehentlich falsche/unvollständige Root-
-  Kategorie, das schon mehrfach in dieser Historie vor Datenverlust
-  geschützt hat (u. a. Build 75s eigene Migrationsnotiz direkt darüber).
-  Der neue Button "Übersetzungen gelöschter Elemente in der Visualisierung
-  entfernen" (siehe [Abschnitt 5](#5-einrichten-der-instanzen-in-symcon),
-  Absatz "Aufräumen: verwaiste Zeilen endgültig entfernen") macht diese
-  bislang nur manuelle, zeilenweise Aufräumarbeit zu einer bewussten,
-  expliziten Ein-Klick-Aktion - mit ausdrücklicher Warnung im Formular,
-  dass (anders als ein normaler Rescan) dabei tatsächlich unwiederbringlich
-  gelöscht wird, falls die Root-Kategorie gerade falsch/unvollständig
-  gewählt ist. "Begrüßung" bleibt bewusst ausgenommen (keine gescannte
-  Liste, sondern eine einzelne direkt konfigurierte Einstellung).
-
-  **Build 77 behebt eingefrorene deutsche Gast-Hinweise nach einer
-  Anbieter-Pause und erweitert das Info-Popup der Kachel.** Live gemeldet:
-  bei aktiv gewählter englischer Gast-Sprache blieben der
-  Pausiert-Hinweis ("Übersetzung pausiert bis...") und der
-  Statistik-Hinweis unter dem Dropdown trotzdem auf Deutsch stehen.
-  Ursache: `EnsureGuestLanguageNamesFresh()` (der Cache für alle
-  live in die Gast-Sprache übersetzten UI-Texte, max. 1x/Tag
-  aktualisiert) lief während einer AKTIVEN Anbieter-Pause, der
-  Übersetzungsversuch schlug dadurch für JEDEN Text zwangsläufig fehl
-  und fiel korrekt auf den rohen deutschen Text zurück - wurde
-  anschließend aber trotzdem als "heute schon erfolgreich aktualisiert"
-  verbucht und dadurch bis zu 24 Stunden lang nicht erneut versucht,
-  selbst nachdem die Pause längst vorbei war. Behoben durch dieselbe
-  Kurzschluss-Prüfung wie in `TranslateChunk()` (während einer aktiven
-  Pause lohnt sich gar kein Versuch, der bestehende - zuletzt ECHT
-  erfolgreich übersetzte - Cache bleibt unangetastet) plus eine zweite
-  Absicherung: der Cache gilt nur dann als "heute schon frisch", wenn
-  wirklich mindestens ein Text erfolgreich übersetzt wurde, nicht bei
-  einem kompletten (auch anbieter-pause-unabhängigen) Fehlschlag.
-  Zusätzlich, auf Nutzer-Wunsch, zeigt das Info-Popup der Kachel (ⓘ-Symbol)
-  jetzt zusätzlich dieselbe Übersetzungsstatistik (Seit Inbetriebnahme/
-  Stündlich/Insgesamt/Durch den Cache eingespart, wie im
-  Konfigurationsformular) sowie - falls gerade aktiv - einen Kurzhinweis
-  zur laufenden Anbieter-Pause, beides live in die jeweils aktive
-  Gast-Sprache übersetzt. Die bisherige Überschrift "Hinweise" wurde durch
-  App-Name + Lizenz-Edition ersetzt (z. B. "Simple Locale - Pro Edition",
-  ohne Lizenz schlicht "Simple Locale") - bewusst NICHT übersetzt, eine
-  Marken-/Editionsbezeichnung ist sprachunabhängig, genau wie
-  `$licenseInfo['edition']` im Konfigurationsformular selbst bereits als
-  roher Wert behandelt wird.
-
-  Außerdem, ebenfalls auf Nutzer-Wunsch: das 🌐-Emoji links neben dem
-  Sprach-Dropdown wurde durch das eigentliche Simple-Locale-Symbol ersetzt
-  (`libs/assets/module_icon_48.png`, als Base64-Grafik eingebettet - kein
-  öffentlicher Pfad/Webhook nötig, funktioniert dadurch überall
-  identisch). Fällt auf die alte 🌐-Glyphe zurück, falls die Bilddatei aus
-  irgendeinem Grund nicht lesbar ist. Die zugehörige Einstellung heißt
-  jetzt "Simple-Locale-Symbol in der Kachel anzeigen" (Property/Attribut-
-  Name `ShowGlobeIcon` und CSS-Klasse `ipssl-globe` bleiben aus
-  Kompatibilitätsgründen unverändert - siehe Abschnitt 7 für eigene,
-  darauf aufbauende Kachel-Anpassungen).
-
-  **Build 78 macht die festen Gast-Oberflächentexte komplett unabhängig von
-  Anbieter-Pausen, ergänzt den Pause-Grund und weitere kleinere
-  Verbesserungen.** Der eigentliche Kern dieses Builds, direkte Folge des
-  in Build 77 gefundenen Bugs: die festen Gast-Oberflächentexte
-  ("Übersetzung pausiert bis", die Statistik-Beschriftungen, der
-  Info-Popup-Hinweistext, ...) laufen ab sofort NICHT mehr über einen
-  24h-Live-Übersetzungs-Cache (`EnsureGuestLanguageNamesFresh`), der -
-  genau dann, wenn er ausgerechnet während einer Anbieter-Pause aktualisiert
-  wird - für den Rest des Tages auf Deutsch hängen bleiben konnte. Diese
-  Texte werden jetzt genau wie Objektnamen/Automations beim Rescan EINMALIG
-  in alle konfigurierten Zielsprachen übersetzt und dauerhaft in einer
-  eigenen, neuen Property (`OwnUiTexts`) gespeichert - da sie fest im
-  PHP-Code stehen und sich nur mit einem künftigen Modul-Update überhaupt
-  ändern können, liegt die Übersetzung dadurch strukturell IMMER schon vor,
-  bevor eine Pause je eine Rolle spielen könnte. Bewusst OHNE eigene Liste
-  im Konfigurationsformular und ausdrücklich NICHT von "Aufräumen" (Build
-  76) betroffen - der Admin kann diese Zeilen weder versehentlich löschen
-  noch verändern, sie gehören zu keinem Symcon-Objekt und sollen dauerhaft,
-  unabhängig von jeder Admin-Aktion, vorhanden bleiben. Ändert ein
-  künftiges Modul-Update den deutschen Wortlaut eines dieser Texte, wird
-  das beim nächsten Rescan automatisch erkannt und neu übersetzt (die alte
-  Übersetzung bleibt bis dahin als Fallback sichtbar, statt sofort zu
-  verschwinden).
-
-  Zusätzlich, alles auf Nutzer-Wunsch: das Info-Popup nennt jetzt auch den
-  GRUND einer laufenden Anbieter-Pause ("Grund: Alle konfigurierten
-  Übersetzungsanbieter melden aktuell ihr Limit erreicht."), nicht mehr
-  nur "bis wann". Die Überschrift des Info-Popups wird jetzt fett
-  dargestellt - technisch über die "Mathematical Sans-Serif Bold"-Zeichen
-  aus dem Unicode-Block "Mathematical Alphanumeric Symbols" (U+1D5D4 ff.),
-  da `alert()` reiner Text ist und keine HTML-/Markdown-Formatierung
-  kennt; sehen in praktisch jedem modernen Browser/Betriebssystem
-  fettgedruckt aus, sind aber technisch eigene Zeichen statt eines
-  Formatierungsattributs (deckt nur A-Z/a-z/0-9 ab, Leerzeichen/
-  Sonderzeichen bleiben unverändert). Und: der graue Kreis-Hintergrund
-  hinter dem Simple-Locale-Symbol in der Kachel (Build 77) wurde entfernt -
-  nur noch das reine Symbol, ohne umschließende Form.
-
-  **Build 79 behebt eine Lücke bei unterschiedlichen Quellsprachen: die
-  Basissprache verschwindet nicht mehr aus der Gast-Auswahl, wenn die
-  Scan-Sprache später geändert wird.** Bisher gab es neben den echten
-  Zielsprachen eine separate Pseudo-Sprache "Original" (`ORIGINAL_IMPORT`),
-  die sich immer auf die AKTUELL eingestellte Scan-Sprache
-  (`SourceLanguage`) bezog. Das führte zu einer Lücke: wurde z. B. zuerst
-  mit Deutsch gescannt und die Scan-Sprache danach auf Englisch
-  umgestellt, verschwand Deutsch komplett aus der Gast-Auswahl - obwohl
-  bereits gescannte Objekte weiterhin ihre deutsche Zeilen-Quellsprache
-  trugen und für sie gar keine Übersetzung "zurück" nach Deutsch existierte
-  (siehe `fieldRowSourceLanguage`, eingeführt in Build 57). "Original" gibt
-  es ab jetzt nicht mehr als eigene wählbare Sprache: stattdessen sorgt
-  eine neue Methode (`EnsureSourceLanguageIsTarget()`, aufgerufen am Anfang
-  jedes `ApplyChanges()`-Laufs) dafür, dass die jeweils AKTUELLE
-  Quellsprache immer als ganz normaler, dauerhafter Eintrag in den
-  Zielsprachen (`TargetLanguages`) steht - ändert sich die Scan-Sprache
-  später erneut, bleibt der alte Eintrag als normale Zielsprache stehen,
-  statt zu verschwinden.
-
-  **Wichtig für Lizenzen mit begrenzter Sprachanzahl** (z. B. die
-  "Spezialversion"): der automatisch ergänzte Quellsprachen-Eintrag
-  unterliegt exakt derselben Lizenz-Sprachobergrenze wie jede manuell
-  hinzugefügte Zielsprache (`EnforceLicensedLanguageLimit()`, läuft direkt
-  im Anschluss). Das ist bewusst so: ohne diese Kopplung könnte man durch
-  wiederholtes Umstellen der Scan-Sprache beliebig viele "kostenlose"
-  Zielsprachen an einer lizenzierten Obergrenze vorbei ansammeln. In der
-  Praxis bedeutet das: bei einer Lizenz mit z. B. Sprachlimit 1, die
-  bereits eine Zielsprache konfiguriert hat, verbraucht ein Wechsel der
-  Scan-Sprache selbst einen Platz in dieser Obergrenze - im Zweifel wird
-  dabei sogar eine zuvor konfigurierte Zielsprache automatisch verdrängt
-  (dieselbe Kappungs-Logik wie bisher schon bei einem Lizenz-Downgrade).
-  Unlimitierte Lizenzen sind davon nicht betroffen.
-
-  Bereits bestehende Installationen: eine Instanz, deren aktive
-  Gast-Sprache (`CurrentLanguage`) noch auf der alten Pseudo-Sprache
-  "Original" stand, wird beim ersten `ApplyChanges()` nach diesem Update
-  automatisch, einmalig auf die tatsächliche Quellsprache umgeschrieben -
-  keine manuelle Nacharbeit nötig.
-
-  **Build 80 behebt zwei Nachbesserungen an Build 79, die erst beim
-  direkten Live-Test auffielen.** Erstens: ein reiner Rescan-Klick zeigte
-  die Quellsprache weder in "Zielsprachen" noch als neue Spalte bei
-  "Objektnamen"/"Eigene Texte" - `ScanRootTree()` liest die aktuelle
-  Zielsprachenliste ganz am Anfang eines Durchlaufs, WEIT BEVOR
-  `EnsureSourceLanguageIsTarget()` (das bisher nur in `ApplyChanges()`
-  hing) überhaupt zum Zug kam - der neu ergänzte Eintrag kam dadurch immer
-  einen ganzen Rescan-Durchlauf zu spät. `ScanRootTree()` ruft
-  `EnsureSourceLanguageIsTarget()` jetzt selbst, ganz am Anfang, auf - ein
-  einzelner Rescan reicht ab jetzt aus.
-
-  Zweitens, unabhängig vom ersten Fund: bei einer Lizenz mit einer
-  eingeschränkten `allowedLanguages`-Liste (nur bei gezielten
-  Promo-Lizenzen wie "Finnisch zu Nikolaus" oder der
-  "Nachbarländer"-Aktion, siehe `GetLicensedAllowedLanguages`) wurde der
-  gerade erst ergänzte Quellsprachen-Eintrag von genau dieser Prüfung in
-  JEDEM `ApplyChanges()`-Durchlauf sofort wieder entfernt, da die eigene
-  Basissprache so gut wie nie in einer thematisch engen Promo-Sprachliste
-  auftaucht - für diese Lizenzen hätte Build 79 dauerhaft überhaupt keine
-  Wirkung gezeigt, egal wie oft man "Übernehmen" klickt. Die aktuelle
-  Quellsprache ist jetzt explizit von der `allowedLanguages`-Einschränkung
-  ausgenommen (das numerische Sprachlimit selbst bleibt davon unberührt -
-  siehe oben, das ist weiterhin bewusst gewollt).
-
-  **Build 81 behebt zwei weitere Anzeige-Lücken, die erst nach Build 80 im
-  Live-Test auffielen - die Daten selbst waren zu diesem Zeitpunkt bereits
-  korrekt gespeichert (per Debug-Meldung bestätigt), es fehlte nur die
-  passende Darstellung.** Erstens übersprang `BuildLanguageColumnSet()`
-  (baut die Sprachspalten für "Objektnamen"/"Eigene Texte"/"Aufzählungs-
-  optionen"/"Automations"/"Begrüßung" auf) bislang grundsätzlich die Spalte
-  für die instanzweite Quellsprache - korrekt VOR Build 79, als ihr Inhalt
-  immer 1:1 identisch mit "Original import" war. Seitdem kann aber eine
-  EINZELNE Zeile eine abweichende eigene Quellsprache tragen (z. B. eine
-  ursprünglich englischsprachig gescannte Zeile in einem sonst deutschen
-  Baum) - für so eine Zeile zeigt "Original import" weiterhin den
-  englischen Rohtext, während die (bisher fehlende) "Deutsch"-Spalte die
-  tatsächliche deutsche Übersetzung zeigen sollte, also einen eigenen,
-  nicht-redundanten Wert. Die Spalte fehlte dadurch für den kompletten
-  Baum, unabhängig davon, ob überhaupt eine Zeile abweichende Quellsprachen
-  hatte. Für Zeilen mit einheitlicher Quellsprache bleibt der Spalteninhalt
-  weiterhin redundant zu "Original import" - bewusst in Kauf genommen,
-  keine Sonderlogik dafür.
-
-  Zweitens zeigte "Zielsprachen" nach dem automatischen Ergänzen der
-  Quellsprache (siehe Build 79) eine LEERE Zeile ohne sichtbaren
-  Sprachnamen: `BuildTargetLanguageOptions()` liefert nicht nur die Auswahl
-  für "Hinzufügen", sondern auch die Beschriftung, mit der die Liste jede
-  bereits gespeicherte Zeile anzeigt - und schloss die Quellsprache
-  ebenfalls grundsätzlich aus (plus, unter Testphase/`allowedLanguages`-
-  Einschränkung, ein zweites Mal). Beide Ausschlüsse sind jetzt entfernt
-  bzw. die Quellsprache explizit ausgenommen - dieselbe Ausnahme wie in
-  Build 80 für `EnforceLicensedLanguageLimit()`, konsistent an beiden
-  Stellen angewendet.
-
-  **Build 82, auf Nutzer-Wunsch: die Spalte der Quellsprache bleibt beim
-  Rescan nicht mehr leer, sondern übernimmt direkt den Rohtext.** Trifft
-  eine Zeile beim Rescan auf eine Zielsprache, die genau ihrer eigenen
-  Quellsprache entspricht (siehe Build 79/81), gibt es nichts zu
-  übersetzen - der Rohtext IST bereits der korrekte Inhalt. Bisher blieb
-  die Zelle in diesem Fall trotzdem leer (kein API-Aufruf, aber auch kein
-  Kopiervorgang), was in der Admin-Ansicht wie eine fehlende Übersetzung
-  aussah. Die Zelle wird jetzt direkt mit dem Rohtext befüllt - ohne
-  API-Aufruf, ohne Übersetzungs-Kontingent zu verbrauchen - unter der
-  Annahme, dass dieser Text bereits gut genug ist; der Admin kann ihn wie
-  jede andere Zelle jederzeit manuell korrigieren, eine bereits gefüllte
-  oder korrigierte Zelle wird dabei nie überschrieben.
-
-  Außerdem, ebenfalls auf Nutzer-Wunsch: das Simple-Locale-Symbol links
-  neben dem Sprach-Dropdown skaliert jetzt in der Höhe exakt auf die Höhe
-  der Dropdown-Box, statt einer festen Pixelgröße - passt sich dadurch
-  automatisch an, falls Schriftgröße/Innenabstand des Dropdowns sich
-  künftig ändern (z. B. durch eigenes Kachel-HTML, siehe Abschnitt 7).
-
-  **Build 83, auf Nutzer-Wunsch: das Panel "Übersetzungsanbieter" spiegelt
-  jetzt wider, wie zuverlässig die angezeigte Pause-Zeit je Anbieter
-  tatsächlich ist, plus dieselbe Formatierungs-Korrektur wie bei der
-  Statistik.** Bisher zeigten alle drei Anbieter (Google, DeepL,
-  kostenfreier Anbieter/MyMemory) dieselbe generische, EXPONENTIELL
-  eskalierende Schätzung ("jetzt + 15min/30min/1h/2h/... bis maximal 24h",
-  siehe `RecordProviderPaused`) als "pausiert bis" an - unabhängig davon,
-  ob diese Schätzung für den jeweiligen Anbieter überhaupt etwas mit der
-  Realität zu tun hat:
-  - **MyMemory** setzt sein kostenfreies Tageskontingent nachweislich
-    zuverlässig um Mitternacht UTC zurück (fest, bekannt) - die generische
-    "jetzt + 24h"-Schätzung konnte dadurch je nach Tageszeit des
-    Fehlschlags um bis zu fast 24 Stunden danebenliegen. Wird jetzt exakt
-    auf die nächste UTC-Mitternacht berechnet (`GetNextUtcMidnightTimestamp`) -
-    sowohl beim eindeutigen `quotaFinished`-JSON-Signal als auch beim
-    generischen HTTP-429-Pfad, sofern dort ein Tageskontingent (nicht nur
-    ein kurzes Burst-Limit) erkannt wurde.
-  - **Google** liefert dagegen keine verlässliche Reset-Zeit (siehe
-    `RecordProviderPaused`: live beobachtet, dass ein erkanntes Rate-Limit
-    trotzdem über Stunden bestehen blieb) - die Zeile heißt jetzt
-    "voraussichtlich pausiert bis" statt schlicht "pausiert bis", um die
-    angezeigte Zeit klar als Schätzung statt als Zusage zu kennzeichnen.
-  - **DeepL** bekommt dieselbe "voraussichtlich"-Formulierung PLUS einen
-    zusätzlichen Hinweis darunter: bei DeepL ist ein aufgebrauchtes
-    Kontingent nicht garantiert automatisch zurückgesetzt - bloßes Warten
-    hilft dann nicht, nur ein Kauf bei DeepL oder ein neuer API-Key.
-
-  Außerdem, wie von der Statistik-Sektion bekannt: die bisher separat
-  schwebende ":" -Beschriftung (eigenes Label-Element, dadurch je nach
-  Länge des Anbieternamens unterschiedlich weit vom Text entfernt) ist
-  jetzt direkt an den Anbieternamen angehängt ("Google Cloud Translate:"
-  statt "Google Cloud Translate" + ":" als getrennte Elemente) - dieselbe
-  Technik wie bei "Stündlich:"/"Insgesamt:" im Statistik-Panel.
-
-  **Build 84 behebt zwei weitere, live gefundene Probleme.** Erstens war
-  das Simple-Locale-Symbol nach Build 82 auf manchen Kacheln sichtbar
-  GRÖSSER als das Dropdown, nicht exakt gleich hoch: die Höhenanpassung
-  lief über `align-self: stretch`, was das Icon auf die Höhe der GESAMTEN
-  Zeile (`.ipssl-select-row`) skalierte - in der echten Kachel-Darstellung
-  bekommt diese Zeile aber offenbar mehr Höhe zugewiesen, als das Dropdown
-  selbst braucht, wodurch auch das Icon zu groß wurde. Gelöst über eine
-  gemeinsame, feste CSS-Variable (`--ipssl-control-height`), die Dropdown
-  UND Icon jetzt beide explizit auf denselben Wert setzt - unabhängig
-  davon, wie viel Höhe die umgebende Zeile tatsächlich bekommt.
-
-  Zweitens, deutlich wichtiger: eine String-Variable im gescannten Baum
-  kann statt echtem Gast-Anzeigetext auch Konfigurations-/Steuerdaten für
-  ein GANZ ANDERES Modul enthalten (live beobachtet: eine
-  Favoriten-/Playlist-Liste mit Inhalt wie
-  `{"musicProvider":"CLOUDPLAYER","searchPhrase":"Mein Discovery Mix"}`).
-  Simple Locale übersetzte diesen Rohtext bisher wie gewöhnlichen
-  Fließtext - Google/DeepL lieferten dabei u. a. HTML-kodierte
-  Anführungszeichen (`&quot;` statt `"`) zurück, was die JSON-Struktur für
-  das eigentlich konsumierende Skript zerstörte (z. B. erwartete dieses
-  Skript für `musicProvider` einen bestimmten, festen Wert). Eine gezielte
-  "nur die Anzeigetexte innerhalb des JSON übersetzen, Struktur/Schlüssel
-  erhalten"-Lösung wäre technisch nicht zuverlässig umsetzbar: strukturelle
-  Schlüssel/Enum-Werte (z. B. `"CLOUDPLAYER"`) lassen sich innerhalb
-  desselben JSON nicht verlässlich von echtem, übersetzbarem Anzeigetext
-  unterscheiden - eine "intelligente" JSON-Teilübersetzung würde ebenso oft
-  falsch raten und stattdessen ein trügerisches Sicherheitsgefühl erzeugen.
-  Erkennt Simple Locale jetzt, dass ein Rohtext gültiges JSON ist (beginnt
-  mit `{` oder `[` UND lässt sich vollständig parsen - ein einzelnes Wort
-  oder eine Zahl wie "42"/"true" zählt bewusst NICHT als JSON, da das
-  weiterhin ganz normaler übersetzbarer Text sein kann), wird dieser
-  Rohtext von der Übersetzung komplett ausgenommen - für JEDE Gast-Sprache
-  bleibt automatisch der unveränderte Rohtext sichtbar (bestehender
-  Rohtext-Fallback, keine neue Logik nötig). Bereits VOR diesem Update
-  fehlerhaft übersetzte JSON-Zellen bleiben bestehen (wie bei jeder anderen
-  Fehlübersetzung, siehe unten) - einmalig die betroffene Zelle leeren,
-  "Übernehmen" klicken, dann erneut Rescan ausführen, danach bleibt sie
-  dauerhaft leer/unverändert (kein erneuter Übersetzungsversuch mehr).
-
-  **Build 85, auf Nutzer-Wunsch: die eigenen Gast-Oberflächentexte (siehe
-  Build 78) bringen jetzt feste Standard-Übersetzungen fürs Ausliefern mit
-  - für de/en/es/it/fr/nl sowie alle `TRIAL_LANGUAGE_CODES` (isländisch,
-  walisisch, zulu, māori, latein) steht die Übersetzung dieser Texte sofort
-  bereit, ganz ohne einen einzigen API-Aufruf bei irgendeinem Provider zu
-  verbrauchen - selbst direkt nach einer frischen Installation.** Neue
-  Konstante `OWN_UI_TEXT_BUNDLED_TRANSLATIONS`, eingebunden in
-  `MergeOwnUiTextRows()`: füllt beim Rescan JEDE noch leere Sprachspalte
-  einer dieser mitgelieferten Sprachen direkt mit dem fest hinterlegten
-  Text - unabhängig von den aktuell konfigurierten Zielsprachen, damit die
-  Übersetzung sofort bereitsteht, sobald eine dieser Sprachen jemals als
-  Zielsprache gewählt wird. Eine bereits vorhandene (echte, per Provider
-  erzeugte) Übersetzung wird dabei nie überschrieben. en/es/it/fr
-  übernehmen bewusst denselben Wortlaut wie die längst vorhandenen
-  Konsolensprachen-Übersetzungen derselben deutschen Texte (z. B.
-  "Stündlich:" → "Hourly:"), damit Konsolen- und Gast-Oberfläche
-  konsistent klingen.
-
-  **Qualitäts-Hinweis:** für die fünf Testphasen-Sprachen (is/cy/zu/mi/la)
+* **Qualitäts-Hinweis:** für die fünf Testphasen-Sprachen (is/cy/zu/mi/la)
   gibt es keine Konsolensprachen-Referenz zum Abgleich, und die
   Übersetzungsqualität für diese seltener unterstützten Sprachen -
   insbesondere Zulu und Māori - ist spürbar weniger zuverlässig
@@ -1010,87 +191,7 @@ Beschreibung des Moduls.
   Zeilen sind (wie alle `propertyOwnUiTexts`-Zeilen) bewusst NICHT über das
   Konfigurationsformular editierbar - eine Korrektur kann aktuell nur über
   ein künftiges Modul-Update erfolgen.
-
-  Außerdem, ebenfalls auf Nutzer-Wunsch: das Panel "Übersetzungsanbieter"
-  nutzt für MyMemory jetzt den WIRKLICH genauen Reset-Zeitpunkt statt der
-  Build-83-Annahme "nächste UTC-Mitternacht" - MyMemorys Fehlermeldung
-  nennt die verbleibende Wartezeit meist direkt und exakt (z. B. "NEXT
-  AVAILABLE IN 02 HOURS 51 MINUTES 23 SECONDS"), live beobachtet und
-  spürbar präziser als die reine Mitternachts-Annahme (das Kontingentfenster
-  scheint nicht zwingend exakt auf UTC-Mitternacht zu fallen, sondern eher
-  rollierend ab dem ersten Verbrauch zu laufen). Neue
-  `ParseMyMemoryNextAvailableTimestamp()` extrahiert diesen Countdown direkt
-  aus MyMemorys Antworttext; die UTC-Mitternacht-Berechnung aus Build 83
-  bleibt als Rückfallwert bestehen, falls das Muster einmal nicht gefunden
-  wird (z. B. bei einer künftig geänderten Formulierung).
-
-  **Build 86 behebt einen Bug in Build 85, live gefunden: eine bereits als
-  Gast-Sprache aktive, mitgelieferte Sprache (z. B. Englisch) zeigte
-  trotzdem den deutschen Rohtext.** Ursache: die neuen mitgelieferten
-  Übersetzungen (`OWN_UI_TEXT_BUNDLED_TRANSLATIONS`) landeten bisher NUR
-  über `MergeOwnUiTextRows()` in der jeweiligen Zeile - und diese Funktion
-  läuft ausschließlich innerhalb `ScanRootTree()`, also nur bei einem
-  tatsächlichen Rescan. Vor dem allerersten Rescan (oder direkt nach dem
-  Update auf Build 85, bevor ein neuer Rescan lief) blieb
-  `propertyOwnUiTexts` für diese Sprache leer, und `GetOwnUiText()` fiel
-  auf den deutschen Rohtext zurück - genau das Gegenteil des in Build 85
-  versprochenen "sofort bereit, kein Rescan nötig". `GetOwnUiText()` (der
-  eigentliche Lesepfad, den jeder Gast-Text-Baustein nutzt) greift jetzt
-  zusätzlich direkt auf die mitgelieferte Übersetzungstabelle zurück, wenn
-  weder eine persistierte Zeile noch eine Zelle darin etwas liefert -
-  unabhängig davon, ob/wann je ein Rescan lief. Eine bereits persistierte
-  Zeile (echte Provider-Übersetzung, manuelle Korrektur oder ein durch
-  einen späteren Rescan eingetragener Bundled-Wert) hat weiterhin Vorrang
-  vor diesem Fallback.
-
-  **Build 87 behebt zwei weitere, live gefundene Probleme und dokumentiert
-  eine strukturelle Einschränkung.**
-
-  Erstens: eine korrekte, mit hoher Konfidenz bestätigte Übersetzung, die
-  zufällig identisch zum Ausgangstext blieb (z. B. "Cover" bleibt auch auf
-  Spanisch "Cover" - ein echtes Lehnwort, von MyMemory selbst mit
-  `match: 1` bestätigt), wurde bisher fälschlich als gescheiterter
-  Übersetzungsversuch gewertet und dauerhaft verworfen - die Zelle blieb
-  leer UND wurde bei JEDEM weiteren Rescan erneut angefragt, ohne je
-  "fertig" zu werden (treffend als drohender Deadlock beschrieben: Zellen,
-  deren korrekte Übersetzung zufällig gleich dem Rohtext bleibt, wie auch
-  technische, gar nicht übersetzbare Bezeichner wie `SetVisibilityOff`
-  innerhalb von Automatisierungs-Aktionsnamen, konnten so nie einen
-  stabilen, gecachten Endzustand erreichen). Ursache war eine
-  Unterscheidungslücke: `TranslateBatchUncached()` fällt bei einem
-  ECHTEN Anbieter-Fehlschlag bewusst auf den unübersetzten Rohtext zurück
-  (verhindert eine leere/kaputte HTML-Struktur, siehe Build-70-Historie),
-  aber das Ergebnis sah für die aufrufende Stelle identisch aus wie eine
-  ECHTE, zufällig gleichbleibende Übersetzung - beide wurden bisher über
-  einen reinen Textvergleich ("Ergebnis == Rohtext?") auseinandergehalten,
-  einer strukturell unzuverlässigen Heuristik. `TranslateBatchUncached()`
-  liefert jetzt zusätzlich ein echtes, aus `TranslateChunk()` stammendes
-  `failed`-Flag pro Text mit - kein Rätselraten mehr nötig: eine echte
-  Übersetzung (auch wenn zufällig identisch) gilt jetzt korrekt als
-  erfolgreich und wird gecacht, nur ein wirklicher Fehlschlag bleibt leer
-  und offen für den nächsten Versuch.
-
-  Zweitens: der rote "Übersetzung pausiert bis..."-Hinweis auf der Kachel
-  blieb nach Ende einer Anbieter-Pause teils MINUTENLANG stehen, obwohl
-  `GetGlobalPauseUntil()` selbst jederzeit korrekt (nicht
-  zwischengespeichert) den aktuellen Zustand lieferte und ein manueller
-  Anbieter-Test im Formular längst wieder Erfolg meldete - reines
-  Anzeigeproblem, keine fehlerhafte Übersetzungs-Entscheidung dahinter.
-  `ClearProviderPause()` (läuft bei jedem echten Übersetzungserfolg)
-  aktualisiert zwar sofort den gespeicherten Pause-Zustand, pusht aber nie
-  von sich aus eine aktualisierte Anzeige an bereits geöffnete
-  Gast-Kacheln - und auch ein rein zeitliches Ablaufen der Pause (ganz
-  ohne neuen Übersetzungsversuch) hat dafür ohnehin keinen eigenen
-  Auslöser. Der bisher nur für die Statistik-Zeile gedachte periodische
-  Kachel-Refresh (`RefreshTranslationStatsTile`, zuvor an
-  `propertyShowTranslationStats` gekoppelt und alle 10 Minuten) läuft ab
-  jetzt IMMER (unabhängig von dieser Einstellung) und alle 2 statt 10
-  Minuten - er aktualisiert ohnehin die komplette Gast-Anzeige in einem
-  Rutsch (Statistik UND Pause-/Testphase-Hinweis), verursacht dabei
-  weiterhin keinen einzigen API-Aufruf (reine `PushVisualizationUpdate()`-
-  Neuberechnung).
-
-  **Bekannte, strukturelle Einschränkung (dokumentiert, kein Code-Fix
+* **Bekannte, strukturelle Einschränkung (dokumentiert, kein Code-Fix
   möglich): live per VM_UPDATE nachübersetzte "Eigene Texte" können für
   einen kurzen Moment unübersetzt sichtbar sein**, wenn eine externe
   Quelle (z. B. ein Wetter-/Sensor-Modul) denselben Wert schreibt, den es
@@ -1110,381 +211,6 @@ Beschreibung des Moduls.
   diese umstellen - dann schreibt die externe Quelle nie direkt in eine
   gast-sichtbare Variable, nur Simple Locales bereits übersetztes
   Ergebnis erreicht sie.
-
-  **Build 88, auf Nutzer-Wunsch: "Baum neu einlesen" zeigt jetzt einen
-  Fortschrittsbalken im Konfigurationsformular, solange der Rescan
-  läuft.** Bisher war ein länger laufender Rescan (viele neue
-  Übersetzungen, mehrere API-Aufrufe) im Formular selbst nicht von einem
-  eingefrorenen/nicht reagierenden Modul zu unterscheiden - erkennbar war
-  das bislang nur über die Debug-Meldungen-Konsole, die kaum ein
-  gewöhnlicher Nutzer je öffnet. Neues `ProgressBar`-Formularelement
-  (`indeterminate`, also eine laufende Animation statt eines exakten
-  Prozentwerts - eine echte Prozentanzeige würde eine deutlich tiefere
-  Umstrukturierung der Übersetzungs-Batches erfordern, für vergleichsweise
-  wenig zusätzlichen Nutzen), dessen Beschriftung während `ScanRootTree()`
-  bei jedem Verarbeitungsschritt per `UpdateFormField()` live aktualisiert
-  wird ("Baum wird eingelesen…" → "Objektnamen und Texte werden
-  übersetzt…" → "Weitere Inhalte werden übersetzt…" → "Ergebnis wird
-  gespeichert…") - nach demselben Prinzip, nach dem auch die
-  Debug-Konsole schon während eines laufenden Skripts live neue Einträge
-  zeigt, nicht erst nach Skriptende. Wird sowohl beim Abbruch (unbenannte
-  Objekte gefunden) als auch beim regulären Abschluss zuverlässig wieder
-  ausgeblendet - unabhängig davon, ob es sich um einen manuellen oder
-  einen automatischen Hintergrund-Rescan handelt (letzterer ruft nie
-  `ReloadForm()` auf, das Ausblenden darf deshalb nicht daran hängen -
-  sonst genau dieselbe Art von hängenbleibender Anzeige wie der in
-  Build 87 behobene Pause-Hinweis).
-
-  **Build 89, auf Nutzer-Wunsch: neue Liste "Eigene Übersetzungstabelle" -
-  ein admin-gepflegtes Glossar, das jeder automatischen Übersetzung
-  (Google/DeepL/MyMemory) vorgezogen wird.** Aufbau wie "Objektnamen"
-  (eine Quellsprachen-Spalte + eine Spalte je Zielsprache), aber komplett
-  eigenständig admin-editierbar statt aus dem Objektbaum gescannt - über
-  den "Hinzufügen"-Button der Liste selbst legt der Admin eine neue Zeile
-  an, wählt die Quellsprache, trägt den Quelltext ein und füllt beliebig
-  viele Zielsprachen-Zellen aus. Trifft der Quelltext einer Zeile hier
-  (zeichengenau, kein Fuzzy-Matching) auf den Rohtext IRGENDEINER anderen
-  Zeile in dieser Instanz zu (Objektnamen, Eigene Texte,
-  Aufzählungsoptionen, Automatisierungen, Begrüßung), wird für jede
-  ausgefüllte Zielsprachen-Zelle diese Übersetzung verwendet statt eines
-  Anbieter-Aufrufs - und zwar mit höherer Priorität als sogar der interne
-  Übersetzungs-Cache. Bewusst zellenweise: eine ansonsten passende Zeile
-  mit einer noch LEEREN Zelle für eine bestimmte Zielsprache blockiert die
-  automatische Übersetzung NUR für andere, bereits ausgefüllte Sprachen
-  nicht - für diese eine Sprache läuft die automatische Übersetzung ganz
-  normal weiter. Neues Lizenz-Feature `manual_translations` (ab
-  Standard-Lizenz, unabhängig vom bestehenden `edit_translations` für das
-  nachträgliche Korrigieren einzelner Auto-Übersetzungszellen) - ohne
-  dieses Feature bleibt die Property zwar erhalten (kein Datenverlust bei
-  einem Lizenz-Downgrade), wirkt sich aber gar nicht mehr aus, weder beim
-  Bearbeiten noch bei der Anwendung bereits gespeicherter Zeilen.
-
-  **Build 90 behebt einen strukturellen Bug, live gefunden: ein
-  Sprachwechsel konnte in "Aufzählungsoptionen" ("Captions") Dopplungs-
-  Zeilen erzeugen, deren "Original import" tatsächlich die zuletzt
-  angezeigte ÜBERSETZUNG war, fälschlich als Quellsprache markiert.**
-  Zeigt eine Variable ihre Beschriftung über ein geteiltes Profil/Template
-  (z. B. "An"/"Aus"), kann Simple Locale beim Live-Anzeigen einer anderen
-  Sprache keine einzelnen Felder an einer WEITERHIN referenzierten
-  Quelle überschreiben - die Variable wird deshalb bewusst "geforkt"
-  (die Profil-/Template-Referenz entfernt, die Übersetzung stattdessen
-  direkt inline in die Variable geschrieben, siehe
-  `ApplyEnumerationOptionsToVariable`). Bis Build 90 verlor die Variable
-  dadurch aber auch dauerhaft die einzige Spur ihrer ursprünglichen,
-  geteilten Identität: ohne erkennbare Profil-/Template-Referenz fiel die
-  Zeilenerkennung beim nächsten Rescan auf einen Hash über den GERADE
-  angezeigten Text zurück (Build 75, für Variablen, die von Haus aus kein
-  geteiltes Profil/Template nutzen) - und dieser Hash änderte sich mit
-  JEDEM Sprachwechsel, weil sich der angezeigte Text änderte. Der nächste
-  Rescan erkannte die Zeile dadurch nicht wieder, hielt den gerade
-  angezeigten (oft längst übersetzten) Text für frischen Quelltext und
-  legte eine neue, falsch beschriftete Dopplungs-Zeile an - reproduzierbar
-  bei jedem automatischen Rescan, solange die Kachel auf einer anderen
-  als der Quellsprache stand. Der bereits vor dem allerersten Fork
-  gesicherte Rücksprung-Zustand
-  (`attributeEnumerationPresentationBackup`, ursprünglich nur fürs
-  Zurückschalten auf "Original" gedacht) kennt die echte, stabile
-  Profil-/Template-Referenz aber weiterhin - `GetPresentationSourceKey()`
-  leitet den Zeilen-Schlüssel jetzt bevorzugt daraus ab, sobald ein
-  Backup existiert, unabhängig davon, welche Sprache die Variable gerade
-  live anzeigt.
-
-  Zweiter, tieferer Teil desselben Bugs: Variablen OHNE jedes geteilte
-  Profil/Template (eigenständige, direkt vom Gerätetreiber gesetzte
-  Inline-Präsentation, siehe Build 75) verlieren durch den Fork nicht nur
-  eine Referenz, sondern ihren GESAMTEN stabilen Rohtext - für sie reicht
-  die stabile Referenz allein nicht, da der Rohtext selbst (nicht nur ein
-  Verweis darauf) in den Content-Hash einfließt. `ReadTranslatablePresentation()`
-  liest den zu extrahierenden Inhalt jetzt ebenfalls bevorzugt aus dem
-  Backup, sobald dieses selbst keine Profil-/Template-Referenz enthält -
-  hat der Backup dagegen eine Referenz (der häufigere Fall), bleibt es bei
-  der live aufgelösten Präsentation für den Inhalt (der Backup ist dort
-  nur eine dünne Referenz ohne eigene Beschriftungen), die
-  Zeilenerkennung ist für diesen Fall bereits über die Schlüssel-Ableitung
-  oben abgesichert.
-
-  **Bereits bestehende Installationen:** durch den Bug bereits entstandene
-  Dopplungs-Zeilen verschwinden nicht automatisch rückwirkend - einmal
-  "Baum neu einlesen" (damit die betroffenen Variablen wieder unter ihrem
-  stabilen Schlüssel erkannt werden) und danach einmal "Aufräumen"
-  (entfernt die jetzt nicht mehr auffindbaren alten Dopplungs-Zeilen,
-  siehe Build 76) klicken.
-
-  **Build 91, auf Nutzer-Wunsch: der "Hinzufügen"-Button der "Eigenen
-  Übersetzungstabelle" ist jetzt ebenfalls deaktiviert, wenn die Lizenz
-  das Feature `manual_translations` (Build 89) nicht enthält.** Die
-  Zellen selbst waren dafür bereits schreibgeschützt (siehe
-  `BuildListColumns`), der Button blieb bisher aber unabhängig davon
-  klickbar - ein Klick legte eine neue Zeile an, die sich anschließend
-  gar nicht mehr bearbeiten ließ, ein verwirrender Sackgassen-Zustand.
-  Außerdem ist `manual_translations` jetzt ab der Standard-Lizenz Teil
-  des offiziellen Feature-Sets (Standard UND Pro, siehe
-  `includes/products.php` im Shop-Repository) - bereits VOR diesem Update
-  ausgestellte Lizenzschlüssel enthalten dieses Feature naturgemäß noch
-  nicht (ein Lizenzschlüssel ist beim Ausstellen kryptografisch signiert
-  und lässt sich nicht nachträglich ändern) und benötigen einen neu
-  ausgestellten Schlüssel, um die "Eigene Übersetzungstabelle"
-  tatsächlich nutzen zu können.
-
-  **Build 92:** die Überschrift der Liste selbst ("Eigene
-  Übersetzungstabelle", live gemeldet) fehlte noch in `locale.json` und
-  blieb dadurch bei jeder Konsolensprache auf Deutsch stehen, obwohl die
-  Spalten-/Beschreibungstexte bereits korrekt übersetzt wurden - Build 89
-  hatte nur Letztere ergänzt, den kurzen Listentitel selbst aber
-  übersehen. Ergänzt für en/es/it/fr.
-
-  **Build 93 behebt einen wichtigen Bug in der "Eigenen
-  Übersetzungstabelle" (Build 89): ein Glossar-Eintrag wirkte bisher nur
-  auf noch LEERE Zellen, nicht auf bereits (ggf. falsch) automatisch
-  übersetzte.** Live gefunden: "SSW" (Windrichtung Süd-Südwest) wurde von
-  Google fälschlich als Abkürzung für "Schwangerschaftswoche" erkannt und
-  mit "week of pregnancy" "übersetzt" - ein extra dafür angelegter
-  Glossar-Eintrag ("SSW" → "SSW") blieb trotzdem komplett wirkungslos,
-  weil die betroffene Zielsprachen-Zelle bereits (falsch) befüllt war und
-  die Glossar-Prüfung bisher nur innerhalb `TranslateBatch()` lief - dort
-  aber nur für noch unübersetzte ("pending") Zellen erreichbar ist, exakt
-  wie bei jeder anderen Zelle auch (schützt normalerweise echte manuelle
-  Korrekturen vor versehentlichem Überschreiben). Das widersprach aber der
-  ursprünglichen Anfrage wörtlich: ein Glossar-Eintrag soll "immer
-  Vorrang vor Online-Übersetzungen" haben - was nur funktionieren kann,
-  wenn er auch eine bereits gefüllte Zelle überschreiben darf. Neue
-  `ApplyManualTranslationOverrides()` läuft jetzt bei JEDEM Rescan VOR der
-  normalen Fülllogik und prüft JEDE Zelle jeder Zeile gegen das Glossar -
-  unabhängig davon, ob sie bereits befüllt ist -, und überschreibt sie,
-  sobald ein passender Eintrag mit abweichendem Wert existiert. Eine
-  bereits korrekte Zelle (Wert entspricht bereits dem Glossar-Eintrag)
-  bleibt dabei unverändert (kein unnötiges Neu-Markieren). Betrifft
-  bewusst auch die Quellsprachen-Spalte selbst (z. B. um einen Tippfehler
-  im gescannten Rohtext gezielt zu korrigieren, ohne den eigentlichen
-  Objektnamen anzufassen). Die bisherige Prüfung innerhalb
-  `TranslateBatch()` bleibt zusätzlich bestehen - notwendig für die live
-  nachübersetzten "Eigenen Texte" (siehe `ApplyTrackedVariableUpdate`),
-  die nicht über den normalen Rescan-Pfad laufen.
-
-  **Build 94, rein diagnostisch: temporäres `SendDebug`-Logging (Kategorie
-  `IPSSL_GreetingDiag`) rund um die "Begrüßung" (Modus "Variable").** Live
-  gemeldet: nach einem Sprachwechsel in der Gäste-Visu (de → en) und einem
-  anschließenden Rescan stand `ORIGINAL_IMPORT` der Begrüßungs-Zeile
-  fälschlich auf dem englischen Text, obwohl die Quellsprache weiterhin
-  `de` ist - trotz des seit Build (siehe Commit `6ae1bd3`) bestehenden
-  `IsSourceLanguageActive`-Schutzes in `MergeGreetingRows()`, der genau
-  das verhindern soll. Reine Code-Analyse konnte den genauen Leck-Punkt
-  nicht zweifelsfrei bestimmen - zwei Kandidaten: (a) der Schutz in
-  `MergeGreetingRows()` selbst greift in diesem konkreten Fall nicht wie
-  erwartet, oder (b) der eigentliche Schreib-/Übersetzungsvorgang von
-  `ApplyGreetingLanguage()` (beim Sprachwechsel selbst, nicht erst beim
-  Rescan) über `HandleTrackedVariableUpdate()`/`ApplyTrackedVariableUpdate()`
-  läuft - letztere Funktion hat KEINEN `IsSourceLanguageActive`-Schutz und
-  würde jeden als "extern" erkannten Schreibvorgang ungeprüft als frischen
-  Rohtext übernehmen. Das Logging deckt beide Kandidaten ab: Reihenfolge
-  von `SetValueString()` und dem Self-Write-Guard-Attribut in
-  `WriteTrackedValueString()`, den tatsächlich ausgewerteten
-  `IsSourceLanguageActive`-Wert in `ScanRootTree()`, sowie jeden Schreibpfad
-  in `ApplyGreetingLanguage()`/`ApplyTrackedVariableUpdate()` mit den
-  jeweils beteiligten Rohwerten. Rein additiv, keine Verhaltensänderung
-  (volle Regressionssuite unverändert grün) - wird entfernt bzw. durch die
-  eigentliche Korrektur ersetzt, sobald die Logs den Mechanismus bestätigt
-  haben.
-
-  **Build 95 behebt den in Build 94 diagnostizierten Bug und entfernt das
-  dortige temporäre Logging wieder.** Der Log-Dump des Nutzers hat den
-  Mechanismus zweifelsfrei belegt (Kandidat b aus Build 94): `existingGreeting`
-  und `mergedGreeting` beim Rescan waren korrekt deutsch -
-  `IsSourceLanguageActive` in `MergeGreetingRows()` funktioniert also wie
-  vorgesehen. Trotzdem zeigte die Zeile direkt nach `IPS_SetProperty()` +
-  `IPS_ApplyChanges()` wieder den englischen Text, während `de`/`en`/`es`
-  unverändert blieben - ein klares Zeichen für einen gezielten Feld-Patch,
-  keinen vollständigen Zeilenaustausch. Ursache: irgendwann zuvor (Zeitpunkt
-  unklar, vermutlich ein seltenes Timing-Fenster im Selbst-Schreib-Schutz
-  `attributeLastSelfWrittenValues`) hatte `WriteTrackedValueString()`s
-  eigener Übersetzungs-Schreibvorgang für die Begrüßungsvariable
-  `HandleTrackedVariableUpdate()` ausgelöst, ohne vom Selbst-Schreib-Schutz
-  erkannt zu werden - `ApplyTrackedVariableUpdate()` hat den englischen Text
-  daraufhin (ohne jeden `IsSourceLanguageActive`-Schutz, den nur
-  `MergeGreetingRows()` kennt) als vermeintlich frischen deutschen Rohtext
-  übernommen und über `BufferPendingTrackedRowUpdate()` gepuffert. Dieser
-  längst veraltete Puffer-Eintrag blieb liegen, bis der o. g. Rescan lief:
-  dessen abschließendes `IPS_ApplyChanges()` reentert in `ApplyChanges()`,
-  das als einen seiner ersten Schritte `FlushPendingTrackedRowUpdates()`
-  aufruft - und DAS hat den falschen Puffer-Eintrag über das gerade eben
-  korrekt geschriebene Ergebnis geschrieben. Ein zeitpunktunabhängiger Fix
-  direkt am Symptom statt am (schwer greifbaren) Timing-Fenster:
-  `ApplyTrackedVariableUpdate()` bricht jetzt sofort ab, wenn der neu
-  beobachtete Wert exakt der bereits gespeicherten Übersetzung dieser Zeile
-  für die AKTUELL aktive Sprache entspricht - das ist so gut wie sicher ein
-  Echo des eigenen Schreibvorgangs, kein echter externer Inhaltswechsel (ein
-  Fremdmodul/Zeitplan-Skript, das z. B. eine Tageszeit-Begrüßung schreibt,
-  träfe kaum je zufällig exakt den Text einer vorhandenen Übersetzung). Der
-  legitime externe-Update-Anwendungsfall aus Build 70 (z. B. ein häufig
-  aktualisiertes Wetter-Widget) bleibt davon unberührt, da ein echter neuer
-  Messwert praktisch nie mit einer gespeicherten Übersetzung übereinstimmt.
-
-  **Build 96, auf Nutzer-Wunsch: sichtbare Rückmeldung für alle Buttons im
-  Konfigurationsformular.** "Lizenz aktivieren" hatte bereits ein passendes
-  Popup und "Übersetzungs-Cache leeren" stellte sich bei der Durchsicht als
-  bereits vollständig umgesetzt heraus (Popup `CacheClearedPopup` mit
-  Erfolgsmeldung, in allen vier Sprachen lokalisiert, nach demselben Muster
-  wie das Ergebnis-Popup der Anbieter-Prüfung) - keine Änderung nötig. Neu
-  bekommen "Übersetzungen gelöschter Elemente entfernen" (Aufräumen) und
-  "Übersetzungsanbieter prüfen" je einen eigenen Fortschrittsbalken
-  (`CleanupProgressBar`/`ProviderCheckProgressBar`, dieselbe `ProgressBar`-
-  Anzeige wie beim Rescan seit Build 88), sichtbar ab Klick bis kurz vor dem
-  jeweiligen Ergebnis (Popup bzw. Formular-Neuladen) - selbst wenn "Aufräumen"
-  in der Praxis meist nur einen kurzen Moment dauert, bestätigt das kurze
-  Aufblitzen dem Nutzer, dass der Klick etwas ausgelöst hat, statt scheinbar
-  wirkungslos zu bleiben. Neue gemeinsame Hilfsfunktion `SetButtonProgress()`
-  - dieselbe Live-Push-Logik wie `SetRescanProgress()`, aber ohne dessen
-  persistierten Attribut-Zustand (der nur für einen ggf. minutenlangen Rescan
-  gebraucht wird, den ein wieder geöffnetes Formular nachträglich anzeigen
-  können muss - "Aufräumen"/"Anbieter prüfen" laufen synchron innerhalb eines
-  einzigen `RequestAction()`-Aufrufs und sind dafür zu kurzlebig). Das
-  bestehende Ergebnis-Popup der Anbieter-Prüfung bleibt unverändert - der
-  Fortschrittsbalken blendet sich unmittelbar davor aus.
-
-  **Build 97, auf Nutzer-Nachfrage geprüft: die in `library.json` deklarierte
-  Mindestversion Symcon 7.1 stimmt weiterhin, ein realer Lücke in der
-  Absicherung von `ApplyEnumerationOptionsToVariable()` wurde dabei aber
-  gefunden und geschlossen.** `IPS_SetVariableCustomPresentation()` und
-  `IPS_GetVariablePresentation()` - Symcons Presentation-System, seit Build 90
-  Grundlage für die Übersetzung von Enum-/Profil-Beschriftungen (Dropdowns,
-  Status-Variablen usw.) - sind laut offizieller Symcon-Dokumentation erst
-  "seit 8.0" verfügbar. Die Lese-Seite (`ReadTranslatablePresentation()`,
-  Quelle für `propertyEnumerationOptions`) hat dafür bereits seit jeher einen
-  `function_exists('IPS_GetVariablePresentation')`-Schutz (liefert auf
-  Symcon < 8.0 einfach `null`, siehe auch [Abschnitt
-  3](#3-voraussetzungen): "bleibt komplett inaktiv, kein Fehler") -
-  `ApplyEnumerationOptionsToVariable()` (die Schreib-Seite, angewendet bei
-  jedem Sprachwechsel) hatte denselben Schutz aber NIE bekommen (nur `@`,
-  unterdrückt bloß Warnungen, keinen Fatal Error bei einer unbekannten
-  Funktion). Auf einer frisch auf Symcon < 8.0 gescannten Instanz blieb das
-  bisher folgenlos, weil `propertyEnumerationOptions` dort dank der
-  Lese-Seiten-Sperre ohnehin nie Zeilen enthält (die Schleife, die
-  `ApplyEnumerationOptionsToVariable()` aufruft, läuft dann schlicht nie an) -
-  betroffen wäre aber eine Instanz gewesen, deren Konfiguration ursprünglich
-  auf Symcon ≥ 8.0 gescannt wurde (also bereits reale Zeilen in
-  `propertyEnumerationOptions` stehen) und die anschließend auf eine Version
-  < 8.0 zurückgestuft bzw. deren Konfiguration dorthin übertragen wird - dort
-  hätte der nächste Sprachwechsel einen Fatal Error ausgelöst. Jetzt trägt
-  `ApplyEnumerationOptionsToVariable()` denselben Schutz wie die Lese-Seite.
-  Der ursprünglich für Symcon 7.1 dokumentierte Kompatibilitätsanspruch bleibt
-  damit korrekt, ohne Einschränkung.
-
-  **Build 98 behebt einen live gemeldeten Bug: das Ergebnis-Popup von
-  "Aufräumen" verschwand direkt wieder, weil der dafür nötige
-  Formular-Reload (`ReloadForm()`) im selben Aufruf lief.** `ReloadForm()`
-  ist bei "Aufräumen" nicht verzichtbar - ein bereits offenes
-  Konfigurationsformular hätte sonst weiterhin den alten (längeren)
-  Listen-Stand im "Übernehmen"-Puffer und würde ihn beim nächsten Speichern
-  über das gerade bereinigte Ergebnis zurückschreiben (dieselbe Begründung
-  gilt für den manuellen Rescan, siehe dortiger Kommentar) - aber genau
-  dieser komplette Formular-Neuaufbau riss auch das gerade erst über
-  `UpdateFormField()` gezeigte `CleanupResultPopup` sofort wieder mit aus dem
-  DOM, bevor der Nutzer die Meldung lesen konnte. Fix: `CleanupOrphanedRows()`
-  ruft `ReloadForm()` nicht mehr synchron im selben Durchlauf auf, sondern
-  blendet das Ergebnis-Popup zuerst live auf dem noch offenen Formular ein
-  (derselbe bereits bewährte Mechanismus wie bei `CacheClearedPopup`/
-  `ProviderCheckResultPopup`, die beide ganz ohne Reload auskommen) und
-  startet dann einen einmaligen, um `CLEANUP_RELOAD_DELAY_SECONDS` (5s)
-  verzögerten Timer (`ProcessDeferredCleanupReload()`), der den eigentlichen
-  Reload erst danach nachholt - genug Zeit, die Meldung zu lesen, bevor die
-  Liste im Hintergrund aktualisiert wird. Das Popup bleibt dabei nahtlos
-  sichtbar: der zugrunde liegende Zähler-Wert wird weiterhin erst beim
-  tatsächlichen Reload (in `PopulateFormElements()`) einmalig verbraucht,
-  nicht schon beim Live-Einblenden.
-
-  **Build 99, auf Nutzer-Wunsch: Tausendertrennzeichen in den
-  Übersetzungsstatistiken.** Live gemeldet anhand eines Cache-Ersparnis-Werts
-  von über 1,6 Millionen Zeichen, der als reine Ziffernfolge kaum lesbar war.
-  Neue Funktion `FormatStatsCountForDisplay()` (Format "1.622.345", dieselbe
-  feste, nicht konsolensprachenabhängige Konvention wie das bereits
-  bestehende `date('d.m.Y', ...)` an anderer Stelle) wird jetzt in den
-  Konfigurationsformular-Statistikzeilen, im Gast-Info-Popup der Kachel und
-  im kleinen Hinweistext unter dem Sprach-Dropdown verwendet. Bewusst NICHT
-  in die bestehende `FormatStatsCount()` eingebaut, sondern als eigene
-  Funktion daneben: `FormatStatsCount()` liefert auch die Werte für die
-  `<!--COUNT_TRANSLATIONS-->`/`<!--COUNT_SIGNES-->`-Platzhalter in eigenen
-  Kacheln (siehe Abschnitt 7) - dort laut Dokumentation bewusst "nur die
-  reine Zahl", da Nutzer sich daraus eigenen Text/JS/CSS bauen; ein
-  Trennzeichen hätte dort z. B. ein eigenes `parseInt()` stillschweigend
-  brechen können.
-
-  **Build 100, rein diagnostisch: temporäres `SendDebug`-Logging (Kategorie
-  `IPSSL_TranslateGapDiag`) in `FillLanguageColumn()`.** Live gemeldet: nach
-  einem vollständigen Rescan blieben viele "Eigene Texte"-Zellen für eine
-  einzelne Zielsprache (hier: Spanisch) leer, obwohl weder eine Anbieter-Pause
-  aktiv war noch der Rohtext als JSON erkannt wurde (das wäre erwartetes
-  Verhalten, siehe Build 84) - ein per Debug-Log bestätigter kompletter
-  Rescan-Durchlauf zeigte für die betroffenen Zeilen ueberhaupt KEINEN
-  `FreeTranslate_Request`/`GoogleTranslate_Mapping`-Eintrag für
-  `Text_es`, obwohl die Original-Zelle sichtbar nicht-leeren, echten Text
-  enthielt. Reine Code-Analyse von `IsRowLanguageTranslationCurrent()` (der
-  einzige Ort, an dem eine Zeile hier übersprungen werden kann, wenn
-  `$fromText` nicht leer und kein JSON ist) zeigt keinen offensichtlichen
-  Fehler - der Kernverdacht ist daher, dass die betroffene Zielsprachen-Zelle
-  entgegen dem Anschein in der Formular-Ansicht in Wahrheit NICHT den leeren
-  String `''` enthält (z. B. ein einzelnes Leerzeichen, übrig von einer
-  manuellen Lösch-Aktion im Formular) - der strikte `===''`-Vergleich würde
-  das fälschlich als "bereits übersetzt" werten. Das neue Logging macht den
-  tatsächlichen Zellenwert per `json_encode()` eindeutig sichtbar (deckt auch
-  unsichtbare Whitespace-/Sonderzeichen auf) und protokolliert für jede nicht
-  als JSON erkannte Zeile mit nicht-leerem Rohtext die vollständige
-  Entscheidungsgrundlage (aktueller Zellenwert, JSON-Erkennung,
-  "bereits aktuell"-Ergebnis, Zeitstempel). Rein additiv, keine
-  Verhaltensänderung (volle Regressionssuite unverändert grün) - wird
-  entfernt bzw. durch die eigentliche Korrektur ersetzt, sobald die Logs den
-  Mechanismus bestätigt haben.
-
-  **Build 101 behebt einen per direkter Property-Abfrage bestätigten Bug:
-  wird ein Rohtext leer, bleiben veraltete Übersetzungen in den
-  Zielsprachen-Spalten unverändert stehen, statt mit-geleert zu werden.**
-  Live gefunden (Nutzer-Diagnose über ein kleines Inspektions-Skript, siehe
-  unten): eine "Eigene Texte"-Zeile mit dynamischem Inhalt (springt je nach
-  Bedingung zwischen echtem Text und `""`) zeigte `ORIGINAL_IMPORT_Text` aktuell
-  leer, `Text_en` aber weiterhin eine längst nicht mehr zutreffende alte
-  Übersetzung. Ursache: `ApplyTrackedVariableUpdate()` übernimmt einen leeren
-  Wert korrekt als frischen Rohtext und markiert per `MarkRowSourceChanged()`
-  bewusst alle Zielsprachen-Zellen als veraltet, OHNE ihren bisherigen
-  (Fallback-)Wert zu löschen (siehe dortiger Kommentar) - die eigentliche
-  Auffrischung sollte der nächste Rescan übernehmen. `FillLanguageColumn()`/
-  `FillLanguageColumnFromRawSource()` übersprangen eine Zeile mit leerem
-  Rohtext bisher aber komplett ("nichts zu übersetzen") - dabei blieb die
-  laengst veraltete Zielsprachen-Zelle als Karteileiche stehen, statt
-  wenigstens geleert zu werden. Trifft ein Rescan die Zeile wiederholt in
-  ihrem leeren Zustand (z. B. weil der Inhalt öfter leer als gefüllt ist),
-  konnte das faktisch dauerhaft so bleiben. Fix: eine bereits befüllte
-  Zielsprachen-Zelle wird jetzt aktiv mit-geleert, sobald der Rohtext selbst
-  leer ist - konsistent mit `ResolveRowValue()`, das bei leerem Rohtext
-  ohnehin nichts anzuzeigen hätte. Entfernt außerdem das temporäre Build-100-
-  Logging wieder. **Der zweite, separate Verdacht aus derselben Live-Diagnose
-  ist inzwischen aufgeklärt** (siehe Build 102 direkt im Anschluss) - zwei
-  statische "Eigene Texte"-Zeilen mit langen Rohtexten zeigten dauerhaft
-  leeres Spanisch bei gefülltem Englisch; der Meldungen-Log des Nutzers zeigte
-  den tatsächlichen Grund: "alle Anbieter der Kette (deepl [pausiert], google
-  [pausiert], free) haben 'de' -> 'es' abgelehnt" - kein Logikfehler, sondern
-  eine echte Anbieter-Erschöpfung (siehe Build 102).
-
-  **Build 102, auf Nutzer-Hinweis: DeepLs kostenfreie Stufe ist inzwischen
-  KEIN wiederkehrendes Monats-/Tageskontingent mehr, sondern ein EINMALIGES
-  Frei-Kontingent (aktuell 1 Mio. Zeichen), danach bleibt der Key dauerhaft
-  gesperrt.** `DetectRateLimitCooldown()` behandelte DeepLs dediziertes HTTP
-  456 ("Quota Exceeded") bisher wie jedes andere erkannte
-  Tageskontingent-Signal (`DAILY_QUOTA_COOLDOWN_SECONDS`, 24h) - das Modul
-  hätte einen einmalig aufgebrauchten DeepL-Key dadurch jeden einzigen Tag
-  aufs Neue (erfolglos) angefragt, obwohl das Kontingent nie zurückkehrt.
-  HTTP 456 bekommt jetzt die deutlich längere, neue
-  `DEEPL_QUOTA_EXHAUSTED_COOLDOWN_SECONDS` (30 Tage) - stoppt die
-  automatischen Wiederholungsversuche faktisch, ohne den Anbieter für immer
-  zu deaktivieren; ein Klick auf "Übersetzungsanbieter prüfen" nach einem
-  Key-Wechsel/Upgrade beendet die Sperre wie gewohnt sofort bei Erfolg. Dabei
-  einen zweiten, unabhängigen Bug in `RecordProviderPaused()` gefunden und
-  mitbehoben: die Eskalations-Deckelung rundete JEDEN übergebenen
-  Basis-Cooldown ab `DAILY_QUOTA_COOLDOWN_SECONDS` bedingungslos auf genau
-  24h herunter - das hätte die neue, längere DeepL-Sperre stillschweigend
-  wirkungslos gemacht. Ein bereits als "langfristig bekannt" erkannter
-  Fehlschlag (Tageskontingent ODER jetzt auch DeepLs Einmalkontingent) startet
-  jetzt direkt beim tatsächlich übergebenen Wert; nur die generische
-  Kurzsperren-Eskalation (Streak-Verdopplung für ein nicht näher erkanntes
-  Rate-Limit) bleibt weiterhin auf 24h gedeckelt.
 * **Lange Texte über den kostenfreien Anbieter: 500-Byte-Grenze pro Anfrage.**
   Der kostenfreie Anbieter (MyMemory) akzeptiert pro Übersetzungsanfrage
   maximal 500 Byte Text - längere Inhalte lehnt er bewusst sofort ab
@@ -1506,148 +232,6 @@ Beschreibung des Moduls.
   zur Anbieterkette insgesamt. Kein Chunking/Aufteilen langer Texte in v1 -
   ein zu langer Text wird also nicht in mehrere kürzere Anfragen zerlegt,
   sondern komplett über den kostenfreien Anbieter übersprungen.
-
-  **Build 103 behebt einen direkten Nebeneffekt dieser Längengrenze, live
-  gefunden anhand einer irreführenden Meldungen-Log-Zeile.** Ein Eintrag
-  "alle Anbieter der Kette (deepl [pausiert], google [pausiert], free) haben
-  'de' -> 'es' abgelehnt (77 Text(e), erster Text: 'Echo Info')" sah aus, als
-  hätte selbst ein triviales 9-Zeichen-Wort abgelehnt - der zugehörige Debug-
-  Log-Eintrag zeigte für "Echo Info" aber eine echte, erfolgreiche MyMemory-
-  Antwort (HTTP 200, `quotaFinished: false`). Der Text im Log ist nur der
-  ERSTE von 77 angefragten Texten (`$Texts[0]` in der Fehler-Zusammenfassung),
-  nicht zwangsläufig der eigentliche Übeltäter. Ursache: MyMemory hat keinen
-  echten Batch-Endpunkt (ein HTTP-Request pro Text, siehe oben) -
-  `TranslateChunkFree()` brach bei EINEM einzelnen `null`-Ergebnis (egal an
-  welcher Position) bislang sofort für den GESAMTEN Aufruf ab und verwarf
-  dabei alle bereits erfolgreich übersetzten Texte desselben Aufrufs. Ein
-  einzelner über 500 Byte langer Text irgendwo unter den 77 angefragten
-  reichte also aus, um alle 76 übrigen, problemlos übersetzbaren Texte mit
-  sich zu reißen. `TranslateSingleFree()` liefert für diesen Fall jetzt `''`
-  (Leerstring) statt `null` - dasselbe Signal wie beim bereits bestehenden
-  Leerstring-Fall für einen leeren Rohtext direkt darüber -
-  `TranslateChunkFree()` fährt dadurch mit den restlichen Texten fort, statt
-  abzubrechen. Die zu lange Zelle selbst bleibt weiterhin leer (wird beim
-  nächsten Rescan erneut versucht, dann ggf. über einen zwischenzeitlich
-  wieder verfügbaren bezahlten Anbieter ohne diese Längenbegrenzung) - alle
-  anderen Texte desselben Aufrufs werden jetzt aber sofort korrekt gefüllt,
-  statt unnötig auf den nächsten Rescan warten zu müssen.
-* **Build 104, auf Nutzer-Nachfrage: eine manuell im Formular korrigierte
-  Übersetzungszelle wurde bislang nicht sofort in der Visualisierung
-  sichtbar.** Nicht wie zunächst vermutet die für externe VM_UPDATE-
-  Schreibvorgänge gedachte 12-Minuten-Debounce
-  (`PENDING_ROW_UPDATE_DEBOUNCE_SECONDS`, siehe `BufferPendingTrackedRowUpdate`
-  weiter unten) - die betrifft ausschließlich fremde Schreibzugriffe, nicht
-  eine manuelle Bearbeitung im Konfigurationsformular. Der tatsächliche Grund:
-  `ApplyLanguage()` (die Funktion, die Namen/Wert tatsächlich ans lebende
-  Objekt schreibt) lief in `ApplyChanges()` bisher NUR erneut, wenn sich
-  entweder die aktuell aktive Gast-Sprache selbst geändert hatte oder eine
-  Zeilen-Quellsprache reconciled wurde - eine reine Korrektur einer
-  Übersetzungszelle löst keines von beidem aus. Die Korrektur landete zwar
-  sofort gespeichert in der Property, wurde aber erst beim nächsten
-  tatsächlichen Sprachwechsel ans Objekt gepusht. Neue, güns­tige
-  Fingerprint-Prüfung (`ComputeActiveLanguageContentFingerprint()`, kein
-  API-Aufruf, reiner `md5()`-Vergleich über die für die aktuell aktive
-  Sprache aufgelösten Zellwerte, analog zur bereits bestehenden
-  `ComputeRowSourceLanguageFingerprint()` für Zeilen-Quellsprachen) stößt
-  `ApplyLanguage()` jetzt zusätzlich an, sobald sich irgendein für die aktuell
-  aktive Sprache relevanter Zellinhalt seit dem letzten Durchlauf geändert
-  hat - eine Korrektur an einer GERADE NICHT aktiven Zielsprache löst dabei
-  bewusst nichts aus (für den aktuellen Gast ändert sich ja nichts sichtbar).
-
-  **Build 105 behebt einen direkten Nebeneffekt von Build 104, live gefunden:
-  eine manuelle Korrektur wurde kurz angezeigt, dann aber "einen Augenblick
-  später" wieder auf den alten Wert zurückgesetzt - in der Tabelle stand
-  weiterhin die Korrektur, in der Visualisierung wieder der alte Wert.**
-  Ursache: `StagePendingTrackedRowUpdates()` (der verzögerte, gepufferte
-  Flush externer VM_UPDATE-Änderungen, siehe `BufferPendingTrackedRowUpdate`/
-  `PENDING_ROW_UPDATE_DEBOUNCE_SECONDS` oben) überschrieb Zeilenfelder beim
-  tatsächlichen Schreiben bislang bedingungslos mit dem gepufferten Wert -
-  völlig unabhängig davon, ob die Zelle inzwischen längst anderweitig
-  geändert wurde. `FlushPendingTrackedRowUpdates()` läuft am Anfang JEDES
-  `ApplyChanges()`-Durchlaufs, auch genau desjenigen, den das eigene
-  "Übernehmen" der manuellen Korrektur gerade selbst auslöst - ein zu diesem
-  Zeitpunkt noch ausstehender, längst veralteter Puffer-Eintrag (aus einem
-  früheren externen Schreibvorgang oder einem Selbst-Schreib-Echo, siehe
-  Build 95) konnte die frische Korrektur damit im selben oder einem knapp
-  späteren `ApplyChanges()`-Durchlauf kommentarlos wieder überschreiben -
-  ein Bug, der schon vor Build 104 bestand, aber unsichtbar blieb, weil
-  `ApplyLanguage()` bis dahin nur bei einem echten Sprachwechsel erneut
-  lief. Build 104s neue, häufigere `ApplyLanguage()`-Aufrufe machten genau
-  diesen alten Bug jetzt sichtbar. Fix: `BufferPendingTrackedRowUpdate()`
-  sichert jetzt zusätzlich eine Baseline (den Feldwert UNMITTELBAR VOR der
-  externen Änderung) für die beiden eigentlichen Inhaltsfelder (Rohtext und
-  ggf. die live nachübersetzte Zielsprachen-Zelle - reine
-  Zeitstempel-Buchführung bleibt unverändert bedingungslos). Beim
-  tatsächlichen Schreiben wendet `StagePendingTrackedRowUpdates()` ein
-  gepuffertes Feld nur noch an, wenn der aktuelle Zeilenwert noch exakt der
-  Baseline entspricht (also seither NICHTS anderes - typischerweise eine
-  manuelle Korrektur - die Zelle verändert hat) - andernfalls wird gezielt
-  NUR dieses eine Feld übersprungen, alle anderen gepufferten Felder
-  derselben Zeile sowie alle anderen Zeilen werden weiterhin normal
-  angewendet. Das ursprüngliche Ziel von Build 71 (ein gepufferter externer
-  Schreibvorgang darf durch ein unabhängiges "Übernehmen" nicht verloren
-  gehen) bleibt für jedes nicht betroffene Feld unverändert bestehen.
-
-  **Build 106, rein diagnostisch: Build 105 hat das live gemeldete Problem
-  NICHT behoben - live gefunden, dass es sich um "Objektnamen" handelt (nicht
-  "Eigene Texte"), für die aktuell aktive Sprache.** Ein frischer Debug-Export
-  zeigte statt eines Puffer-Flushes einen kompletten RESCAN rund 2 Sekunden
-  nach der manuellen Korrektur (zwei `EnsureSourceLanguageIsTarget`-Zeilen im
-  Abstand von 2s, vermutlich der Auto-Rescan-Timer) - `MergeRows()` (per
-  Code-Analyse bestätigt korrekt: friert Rohtext/Übersetzungen für bereits
-  bekannte `ObjectID`s ein) und ein Abgleich mit der "Eigenen
-  Übersetzungstabelle" (Build 93 - Glossareintrag würde jede Rescan-gestützte
-  Korrektur zurücksetzen) wurden beide geprüft und ausgeschlossen (keine
-  passende Glossar-Zeile vorhanden). Bleibt als Verdacht:
-  `FillLanguageColumn()`s "bereits aktuell"-Prüfung (`IsRowLanguageTranslationCurrent()`)
-  erkennt die frisch manuell bearbeitete Zelle fälschlich als "veraltet" und
-  übersetzt sie beim Rescan neu, wodurch die manuelle Korrektur überschrieben
-  wird - dieselbe Funktion, bei der Build 100/101 bereits einmal eine
-  verwandte Lücke fand (dort: Rohtext wurde leer). Neues
-  `SendDebug('IPSSL_NameRevertDiag', ...)` in `FillLanguageColumn()` (ersetzt
-  das in Build 101 entfernte `IPSSL_TranslateGapDiag`) protokolliert für jede
-  nicht-leere, nicht als JSON erkannte Zeile die vollständige
-  Pending/Aktuell-Entscheidung. Rein additiv, keine Verhaltensänderung (volle
-  Regressionssuite unverändert grün) - wird entfernt bzw. durch die
-  eigentliche Korrektur ersetzt, sobald die Logs den Mechanismus bestätigt
-  haben.
-
-  **Build 107 fand die eigentliche Ursache - nicht in `FillLanguageColumn()`,
-  sondern in `ApplyLanguage()` selbst.** Der Build-106-Diagnose-Export zeigte
-  bei allen 99 protokollierten Zeilen `isCurrent=true` (korrekt nicht
-  pending), und die tatsächlich bearbeitete `ObjectID` tauchte im gesamten
-  Log kein einziges Mal auf - der Verdacht aus Build 106 war damit widerlegt.
-  Ein direkt per Skript in der Symcon-Konsole ausgelesener Property-Snapshot
-  bewies stattdessen, dass die manuelle Korrektur den Rücksprung binnen des
-  GLEICHEN `ApplyLanguage()`-Laufs erlitt, nicht erst Sekunden später durch
-  einen Rescan. Grund: `WalkTree()` legt für JEDES Objekt mit gesetztem Ident
-  eine Zeile in "Objektnamen" an - unabhängig davon, ob es sich zusätzlich um
-  eine getrackte "Eigene Texte"-Variable handelt. Eine solche Variable landet
-  dadurch zwangsläufig gleichzeitig in BEIDEN Listen, und "Eigene Texte"
-  pflegt für ihre eigenen Zeilen eine komplett unabhängige, eigene
-  Namens-Übersetzung (`ORIGINAL_IMPORT_Name`/`Name_<lang>`). `ApplyLanguage()`
-  rief für dasselbe Objekt daher zwei voneinander unabhängige `IPS_SetName()`
-  auf - zuerst aus "Objektnamen" (die gerade korrigierte, richtige Zeile),
-  direkt darauf aus "Eigene Texte" (der eigene, unveränderte, damit
-  zwangsläufig veraltete Stand) -, wobei der zweite Aufruf den ersten
-  kommentarlos wieder überschrieb. Ein Schutz gegen doppeltes Schreiben
-  existierte bereits für Werte (`$writtenValueObjectIDs`, gegen zwei
-  "Eigene Texte"-Zeilen mit derselben `ValueObjectID`), aber nicht für Namen
-  über beide Listen hinweg. Fix: neues `$writtenNameObjectIDs`, von der
-  "Objektnamen"-Schleife befüllt - die "Eigene Texte"-Schleife überspringt
-  ihren eigenen `IPS_SetName()`-Aufruf jetzt für jedes Objekt, das bereits
-  über "Objektnamen" benannt wurde. Betraf nur Objekte, die in beiden Listen
-  gleichzeitig auftauchen (jede sinnvoll benannte "Eigene Texte"-Variable mit
-  gesetztem Ident, ein häufiger Fall) - reiner Namens-Bug, Werte
-  (`SetValueString`) waren nie betroffen. Kein Rescan/Sprachwechsel nötig,
-  damit der Fix greift: er wirkt bereits beim nächsten `ApplyLanguage()`-Lauf
-  nach der jeweiligen Korrektur. Für "Beschriftungen", "Automations" und
-  "Begrüßung" besteht dasselbe Risiko nicht - sie schreiben auf strukturell
-  andere Ziele (Custom Presentation bzw. die `Automations`-/`GreetingName`-
-  Property der Kachel-Visualisierungs-Instanz), nie über `IPS_SetName()`; der
-  einzige denkbare Überschneidungsfall (Begrüßung im Variable-Modus teilt
-  sich eine `ValueObjectID` mit einer "Eigene Texte"-Zeile) war bereits vor
-  Build 107 über denselben `$writtenValueObjectIDs`-Mechanismus abgesichert.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
@@ -2542,3 +1126,1407 @@ private function TranslateViaSimpleLocale(string $Text, string $SourceLanguage):
 Am besten bei jedem Aufruf von `GetVisualizationTile()` aufgerufen - dort
 gibt es (anders als bei Variablen-Werten) kein Caching-/Veraltungsproblem,
 da die Kachel ohnehin bei jedem Aufruf neu gerendert wird.
+
+### 11. Change-Log
+
+Chronologische Historie aller Bugfixes, Features und Nachbesserungen aus
+Build 53 bis Build 107 - ausgelagert aus Abschnitt 2, das dadurch als reine,
+aktuelle Liste bestehen bleibt. Jeder Eintrag ist unverändert (verbatim) aus
+der ursprünglichen Fassung übernommen.
+
+* **Build 53** behebt einen internen Fehler, der diesen Live-Pfad zusätzlich
+  bei JEDER Aktualisierung einer verfolgten Variable einen kompletten,
+  eigentlich nur nach einer Quellsprachen-Änderung nötigen Zeilen-Abgleich
+  (siehe "Quellsprache: pro Zeile individuell änderbar" in Abschnitt 7)
+  erneut anstoßen und dabei in kurzer Zeit die Tageskontingente mehrerer
+  Übersetzungsanbieter gleichzeitig aufbrauchen konnte - seit Build 53 läuft
+  dieser Abgleich nur noch, wenn sich seit dem letzten Mal tatsächlich eine
+  Quellsprache geändert hat (Fingerprint-Vergleich, kein API-Aufruf).
+  Fehlerdetails zu jedem fehlgeschlagenen Übersetzungsversuch (welcher
+  Anbieter, HTTP-Code, Antwort) landen seit Build 53 zusätzlich im normalen
+  Symcon-Meldungen-Log der Instanz (nicht mehr nur im Debug-Panel).
+* **Build 54**
+  korrigiert dabei einen Fehler in Build 53 selbst: die von IPSModule geerbte
+  `LogMessage()`-Methode löste, aus dem über `MessageSink()`/`VM_UPDATE`
+  erreichbaren Übersetzungs-Fehlerpfad heraus aufgerufen, zuverlässig eine
+  "InstanceInterface is not available"-Warnung aus (die Methode scheint eine im
+  MessageSink-Ausführungskontext nicht existierende Interface-Instanz
+  vorauszusetzen) - seit Build 54 wird stattdessen die kontextunabhängige globale
+  `IPS_LogMessage()`-Funktion verwendet.
+* **Build 55** führt die automatische Pause bei Rate-Limit/Tageskontingent ein. Meldet ein
+  einzelner Übersetzungsanbieter ein Rate-Limit oder ein aufgebrauchtes
+  Tageskontingent (erkannt an HTTP 429/456 bzw. HTTP 403 mit "rate limit" in
+  der Antwort), wird genau dieser eine Anbieter für eine gewisse Zeit
+  automatisch pausiert (kurze Sperre bei einem reinen Burst-Limit, 24h bei
+  einem erkannten Tageskontingent) - er wird währenddessen nicht erneut
+  angefragt, die übrigen konfigurierten Anbieter werden aber normal
+  weiterversucht. Melden ALLE konfigurierten Anbieter gleichzeitig ein
+  Limit (bei nur einem konfigurierten Anbieter genügt bereits dieser eine),
+  lohnt sich kein weiterer Versuch mehr - die Instanz pausiert dann komplett
+  bis zum frühesten Reset-Zeitpunkt: kein einziger weiterer API-Aufruf, bis
+  mindestens ein Anbieter wieder verfügbar sein sollte. Sichtbar an drei
+  Stellen: ein kleiner roter Hinweis "Übersetzung pausiert bis HH:MM" direkt
+  unter dem Dropdown in der Kachel (live in die jeweils aktive Gast-Sprache
+  übersetzt), der Instanz-Status "Aktiv, aber pausiert", und eine detaillierte
+  Aufschlüsselung (welcher Anbieter pausiert bis wann) im Panel
+  "Übersetzungsanbieter" des Konfigurationsformulars. Ein ungültiger/
+  abgelaufener API-Key oder ein Netzwerkfehler lösen dagegen NIE eine Pause
+  aus (die würde sich ja nie von selbst erledigen) - nur ein tatsächlich als
+  Rate-Limit/Kontingent erkannter Fehler.
+* **Build 57** korrigiert zwei live beobachtete Inkonsistenzen aus Build 55/56:
+  (1) Googles "User Rate Limit Exceeded" enthält keines der Tageskontingent-
+  Schlüsselwörter und bekam daher immer nur die kurze 15-Minuten-Basissperre -
+  blieb der Fehler aber über Stunden bestehen, führte das zu einem
+  "Flackern" (Google fiel nach jeder abgelaufenen Sperre wieder aus der
+  Pause-Übersicht heraus, obwohl der Fehler weiter auftrat). Jeder ERNEUTE
+  Fehlschlag ohne zwischenzeitlichen Erfolg verdoppelt die Sperrdauer jetzt
+  automatisch (15min, 30min, 1h, ... gedeckelt auf 24h) - ein tatsächlich nur
+  kurz blockierter Anbieter erholt sich weiterhin schnell, ein andauernd
+  fehlschlagender wandert automatisch Richtung Tagessperre. (2) Der
+  Instanz-Status "Aktiv, aber pausiert" wurde bisher nur GESETZT, wenn gerade
+  tatsächlich ein Übersetzungsversuch lief - fand seitdem keiner mehr statt,
+  blieb die Statuszeile veraltet stehen, obwohl die Panel-Übersicht (die
+  immer frisch berechnet wird) bereits alle Anbieter als pausiert zeigte.
+  Seit Build 57 wird der Status zusätzlich bei jedem Öffnen des
+  Konfigurationsformulars und bei jedem "Übernehmen" neu bewertet.
+* **Build 58 behebt den bisher schwerwiegendsten Fund dieser Reihe:** ein
+  HTML-Widget (z. B. das Wetter-Beispiel aus Abschnitt 1) konnte bei
+  pausierter/fehlgeschlagener Übersetzung komplett LEER erscheinen - Struktur
+  (Rahmen, Icons, Tagesüberschriften) intakt, aber jeder einzelne dynamische
+  Wert (Prozentzahlen, Windgeschwindigkeit, Temperaturen) leer, statt wie
+  erwartet auf die unübersetzte Originalsprache zurückzufallen. Ursache: die
+  Text-Knoten-Zerlegung für HTML-Inhalte (siehe Abschnitt 7, Build 47) setzte
+  ein leeres Übersetzungsergebnis je Knoten direkt in die wiederzusammengesetzte
+  HTML-Struktur ein, statt bei einem fehlgeschlagenen/pausierten
+  Übersetzungsversuch auf den unübersetzten Original-Knoten zurückzufallen -
+  betraf dadurch praktisch jedes mehrsprachige HTML-Widget, sobald auch nur
+  EIN einzelner Übersetzungsversuch fehlschlug (nicht nur während einer
+  Pause). Zusätzlich zeigte der kleine rote "Übersetzung pausiert bis"-Hinweis
+  unter dem Dropdown teils nur die Uhrzeit ohne den Text davor (derselbe
+  Grundfehler: ein leeres statt eines fehlenden Übersetzungsergebnisses wurde
+  nicht als "fehlgeschlagen, bitte Original verwenden" erkannt).
+* **Build 59 behebt dieselbe Fehlerklasse an zwei weiteren, deutlich
+  schwerwiegenderen Stellen - dem eigentlichen DATENVERLUST-Bug dieser
+  Serie:** sowohl `ReconcileRowSourceLanguageChanges()` (läuft für ALLE fünf
+  Zeilen-Properties: Objektnamen, Eigene Texte, Beschriftungen, Automations,
+  Begrüßung) als auch der `VM_UPDATE`-Live-Übersetzungspfad überschrieben eine
+  bereits vorhandene, funktionierende Übersetzungsspalte bedingungslos mit dem
+  Ergebnis eines erneuten Übersetzungsversuchs - auch dann, wenn dieser wegen
+  einer pausierten/ausgefallenen Anbieter-Kette leer zurückkam. Live
+  beobachtet: nach einer längeren Pause-Phase waren in "Objektnamen" und
+  teilweise "Eigene Texte"/"Beschriftungen"/"Automations" sämtliche
+  Zielsprachen-Spalten leer, obwohl vorher funktionierende Übersetzungen
+  vorhanden waren - nur "Original-Import" blieb erhalten. Seit Build 59 wird
+  eine bestehende Spalte bei einem fehlgeschlagenen Übersetzungsversuch NIE
+  mehr überschrieben (die zuletzt bekannte gute Übersetzung bleibt stehen,
+  bis ein neuer Versuch tatsächlich erfolgreich war), und die interne
+  Buchführung wird nur bei VOLLSTÄNDIGEM Erfolg aller Zielsprachen
+  fortgeschrieben - schlägt auch nur eine einzige fehl, bleibt die betroffene
+  Zeile für einen späteren erneuten Versuch vorgemerkt, statt fälschlich als
+  "erledigt" zu gelten. Zusätzlich überspringt `ApplyChanges()` den kompletten
+  Quellsprachen-Abgleich jetzt schon im Vorfeld, solange die Anbieter-Kette
+  komplett pausiert ist (siehe oben) - der zugehörige interne Fingerprint
+  bleibt dabei bewusst unverändert, damit der Abgleich zuverlässig nachgeholt
+  wird, sobald mindestens ein Anbieter wieder verfügbar ist. Der eigentliche
+  Übersetzungs-Cache (`GetCachedTranslation`/`StoreCachedTranslation`, siehe
+  Abschnitt 1) war von diesem Bug nie betroffen - ein fehlgeschlagenes/leeres
+  Ergebnis wurde dort schon immer bewusst NICHT zwischengespeichert (siehe
+  `TranslateBatch`: nur tatsächlich übersetzte, nicht-leere Ergebnisse landen
+  im Cache), sodass ein erneuter Versuch für denselben Text nie an einem
+  fälschlich gecachten leeren Ergebnis scheitert.
+* **Build 60** ergänzt drei Wünsche und behebt einen weiteren, unabhängigen
+  Datenverlust-Bug: (1) Ein neuer/geänderter API-Key (Google/DeepL) oder eine
+  geänderte MyMemory-Kontakt-E-Mail beendet die Pause des betroffenen
+  Anbieters jetzt sofort, statt auf den Ablauf der ggf. bereits eskalierten
+  Sperrfrist zu warten - erkannt über einen SHA-256-Hash der zuletzt
+  gesehenen Zugangsdaten (nie der Klartext-Wert selbst); beim allerersten
+  `ApplyChanges()` einer Instanz (noch kein Vergleichswert vorhanden) wird
+  das nie fälschlich als Änderung gewertet. (2) Der rote Testphase-/
+  Pausiert-Hinweis unter dem Dropdown ist jetzt mittig statt linksbündig
+  ausgerichtet. (3) Ein neuer Nutzungs-Zähler zeigt die durchschnittliche
+  Anzahl an Übersetzungsanfragen und übersetzten Zeichen pro Stunde seit der
+  allerersten Einrichtung der Instanz (nicht seit der ersten tatsächlichen
+  Übersetzung) - als Satz direkt unter der Erläuterung des "Aktiv"-Schalters
+  im Konfigurationsformular (nur bei natürlichem Öffnen/Neuaufbau des
+  Formulars berechnet, löst NIE einen erzwungenen Refresh aus - siehe
+  unten), und optional (Checkbox "Übersetzungsstatistik in der Kachel
+  anzeigen", standardmäßig aus) auch als kleiner Hinweistext in der Kachel
+  selbst, dort alle 10 Minuten aktualisiert über `PushVisualizationUpdate()`
+  (nicht über einen Formular-Reload). Für eigene Kacheln stehen dafür zwei
+  Platzhalter bereit, siehe [Abschnitt 7](#7-visualisierung).
+
+  **Zusätzlich behebt Build 60 einen weiteren, unabhängigen und
+  schwerwiegenden Bug:** Der automatische Hintergrund-Rescan (Timer, siehe
+  "Automatischer Rescan (Minuten)") teilte sich bisher denselben internen
+  Code-Pfad wie der manuelle "Baum neu einlesen"-Button - inklusive dessen
+  abschließendem `ReloadForm()`. Das bedeutete: war das
+  Konfigurationsformular gerade geöffnet und wurden dort z. B. Übersetzungen
+  von Hand bearbeitet, konnte der Hintergrund-Timer JEDERZEIT dazwischen-
+  funken und das gesamte Formular neu laden - alle noch nicht mit
+  "Übernehmen" gespeicherten Änderungen gingen dabei kommentarlos verloren.
+  Seit Build 60 lädt ausschließlich der manuelle Button das Formular neu;
+  der automatische Hintergrund-Rescan aktualisiert die Objektliste weiterhin
+  normal im Hintergrund, rührt ein gerade geöffnetes Formular aber nicht
+  mehr an.
+* **Build 61** ergänzt den Nutzungs-Zähler aus Build 60 um eine zweite
+  Statistik und einen neuen Diagnose-Button: (1) Zusätzlich zu den
+  tatsächlich gestellten Anfragen zählt die Instanz jetzt auch mit, wie viele
+  Übersetzungsanfragen und Zeichen dank des Caches (siehe oben,
+  `GetCachedTranslation`/`StoreCachedTranslation`) gar nicht erst an einen
+  Anbieter geschickt werden mussten - als reine Gesamtsumme seit
+  Inbetriebnahme (keine Pro-Stunde-Rate wie beim Hauptzähler), direkt
+  angehängt an den Statistik-Satz unter der Erläuterung des "Aktiv"-Schalters
+  im Konfigurationsformular. Für eigene Kacheln stehen dafür zwei weitere
+  Platzhalter bereit, `<!--COUNT_CACHE_TRANSLATIONS-->` und
+  `<!--COUNT_CACHE_SIGNES-->` (ebenfalls reine Ganzzahl ohne Einheit), siehe
+  [Abschnitt 7](#7-visualisierung). (2) Ein neuer Button "Übersetzungsanbieter
+  prüfen" ganz unten im Konfigurationsformular schickt eine einzelne
+  Testanfrage ("Testabfrage" -> Englisch) DIREKT an jeden gerade
+  eingerichteten Anbieter (Google/DeepL, falls ein API-Key eingetragen ist,
+  sowie immer MyMemory) - bewusst am Cache vorbei (immer eine echte, frische
+  Antwort) und unabhängig von einer eventuell laufenden Pause (die würde
+  einen normalen Übersetzungsversuch sonst überspringen, hier soll aber
+  gerade geprüft werden, ob der Anbieter TROTZ Pause inzwischen wieder
+  funktioniert). Meldet für jeden Anbieter einzeln zurück, ob die Antwort
+  angekommen ist, und beendet dabei automatisch eine noch laufende Pause,
+  sobald ein Anbieter wieder erfolgreich antwortet - nützlich z. B. direkt
+  nach einem Kontingent-/Abo-Upgrade beim Anbieter, ohne auf das
+  automatische Ablaufen der (ggf. bereits mehrfach eskalierten, siehe Build
+  57) Pause warten zu müssen.
+* **Build 62 behebt zwei live gefundene Bugs:** (1) **Der eigentlich
+  schwerwiegendere:** Der kostenfreie Anbieter (MyMemory) meldet ein
+  erschöpftes Tageskontingent NICHT über einen HTTP-Fehlercode wie Google/
+  DeepL, sondern ausschließlich über das JSON-Feld `quotaFinished` bei
+  weiterhin HTTP 200 - `DetectRateLimitCooldown`/`RecordProviderPaused`
+  (siehe oben) wurden dadurch für diesen Fall bisher NIE ausgelöst: 'free'
+  blieb in der Panel-Übersicht dauerhaft als "nicht pausiert" sichtbar,
+  obwohl JEDER weitere Versuch für den Rest des Tages ebenfalls scheiterte.
+  Live beobachtet: Google/DeepL waren bereits (durch intensives Testen)
+  pausiert, MyMemory zusätzlich fälschlich als verfügbar geführt - jeder
+  weitere Rescan-Versuch schlug dadurch für ALLE drei Anbieter fehl, ohne
+  dass die Instanz das als Pause/Fehler erkannte oder meldete: Rescan lief
+  zwar technisch durch, aber ohne jede neue Übersetzung und ohne
+  Statusänderung - wirkte dadurch nach außen wie "Rescan tut gar nichts".
+  MyMemorys `quotaFinished` löst jetzt direkt die volle Tagessperre aus,
+  genau wie ein per HTTP erkanntes Tageskontingent bei Google/DeepL. (2) Die
+  in Build 60/61 eingeführte Pro-Stunde-Hochrechnung des Nutzungs-Zählers
+  konnte kurz nach der Inbetriebnahme (oder nach einem kurzen Anfragen-
+  Ansturm, z. B. über den "Übersetzungsanbieter prüfen"-Button) eine Rate
+  zeigen, die HÖHER als der tatsächliche Gesamtzähler war (z. B. "1698
+  Anfragen/h" bei nur "783 Anfragen insgesamt", da erst 28 Minuten seit
+  Inbetriebnahme vergangen waren) - wirkte wie ein Rechenfehler, war aber
+  nur eine Hochrechnung aus einem sehr kurzen Zeitfenster. Die Rate wird
+  jetzt auf mindestens eine volle Stunde gedeckelt: innerhalb der ersten
+  Stunde nach Inbetriebnahme zeigt sie exakt den bisherigen Gesamtwert (nie
+  mehr), erst danach weicht sie als echte Rate vom Gesamtwert ab.
+* **Build 63 korrigiert die Farbcodierung im Symcon-"Meldungen"-Log (englisch
+  "Status Log"):** Übersetzungs-Fehler/-Warnungen (`LogTranslateMessage()`,
+  siehe oben "MyMemorys quotaFinished" und die Anbieter-Fehlermeldungen)
+  erschienen dort bisher grau als generischer "Custom"-Eintrag mit einem
+  Text-Präfix "[FEHLER]"/"[WARNUNG]", statt in der eigentlich vorgesehenen
+  roten/gelben Farbcodierung für "Error"/"Warning". Grund: die global
+  aufgerufene `IPS_LogMessage()`-Funktion kennt gar keinen Schweregrad-
+  Parameter - nur die von `IPSModule` geerbte, INSTANZ-gebundene
+  `LogMessage($Message, $Type)`-Methode (mit `KL_ERROR`/`KL_WARNING`) liefert
+  die echte Farbcodierung, wurde hier aber bewusst gemieden, weil sie
+  nachweislich abstürzt, sobald sie aus dem `MessageSink()`/`VM_UPDATE`-
+  Ausführungskontext heraus aufgerufen wird (siehe Build 54). Seit Build 63
+  unterscheidet die Instanz beide Kontexte: außerhalb von `MessageSink()`
+  (Rescan, "Übersetzungsanbieter prüfen", `ApplyChanges()`, ...) wird jetzt
+  die typisierte `LogMessage()`-Methode verwendet - Fehler erscheinen dadurch
+  korrekt rot als "Error", Warnungen gelb als "Warning". Nur innerhalb der
+  einen bekannten Absturz-Situation (`MessageSink()`/`VM_UPDATE`) greift
+  weiterhin die alte, sichere `IPS_LogMessage()`-Variante mit Text-Präfix,
+  da dort echte Instabilität nachgewiesen wurde.
+* **Build 64 behebt eine fehlende Ein-/Mehrzahl-Behandlung im
+  Nutzungs-Zähler-Satz** (siehe oben, Build 60/61): "Anfragen"/"Zeichen" (und
+  deren Übersetzungen) standen dort bisher IMMER in der Mehrzahl fest
+  codiert, auch wenn der tatsächliche Wert 1 war (z. B. "1 Anfragen" statt
+  korrekt "1 Anfrage", ebenso in den anderen 4 Sprachen). Behoben nach genau
+  demselben, bereits bei der Testphasen-Anzeige bewährten Muster
+  (`BuildTrialInfoText()`, "Tag(e)"/"day(s)"/"día(s)"/"giorno/i"/"jour(s)"):
+  EIN einzelner, nicht konjugierender Anzeige-String pro Sprache, der für
+  jede Anzahl passt - kein Laufzeit-Unterschied zwischen Einzahl/Mehrzahl
+  nötig. Die betroffenen `locale.json`-Schlüssel heißen jetzt "Anfrage(n)"/
+  "Anfrage(n)/h" (vorher "Anfragen"/"Anfragen/h") und liefern in jeder
+  Sprache eine passende Kurzform (z. B. "request(s)/h" statt nur "requests/h";
+  fürs unregelmäßige Spanisch "carácter"/"caracteres" wurde stattdessen
+  bewusst auf das regelmäßig pluralisierende Synonym "signo(s)" ausgewichen,
+  um die im Plural verschwindende Betonungs-Markierung "á" nicht falsch
+  darzustellen; Italienisch nutzt statt eines Suffixes einen Klammer-Wechsel
+  der letzten Buchstaben, z. B. "richiest(a/e)", "caratter(e/i)", passend zum
+  bereits bestehenden "giorno/i").
+* **Build 65 behebt den bisher schwerwiegendsten Fund dieser gesamten
+  Serie:** Live beobachtet wurden "Automations" und "Begrüßung" nach einem
+  Rescan während einer Anbieter-Pause komplett auf den unübersetzten
+  deutschen Rohtext eingefroren - in JEDER Zielsprachen-Spalte, dauerhaft,
+  auch nachdem die Pause längst vorbei war. Ursache: `TranslateBatchUncached()`
+  fällt bei einem fehlgeschlagenen Übersetzungsversuch bewusst NIE auf einen
+  leeren String zurück, sondern auf den unübersetzten Quelltext (siehe Build
+  58 - richtig für die dortige Wiederzusammensetzung von HTML-Widgets, die
+  sonst mit leeren dynamischen Werten dastünden). Das Problem: `TranslateBatch()`
+  ist der EINE zentrale Durchgangspunkt, über den ALLE anderen Funktionen
+  laufen (`FillLanguageColumn` beim Rescan, `ApplyTrackedVariableUpdate` bei
+  der VM_UPDATE-Live-Nachübersetzung, `ReconcileRowFields` beim
+  Quellsprachen-Abgleich) - und JEDE von ihnen entscheidet ausschließlich
+  anhand eines LEEREN Strings, ob eine Zelle als "fertig übersetzt, nicht
+  erneut versuchen" oder "fehlgeschlagen, bitte später erneut versuchen"
+  gilt. Da dieses leere Signal wegen des Fallbacks nie ankam, wurde JEDE
+  Zelle, deren allererster Übersetzungsversuch während einer Pause
+  stattfand, fälschlich als "erledigt" verbucht - inklusive einer
+  Cache-Vergiftung (der unübersetzte Rohtext wurde als "echte Übersetzung"
+  zwischengespeichert und dadurch nie wieder neu versucht, selbst nach Ende
+  der Pause). Behoben an der EINEN zentralen Stelle (`TranslateBatch()`):
+  ein Ergebnis, das exakt dem unübersetzten Quelltext entspricht, wird dort
+  wieder in einen echten Leerstring zurückverwandelt, bevor es an
+  irgendeinen Aufrufer weitergereicht oder gecacht wird - `TranslateBatchUncached()`
+  selbst (und damit die HTML-Wiederzusammensetzung) bleibt unverändert.
+  **Bereits vorhandene, auf diese Weise eingefrorene Zellen werden davon
+  nicht rückwirkend erkannt** (der gespeicherte deutsche Text ist nicht mehr
+  von einer "zufällig identischen" echten Übersetzung unterscheidbar) -
+  betroffene Zellen müssen einmalig manuell im Formular geleert werden,
+  danach übersetzt sie der nächste Rescan/die nächste Anbieter-Erholung
+  normal nach.
+* **Build 66 schließt dieselbe Lücke zusätzlich im Übersetzungs-Cache:**
+  Live beobachtet direkt nach Build 65 - Zellen leeren + Rescan füllte
+  "Automations" trotzdem wieder mit Deutsch, obwohl "Begrüßung" im selben
+  Test korrekt übersetzt wurde. Ursache: der interne Übersetzungs-Cache
+  (siehe Abschnitt 1, `GetCachedTranslation`/`StoreCachedTranslation`) hatte
+  denselben unübersetzten Rohtext bereits VOR Build 65 unter genau diesem
+  Schlüssel als "echte Übersetzung" zwischengespeichert (z. B. "Gehen" für
+  Deutsch->Englisch) - ein Cache-TREFFER läuft komplett an `TranslateBatch()`s
+  frischem Übersetzungspfad (und damit am Build-65-Schutz) vorbei, liefert
+  also weiterhin den vergifteten alten Eintrag. Im Debug-Log erkennbar an
+  einem "..._Mapping"-Eintrag ganz ohne jeden nachfolgenden
+  "..._Request"/"..._Response" - der sichere Hinweis auf einen Cache-Treffer
+  statt eines echten (und damit geschützten) neuen Versuchs. Behoben wie
+  beim strukturell identischen Vorfall vom 2026-08-15 (siehe
+  `TRANSLATION_CACHE_SCHEMA_VERSION`): die Cache-Version wurde erneut erhöht
+  (2 → 3) - macht JEDEN vor Build 66 gecachten Eintrag unerreichbar (die
+  Version steckt im Cache-Schlüssel) und erzwingt für jeden betroffenen Text
+  einmalig einen frischen, jetzt korrekt geschützten Übersetzungsversuch.
+  **Mit Build 66 reicht das Leeren betroffener Zellen im Formular + Rescan
+  wieder allein aus** - ein zusätzliches manuelles "Übersetzungs-Cache
+  leeren" ist NICHT mehr nötig (macht aber ebenfalls nichts kaputt, falls
+  bereits geklickt).
+* **Build 67 behebt eine Konsolensprachen-Einschränkung, die zwei
+  dynamische Textbereiche im Konfigurationsformular betraf** - den
+  Nutzungs-Zähler-Satz unter "Aktiv" (siehe oben) und die
+  Pause-Übersicht im Panel "Übersetzungsanbieter": beide blieben live
+  beobachtet dauerhaft auf Deutsch stehen, selbst bei englischer
+  (oder jeder anderen) Konsolensprache des Betrachters - obwohl fest
+  eingebaute Formular-Beschriftungen ("Aktiv", "Notaus-Schalter: ...")
+  im selben Formular korrekt übersetzt erschienen. Ursache: `$this->Translate()`
+  ist an die Symcon-SYSTEMSPRACHE gebunden (eine einzelne, installationsweite
+  Kernel-Einstellung), NICHT an die individuelle Konsolensprache der gerade
+  betrachtenden Admin-Sitzung - die tatsächliche, per-Betrachter korrekte
+  Übersetzung von `GetConfigurationForm()`-Beschriftungen übernimmt
+  stattdessen der Konsolen-Client selbst, per exaktem Textabgleich einer
+  KOMPLETTEN Beschriftung gegen `locale.json` - unabhängig davon, ob diese
+  Beschriftung ursprünglich statisch in `form.json` stand oder von PHP
+  gesetzt wurde. Eine zur Laufzeit aus mehreren `Translate()`-Fragmenten und
+  eingefügten Werten (Datum, Uhrzeit, Zahlen) ZUSAMMENGESETZTE Zeichenkette
+  matcht dadurch NIE einen `locale.json`-Eintrag als Ganzes und bleibt
+  unabhängig von der tatsächlichen Konsolensprache stehen - exakt dieselbe,
+  bereits beim Lizenz-Infobereich gefundene und dort erfolgreich behobene
+  Einschränkung (siehe die vielen einzelnen `LicenseInfoXxx`-Formularelemente).
+  Beide betroffenen Bereiche wurden nach demselben, bereits bewährten Muster
+  umgebaut: viele einzelne, kleine `RowLayout`/Label-Formularelemente statt
+  eines zusammengesetzten Fließtexts - jedes Element trägt entweder eine
+  feste, unveränderte deutsche Zeichenkette (die der Konsolen-Client korrekt
+  je nach Betrachter übersetzt) oder einen rohen, nicht zu übersetzenden Wert
+  (Datum/Uhrzeit/Zahl), nie beides zusammengesetzt in einer Caption. Kein
+  `$this->Translate()`-Aufruf mehr in `FormatTranslationStatsValue()`/
+  `PopulateProviderPauseStatusElement()`/`FormatProviderPauseUntil()`.
+  Zusätzlich zeigt die Pause-Übersicht im Panel "Übersetzungsanbieter"
+  jetzt auch in der Kachel selbst (roter Hinweis unter dem Dropdown) das
+  Datum zusätzlich zur Uhrzeit (z. B. "18.08. 21:34" statt nur "21:34") -
+  eine reine Uhrzeit war bei einer über Mitternacht hinausreichenden Pause
+  (durch die Eskalation, siehe Build 57, bis zu 24h) mehrdeutig.
+* **Build 68 rundet die Build-67-Umstellung ab:** Live beobachtet blieben
+  zwei einzelne Textbausteine trotz Build 67 weiterhin unübersetzt -
+  "Tag(e):" und "Zeichen." -, obwohl das bloße "Tag(e)"/"Zeichen" an anderer
+  Stelle im selben Formular korrekt übersetzte. Ursache: an genau diesen
+  beiden Stellen war ein Satzzeichen DIREKT an das deutsche Wort angehängt
+  ("Tag(e):" statt "Tag(e)", "Zeichen." statt "Zeichen") - eine Zeichenkette,
+  die dadurch nicht mehr EXAKT dem registrierten `locale.json`-Schlüssel
+  entspricht, bleibt beim Abgleich unübersetzt stehen (siehe Build 67).
+  Jedes Satzzeichen, das zu keinem eigenen Textbaustein gehört, sitzt jetzt
+  in einem eigenen, unbenannten Element (kein `locale.json`-Eintrag nötig -
+  ein Satzzeichen ohne Übersetzungstreffer wird ohnehin unverändert
+  angezeigt). Zusätzlich fehlte "Kostenfreier Anbieter (MyMemory)" bisher
+  komplett als registrierter Übersetzungstext (nicht falsch zusammengesetzt,
+  sondern schlicht nie übersetzbar gemacht) - jetzt in allen 4 Sprachen
+  ergänzt und sowohl in der Pause-Übersicht als auch im
+  "Übersetzungsanbieter prüfen"-Ergebnis verwendet. Der Nutzungs-Zähler
+  wurde dabei gleich klarer strukturiert: statt der bisherigen ".../h"-Suffixe
+  zeigt eine neue, eigene Zeile "Stündlich" (übersetzbar) die
+  Pro-Stunde-Werte, "Insgesamt" (vormals klein geschrieben "insgesamt")
+  startet jetzt ebenfalls eine eigene Zeile - vier klar getrennte,
+  vollständig lokalisierte Zeilen (Seit Inbetriebnahme / Stündlich /
+  Insgesamt / Durch den Cache eingespart) statt eines einzigen, dichten
+  Absatzes. Nach demselben Muster wurden außerdem der Testphasen-Hinweis
+  (`TrialInfoFreshLabel`/`TrialInfoRunningRow`/`TrialInfoExpiredRow`, je
+  nach Testphasen-Status genau eine sichtbare Variante) und das Ergebnis-
+  Popup von "Übersetzungsanbieter prüfen" umgebaut (ein `RowLayout` je
+  geprüftem Anbieter, per `UpdateFormField()` einzeln befüllt statt eines
+  einzigen zusammengesetzten Texts) - beide hatten dieselbe Systemsprache-
+  statt-Konsolensprache-Einschränkung, waren bisher aber nur noch nicht
+  gemeldet worden.
+* **Build 69 behebt einen unsichtbaren Zeichen-Artefakt aus MyMemory:** Live
+  im Debug-Log beobachtet lieferte MyMemory bei einem Treffer aus seiner
+  Übersetzungsspeicher-Datenbank ein zusätzliches, unsichtbares Zeichen direkt
+  am Ende der Übersetzung mit ("Position" wurde tatsächlich als
+  "Position " - mit einem geschützten Leerzeichen (U+00A0) dahinter -
+  zurückgegeben). PHPs `trim()` entfernt nur ASCII-Leerraum (Leerzeichen, Tab,
+  Zeilenumbruch), niemals Unicode-Zeichen wie ein geschütztes Leerzeichen oder
+  ein Zero-Width-Space (U+200B) - ein solches Ergebnis wurde daher unverändert
+  gespeichert/gecacht und sah in den allermeisten Ansichten optisch identisch
+  zum sauberen Text aus, obwohl es ihm nicht exakt entsprach. Behoben an der
+  einen zentralen Stelle, durch die die Ergebnisse aller drei Anbieter
+  (Google/DeepL/MyMemory) laufen (`TranslateChunk()`): am Anfang und Ende
+  werden jetzt gezielt nur geschützte Leerzeichen und Zero-Width-Spaces
+  entfernt - bewusst NIE ein normales ASCII-Leerzeichen, da ein einzelner
+  HTML-Textknoten (siehe Build 63/`SplitHtmlIntoTextNodes`) am Rand
+  absichtlich ein Leerzeichen tragen kann, das für den korrekten Abstand
+  zwischen zwei benachbarten Inline-Elementen gebraucht wird.
+* **Build 70 übersetzt live nur noch die aktuell aktive Gast-Sprache, holt
+  alle anderen bei Bedarf nach, und filtert reine Zahlen/Symbole komplett
+  heraus:** Live beobachtet lief ein täglich verfügbares Übersetzungs-
+  Kontingent innerhalb weniger Stunden vollständig leer (77.000 Zeichen an
+  einem einzigen Tag), obwohl die Übersetzungs-Anbieter zwischenzeitlich
+  sogar pausiert waren. Ursache: eine häufig extern aktualisierte "Eigene
+  Texte"-Variable (z. B. ein Wetter-/Sensor-Widget, mehrmals pro Minute
+  über `VM_UPDATE` aktualisiert) hat bei JEDER Änderung sofort ALLE
+  konfigurierten Zielsprachen neu übersetzt, obwohl zu keinem Zeitpunkt
+  mehr als eine Sprache gleichzeitig angezeigt wurde. Ab Build 70
+  übersetzen der Rescan, die `VM_UPDATE`-Live-Nachübersetzung und der
+  Quellsprachen-Abgleich (siehe Build 57) sofort nur noch die AKTUELL
+  aktive Gast-Sprache - alle anderen Zielsprachen-Zellen bleiben dabei
+  bewusst auf ihrem letzten bekannten (ggf. jetzt veralteten) Stand stehen,
+  statt geleert zu werden. Ein neuer Zeitstempel-Abgleich je Zeile (wann
+  wurde der Rohtext zuletzt geändert, wann wurde jede Sprache zuletzt
+  tatsächlich übersetzt) erkennt zuverlässig, welche Zelle veraltet ist,
+  ohne den bisherigen Fallback-Wert zu löschen. Wechselt ein Gast
+  tatsächlich auf eine bisher nur lazy behandelte Sprache, holt ein neuer
+  Nachhol-Mechanismus GENAU die betroffenen Zeilen gebündelt (ein
+  API-Aufruf je Zeilen-Property statt einzeln je Zeile) nach, bevor die
+  Sprache angezeigt wird - danach ist sie normal gecacht. Bereits vor
+  diesem Build gespeicherte Zeilen ohne die neue Zeitstempel-Buchführung
+  gelten dabei bewusst als "aktuell" (keine Massen-Neuübersetzung des
+  kompletten Bestands nach dem Update). Zusätzlich geht ein Text-Fragment
+  ganz ohne jeden Buchstaben (reine Zahlen, "%", "°", Uhrzeiten,
+  Satzzeichen - besonders häufig bei der feingranularen HTML-Text-Knoten-
+  Zerlegung eines Live-Widgets, siehe Build 63) gar nicht mehr an eine
+  Übersetzungs-API: eine erkannte einzelne Zahl wird stattdessen über
+  PHPs eingebaute `NumberFormatter`-Klasse (Intl-Erweiterung) rein lokal
+  in die landesübliche Schreibweise der Zielsprache umgerechnet (z. B.
+  deutsches "1.234,56" → englisches "1,234.56"), ohne dabei eine
+  ungruppierte Zahl (z. B. eine Jahreszahl oder Zimmernummer wie "2026")
+  fälschlich mit einem künstlich eingefügten Tausendertrennzeichen zu
+  versehen. Fehlt die Intl-Erweiterung auf einer Installation, wird der
+  Text stattdessen unverändert durchgereicht (kein Fehler). Einziger,
+  bewusst in Kauf genommener Nebeneffekt: eine reine Zahl wird nie mehr
+  durch eine Übersetzungs-API-Anfrage geschickt und kann deshalb auch
+  keine darüber hinausgehende, kontextabhängige Umformatierung mehr
+  erhalten, die Google/DeepL gelegentlich mitgeliefert haben.
+* **Build 71 entkoppelt die Live-Übersetzung von der Formular-Persistierung
+  einer häufig aktualisierten Variable:** Live gemeldet - trotz Build 70
+  konnte ein Admin praktisch keine eigene Änderung im Konfigurationsformular
+  mehr speichern, wenn eine "Eigene Texte"-Variable mehrmals pro Minute von
+  außen aktualisiert wurde (z. B. ein Wetter-/Sensor-Widget). Ursache: jede
+  externe Änderung hat weiterhin sofort per `IPS_SetProperty()` + `IPS_
+  ApplyChanges()` genau die Property umgeschrieben, die im offenen Formular
+  als bearbeitbare "Eigene Texte"-Liste angezeigt wird - kein `ReloadForm()`
+  nötig, das reine Überschreiben der zugrunde liegenden Property unter einer
+  live gebundenen Formularliste reichte bereits, um eine laufende Bearbeitung
+  zu stören. Ab Build 71 sind zwei Schreibvorgänge, die bislang immer
+  gemeinsam sofort passierten, sauber entkoppelt: die **Live-Variable**
+  (das, was der Gast in der Kachel sieht) wird weiterhin komplett
+  unverändert/unverzögert geschrieben; nur die **Property-Persistierung**
+  (die Buchführung, die ausschließlich für einen späteren, seltenen
+  Sprachwechsel gebraucht wird) wird jetzt gepuffert und erst nach 12
+  Minuten Ruhe auf der jeweiligen Variable tatsächlich committet (Debounce -
+  jede neue Änderung schiebt den Zeitpunkt weiter nach hinten). Speichert
+  der Admin währenddessen im Formular ("Übernehmen"), wird der noch
+  wartende Puffer automatisch VORHER eingespielt, bevor die eigene Änderung
+  verarbeitet wird - die zuletzt gepufferte externe Änderung geht dabei
+  nicht verloren, unabhängig vom Timing. Ein tatsächlicher Sprachwechsel
+  (selten, aber jederzeit möglich) leert den Puffer ebenfalls sofort, statt
+  auf das Ende der Ruhephase zu warten - ein Gast bekommt dadurch immer den
+  aktuellsten Stand zu sehen. Das Konfigurationsformular zeigt zusätzlich
+  oben einen Hinweis mit der voraussichtlichen Uhrzeit der nächsten
+  Persistierung an, solange etwas ansteht.
+* **Build 72 macht den Übersetzungs-Cache treffsicherer und größer:** Bisher
+  war der lokale Cache (bis zu 500 Einträge) rein nach Einfügereihenfolge
+  organisiert (FIFO) - wurde er voll, flog immer der ZUERST gespeicherte
+  Eintrag zuerst raus, unabhängig davon, wie oft er seitdem tatsächlich
+  wiederverwendet wurde. Ein Schwung einmaliger, nie wieder vorkommender
+  Texte konnte dadurch theoretisch einen häufig wiederverwendeten Kern-
+  Eintrag (z. B. einen festen Objektnamen) verdrängen, nur weil dieser
+  zufällig zuerst im Cache landete. Jeder Eintrag führt jetzt zusätzlich
+  einen Hit-Zähler und den Zeitpunkt seines letzten Zugriffs - wird der
+  Cache voll, fliegt der Eintrag mit dem NIEDRIGSTEN Hit-Zähler zuerst raus
+  (bei Gleichstand der am längsten nicht mehr genutzte). Ein Eintrag, der
+  seit über 24 Stunden nicht mehr gelesen wurde, gilt beim nächsten Zugriff
+  als "neu wieder aufgewärmt" (Zähler-Reset auf 1) statt seinen alten
+  Zähler für immer fortzuschreiben - verhindert, dass ein früher einmal
+  populärer, inzwischen längst nicht mehr gebrauchter Eintrag einen frisch
+  aktiven verdrängt. Die Kapazität wurde gleichzeitig von 500 auf 1000
+  Einträge angehoben. Da sich dabei die gespeicherte FORM eines Eintrags
+  ändert (von einem reinen String zu einem kleinen Objekt mit Hit-Zähler/
+  Zeitstempel), wurde `TRANSLATION_CACHE_SCHEMA_VERSION` erhöht (4) - macht
+  den kompletten, bis dahin aufgewärmten Cache einmalig unerreichbar (jeder
+  Text wird beim nächsten Bedarf einmal frisch übersetzt, alte Einträge
+  bleiben als toter Ballast stehen, bis die neue Verdrängungslogik sie -
+  mangels jedes Hit-Zählers - als Erstes wieder herausdrängt).
+* **Build 73 stellt klar, dass "nur aktive Sprache" ausschließlich für den
+  automatischen Live-Trigger gilt, nicht für Rescan, und macht den
+  Persistierungs-Hinweis live sichtbar:** Zwei Nachbesserungen nach dem
+  ersten Praxistest von Build 70/71. Erstens: Rescan (manuell wie
+  Auto-Rescan) und der Quellsprachen-Abgleich (siehe Build 57) übersetzen
+  ab sofort wieder ALLE konfigurierten Zielsprachen in einem Durchgang,
+  nicht mehr nur die aktuell aktive - live gemeldet, nachdem gelöschte
+  Objekte per Rescan zurückkehrten (bzw. eine Zelle manuell geleert wurde),
+  aber keine ihrer Zielsprachen nachübersetzt wurde, solange sie nicht
+  gerade aktiv war. Ein Nutzer, der "Baum neu einlesen" klickt oder eine
+  Zelle absichtlich leert, erwartet zu Recht, dass JEDE fehlende
+  Übersetzung nachgeholt wird, nicht nur die gerade angezeigte Sprache -
+  das war ursprünglich zu weit gefasst: die eigentliche
+  Kontingent-Ursache (siehe Build 70) war ausschließlich die automatische
+  Live-Nachübersetzung bei externen Variablenänderungen
+  (`ApplyTrackedVariableUpdate`, mehrmals pro Minute bei einer aktiven
+  Wetter-/Sensor-Variable), NICHT ein einmaliger Rescan. Diese eine Stelle
+  bleibt weiterhin bewusst auf die aktive Sprache beschränkt - der
+  Nachhol-Mechanismus beim Sprachwechsel bleibt für sie zusätzlich als
+  Backstop bestehen. Zweitens: der in Build 71 eingeführte
+  Persistierungs-Hinweis im Formular wurde bislang nur beim (Neu-)Öffnen
+  des Formulars berechnet - ein bereits offenes Formular zeigte ihn
+  deshalb nie an, egal wie lange man wartete (folgerichtig, da Build 71
+  bewusst kein `ReloadForm()` mehr bei externen Schreibvorgängen auslöst).
+  Der Hinweis wird jetzt zusätzlich per `UpdateFormField()` direkt aus dem
+  Puffer-Mechanismus heraus live in ein bereits offenes Formular
+  eingeblendet bzw. wieder ausgeblendet - ohne jede Störung der laufenden
+  Bearbeitung, exakt wie die bereits bestehenden `UpdateFormField()`-
+  Aufrufe in anderen Formular-Popups.
+* **Build 74 behebt eingeschleuste Platzhalter-Tags bei DeepL-Übersetzungen
+  reiner Objektnamen:** Live gemeldet (Screenshot, zweimal beobachtet): ein
+  völlig einfacher Objektname ohne jedes HTML ("N-JOY") kam auf Spanisch als
+  `<g id="1">N-JOY</g>                    <g id="2"><g id="3"/></g>` zurück
+  - sichtbare, kaputte Auszeichnungs-Reste mitten im Klartext. Ursache:
+  `TranslateChunkDeepL()` hat bei JEDER Anfrage unterschiedslos
+  `"tag_handling": "html"` an DeepL geschickt, unabhängig davon, ob der Text
+  tatsächlich HTML enthielt (kopiert vom analogen, aber harmloseren Muster
+  bei Google, siehe unten). Anders als Googles `format`-Parameter (der nur
+  steuert, ob Sonderzeichen als HTML-Entity zurückkommen) schaltet DeepLs
+  `tag_handling` seine komplette Markup-Verarbeitung ein - und kann dabei
+  auch bei komplett taglosem Eingabetext eigene, synthetische
+  Platzhalter-Tags in die Ausgabe einschleusen. `$IsHtml` wird jetzt bis zu
+  `TranslateChunkGoogle()`/`TranslateChunkDeepL()` durchgereicht:
+  `tag_handling` wird bei DeepL nur noch für echte "Eigene Texte"-HTML-
+  Inhalte überhaupt gesetzt (sonst fehlt der Schlüssel im Request komplett -
+  DeepLs Standardmodus ohne jede Markup-Erkennung, strukturell
+  ausgeschlossen, dass so ein Platzhalter-Tag je entstehen kann). Bei dieser
+  Gelegenheit auch Google angepasst: `format` steht jetzt nur noch bei
+  echtem HTML auf `"html"`, sonst auf `"text"` - vermeidet nicht nur den
+  bisher nötigen `html_entity_decode()`-Umweg für reinen Text, sondern
+  schließt auch aus, dass ein wörtliches "&"/"<" in einem Objektnamen (z. B.
+  "Bad & WC") im html-Modus fälschlich als Beginn einer HTML-Entity/eines
+  Tags interpretiert wird.
+* **Build 75 fasst inhaltlich identische Beschriftungen ohne geteiltes
+  Profil/Template zu einer Zeile zusammen:** Live gemeldet (Screenshot):
+  mehrere Variablen mit exakt identischem Beschriftungs-Inhalt (z. B. eine
+  ganze Reihe "Ja"/"Nein"-Variablen) erschienen als komplett getrennte
+  Zeilen in "Captions", obwohl über ein geteiltes Profil oder Template
+  verknüpfte Variablen bereits korrekt zu einer Zeile zusammengefasst
+  wurden. Ursache: `GetPresentationSourceKey()` fiel auf einen rein
+  variablenspezifischen Schlüssel zurück, sobald eine Variable ihre
+  `VariableCustomPresentation` INLINE trägt (kein Profilname, keine
+  Template-GUID) - ein sehr verbreitetes Muster, da viele Symcon-
+  Gerätetreiber dieselbe JSON-Struktur direkt in jede einzelne Variable
+  schreiben, statt ein gemeinsames Template-Objekt zu referenzieren. Fällt
+  jetzt zusätzlich auf einen Hash über den tatsächlich extrahierten,
+  übersetzbaren Inhalt (Feldpfad + Text) zurück, wenn weder Profil noch
+  Template vorliegen - zwei Variablen mit identischem Inhalt landen jetzt
+  automatisch in derselben Zeile, auch ganz ohne eine geteilte Symcon-
+  Objektidentität dahinter. Profil-/Template-basierte Gruppierung (bereits
+  korrekt) bleibt davon komplett unberührt und hat weiterhin Vorrang - das
+  ist bewusst so: verweisen zwei Variablen auf ein ECHTES, aber (durch ein
+  fremdes Modul, z. B. Echo/Alexa) je Geräteinstanz eigenes Profil, bleiben
+  sie zurecht getrennte Zeilen, selbst wenn ihr Inhalt gerade zufällig
+  übereinstimmt - sonst würde eine spätere, unabhängige Änderung an EINEM
+  der beiden Profile fälschlich beide Zeilen gemeinsam betreffen. Hinweis:
+  nach dem ersten Rescan mit diesem Build bleiben die alten,
+  variablenspezifischen Zeilen als verwaiste Duplikate bestehen (wie bei
+  jedem entfernten/veränderten Objekt, siehe Abschnitt "Bekannte
+  Einschränkungen") - können nach Prüfung der neuen, zusammengeführten
+  Zeile manuell gelöscht werden.
+* **Build 76 ergänzt "Aufräumen": verwaiste Zeilen künftig per Klick statt
+  einzeln von Hand entfernbar.** Nutzer-Wunsch nach einem Feature-Vergleich
+  mit Symcons eigener, konkurrierender Lösung - die hat eine entsprechende
+  Funktion, Simple Locale bislang nicht. Bereits mit Build 51 (Root-Baum-
+  Merge) bewusst als Designentscheidung eingeführt: Rescan/Auto-Rescan
+  lassen Zeilen, deren Objekt inzwischen gelöscht oder aus der
+  Visualisierung entfernt wurde, absichtlich unangetastet stehen (siehe
+  `MergeRows`/`MergeEnumerationOptions`/`MergeAutomationRows`) - ein
+  Sicherheitsnetz gegen eine versehentlich falsche/unvollständige Root-
+  Kategorie, das schon mehrfach in dieser Historie vor Datenverlust
+  geschützt hat (u. a. Build 75s eigene Migrationsnotiz direkt darüber).
+  Der neue Button "Übersetzungen gelöschter Elemente in der Visualisierung
+  entfernen" (siehe [Abschnitt 5](#5-einrichten-der-instanzen-in-symcon),
+  Absatz "Aufräumen: verwaiste Zeilen endgültig entfernen") macht diese
+  bislang nur manuelle, zeilenweise Aufräumarbeit zu einer bewussten,
+  expliziten Ein-Klick-Aktion - mit ausdrücklicher Warnung im Formular,
+  dass (anders als ein normaler Rescan) dabei tatsächlich unwiederbringlich
+  gelöscht wird, falls die Root-Kategorie gerade falsch/unvollständig
+  gewählt ist. "Begrüßung" bleibt bewusst ausgenommen (keine gescannte
+  Liste, sondern eine einzelne direkt konfigurierte Einstellung).
+* **Build 77 behebt eingefrorene deutsche Gast-Hinweise nach einer
+  Anbieter-Pause und erweitert das Info-Popup der Kachel.** Live gemeldet:
+  bei aktiv gewählter englischer Gast-Sprache blieben der
+  Pausiert-Hinweis ("Übersetzung pausiert bis...") und der
+  Statistik-Hinweis unter dem Dropdown trotzdem auf Deutsch stehen.
+  Ursache: `EnsureGuestLanguageNamesFresh()` (der Cache für alle
+  live in die Gast-Sprache übersetzten UI-Texte, max. 1x/Tag
+  aktualisiert) lief während einer AKTIVEN Anbieter-Pause, der
+  Übersetzungsversuch schlug dadurch für JEDEN Text zwangsläufig fehl
+  und fiel korrekt auf den rohen deutschen Text zurück - wurde
+  anschließend aber trotzdem als "heute schon erfolgreich aktualisiert"
+  verbucht und dadurch bis zu 24 Stunden lang nicht erneut versucht,
+  selbst nachdem die Pause längst vorbei war. Behoben durch dieselbe
+  Kurzschluss-Prüfung wie in `TranslateChunk()` (während einer aktiven
+  Pause lohnt sich gar kein Versuch, der bestehende - zuletzt ECHT
+  erfolgreich übersetzte - Cache bleibt unangetastet) plus eine zweite
+  Absicherung: der Cache gilt nur dann als "heute schon frisch", wenn
+  wirklich mindestens ein Text erfolgreich übersetzt wurde, nicht bei
+  einem kompletten (auch anbieter-pause-unabhängigen) Fehlschlag.
+  Zusätzlich, auf Nutzer-Wunsch, zeigt das Info-Popup der Kachel (ⓘ-Symbol)
+  jetzt zusätzlich dieselbe Übersetzungsstatistik (Seit Inbetriebnahme/
+  Stündlich/Insgesamt/Durch den Cache eingespart, wie im
+  Konfigurationsformular) sowie - falls gerade aktiv - einen Kurzhinweis
+  zur laufenden Anbieter-Pause, beides live in die jeweils aktive
+  Gast-Sprache übersetzt. Die bisherige Überschrift "Hinweise" wurde durch
+  App-Name + Lizenz-Edition ersetzt (z. B. "Simple Locale - Pro Edition",
+  ohne Lizenz schlicht "Simple Locale") - bewusst NICHT übersetzt, eine
+  Marken-/Editionsbezeichnung ist sprachunabhängig, genau wie
+  `$licenseInfo['edition']` im Konfigurationsformular selbst bereits als
+  roher Wert behandelt wird.
+
+  Außerdem, ebenfalls auf Nutzer-Wunsch: das 🌐-Emoji links neben dem
+  Sprach-Dropdown wurde durch das eigentliche Simple-Locale-Symbol ersetzt
+  (`libs/assets/module_icon_48.png`, als Base64-Grafik eingebettet - kein
+  öffentlicher Pfad/Webhook nötig, funktioniert dadurch überall
+  identisch). Fällt auf die alte 🌐-Glyphe zurück, falls die Bilddatei aus
+  irgendeinem Grund nicht lesbar ist. Die zugehörige Einstellung heißt
+  jetzt "Simple-Locale-Symbol in der Kachel anzeigen" (Property/Attribut-
+  Name `ShowGlobeIcon` und CSS-Klasse `ipssl-globe` bleiben aus
+  Kompatibilitätsgründen unverändert - siehe Abschnitt 7 für eigene,
+  darauf aufbauende Kachel-Anpassungen).
+* **Build 78 macht die festen Gast-Oberflächentexte komplett unabhängig von
+  Anbieter-Pausen, ergänzt den Pause-Grund und weitere kleinere
+  Verbesserungen.** Der eigentliche Kern dieses Builds, direkte Folge des
+  in Build 77 gefundenen Bugs: die festen Gast-Oberflächentexte
+  ("Übersetzung pausiert bis", die Statistik-Beschriftungen, der
+  Info-Popup-Hinweistext, ...) laufen ab sofort NICHT mehr über einen
+  24h-Live-Übersetzungs-Cache (`EnsureGuestLanguageNamesFresh`), der -
+  genau dann, wenn er ausgerechnet während einer Anbieter-Pause aktualisiert
+  wird - für den Rest des Tages auf Deutsch hängen bleiben konnte. Diese
+  Texte werden jetzt genau wie Objektnamen/Automations beim Rescan EINMALIG
+  in alle konfigurierten Zielsprachen übersetzt und dauerhaft in einer
+  eigenen, neuen Property (`OwnUiTexts`) gespeichert - da sie fest im
+  PHP-Code stehen und sich nur mit einem künftigen Modul-Update überhaupt
+  ändern können, liegt die Übersetzung dadurch strukturell IMMER schon vor,
+  bevor eine Pause je eine Rolle spielen könnte. Bewusst OHNE eigene Liste
+  im Konfigurationsformular und ausdrücklich NICHT von "Aufräumen" (Build
+  76) betroffen - der Admin kann diese Zeilen weder versehentlich löschen
+  noch verändern, sie gehören zu keinem Symcon-Objekt und sollen dauerhaft,
+  unabhängig von jeder Admin-Aktion, vorhanden bleiben. Ändert ein
+  künftiges Modul-Update den deutschen Wortlaut eines dieser Texte, wird
+  das beim nächsten Rescan automatisch erkannt und neu übersetzt (die alte
+  Übersetzung bleibt bis dahin als Fallback sichtbar, statt sofort zu
+  verschwinden).
+
+  Zusätzlich, alles auf Nutzer-Wunsch: das Info-Popup nennt jetzt auch den
+  GRUND einer laufenden Anbieter-Pause ("Grund: Alle konfigurierten
+  Übersetzungsanbieter melden aktuell ihr Limit erreicht."), nicht mehr
+  nur "bis wann". Die Überschrift des Info-Popups wird jetzt fett
+  dargestellt - technisch über die "Mathematical Sans-Serif Bold"-Zeichen
+  aus dem Unicode-Block "Mathematical Alphanumeric Symbols" (U+1D5D4 ff.),
+  da `alert()` reiner Text ist und keine HTML-/Markdown-Formatierung
+  kennt; sehen in praktisch jedem modernen Browser/Betriebssystem
+  fettgedruckt aus, sind aber technisch eigene Zeichen statt eines
+  Formatierungsattributs (deckt nur A-Z/a-z/0-9 ab, Leerzeichen/
+  Sonderzeichen bleiben unverändert). Und: der graue Kreis-Hintergrund
+  hinter dem Simple-Locale-Symbol in der Kachel (Build 77) wurde entfernt -
+  nur noch das reine Symbol, ohne umschließende Form.
+* **Build 79 behebt eine Lücke bei unterschiedlichen Quellsprachen: die
+  Basissprache verschwindet nicht mehr aus der Gast-Auswahl, wenn die
+  Scan-Sprache später geändert wird.** Bisher gab es neben den echten
+  Zielsprachen eine separate Pseudo-Sprache "Original" (`ORIGINAL_IMPORT`),
+  die sich immer auf die AKTUELL eingestellte Scan-Sprache
+  (`SourceLanguage`) bezog. Das führte zu einer Lücke: wurde z. B. zuerst
+  mit Deutsch gescannt und die Scan-Sprache danach auf Englisch
+  umgestellt, verschwand Deutsch komplett aus der Gast-Auswahl - obwohl
+  bereits gescannte Objekte weiterhin ihre deutsche Zeilen-Quellsprache
+  trugen und für sie gar keine Übersetzung "zurück" nach Deutsch existierte
+  (siehe `fieldRowSourceLanguage`, eingeführt in Build 57). "Original" gibt
+  es ab jetzt nicht mehr als eigene wählbare Sprache: stattdessen sorgt
+  eine neue Methode (`EnsureSourceLanguageIsTarget()`, aufgerufen am Anfang
+  jedes `ApplyChanges()`-Laufs) dafür, dass die jeweils AKTUELLE
+  Quellsprache immer als ganz normaler, dauerhafter Eintrag in den
+  Zielsprachen (`TargetLanguages`) steht - ändert sich die Scan-Sprache
+  später erneut, bleibt der alte Eintrag als normale Zielsprache stehen,
+  statt zu verschwinden.
+
+  **Wichtig für Lizenzen mit begrenzter Sprachanzahl** (z. B. die
+  "Spezialversion"): der automatisch ergänzte Quellsprachen-Eintrag
+  unterliegt exakt derselben Lizenz-Sprachobergrenze wie jede manuell
+  hinzugefügte Zielsprache (`EnforceLicensedLanguageLimit()`, läuft direkt
+  im Anschluss). Das ist bewusst so: ohne diese Kopplung könnte man durch
+  wiederholtes Umstellen der Scan-Sprache beliebig viele "kostenlose"
+  Zielsprachen an einer lizenzierten Obergrenze vorbei ansammeln. In der
+  Praxis bedeutet das: bei einer Lizenz mit z. B. Sprachlimit 1, die
+  bereits eine Zielsprache konfiguriert hat, verbraucht ein Wechsel der
+  Scan-Sprache selbst einen Platz in dieser Obergrenze - im Zweifel wird
+  dabei sogar eine zuvor konfigurierte Zielsprache automatisch verdrängt
+  (dieselbe Kappungs-Logik wie bisher schon bei einem Lizenz-Downgrade).
+  Unlimitierte Lizenzen sind davon nicht betroffen.
+
+  Bereits bestehende Installationen: eine Instanz, deren aktive
+  Gast-Sprache (`CurrentLanguage`) noch auf der alten Pseudo-Sprache
+  "Original" stand, wird beim ersten `ApplyChanges()` nach diesem Update
+  automatisch, einmalig auf die tatsächliche Quellsprache umgeschrieben -
+  keine manuelle Nacharbeit nötig.
+* **Build 80 behebt zwei Nachbesserungen an Build 79, die erst beim
+  direkten Live-Test auffielen.** Erstens: ein reiner Rescan-Klick zeigte
+  die Quellsprache weder in "Zielsprachen" noch als neue Spalte bei
+  "Objektnamen"/"Eigene Texte" - `ScanRootTree()` liest die aktuelle
+  Zielsprachenliste ganz am Anfang eines Durchlaufs, WEIT BEVOR
+  `EnsureSourceLanguageIsTarget()` (das bisher nur in `ApplyChanges()`
+  hing) überhaupt zum Zug kam - der neu ergänzte Eintrag kam dadurch immer
+  einen ganzen Rescan-Durchlauf zu spät. `ScanRootTree()` ruft
+  `EnsureSourceLanguageIsTarget()` jetzt selbst, ganz am Anfang, auf - ein
+  einzelner Rescan reicht ab jetzt aus.
+
+  Zweitens, unabhängig vom ersten Fund: bei einer Lizenz mit einer
+  eingeschränkten `allowedLanguages`-Liste (nur bei gezielten
+  Promo-Lizenzen wie "Finnisch zu Nikolaus" oder der
+  "Nachbarländer"-Aktion, siehe `GetLicensedAllowedLanguages`) wurde der
+  gerade erst ergänzte Quellsprachen-Eintrag von genau dieser Prüfung in
+  JEDEM `ApplyChanges()`-Durchlauf sofort wieder entfernt, da die eigene
+  Basissprache so gut wie nie in einer thematisch engen Promo-Sprachliste
+  auftaucht - für diese Lizenzen hätte Build 79 dauerhaft überhaupt keine
+  Wirkung gezeigt, egal wie oft man "Übernehmen" klickt. Die aktuelle
+  Quellsprache ist jetzt explizit von der `allowedLanguages`-Einschränkung
+  ausgenommen (das numerische Sprachlimit selbst bleibt davon unberührt -
+  siehe oben, das ist weiterhin bewusst gewollt).
+* **Build 81 behebt zwei weitere Anzeige-Lücken, die erst nach Build 80 im
+  Live-Test auffielen - die Daten selbst waren zu diesem Zeitpunkt bereits
+  korrekt gespeichert (per Debug-Meldung bestätigt), es fehlte nur die
+  passende Darstellung.** Erstens übersprang `BuildLanguageColumnSet()`
+  (baut die Sprachspalten für "Objektnamen"/"Eigene Texte"/"Aufzählungs-
+  optionen"/"Automations"/"Begrüßung" auf) bislang grundsätzlich die Spalte
+  für die instanzweite Quellsprache - korrekt VOR Build 79, als ihr Inhalt
+  immer 1:1 identisch mit "Original import" war. Seitdem kann aber eine
+  EINZELNE Zeile eine abweichende eigene Quellsprache tragen (z. B. eine
+  ursprünglich englischsprachig gescannte Zeile in einem sonst deutschen
+  Baum) - für so eine Zeile zeigt "Original import" weiterhin den
+  englischen Rohtext, während die (bisher fehlende) "Deutsch"-Spalte die
+  tatsächliche deutsche Übersetzung zeigen sollte, also einen eigenen,
+  nicht-redundanten Wert. Die Spalte fehlte dadurch für den kompletten
+  Baum, unabhängig davon, ob überhaupt eine Zeile abweichende Quellsprachen
+  hatte. Für Zeilen mit einheitlicher Quellsprache bleibt der Spalteninhalt
+  weiterhin redundant zu "Original import" - bewusst in Kauf genommen,
+  keine Sonderlogik dafür.
+
+  Zweitens zeigte "Zielsprachen" nach dem automatischen Ergänzen der
+  Quellsprache (siehe Build 79) eine LEERE Zeile ohne sichtbaren
+  Sprachnamen: `BuildTargetLanguageOptions()` liefert nicht nur die Auswahl
+  für "Hinzufügen", sondern auch die Beschriftung, mit der die Liste jede
+  bereits gespeicherte Zeile anzeigt - und schloss die Quellsprache
+  ebenfalls grundsätzlich aus (plus, unter Testphase/`allowedLanguages`-
+  Einschränkung, ein zweites Mal). Beide Ausschlüsse sind jetzt entfernt
+  bzw. die Quellsprache explizit ausgenommen - dieselbe Ausnahme wie in
+  Build 80 für `EnforceLicensedLanguageLimit()`, konsistent an beiden
+  Stellen angewendet.
+* **Build 82, auf Nutzer-Wunsch: die Spalte der Quellsprache bleibt beim
+  Rescan nicht mehr leer, sondern übernimmt direkt den Rohtext.** Trifft
+  eine Zeile beim Rescan auf eine Zielsprache, die genau ihrer eigenen
+  Quellsprache entspricht (siehe Build 79/81), gibt es nichts zu
+  übersetzen - der Rohtext IST bereits der korrekte Inhalt. Bisher blieb
+  die Zelle in diesem Fall trotzdem leer (kein API-Aufruf, aber auch kein
+  Kopiervorgang), was in der Admin-Ansicht wie eine fehlende Übersetzung
+  aussah. Die Zelle wird jetzt direkt mit dem Rohtext befüllt - ohne
+  API-Aufruf, ohne Übersetzungs-Kontingent zu verbrauchen - unter der
+  Annahme, dass dieser Text bereits gut genug ist; der Admin kann ihn wie
+  jede andere Zelle jederzeit manuell korrigieren, eine bereits gefüllte
+  oder korrigierte Zelle wird dabei nie überschrieben.
+
+  Außerdem, ebenfalls auf Nutzer-Wunsch: das Simple-Locale-Symbol links
+  neben dem Sprach-Dropdown skaliert jetzt in der Höhe exakt auf die Höhe
+  der Dropdown-Box, statt einer festen Pixelgröße - passt sich dadurch
+  automatisch an, falls Schriftgröße/Innenabstand des Dropdowns sich
+  künftig ändern (z. B. durch eigenes Kachel-HTML, siehe Abschnitt 7).
+* **Build 83, auf Nutzer-Wunsch: das Panel "Übersetzungsanbieter" spiegelt
+  jetzt wider, wie zuverlässig die angezeigte Pause-Zeit je Anbieter
+  tatsächlich ist, plus dieselbe Formatierungs-Korrektur wie bei der
+  Statistik.** Bisher zeigten alle drei Anbieter (Google, DeepL,
+  kostenfreier Anbieter/MyMemory) dieselbe generische, EXPONENTIELL
+  eskalierende Schätzung ("jetzt + 15min/30min/1h/2h/... bis maximal 24h",
+  siehe `RecordProviderPaused`) als "pausiert bis" an - unabhängig davon,
+  ob diese Schätzung für den jeweiligen Anbieter überhaupt etwas mit der
+  Realität zu tun hat:
+  - **MyMemory** setzt sein kostenfreies Tageskontingent nachweislich
+    zuverlässig um Mitternacht UTC zurück (fest, bekannt) - die generische
+    "jetzt + 24h"-Schätzung konnte dadurch je nach Tageszeit des
+    Fehlschlags um bis zu fast 24 Stunden danebenliegen. Wird jetzt exakt
+    auf die nächste UTC-Mitternacht berechnet (`GetNextUtcMidnightTimestamp`) -
+    sowohl beim eindeutigen `quotaFinished`-JSON-Signal als auch beim
+    generischen HTTP-429-Pfad, sofern dort ein Tageskontingent (nicht nur
+    ein kurzes Burst-Limit) erkannt wurde.
+  - **Google** liefert dagegen keine verlässliche Reset-Zeit (siehe
+    `RecordProviderPaused`: live beobachtet, dass ein erkanntes Rate-Limit
+    trotzdem über Stunden bestehen blieb) - die Zeile heißt jetzt
+    "voraussichtlich pausiert bis" statt schlicht "pausiert bis", um die
+    angezeigte Zeit klar als Schätzung statt als Zusage zu kennzeichnen.
+  - **DeepL** bekommt dieselbe "voraussichtlich"-Formulierung PLUS einen
+    zusätzlichen Hinweis darunter: bei DeepL ist ein aufgebrauchtes
+    Kontingent nicht garantiert automatisch zurückgesetzt - bloßes Warten
+    hilft dann nicht, nur ein Kauf bei DeepL oder ein neuer API-Key.
+
+  Außerdem, wie von der Statistik-Sektion bekannt: die bisher separat
+  schwebende ":" -Beschriftung (eigenes Label-Element, dadurch je nach
+  Länge des Anbieternamens unterschiedlich weit vom Text entfernt) ist
+  jetzt direkt an den Anbieternamen angehängt ("Google Cloud Translate:"
+  statt "Google Cloud Translate" + ":" als getrennte Elemente) - dieselbe
+  Technik wie bei "Stündlich:"/"Insgesamt:" im Statistik-Panel.
+* **Build 84 behebt zwei weitere, live gefundene Probleme.** Erstens war
+  das Simple-Locale-Symbol nach Build 82 auf manchen Kacheln sichtbar
+  GRÖSSER als das Dropdown, nicht exakt gleich hoch: die Höhenanpassung
+  lief über `align-self: stretch`, was das Icon auf die Höhe der GESAMTEN
+  Zeile (`.ipssl-select-row`) skalierte - in der echten Kachel-Darstellung
+  bekommt diese Zeile aber offenbar mehr Höhe zugewiesen, als das Dropdown
+  selbst braucht, wodurch auch das Icon zu groß wurde. Gelöst über eine
+  gemeinsame, feste CSS-Variable (`--ipssl-control-height`), die Dropdown
+  UND Icon jetzt beide explizit auf denselben Wert setzt - unabhängig
+  davon, wie viel Höhe die umgebende Zeile tatsächlich bekommt.
+
+  Zweitens, deutlich wichtiger: eine String-Variable im gescannten Baum
+  kann statt echtem Gast-Anzeigetext auch Konfigurations-/Steuerdaten für
+  ein GANZ ANDERES Modul enthalten (live beobachtet: eine
+  Favoriten-/Playlist-Liste mit Inhalt wie
+  `{"musicProvider":"CLOUDPLAYER","searchPhrase":"Mein Discovery Mix"}`).
+  Simple Locale übersetzte diesen Rohtext bisher wie gewöhnlichen
+  Fließtext - Google/DeepL lieferten dabei u. a. HTML-kodierte
+  Anführungszeichen (`&quot;` statt `"`) zurück, was die JSON-Struktur für
+  das eigentlich konsumierende Skript zerstörte (z. B. erwartete dieses
+  Skript für `musicProvider` einen bestimmten, festen Wert). Eine gezielte
+  "nur die Anzeigetexte innerhalb des JSON übersetzen, Struktur/Schlüssel
+  erhalten"-Lösung wäre technisch nicht zuverlässig umsetzbar: strukturelle
+  Schlüssel/Enum-Werte (z. B. `"CLOUDPLAYER"`) lassen sich innerhalb
+  desselben JSON nicht verlässlich von echtem, übersetzbarem Anzeigetext
+  unterscheiden - eine "intelligente" JSON-Teilübersetzung würde ebenso oft
+  falsch raten und stattdessen ein trügerisches Sicherheitsgefühl erzeugen.
+  Erkennt Simple Locale jetzt, dass ein Rohtext gültiges JSON ist (beginnt
+  mit `{` oder `[` UND lässt sich vollständig parsen - ein einzelnes Wort
+  oder eine Zahl wie "42"/"true" zählt bewusst NICHT als JSON, da das
+  weiterhin ganz normaler übersetzbarer Text sein kann), wird dieser
+  Rohtext von der Übersetzung komplett ausgenommen - für JEDE Gast-Sprache
+  bleibt automatisch der unveränderte Rohtext sichtbar (bestehender
+  Rohtext-Fallback, keine neue Logik nötig). Bereits VOR diesem Update
+  fehlerhaft übersetzte JSON-Zellen bleiben bestehen (wie bei jeder anderen
+  Fehlübersetzung, siehe unten) - einmalig die betroffene Zelle leeren,
+  "Übernehmen" klicken, dann erneut Rescan ausführen, danach bleibt sie
+  dauerhaft leer/unverändert (kein erneuter Übersetzungsversuch mehr).
+* **Build 85, auf Nutzer-Wunsch: die eigenen Gast-Oberflächentexte (siehe
+  Build 78) bringen jetzt feste Standard-Übersetzungen fürs Ausliefern mit
+  - für de/en/es/it/fr/nl sowie alle `TRIAL_LANGUAGE_CODES` (isländisch,
+  walisisch, zulu, māori, latein) steht die Übersetzung dieser Texte sofort
+  bereit, ganz ohne einen einzigen API-Aufruf bei irgendeinem Provider zu
+  verbrauchen - selbst direkt nach einer frischen Installation.** Neue
+  Konstante `OWN_UI_TEXT_BUNDLED_TRANSLATIONS`, eingebunden in
+  `MergeOwnUiTextRows()`: füllt beim Rescan JEDE noch leere Sprachspalte
+  einer dieser mitgelieferten Sprachen direkt mit dem fest hinterlegten
+  Text - unabhängig von den aktuell konfigurierten Zielsprachen, damit die
+  Übersetzung sofort bereitsteht, sobald eine dieser Sprachen jemals als
+  Zielsprache gewählt wird. Eine bereits vorhandene (echte, per Provider
+  erzeugte) Übersetzung wird dabei nie überschrieben. en/es/it/fr
+  übernehmen bewusst denselben Wortlaut wie die längst vorhandenen
+  Konsolensprachen-Übersetzungen derselben deutschen Texte (z. B.
+  "Stündlich:" → "Hourly:"), damit Konsolen- und Gast-Oberfläche
+  konsistent klingen.
+
+  Außerdem, ebenfalls auf Nutzer-Wunsch: das Panel "Übersetzungsanbieter"
+  nutzt für MyMemory jetzt den WIRKLICH genauen Reset-Zeitpunkt statt der
+  Build-83-Annahme "nächste UTC-Mitternacht" - MyMemorys Fehlermeldung
+  nennt die verbleibende Wartezeit meist direkt und exakt (z. B. "NEXT
+  AVAILABLE IN 02 HOURS 51 MINUTES 23 SECONDS"), live beobachtet und
+  spürbar präziser als die reine Mitternachts-Annahme (das Kontingentfenster
+  scheint nicht zwingend exakt auf UTC-Mitternacht zu fallen, sondern eher
+  rollierend ab dem ersten Verbrauch zu laufen). Neue
+  `ParseMyMemoryNextAvailableTimestamp()` extrahiert diesen Countdown direkt
+  aus MyMemorys Antworttext; die UTC-Mitternacht-Berechnung aus Build 83
+  bleibt als Rückfallwert bestehen, falls das Muster einmal nicht gefunden
+  wird (z. B. bei einer künftig geänderten Formulierung).
+* **Build 86 behebt einen Bug in Build 85, live gefunden: eine bereits als
+  Gast-Sprache aktive, mitgelieferte Sprache (z. B. Englisch) zeigte
+  trotzdem den deutschen Rohtext.** Ursache: die neuen mitgelieferten
+  Übersetzungen (`OWN_UI_TEXT_BUNDLED_TRANSLATIONS`) landeten bisher NUR
+  über `MergeOwnUiTextRows()` in der jeweiligen Zeile - und diese Funktion
+  läuft ausschließlich innerhalb `ScanRootTree()`, also nur bei einem
+  tatsächlichen Rescan. Vor dem allerersten Rescan (oder direkt nach dem
+  Update auf Build 85, bevor ein neuer Rescan lief) blieb
+  `propertyOwnUiTexts` für diese Sprache leer, und `GetOwnUiText()` fiel
+  auf den deutschen Rohtext zurück - genau das Gegenteil des in Build 85
+  versprochenen "sofort bereit, kein Rescan nötig". `GetOwnUiText()` (der
+  eigentliche Lesepfad, den jeder Gast-Text-Baustein nutzt) greift jetzt
+  zusätzlich direkt auf die mitgelieferte Übersetzungstabelle zurück, wenn
+  weder eine persistierte Zeile noch eine Zelle darin etwas liefert -
+  unabhängig davon, ob/wann je ein Rescan lief. Eine bereits persistierte
+  Zeile (echte Provider-Übersetzung, manuelle Korrektur oder ein durch
+  einen späteren Rescan eingetragener Bundled-Wert) hat weiterhin Vorrang
+  vor diesem Fallback.
+* **Build 87 behebt zwei weitere, live gefundene Probleme und dokumentiert
+  eine strukturelle Einschränkung.**
+
+  Erstens: eine korrekte, mit hoher Konfidenz bestätigte Übersetzung, die
+  zufällig identisch zum Ausgangstext blieb (z. B. "Cover" bleibt auch auf
+  Spanisch "Cover" - ein echtes Lehnwort, von MyMemory selbst mit
+  `match: 1` bestätigt), wurde bisher fälschlich als gescheiterter
+  Übersetzungsversuch gewertet und dauerhaft verworfen - die Zelle blieb
+  leer UND wurde bei JEDEM weiteren Rescan erneut angefragt, ohne je
+  "fertig" zu werden (treffend als drohender Deadlock beschrieben: Zellen,
+  deren korrekte Übersetzung zufällig gleich dem Rohtext bleibt, wie auch
+  technische, gar nicht übersetzbare Bezeichner wie `SetVisibilityOff`
+  innerhalb von Automatisierungs-Aktionsnamen, konnten so nie einen
+  stabilen, gecachten Endzustand erreichen). Ursache war eine
+  Unterscheidungslücke: `TranslateBatchUncached()` fällt bei einem
+  ECHTEN Anbieter-Fehlschlag bewusst auf den unübersetzten Rohtext zurück
+  (verhindert eine leere/kaputte HTML-Struktur, siehe Build-70-Historie),
+  aber das Ergebnis sah für die aufrufende Stelle identisch aus wie eine
+  ECHTE, zufällig gleichbleibende Übersetzung - beide wurden bisher über
+  einen reinen Textvergleich ("Ergebnis == Rohtext?") auseinandergehalten,
+  einer strukturell unzuverlässigen Heuristik. `TranslateBatchUncached()`
+  liefert jetzt zusätzlich ein echtes, aus `TranslateChunk()` stammendes
+  `failed`-Flag pro Text mit - kein Rätselraten mehr nötig: eine echte
+  Übersetzung (auch wenn zufällig identisch) gilt jetzt korrekt als
+  erfolgreich und wird gecacht, nur ein wirklicher Fehlschlag bleibt leer
+  und offen für den nächsten Versuch.
+
+  Zweitens: der rote "Übersetzung pausiert bis..."-Hinweis auf der Kachel
+  blieb nach Ende einer Anbieter-Pause teils MINUTENLANG stehen, obwohl
+  `GetGlobalPauseUntil()` selbst jederzeit korrekt (nicht
+  zwischengespeichert) den aktuellen Zustand lieferte und ein manueller
+  Anbieter-Test im Formular längst wieder Erfolg meldete - reines
+  Anzeigeproblem, keine fehlerhafte Übersetzungs-Entscheidung dahinter.
+  `ClearProviderPause()` (läuft bei jedem echten Übersetzungserfolg)
+  aktualisiert zwar sofort den gespeicherten Pause-Zustand, pusht aber nie
+  von sich aus eine aktualisierte Anzeige an bereits geöffnete
+  Gast-Kacheln - und auch ein rein zeitliches Ablaufen der Pause (ganz
+  ohne neuen Übersetzungsversuch) hat dafür ohnehin keinen eigenen
+  Auslöser. Der bisher nur für die Statistik-Zeile gedachte periodische
+  Kachel-Refresh (`RefreshTranslationStatsTile`, zuvor an
+  `propertyShowTranslationStats` gekoppelt und alle 10 Minuten) läuft ab
+  jetzt IMMER (unabhängig von dieser Einstellung) und alle 2 statt 10
+  Minuten - er aktualisiert ohnehin die komplette Gast-Anzeige in einem
+  Rutsch (Statistik UND Pause-/Testphase-Hinweis), verursacht dabei
+  weiterhin keinen einzigen API-Aufruf (reine `PushVisualizationUpdate()`-
+  Neuberechnung).
+* **Build 88, auf Nutzer-Wunsch: "Baum neu einlesen" zeigt jetzt einen
+  Fortschrittsbalken im Konfigurationsformular, solange der Rescan
+  läuft.** Bisher war ein länger laufender Rescan (viele neue
+  Übersetzungen, mehrere API-Aufrufe) im Formular selbst nicht von einem
+  eingefrorenen/nicht reagierenden Modul zu unterscheiden - erkennbar war
+  das bislang nur über die Debug-Meldungen-Konsole, die kaum ein
+  gewöhnlicher Nutzer je öffnet. Neues `ProgressBar`-Formularelement
+  (`indeterminate`, also eine laufende Animation statt eines exakten
+  Prozentwerts - eine echte Prozentanzeige würde eine deutlich tiefere
+  Umstrukturierung der Übersetzungs-Batches erfordern, für vergleichsweise
+  wenig zusätzlichen Nutzen), dessen Beschriftung während `ScanRootTree()`
+  bei jedem Verarbeitungsschritt per `UpdateFormField()` live aktualisiert
+  wird ("Baum wird eingelesen…" → "Objektnamen und Texte werden
+  übersetzt…" → "Weitere Inhalte werden übersetzt…" → "Ergebnis wird
+  gespeichert…") - nach demselben Prinzip, nach dem auch die
+  Debug-Konsole schon während eines laufenden Skripts live neue Einträge
+  zeigt, nicht erst nach Skriptende. Wird sowohl beim Abbruch (unbenannte
+  Objekte gefunden) als auch beim regulären Abschluss zuverlässig wieder
+  ausgeblendet - unabhängig davon, ob es sich um einen manuellen oder
+  einen automatischen Hintergrund-Rescan handelt (letzterer ruft nie
+  `ReloadForm()` auf, das Ausblenden darf deshalb nicht daran hängen -
+  sonst genau dieselbe Art von hängenbleibender Anzeige wie der in
+  Build 87 behobene Pause-Hinweis).
+* **Build 89, auf Nutzer-Wunsch: neue Liste "Eigene Übersetzungstabelle" -
+  ein admin-gepflegtes Glossar, das jeder automatischen Übersetzung
+  (Google/DeepL/MyMemory) vorgezogen wird.** Aufbau wie "Objektnamen"
+  (eine Quellsprachen-Spalte + eine Spalte je Zielsprache), aber komplett
+  eigenständig admin-editierbar statt aus dem Objektbaum gescannt - über
+  den "Hinzufügen"-Button der Liste selbst legt der Admin eine neue Zeile
+  an, wählt die Quellsprache, trägt den Quelltext ein und füllt beliebig
+  viele Zielsprachen-Zellen aus. Trifft der Quelltext einer Zeile hier
+  (zeichengenau, kein Fuzzy-Matching) auf den Rohtext IRGENDEINER anderen
+  Zeile in dieser Instanz zu (Objektnamen, Eigene Texte,
+  Aufzählungsoptionen, Automatisierungen, Begrüßung), wird für jede
+  ausgefüllte Zielsprachen-Zelle diese Übersetzung verwendet statt eines
+  Anbieter-Aufrufs - und zwar mit höherer Priorität als sogar der interne
+  Übersetzungs-Cache. Bewusst zellenweise: eine ansonsten passende Zeile
+  mit einer noch LEEREN Zelle für eine bestimmte Zielsprache blockiert die
+  automatische Übersetzung NUR für andere, bereits ausgefüllte Sprachen
+  nicht - für diese eine Sprache läuft die automatische Übersetzung ganz
+  normal weiter. Neues Lizenz-Feature `manual_translations` (ab
+  Standard-Lizenz, unabhängig vom bestehenden `edit_translations` für das
+  nachträgliche Korrigieren einzelner Auto-Übersetzungszellen) - ohne
+  dieses Feature bleibt die Property zwar erhalten (kein Datenverlust bei
+  einem Lizenz-Downgrade), wirkt sich aber gar nicht mehr aus, weder beim
+  Bearbeiten noch bei der Anwendung bereits gespeicherter Zeilen.
+* **Build 90 behebt einen strukturellen Bug, live gefunden: ein
+  Sprachwechsel konnte in "Aufzählungsoptionen" ("Captions") Dopplungs-
+  Zeilen erzeugen, deren "Original import" tatsächlich die zuletzt
+  angezeigte ÜBERSETZUNG war, fälschlich als Quellsprache markiert.**
+  Zeigt eine Variable ihre Beschriftung über ein geteiltes Profil/Template
+  (z. B. "An"/"Aus"), kann Simple Locale beim Live-Anzeigen einer anderen
+  Sprache keine einzelnen Felder an einer WEITERHIN referenzierten
+  Quelle überschreiben - die Variable wird deshalb bewusst "geforkt"
+  (die Profil-/Template-Referenz entfernt, die Übersetzung stattdessen
+  direkt inline in die Variable geschrieben, siehe
+  `ApplyEnumerationOptionsToVariable`). Bis Build 90 verlor die Variable
+  dadurch aber auch dauerhaft die einzige Spur ihrer ursprünglichen,
+  geteilten Identität: ohne erkennbare Profil-/Template-Referenz fiel die
+  Zeilenerkennung beim nächsten Rescan auf einen Hash über den GERADE
+  angezeigten Text zurück (Build 75, für Variablen, die von Haus aus kein
+  geteiltes Profil/Template nutzen) - und dieser Hash änderte sich mit
+  JEDEM Sprachwechsel, weil sich der angezeigte Text änderte. Der nächste
+  Rescan erkannte die Zeile dadurch nicht wieder, hielt den gerade
+  angezeigten (oft längst übersetzten) Text für frischen Quelltext und
+  legte eine neue, falsch beschriftete Dopplungs-Zeile an - reproduzierbar
+  bei jedem automatischen Rescan, solange die Kachel auf einer anderen
+  als der Quellsprache stand. Der bereits vor dem allerersten Fork
+  gesicherte Rücksprung-Zustand
+  (`attributeEnumerationPresentationBackup`, ursprünglich nur fürs
+  Zurückschalten auf "Original" gedacht) kennt die echte, stabile
+  Profil-/Template-Referenz aber weiterhin - `GetPresentationSourceKey()`
+  leitet den Zeilen-Schlüssel jetzt bevorzugt daraus ab, sobald ein
+  Backup existiert, unabhängig davon, welche Sprache die Variable gerade
+  live anzeigt.
+
+  Zweiter, tieferer Teil desselben Bugs: Variablen OHNE jedes geteilte
+  Profil/Template (eigenständige, direkt vom Gerätetreiber gesetzte
+  Inline-Präsentation, siehe Build 75) verlieren durch den Fork nicht nur
+  eine Referenz, sondern ihren GESAMTEN stabilen Rohtext - für sie reicht
+  die stabile Referenz allein nicht, da der Rohtext selbst (nicht nur ein
+  Verweis darauf) in den Content-Hash einfließt. `ReadTranslatablePresentation()`
+  liest den zu extrahierenden Inhalt jetzt ebenfalls bevorzugt aus dem
+  Backup, sobald dieses selbst keine Profil-/Template-Referenz enthält -
+  hat der Backup dagegen eine Referenz (der häufigere Fall), bleibt es bei
+  der live aufgelösten Präsentation für den Inhalt (der Backup ist dort
+  nur eine dünne Referenz ohne eigene Beschriftungen), die
+  Zeilenerkennung ist für diesen Fall bereits über die Schlüssel-Ableitung
+  oben abgesichert.
+
+  **Bereits bestehende Installationen:** durch den Bug bereits entstandene
+  Dopplungs-Zeilen verschwinden nicht automatisch rückwirkend - einmal
+  "Baum neu einlesen" (damit die betroffenen Variablen wieder unter ihrem
+  stabilen Schlüssel erkannt werden) und danach einmal "Aufräumen"
+  (entfernt die jetzt nicht mehr auffindbaren alten Dopplungs-Zeilen,
+  siehe Build 76) klicken.
+* **Build 91, auf Nutzer-Wunsch: der "Hinzufügen"-Button der "Eigenen
+  Übersetzungstabelle" ist jetzt ebenfalls deaktiviert, wenn die Lizenz
+  das Feature `manual_translations` (Build 89) nicht enthält.** Die
+  Zellen selbst waren dafür bereits schreibgeschützt (siehe
+  `BuildListColumns`), der Button blieb bisher aber unabhängig davon
+  klickbar - ein Klick legte eine neue Zeile an, die sich anschließend
+  gar nicht mehr bearbeiten ließ, ein verwirrender Sackgassen-Zustand.
+  Außerdem ist `manual_translations` jetzt ab der Standard-Lizenz Teil
+  des offiziellen Feature-Sets (Standard UND Pro, siehe
+  `includes/products.php` im Shop-Repository) - bereits VOR diesem Update
+  ausgestellte Lizenzschlüssel enthalten dieses Feature naturgemäß noch
+  nicht (ein Lizenzschlüssel ist beim Ausstellen kryptografisch signiert
+  und lässt sich nicht nachträglich ändern) und benötigen einen neu
+  ausgestellten Schlüssel, um die "Eigene Übersetzungstabelle"
+  tatsächlich nutzen zu können.
+* **Build 92:** die Überschrift der Liste selbst ("Eigene
+  Übersetzungstabelle", live gemeldet) fehlte noch in `locale.json` und
+  blieb dadurch bei jeder Konsolensprache auf Deutsch stehen, obwohl die
+  Spalten-/Beschreibungstexte bereits korrekt übersetzt wurden - Build 89
+  hatte nur Letztere ergänzt, den kurzen Listentitel selbst aber
+  übersehen. Ergänzt für en/es/it/fr.
+* **Build 93 behebt einen wichtigen Bug in der "Eigenen
+  Übersetzungstabelle" (Build 89): ein Glossar-Eintrag wirkte bisher nur
+  auf noch LEERE Zellen, nicht auf bereits (ggf. falsch) automatisch
+  übersetzte.** Live gefunden: "SSW" (Windrichtung Süd-Südwest) wurde von
+  Google fälschlich als Abkürzung für "Schwangerschaftswoche" erkannt und
+  mit "week of pregnancy" "übersetzt" - ein extra dafür angelegter
+  Glossar-Eintrag ("SSW" → "SSW") blieb trotzdem komplett wirkungslos,
+  weil die betroffene Zielsprachen-Zelle bereits (falsch) befüllt war und
+  die Glossar-Prüfung bisher nur innerhalb `TranslateBatch()` lief - dort
+  aber nur für noch unübersetzte ("pending") Zellen erreichbar ist, exakt
+  wie bei jeder anderen Zelle auch (schützt normalerweise echte manuelle
+  Korrekturen vor versehentlichem Überschreiben). Das widersprach aber der
+  ursprünglichen Anfrage wörtlich: ein Glossar-Eintrag soll "immer
+  Vorrang vor Online-Übersetzungen" haben - was nur funktionieren kann,
+  wenn er auch eine bereits gefüllte Zelle überschreiben darf. Neue
+  `ApplyManualTranslationOverrides()` läuft jetzt bei JEDEM Rescan VOR der
+  normalen Fülllogik und prüft JEDE Zelle jeder Zeile gegen das Glossar -
+  unabhängig davon, ob sie bereits befüllt ist -, und überschreibt sie,
+  sobald ein passender Eintrag mit abweichendem Wert existiert. Eine
+  bereits korrekte Zelle (Wert entspricht bereits dem Glossar-Eintrag)
+  bleibt dabei unverändert (kein unnötiges Neu-Markieren). Betrifft
+  bewusst auch die Quellsprachen-Spalte selbst (z. B. um einen Tippfehler
+  im gescannten Rohtext gezielt zu korrigieren, ohne den eigentlichen
+  Objektnamen anzufassen). Die bisherige Prüfung innerhalb
+  `TranslateBatch()` bleibt zusätzlich bestehen - notwendig für die live
+  nachübersetzten "Eigenen Texte" (siehe `ApplyTrackedVariableUpdate`),
+  die nicht über den normalen Rescan-Pfad laufen.
+* **Build 94, rein diagnostisch: temporäres `SendDebug`-Logging (Kategorie
+  `IPSSL_GreetingDiag`) rund um die "Begrüßung" (Modus "Variable").** Live
+  gemeldet: nach einem Sprachwechsel in der Gäste-Visu (de → en) und einem
+  anschließenden Rescan stand `ORIGINAL_IMPORT` der Begrüßungs-Zeile
+  fälschlich auf dem englischen Text, obwohl die Quellsprache weiterhin
+  `de` ist - trotz des seit Build (siehe Commit `6ae1bd3`) bestehenden
+  `IsSourceLanguageActive`-Schutzes in `MergeGreetingRows()`, der genau
+  das verhindern soll. Reine Code-Analyse konnte den genauen Leck-Punkt
+  nicht zweifelsfrei bestimmen - zwei Kandidaten: (a) der Schutz in
+  `MergeGreetingRows()` selbst greift in diesem konkreten Fall nicht wie
+  erwartet, oder (b) der eigentliche Schreib-/Übersetzungsvorgang von
+  `ApplyGreetingLanguage()` (beim Sprachwechsel selbst, nicht erst beim
+  Rescan) über `HandleTrackedVariableUpdate()`/`ApplyTrackedVariableUpdate()`
+  läuft - letztere Funktion hat KEINEN `IsSourceLanguageActive`-Schutz und
+  würde jeden als "extern" erkannten Schreibvorgang ungeprüft als frischen
+  Rohtext übernehmen. Das Logging deckt beide Kandidaten ab: Reihenfolge
+  von `SetValueString()` und dem Self-Write-Guard-Attribut in
+  `WriteTrackedValueString()`, den tatsächlich ausgewerteten
+  `IsSourceLanguageActive`-Wert in `ScanRootTree()`, sowie jeden Schreibpfad
+  in `ApplyGreetingLanguage()`/`ApplyTrackedVariableUpdate()` mit den
+  jeweils beteiligten Rohwerten. Rein additiv, keine Verhaltensänderung
+  (volle Regressionssuite unverändert grün) - wird entfernt bzw. durch die
+  eigentliche Korrektur ersetzt, sobald die Logs den Mechanismus bestätigt
+  haben.
+* **Build 95 behebt den in Build 94 diagnostizierten Bug und entfernt das
+  dortige temporäre Logging wieder.** Der Log-Dump des Nutzers hat den
+  Mechanismus zweifelsfrei belegt (Kandidat b aus Build 94): `existingGreeting`
+  und `mergedGreeting` beim Rescan waren korrekt deutsch -
+  `IsSourceLanguageActive` in `MergeGreetingRows()` funktioniert also wie
+  vorgesehen. Trotzdem zeigte die Zeile direkt nach `IPS_SetProperty()` +
+  `IPS_ApplyChanges()` wieder den englischen Text, während `de`/`en`/`es`
+  unverändert blieben - ein klares Zeichen für einen gezielten Feld-Patch,
+  keinen vollständigen Zeilenaustausch. Ursache: irgendwann zuvor (Zeitpunkt
+  unklar, vermutlich ein seltenes Timing-Fenster im Selbst-Schreib-Schutz
+  `attributeLastSelfWrittenValues`) hatte `WriteTrackedValueString()`s
+  eigener Übersetzungs-Schreibvorgang für die Begrüßungsvariable
+  `HandleTrackedVariableUpdate()` ausgelöst, ohne vom Selbst-Schreib-Schutz
+  erkannt zu werden - `ApplyTrackedVariableUpdate()` hat den englischen Text
+  daraufhin (ohne jeden `IsSourceLanguageActive`-Schutz, den nur
+  `MergeGreetingRows()` kennt) als vermeintlich frischen deutschen Rohtext
+  übernommen und über `BufferPendingTrackedRowUpdate()` gepuffert. Dieser
+  längst veraltete Puffer-Eintrag blieb liegen, bis der o. g. Rescan lief:
+  dessen abschließendes `IPS_ApplyChanges()` reentert in `ApplyChanges()`,
+  das als einen seiner ersten Schritte `FlushPendingTrackedRowUpdates()`
+  aufruft - und DAS hat den falschen Puffer-Eintrag über das gerade eben
+  korrekt geschriebene Ergebnis geschrieben. Ein zeitpunktunabhängiger Fix
+  direkt am Symptom statt am (schwer greifbaren) Timing-Fenster:
+  `ApplyTrackedVariableUpdate()` bricht jetzt sofort ab, wenn der neu
+  beobachtete Wert exakt der bereits gespeicherten Übersetzung dieser Zeile
+  für die AKTUELL aktive Sprache entspricht - das ist so gut wie sicher ein
+  Echo des eigenen Schreibvorgangs, kein echter externer Inhaltswechsel (ein
+  Fremdmodul/Zeitplan-Skript, das z. B. eine Tageszeit-Begrüßung schreibt,
+  träfe kaum je zufällig exakt den Text einer vorhandenen Übersetzung). Der
+  legitime externe-Update-Anwendungsfall aus Build 70 (z. B. ein häufig
+  aktualisiertes Wetter-Widget) bleibt davon unberührt, da ein echter neuer
+  Messwert praktisch nie mit einer gespeicherten Übersetzung übereinstimmt.
+* **Build 96, auf Nutzer-Wunsch: sichtbare Rückmeldung für alle Buttons im
+  Konfigurationsformular.** "Lizenz aktivieren" hatte bereits ein passendes
+  Popup und "Übersetzungs-Cache leeren" stellte sich bei der Durchsicht als
+  bereits vollständig umgesetzt heraus (Popup `CacheClearedPopup` mit
+  Erfolgsmeldung, in allen vier Sprachen lokalisiert, nach demselben Muster
+  wie das Ergebnis-Popup der Anbieter-Prüfung) - keine Änderung nötig. Neu
+  bekommen "Übersetzungen gelöschter Elemente entfernen" (Aufräumen) und
+  "Übersetzungsanbieter prüfen" je einen eigenen Fortschrittsbalken
+  (`CleanupProgressBar`/`ProviderCheckProgressBar`, dieselbe `ProgressBar`-
+  Anzeige wie beim Rescan seit Build 88), sichtbar ab Klick bis kurz vor dem
+  jeweiligen Ergebnis (Popup bzw. Formular-Neuladen) - selbst wenn "Aufräumen"
+  in der Praxis meist nur einen kurzen Moment dauert, bestätigt das kurze
+  Aufblitzen dem Nutzer, dass der Klick etwas ausgelöst hat, statt scheinbar
+  wirkungslos zu bleiben. Neue gemeinsame Hilfsfunktion `SetButtonProgress()`
+  - dieselbe Live-Push-Logik wie `SetRescanProgress()`, aber ohne dessen
+  persistierten Attribut-Zustand (der nur für einen ggf. minutenlangen Rescan
+  gebraucht wird, den ein wieder geöffnetes Formular nachträglich anzeigen
+  können muss - "Aufräumen"/"Anbieter prüfen" laufen synchron innerhalb eines
+  einzigen `RequestAction()`-Aufrufs und sind dafür zu kurzlebig). Das
+  bestehende Ergebnis-Popup der Anbieter-Prüfung bleibt unverändert - der
+  Fortschrittsbalken blendet sich unmittelbar davor aus.
+* **Build 97, auf Nutzer-Nachfrage geprüft: die in `library.json` deklarierte
+  Mindestversion Symcon 7.1 stimmt weiterhin, ein realer Lücke in der
+  Absicherung von `ApplyEnumerationOptionsToVariable()` wurde dabei aber
+  gefunden und geschlossen.** `IPS_SetVariableCustomPresentation()` und
+  `IPS_GetVariablePresentation()` - Symcons Presentation-System, seit Build 90
+  Grundlage für die Übersetzung von Enum-/Profil-Beschriftungen (Dropdowns,
+  Status-Variablen usw.) - sind laut offizieller Symcon-Dokumentation erst
+  "seit 8.0" verfügbar. Die Lese-Seite (`ReadTranslatablePresentation()`,
+  Quelle für `propertyEnumerationOptions`) hat dafür bereits seit jeher einen
+  `function_exists('IPS_GetVariablePresentation')`-Schutz (liefert auf
+  Symcon < 8.0 einfach `null`, siehe auch [Abschnitt
+  3](#3-voraussetzungen): "bleibt komplett inaktiv, kein Fehler") -
+  `ApplyEnumerationOptionsToVariable()` (die Schreib-Seite, angewendet bei
+  jedem Sprachwechsel) hatte denselben Schutz aber NIE bekommen (nur `@`,
+  unterdrückt bloß Warnungen, keinen Fatal Error bei einer unbekannten
+  Funktion). Auf einer frisch auf Symcon < 8.0 gescannten Instanz blieb das
+  bisher folgenlos, weil `propertyEnumerationOptions` dort dank der
+  Lese-Seiten-Sperre ohnehin nie Zeilen enthält (die Schleife, die
+  `ApplyEnumerationOptionsToVariable()` aufruft, läuft dann schlicht nie an) -
+  betroffen wäre aber eine Instanz gewesen, deren Konfiguration ursprünglich
+  auf Symcon ≥ 8.0 gescannt wurde (also bereits reale Zeilen in
+  `propertyEnumerationOptions` stehen) und die anschließend auf eine Version
+  < 8.0 zurückgestuft bzw. deren Konfiguration dorthin übertragen wird - dort
+  hätte der nächste Sprachwechsel einen Fatal Error ausgelöst. Jetzt trägt
+  `ApplyEnumerationOptionsToVariable()` denselben Schutz wie die Lese-Seite.
+  Der ursprünglich für Symcon 7.1 dokumentierte Kompatibilitätsanspruch bleibt
+  damit korrekt, ohne Einschränkung.
+* **Build 98 behebt einen live gemeldeten Bug: das Ergebnis-Popup von
+  "Aufräumen" verschwand direkt wieder, weil der dafür nötige
+  Formular-Reload (`ReloadForm()`) im selben Aufruf lief.** `ReloadForm()`
+  ist bei "Aufräumen" nicht verzichtbar - ein bereits offenes
+  Konfigurationsformular hätte sonst weiterhin den alten (längeren)
+  Listen-Stand im "Übernehmen"-Puffer und würde ihn beim nächsten Speichern
+  über das gerade bereinigte Ergebnis zurückschreiben (dieselbe Begründung
+  gilt für den manuellen Rescan, siehe dortiger Kommentar) - aber genau
+  dieser komplette Formular-Neuaufbau riss auch das gerade erst über
+  `UpdateFormField()` gezeigte `CleanupResultPopup` sofort wieder mit aus dem
+  DOM, bevor der Nutzer die Meldung lesen konnte. Fix: `CleanupOrphanedRows()`
+  ruft `ReloadForm()` nicht mehr synchron im selben Durchlauf auf, sondern
+  blendet das Ergebnis-Popup zuerst live auf dem noch offenen Formular ein
+  (derselbe bereits bewährte Mechanismus wie bei `CacheClearedPopup`/
+  `ProviderCheckResultPopup`, die beide ganz ohne Reload auskommen) und
+  startet dann einen einmaligen, um `CLEANUP_RELOAD_DELAY_SECONDS` (5s)
+  verzögerten Timer (`ProcessDeferredCleanupReload()`), der den eigentlichen
+  Reload erst danach nachholt - genug Zeit, die Meldung zu lesen, bevor die
+  Liste im Hintergrund aktualisiert wird. Das Popup bleibt dabei nahtlos
+  sichtbar: der zugrunde liegende Zähler-Wert wird weiterhin erst beim
+  tatsächlichen Reload (in `PopulateFormElements()`) einmalig verbraucht,
+  nicht schon beim Live-Einblenden.
+* **Build 99, auf Nutzer-Wunsch: Tausendertrennzeichen in den
+  Übersetzungsstatistiken.** Live gemeldet anhand eines Cache-Ersparnis-Werts
+  von über 1,6 Millionen Zeichen, der als reine Ziffernfolge kaum lesbar war.
+  Neue Funktion `FormatStatsCountForDisplay()` (Format "1.622.345", dieselbe
+  feste, nicht konsolensprachenabhängige Konvention wie das bereits
+  bestehende `date('d.m.Y', ...)` an anderer Stelle) wird jetzt in den
+  Konfigurationsformular-Statistikzeilen, im Gast-Info-Popup der Kachel und
+  im kleinen Hinweistext unter dem Sprach-Dropdown verwendet. Bewusst NICHT
+  in die bestehende `FormatStatsCount()` eingebaut, sondern als eigene
+  Funktion daneben: `FormatStatsCount()` liefert auch die Werte für die
+  `<!--COUNT_TRANSLATIONS-->`/`<!--COUNT_SIGNES-->`-Platzhalter in eigenen
+  Kacheln (siehe Abschnitt 7) - dort laut Dokumentation bewusst "nur die
+  reine Zahl", da Nutzer sich daraus eigenen Text/JS/CSS bauen; ein
+  Trennzeichen hätte dort z. B. ein eigenes `parseInt()` stillschweigend
+  brechen können.
+* **Build 100, rein diagnostisch: temporäres `SendDebug`-Logging (Kategorie
+  `IPSSL_TranslateGapDiag`) in `FillLanguageColumn()`.** Live gemeldet: nach
+  einem vollständigen Rescan blieben viele "Eigene Texte"-Zellen für eine
+  einzelne Zielsprache (hier: Spanisch) leer, obwohl weder eine Anbieter-Pause
+  aktiv war noch der Rohtext als JSON erkannt wurde (das wäre erwartetes
+  Verhalten, siehe Build 84) - ein per Debug-Log bestätigter kompletter
+  Rescan-Durchlauf zeigte für die betroffenen Zeilen ueberhaupt KEINEN
+  `FreeTranslate_Request`/`GoogleTranslate_Mapping`-Eintrag für
+  `Text_es`, obwohl die Original-Zelle sichtbar nicht-leeren, echten Text
+  enthielt. Reine Code-Analyse von `IsRowLanguageTranslationCurrent()` (der
+  einzige Ort, an dem eine Zeile hier übersprungen werden kann, wenn
+  `$fromText` nicht leer und kein JSON ist) zeigt keinen offensichtlichen
+  Fehler - der Kernverdacht ist daher, dass die betroffene Zielsprachen-Zelle
+  entgegen dem Anschein in der Formular-Ansicht in Wahrheit NICHT den leeren
+  String `''` enthält (z. B. ein einzelnes Leerzeichen, übrig von einer
+  manuellen Lösch-Aktion im Formular) - der strikte `===''`-Vergleich würde
+  das fälschlich als "bereits übersetzt" werten. Das neue Logging macht den
+  tatsächlichen Zellenwert per `json_encode()` eindeutig sichtbar (deckt auch
+  unsichtbare Whitespace-/Sonderzeichen auf) und protokolliert für jede nicht
+  als JSON erkannte Zeile mit nicht-leerem Rohtext die vollständige
+  Entscheidungsgrundlage (aktueller Zellenwert, JSON-Erkennung,
+  "bereits aktuell"-Ergebnis, Zeitstempel). Rein additiv, keine
+  Verhaltensänderung (volle Regressionssuite unverändert grün) - wird
+  entfernt bzw. durch die eigentliche Korrektur ersetzt, sobald die Logs den
+  Mechanismus bestätigt haben.
+* **Build 101 behebt einen per direkter Property-Abfrage bestätigten Bug:
+  wird ein Rohtext leer, bleiben veraltete Übersetzungen in den
+  Zielsprachen-Spalten unverändert stehen, statt mit-geleert zu werden.**
+  Live gefunden (Nutzer-Diagnose über ein kleines Inspektions-Skript, siehe
+  unten): eine "Eigene Texte"-Zeile mit dynamischem Inhalt (springt je nach
+  Bedingung zwischen echtem Text und `""`) zeigte `ORIGINAL_IMPORT_Text` aktuell
+  leer, `Text_en` aber weiterhin eine längst nicht mehr zutreffende alte
+  Übersetzung. Ursache: `ApplyTrackedVariableUpdate()` übernimmt einen leeren
+  Wert korrekt als frischen Rohtext und markiert per `MarkRowSourceChanged()`
+  bewusst alle Zielsprachen-Zellen als veraltet, OHNE ihren bisherigen
+  (Fallback-)Wert zu löschen (siehe dortiger Kommentar) - die eigentliche
+  Auffrischung sollte der nächste Rescan übernehmen. `FillLanguageColumn()`/
+  `FillLanguageColumnFromRawSource()` übersprangen eine Zeile mit leerem
+  Rohtext bisher aber komplett ("nichts zu übersetzen") - dabei blieb die
+  laengst veraltete Zielsprachen-Zelle als Karteileiche stehen, statt
+  wenigstens geleert zu werden. Trifft ein Rescan die Zeile wiederholt in
+  ihrem leeren Zustand (z. B. weil der Inhalt öfter leer als gefüllt ist),
+  konnte das faktisch dauerhaft so bleiben. Fix: eine bereits befüllte
+  Zielsprachen-Zelle wird jetzt aktiv mit-geleert, sobald der Rohtext selbst
+  leer ist - konsistent mit `ResolveRowValue()`, das bei leerem Rohtext
+  ohnehin nichts anzuzeigen hätte. Entfernt außerdem das temporäre Build-100-
+  Logging wieder. **Der zweite, separate Verdacht aus derselben Live-Diagnose
+  ist inzwischen aufgeklärt** (siehe Build 102 direkt im Anschluss) - zwei
+  statische "Eigene Texte"-Zeilen mit langen Rohtexten zeigten dauerhaft
+  leeres Spanisch bei gefülltem Englisch; der Meldungen-Log des Nutzers zeigte
+  den tatsächlichen Grund: "alle Anbieter der Kette (deepl [pausiert], google
+  [pausiert], free) haben 'de' -> 'es' abgelehnt" - kein Logikfehler, sondern
+  eine echte Anbieter-Erschöpfung (siehe Build 102).
+* **Build 102, auf Nutzer-Hinweis: DeepLs kostenfreie Stufe ist inzwischen
+  KEIN wiederkehrendes Monats-/Tageskontingent mehr, sondern ein EINMALIGES
+  Frei-Kontingent (aktuell 1 Mio. Zeichen), danach bleibt der Key dauerhaft
+  gesperrt.** `DetectRateLimitCooldown()` behandelte DeepLs dediziertes HTTP
+  456 ("Quota Exceeded") bisher wie jedes andere erkannte
+  Tageskontingent-Signal (`DAILY_QUOTA_COOLDOWN_SECONDS`, 24h) - das Modul
+  hätte einen einmalig aufgebrauchten DeepL-Key dadurch jeden einzigen Tag
+  aufs Neue (erfolglos) angefragt, obwohl das Kontingent nie zurückkehrt.
+  HTTP 456 bekommt jetzt die deutlich längere, neue
+  `DEEPL_QUOTA_EXHAUSTED_COOLDOWN_SECONDS` (30 Tage) - stoppt die
+  automatischen Wiederholungsversuche faktisch, ohne den Anbieter für immer
+  zu deaktivieren; ein Klick auf "Übersetzungsanbieter prüfen" nach einem
+  Key-Wechsel/Upgrade beendet die Sperre wie gewohnt sofort bei Erfolg. Dabei
+  einen zweiten, unabhängigen Bug in `RecordProviderPaused()` gefunden und
+  mitbehoben: die Eskalations-Deckelung rundete JEDEN übergebenen
+  Basis-Cooldown ab `DAILY_QUOTA_COOLDOWN_SECONDS` bedingungslos auf genau
+  24h herunter - das hätte die neue, längere DeepL-Sperre stillschweigend
+  wirkungslos gemacht. Ein bereits als "langfristig bekannt" erkannter
+  Fehlschlag (Tageskontingent ODER jetzt auch DeepLs Einmalkontingent) startet
+  jetzt direkt beim tatsächlich übergebenen Wert; nur die generische
+  Kurzsperren-Eskalation (Streak-Verdopplung für ein nicht näher erkanntes
+  Rate-Limit) bleibt weiterhin auf 24h gedeckelt.
+* **Build 103 behebt einen direkten Nebeneffekt dieser Längengrenze, live
+  gefunden anhand einer irreführenden Meldungen-Log-Zeile.** Ein Eintrag
+  "alle Anbieter der Kette (deepl [pausiert], google [pausiert], free) haben
+  'de' -> 'es' abgelehnt (77 Text(e), erster Text: 'Echo Info')" sah aus, als
+  hätte selbst ein triviales 9-Zeichen-Wort abgelehnt - der zugehörige Debug-
+  Log-Eintrag zeigte für "Echo Info" aber eine echte, erfolgreiche MyMemory-
+  Antwort (HTTP 200, `quotaFinished: false`). Der Text im Log ist nur der
+  ERSTE von 77 angefragten Texten (`$Texts[0]` in der Fehler-Zusammenfassung),
+  nicht zwangsläufig der eigentliche Übeltäter. Ursache: MyMemory hat keinen
+  echten Batch-Endpunkt (ein HTTP-Request pro Text, siehe oben) -
+  `TranslateChunkFree()` brach bei EINEM einzelnen `null`-Ergebnis (egal an
+  welcher Position) bislang sofort für den GESAMTEN Aufruf ab und verwarf
+  dabei alle bereits erfolgreich übersetzten Texte desselben Aufrufs. Ein
+  einzelner über 500 Byte langer Text irgendwo unter den 77 angefragten
+  reichte also aus, um alle 76 übrigen, problemlos übersetzbaren Texte mit
+  sich zu reißen. `TranslateSingleFree()` liefert für diesen Fall jetzt `''`
+  (Leerstring) statt `null` - dasselbe Signal wie beim bereits bestehenden
+  Leerstring-Fall für einen leeren Rohtext direkt darüber -
+  `TranslateChunkFree()` fährt dadurch mit den restlichen Texten fort, statt
+  abzubrechen. Die zu lange Zelle selbst bleibt weiterhin leer (wird beim
+  nächsten Rescan erneut versucht, dann ggf. über einen zwischenzeitlich
+  wieder verfügbaren bezahlten Anbieter ohne diese Längenbegrenzung) - alle
+  anderen Texte desselben Aufrufs werden jetzt aber sofort korrekt gefüllt,
+  statt unnötig auf den nächsten Rescan warten zu müssen.
+* **Build 104, auf Nutzer-Nachfrage: eine manuell im Formular korrigierte
+  Übersetzungszelle wurde bislang nicht sofort in der Visualisierung
+  sichtbar.** Nicht wie zunächst vermutet die für externe VM_UPDATE-
+  Schreibvorgänge gedachte 12-Minuten-Debounce
+  (`PENDING_ROW_UPDATE_DEBOUNCE_SECONDS`, siehe `BufferPendingTrackedRowUpdate`
+  weiter unten) - die betrifft ausschließlich fremde Schreibzugriffe, nicht
+  eine manuelle Bearbeitung im Konfigurationsformular. Der tatsächliche Grund:
+  `ApplyLanguage()` (die Funktion, die Namen/Wert tatsächlich ans lebende
+  Objekt schreibt) lief in `ApplyChanges()` bisher NUR erneut, wenn sich
+  entweder die aktuell aktive Gast-Sprache selbst geändert hatte oder eine
+  Zeilen-Quellsprache reconciled wurde - eine reine Korrektur einer
+  Übersetzungszelle löst keines von beidem aus. Die Korrektur landete zwar
+  sofort gespeichert in der Property, wurde aber erst beim nächsten
+  tatsächlichen Sprachwechsel ans Objekt gepusht. Neue, güns­tige
+  Fingerprint-Prüfung (`ComputeActiveLanguageContentFingerprint()`, kein
+  API-Aufruf, reiner `md5()`-Vergleich über die für die aktuell aktive
+  Sprache aufgelösten Zellwerte, analog zur bereits bestehenden
+  `ComputeRowSourceLanguageFingerprint()` für Zeilen-Quellsprachen) stößt
+  `ApplyLanguage()` jetzt zusätzlich an, sobald sich irgendein für die aktuell
+  aktive Sprache relevanter Zellinhalt seit dem letzten Durchlauf geändert
+  hat - eine Korrektur an einer GERADE NICHT aktiven Zielsprache löst dabei
+  bewusst nichts aus (für den aktuellen Gast ändert sich ja nichts sichtbar).
+* **Build 105 behebt einen direkten Nebeneffekt von Build 104, live gefunden:
+  eine manuelle Korrektur wurde kurz angezeigt, dann aber "einen Augenblick
+  später" wieder auf den alten Wert zurückgesetzt - in der Tabelle stand
+  weiterhin die Korrektur, in der Visualisierung wieder der alte Wert.**
+  Ursache: `StagePendingTrackedRowUpdates()` (der verzögerte, gepufferte
+  Flush externer VM_UPDATE-Änderungen, siehe `BufferPendingTrackedRowUpdate`/
+  `PENDING_ROW_UPDATE_DEBOUNCE_SECONDS` oben) überschrieb Zeilenfelder beim
+  tatsächlichen Schreiben bislang bedingungslos mit dem gepufferten Wert -
+  völlig unabhängig davon, ob die Zelle inzwischen längst anderweitig
+  geändert wurde. `FlushPendingTrackedRowUpdates()` läuft am Anfang JEDES
+  `ApplyChanges()`-Durchlaufs, auch genau desjenigen, den das eigene
+  "Übernehmen" der manuellen Korrektur gerade selbst auslöst - ein zu diesem
+  Zeitpunkt noch ausstehender, längst veralteter Puffer-Eintrag (aus einem
+  früheren externen Schreibvorgang oder einem Selbst-Schreib-Echo, siehe
+  Build 95) konnte die frische Korrektur damit im selben oder einem knapp
+  späteren `ApplyChanges()`-Durchlauf kommentarlos wieder überschreiben -
+  ein Bug, der schon vor Build 104 bestand, aber unsichtbar blieb, weil
+  `ApplyLanguage()` bis dahin nur bei einem echten Sprachwechsel erneut
+  lief. Build 104s neue, häufigere `ApplyLanguage()`-Aufrufe machten genau
+  diesen alten Bug jetzt sichtbar. Fix: `BufferPendingTrackedRowUpdate()`
+  sichert jetzt zusätzlich eine Baseline (den Feldwert UNMITTELBAR VOR der
+  externen Änderung) für die beiden eigentlichen Inhaltsfelder (Rohtext und
+  ggf. die live nachübersetzte Zielsprachen-Zelle - reine
+  Zeitstempel-Buchführung bleibt unverändert bedingungslos). Beim
+  tatsächlichen Schreiben wendet `StagePendingTrackedRowUpdates()` ein
+  gepuffertes Feld nur noch an, wenn der aktuelle Zeilenwert noch exakt der
+  Baseline entspricht (also seither NICHTS anderes - typischerweise eine
+  manuelle Korrektur - die Zelle verändert hat) - andernfalls wird gezielt
+  NUR dieses eine Feld übersprungen, alle anderen gepufferten Felder
+  derselben Zeile sowie alle anderen Zeilen werden weiterhin normal
+  angewendet. Das ursprüngliche Ziel von Build 71 (ein gepufferter externer
+  Schreibvorgang darf durch ein unabhängiges "Übernehmen" nicht verloren
+  gehen) bleibt für jedes nicht betroffene Feld unverändert bestehen.
+* **Build 106, rein diagnostisch: Build 105 hat das live gemeldete Problem
+  NICHT behoben - live gefunden, dass es sich um "Objektnamen" handelt (nicht
+  "Eigene Texte"), für die aktuell aktive Sprache.** Ein frischer Debug-Export
+  zeigte statt eines Puffer-Flushes einen kompletten RESCAN rund 2 Sekunden
+  nach der manuellen Korrektur (zwei `EnsureSourceLanguageIsTarget`-Zeilen im
+  Abstand von 2s, vermutlich der Auto-Rescan-Timer) - `MergeRows()` (per
+  Code-Analyse bestätigt korrekt: friert Rohtext/Übersetzungen für bereits
+  bekannte `ObjectID`s ein) und ein Abgleich mit der "Eigenen
+  Übersetzungstabelle" (Build 93 - Glossareintrag würde jede Rescan-gestützte
+  Korrektur zurücksetzen) wurden beide geprüft und ausgeschlossen (keine
+  passende Glossar-Zeile vorhanden). Bleibt als Verdacht:
+  `FillLanguageColumn()`s "bereits aktuell"-Prüfung (`IsRowLanguageTranslationCurrent()`)
+  erkennt die frisch manuell bearbeitete Zelle fälschlich als "veraltet" und
+  übersetzt sie beim Rescan neu, wodurch die manuelle Korrektur überschrieben
+  wird - dieselbe Funktion, bei der Build 100/101 bereits einmal eine
+  verwandte Lücke fand (dort: Rohtext wurde leer). Neues
+  `SendDebug('IPSSL_NameRevertDiag', ...)` in `FillLanguageColumn()` (ersetzt
+  das in Build 101 entfernte `IPSSL_TranslateGapDiag`) protokolliert für jede
+  nicht-leere, nicht als JSON erkannte Zeile die vollständige
+  Pending/Aktuell-Entscheidung. Rein additiv, keine Verhaltensänderung (volle
+  Regressionssuite unverändert grün) - wird entfernt bzw. durch die
+  eigentliche Korrektur ersetzt, sobald die Logs den Mechanismus bestätigt
+  haben.
+* **Build 107 fand die eigentliche Ursache - nicht in `FillLanguageColumn()`,
+  sondern in `ApplyLanguage()` selbst.** Der Build-106-Diagnose-Export zeigte
+  bei allen 99 protokollierten Zeilen `isCurrent=true` (korrekt nicht
+  pending), und die tatsächlich bearbeitete `ObjectID` tauchte im gesamten
+  Log kein einziges Mal auf - der Verdacht aus Build 106 war damit widerlegt.
+  Ein direkt per Skript in der Symcon-Konsole ausgelesener Property-Snapshot
+  bewies stattdessen, dass die manuelle Korrektur den Rücksprung binnen des
+  GLEICHEN `ApplyLanguage()`-Laufs erlitt, nicht erst Sekunden später durch
+  einen Rescan. Grund: `WalkTree()` legt für JEDES Objekt mit gesetztem Ident
+  eine Zeile in "Objektnamen" an - unabhängig davon, ob es sich zusätzlich um
+  eine getrackte "Eigene Texte"-Variable handelt. Eine solche Variable landet
+  dadurch zwangsläufig gleichzeitig in BEIDEN Listen, und "Eigene Texte"
+  pflegt für ihre eigenen Zeilen eine komplett unabhängige, eigene
+  Namens-Übersetzung (`ORIGINAL_IMPORT_Name`/`Name_<lang>`). `ApplyLanguage()`
+  rief für dasselbe Objekt daher zwei voneinander unabhängige `IPS_SetName()`
+  auf - zuerst aus "Objektnamen" (die gerade korrigierte, richtige Zeile),
+  direkt darauf aus "Eigene Texte" (der eigene, unveränderte, damit
+  zwangsläufig veraltete Stand) -, wobei der zweite Aufruf den ersten
+  kommentarlos wieder überschrieb. Ein Schutz gegen doppeltes Schreiben
+  existierte bereits für Werte (`$writtenValueObjectIDs`, gegen zwei
+  "Eigene Texte"-Zeilen mit derselben `ValueObjectID`), aber nicht für Namen
+  über beide Listen hinweg. Fix: neues `$writtenNameObjectIDs`, von der
+  "Objektnamen"-Schleife befüllt - die "Eigene Texte"-Schleife überspringt
+  ihren eigenen `IPS_SetName()`-Aufruf jetzt für jedes Objekt, das bereits
+  über "Objektnamen" benannt wurde. Betraf nur Objekte, die in beiden Listen
+  gleichzeitig auftauchen (jede sinnvoll benannte "Eigene Texte"-Variable mit
+  gesetztem Ident, ein häufiger Fall) - reiner Namens-Bug, Werte
+  (`SetValueString`) waren nie betroffen. Kein Rescan/Sprachwechsel nötig,
+  damit der Fix greift: er wirkt bereits beim nächsten `ApplyLanguage()`-Lauf
+  nach der jeweiligen Korrektur. Für "Beschriftungen", "Automations" und
+  "Begrüßung" besteht dasselbe Risiko nicht - sie schreiben auf strukturell
+  andere Ziele (Custom Presentation bzw. die `Automations`-/`GreetingName`-
+  Property der Kachel-Visualisierungs-Instanz), nie über `IPS_SetName()`; der
+  einzige denkbare Überschneidungsfall (Begrüßung im Variable-Modus teilt
+  sich eine `ValueObjectID` mit einer "Eigene Texte"-Zeile) war bereits vor
+  Build 107 über denselben `$writtenValueObjectIDs`-Mechanismus abgesichert.
