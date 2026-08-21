@@ -1391,6 +1391,22 @@ Beschreibung des Moduls.
   sichtbar: der zugrunde liegende Zähler-Wert wird weiterhin erst beim
   tatsächlichen Reload (in `PopulateFormElements()`) einmalig verbraucht,
   nicht schon beim Live-Einblenden.
+
+  **Build 99, auf Nutzer-Wunsch: Tausendertrennzeichen in den
+  Übersetzungsstatistiken.** Live gemeldet anhand eines Cache-Ersparnis-Werts
+  von über 1,6 Millionen Zeichen, der als reine Ziffernfolge kaum lesbar war.
+  Neue Funktion `FormatStatsCountForDisplay()` (Format "1.622.345", dieselbe
+  feste, nicht konsolensprachenabhängige Konvention wie das bereits
+  bestehende `date('d.m.Y', ...)` an anderer Stelle) wird jetzt in den
+  Konfigurationsformular-Statistikzeilen, im Gast-Info-Popup der Kachel und
+  im kleinen Hinweistext unter dem Sprach-Dropdown verwendet. Bewusst NICHT
+  in die bestehende `FormatStatsCount()` eingebaut, sondern als eigene
+  Funktion daneben: `FormatStatsCount()` liefert auch die Werte für die
+  `<!--COUNT_TRANSLATIONS-->`/`<!--COUNT_SIGNES-->`-Platzhalter in eigenen
+  Kacheln (siehe Abschnitt 7) - dort laut Dokumentation bewusst "nur die
+  reine Zahl", da Nutzer sich daraus eigenen Text/JS/CSS bauen; ein
+  Trennzeichen hätte dort z. B. ein eigenes `parseInt()` stillschweigend
+  brechen können.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der

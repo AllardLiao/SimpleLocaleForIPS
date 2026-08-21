@@ -5272,6 +5272,22 @@ private const LANGUAGE_FLAGS = [
         return (string) (int) round($Value);
     }
 
+    // Build 99 (Nutzer-Wunsch): Tausendertrennzeichen für alle rein zur ANZEIGE
+    // gedachten Statistik-Werte (Konfigurationsformular-Zeilen, Gast-Info-Popup,
+    // Kachel-Hinweistext) - live gemeldet anhand eines Cache-Ersparnis-Werts von
+    // über 1,6 Millionen Zeichen, der als reine Ziffernfolge kaum noch lesbar
+    // war. Bewusst eine SEPARATE Funktion, NICHT FormatStatsCount() selbst
+    // erweitert: FormatStatsCount() wird auch von ApplyTranslationStatsPlaceholders()
+    // für die <!--COUNT_TRANSLATIONS-->/<!--COUNT_SIGNES-->-Platzhalter genutzt, die
+    // laut eigenem Kommentar dort bewusst "NUR die reine Zahl" liefern sollen -
+    // Nutzer bauen sich daraus eigene Kachel-Texte (ggf. auch eigenes JS/CSS), ein
+    // Trennzeichen dort könnte eine bestehende eigene Weiterverarbeitung (z.B.
+    // parseInt()) unbemerkt brechen.
+    private function FormatStatsCountForDisplay(float $Value): string
+    {
+        return number_format((int) round($Value), 0, ',', '.');
+    }
+
     // Liefert NUR den rohen Wert (Zahl/Datum, kein Text drumherum) fuer EIN
     // einzelnes Element der 4 Statistik-Zeilen im Konfigurationsformular (siehe
     // PopulateFormElements/form.json, "TranslationStatsRow1".."Row4") - wird bei
@@ -5294,12 +5310,12 @@ private const LANGUAGE_FLAGS = [
 
         return match ($Ident) {
             'TranslationStatsSinceDateLabel'       => date('d.m.Y', $stats['since']) . ', ' . $daysSince,
-            'TranslationStatsRequestsPerHourLabel' => $this->FormatStatsCount($stats['requestsPerHour']),
-            'TranslationStatsCharsPerHourValueLabel' => $this->FormatStatsCount($stats['charsPerHour']),
-            'TranslationStatsTotalRequestsLabel'   => (string) $stats['requestCount'],
-            'TranslationStatsTotalCharsLabel'      => (string) $stats['characterCount'],
-            'TranslationStatsCacheSavedRequestsLabel' => (string) $stats['cacheSavedRequestCount'],
-            'TranslationStatsCacheSavedCharsLabel' => (string) $stats['cacheSavedCharacterCount'],
+            'TranslationStatsRequestsPerHourLabel' => $this->FormatStatsCountForDisplay($stats['requestsPerHour']),
+            'TranslationStatsCharsPerHourValueLabel' => $this->FormatStatsCountForDisplay($stats['charsPerHour']),
+            'TranslationStatsTotalRequestsLabel'   => $this->FormatStatsCountForDisplay((float) $stats['requestCount']),
+            'TranslationStatsTotalCharsLabel'      => $this->FormatStatsCountForDisplay((float) $stats['characterCount']),
+            'TranslationStatsCacheSavedRequestsLabel' => $this->FormatStatsCountForDisplay((float) $stats['cacheSavedRequestCount']),
+            'TranslationStatsCacheSavedCharsLabel' => $this->FormatStatsCountForDisplay((float) $stats['cacheSavedCharacterCount']),
             default                                => '',
         };
     }
@@ -5319,8 +5335,8 @@ private const LANGUAGE_FLAGS = [
         $charsLabel = $this->GetOwnUiText($OwnUiTextRows, 'statsCharactersLabel', $Language, self::STATS_NOTICE_CHARACTERS_LABEL_TEXT);
 
         $text = htmlspecialchars(
-            $this->FormatStatsCount($stats['requestsPerHour']) . ' ' . $requestsLabel
-                . ', ' . $this->FormatStatsCount($stats['charsPerHour']) . ' ' . $charsLabel,
+            $this->FormatStatsCountForDisplay($stats['requestsPerHour']) . ' ' . $requestsLabel
+                . ', ' . $this->FormatStatsCountForDisplay($stats['charsPerHour']) . ' ' . $charsLabel,
             ENT_QUOTES,
             'UTF-8'
         );
@@ -7319,12 +7335,12 @@ HTML;
         $cacheSavedLabel = $this->GetOwnUiText($OwnUiTextRows, 'statsCacheSavedLabel', $Language, self::STATS_POPUP_CACHE_SAVED_LABEL_TEXT);
 
         return $sincePrefix . ' ' . date('d.m.Y', $stats['since']) . ', ' . $daysSince . ' ' . $daysSuffix . "\n"
-            . $hourlyLabel . ' ' . $this->FormatStatsCount($stats['requestsPerHour']) . ' ' . $requestsUnit
-                . ' ' . $this->FormatStatsCount($stats['charsPerHour']) . ' ' . $charsUnit . "\n"
-            . $totalLabel . ' ' . $stats['requestCount'] . ' ' . $requestsUnit
-                . ' ' . $stats['characterCount'] . ' ' . $charsUnit . "\n"
-            . $cacheSavedLabel . ' ' . $stats['cacheSavedRequestCount'] . ' ' . $requestsUnit
-                . ' ' . $stats['cacheSavedCharacterCount'] . ' ' . $charsUnit;
+            . $hourlyLabel . ' ' . $this->FormatStatsCountForDisplay($stats['requestsPerHour']) . ' ' . $requestsUnit
+                . ' ' . $this->FormatStatsCountForDisplay($stats['charsPerHour']) . ' ' . $charsUnit . "\n"
+            . $totalLabel . ' ' . $this->FormatStatsCountForDisplay((float) $stats['requestCount']) . ' ' . $requestsUnit
+                . ' ' . $this->FormatStatsCountForDisplay((float) $stats['characterCount']) . ' ' . $charsUnit . "\n"
+            . $cacheSavedLabel . ' ' . $this->FormatStatsCountForDisplay((float) $stats['cacheSavedRequestCount']) . ' ' . $requestsUnit
+                . ' ' . $this->FormatStatsCountForDisplay((float) $stats['cacheSavedCharacterCount']) . ' ' . $charsUnit;
     }
 
     // Build 77/78: Kurzfassung des admin-seitigen Pause-Panels ("Übersetzungsanbieter"),
