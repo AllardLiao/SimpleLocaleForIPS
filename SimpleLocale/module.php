@@ -4156,6 +4156,14 @@ private const LANGUAGE_FLAGS = [
                                 self::langOriginalImport                    => $sourceText,
                                 self::fieldRowSourceLanguage                => $currentScanSourceLanguage,
                                 self::fieldTranslatedAgainstSourceLanguage  => $currentScanSourceLanguage,
+                                // Build 112 (live korrigiert): rein transientes Merkmal,
+                                // NIE persistiert (siehe MergeChartRows) - steuert nur
+                                // ExcludeChartRowsForIndependentlyNamedVariables() weiter
+                                // unten. Nur wenn der Quelltext aus dem Leer-Titel-Fallback
+                                // stammt (nicht bei einem echten, eigenen Chart-Titel) darf
+                                // eine zusätzlich im Baum stehende Variable diese Zeile
+                                // verdrängen.
+                                '_EmptyTitleFallback'                       => $datasetTitle === '',
                             ];
                         }
                     }
@@ -4823,7 +4831,12 @@ private const LANGUAGE_FLAGS = [
             $result[] = $row;
         }
 
+        // Build 112: '_EmptyTitleFallback' ist ein rein transientes Scan-Merkmal
+        // (siehe WalkTree/ExcludeChartRowsForIndependentlyNamedVariables) - darf
+        // nie in die persistierte Property gelangen (unnötiger Ballast in der
+        // Formular-Tabelle).
         foreach ($ScannedByKey as $newRow) {
+            unset($newRow['_EmptyTitleFallback']);
             $result[] = $newRow;
         }
 
@@ -4846,10 +4859,23 @@ private const LANGUAGE_FLAGS = [
     // "welche Zeilen sind noch live"-Vergleich) gleichermaßen aufgerufen, damit
     // "Aufräumen" eine wegen dieser Regel nie angelegte bzw. nachträglich
     // redundant gewordene Zeile ebenfalls korrekt entfernt.
+    //
+    // Build 112 (live korrigiert): diese Regel greift NUR, wenn der Quelltext der
+    // Zeile aus dem Leer-Titel-Fallback stammt (siehe WalkTree,
+    // '_EmptyTitleFallback') - NICHT bei einem echten, im Chart selbst gesetzten
+    // Titel. Live gefunden: "Außentemperatur" hatte einen expliziten, eigenen
+    // Chart-Titel, dessen zugrunde liegende Variable ZUFÄLLIG zusätzlich
+    // eigenständig im Baum stand - die Zeile wurde dadurch fälschlich als
+    // "wird von Symcon automatisch mitübersetzt" behandelt und von "Aufräumen"
+    // gelöscht, obwohl der eigene Chart-Titel damit nichts zu tun hat (Symcons
+    // Leer-Titel-Fallback greift nur, wenn der Titel tatsächlich leer ist - ein
+    // gesetzter Titel wird immer unverändert angezeigt, unabhängig vom
+    // Variablennamen).
     private function ExcludeChartRowsForIndependentlyNamedVariables(array $ScannedCharts, array $ScannedNames): array
     {
         foreach ($ScannedCharts as $key => $row) {
-            if (isset($ScannedNames[(int) ($row['VariableID'] ?? 0)])) {
+            $isEmptyTitleFallback = $row['_EmptyTitleFallback'] ?? false;
+            if ($isEmptyTitleFallback && isset($ScannedNames[(int) ($row['VariableID'] ?? 0)])) {
                 unset($ScannedCharts[$key]);
             }
         }
