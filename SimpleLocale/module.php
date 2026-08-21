@@ -410,6 +410,11 @@ private const LANGUAGE_FLAGS = [
         // ProcessPendingRowUpdateFlush - ruehrt das Konfigurationsformular nie direkt
         // an, schreibt nur die betroffene(n) Property(s).
         $this->RegisterTimer($this->GetPendingRowUpdateFlushTimerIdent(), 0, 'IPSSL_ProcessPendingRowUpdateFlush($_IPS[\'TARGET\']);');
+        // Build 98: einmaliger, verzoegerter Formular-Reload nach "Aufräumen" - siehe
+        // CleanupOrphanedRows/ProcessDeferredCleanupReload fuer den Grund (ein
+        // sofortiger ReloadForm() liesse das gerade erst live gezeigte Ergebnis-Popup
+        // direkt wieder verschwinden, bevor der Nutzer es lesen konnte).
+        $this->RegisterTimer($this->GetCleanupReloadTimerIdent(), 0, 'IPSSL_ProcessDeferredCleanupReload($_IPS[\'TARGET\']);');
     }
 
     public function Destroy(): void
@@ -1326,6 +1331,23 @@ private const LANGUAGE_FLAGS = [
         $this->FlushPendingTrackedRowUpdates();
     }
 
+    // Timer-Callback (siehe RegisterTimer in Create()) - Build 98: der eigentliche
+    // Formular-Reload nach "Aufräumen" (siehe CleanupOrphanedRows), verzögert um
+    // CLEANUP_RELOAD_DELAY_SECONDS statt sofort im selben Aufruf. Live gemeldeter
+    // Bug: ein sofortiges ReloadForm() direkt nach dem Live-Push von
+    // "CleanupResultPopup" (visible=true) liess das gerade erst gezeigte
+    // Ergebnis-Popup augenblicklich wieder verschwinden, bevor der Nutzer es lesen
+    // konnte - derselbe komplette Formular-Neuaufbau, der einerseits noetig ist
+    // (ein offenes Formular haette sonst weiterhin den alten Listen-Stand im
+    // "Übernehmen"-Puffer, siehe ScanRootTree), andererseits aber jedes gerade
+    // offene Popup mit aus dem DOM reisst. Schaltet sich nach dem Reload selbst
+    // wieder ab (SetTimerInterval(...,0)), analog zu ProcessPendingRowUpdateFlush.
+    public function ProcessDeferredCleanupReload(): void
+    {
+        $this->SetTimerInterval($this->GetCleanupReloadTimerIdent(), 0);
+        $this->ReloadForm();
+    }
+
     // Build 76: "Aufräumen" (Nutzer-Wunsch, analog zur gleichnamigen Funktion in
     // Symcons eigener Lösung) - entfernt Zeilen aus "Objektnamen"/"Eigene Texte"/
     // "Beschriftungen"/"Automations", die bei einem FRISCHEN Scan der aktuell
@@ -1434,11 +1456,28 @@ private const LANGUAGE_FLAGS = [
         IPS_SetProperty($this->InstanceID, self::propertyObjectAutomations, json_encode($objectAutomations));
         IPS_ApplyChanges($this->InstanceID);
 
-        // Fürs einmalige Anzeigen im CleanupResultPopup nach dem gleich folgenden
-        // ReloadForm() - siehe attributeLastCleanupRemovedCount/PopulateFormElements.
+        // Fürs Anzeigen im CleanupResultPopup NACH dem verzögerten ReloadForm() (siehe
+        // ProcessDeferredCleanupReload weiter unten) - PopulateFormElements liest und
+        // verbraucht diesen Wert einmalig, siehe dort.
         $this->WriteAttributeInteger(self::attributeLastCleanupRemovedCount, $removedCount);
         $this->SetButtonProgress('CleanupProgressBar', '');
-        $this->ReloadForm();
+
+        // Build 98 (live gemeldeter Bug): das Ergebnis-Popup SOFORT auf dem noch
+        // offenen Formular live einblenden (derselbe erwiesenermaßen funktionierende
+        // Mechanismus wie bei CacheClearedPopup/ProviderCheckResultPopup) - der
+        // eigentliche ReloadForm() (siehe unten) läuft absichtlich NICHT mehr im
+        // selben Aufruf, sondern erst zeitverzögert über einen eigenen Timer, damit
+        // er das gerade erst gezeigte Popup nicht augenblicklich wieder aus dem DOM
+        // reißt, bevor der Nutzer es lesen konnte.
+        $this->UpdateFormField('CleanupResultCountLabel', 'caption', (string) $removedCount);
+        $this->UpdateFormField('CleanupResultPopup', 'visible', true);
+
+        // Der eigentliche Formular-Reload (weiterhin zwingend nötig - siehe
+        // Kommentar an ProcessDeferredCleanupReload/im Rescan-Kommentar weiter unten:
+        // ein offen gebliebenes Formular hätte sonst weiterhin den alten Listen-Stand
+        // im "Übernehmen"-Puffer) läuft jetzt erst nach CLEANUP_RELOAD_DELAY_SECONDS,
+        // ausgelöst über ProcessDeferredCleanupReload().
+        $this->SetTimerInterval($this->GetCleanupReloadTimerIdent(), self::CLEANUP_RELOAD_DELAY_SECONDS * 1000);
     }
 
     // Manueller Reset des Uebersetzungs-Caches (attributeTranslationCache,
@@ -7832,6 +7871,11 @@ HTML;
     private function GetPendingRowUpdateFlushTimerIdent(): string
     {
         return self::timerPrefix . $this->InstanceID . self::timerIdentPendingRowUpdateFlush;
+    }
+
+    private function GetCleanupReloadTimerIdent(): string
+    {
+        return self::timerPrefix . $this->InstanceID . self::timerIdentCleanupReload;
     }
 
     // Timer-Callback (siehe RegisterTimer in Create()) - schickt bereits offenen

@@ -465,6 +465,7 @@ trait SimpleLocaleConstants
     private const timerIdentAutoRescan = 'AutoRescan';
     private const timerIdentTranslationStats = 'TranslationStats';
     private const timerIdentPendingRowUpdateFlush = 'PendingRowUpdateFlush';
+    private const timerIdentCleanupReload = 'CleanupReload';
 
     // Build 71: Debounce-Fenster fuer BufferPendingTrackedRowUpdate - erst wenn eine
     // extern getrackte "Eigene Texte"-Variable fuer diese Zeitspanne RUHIG bleibt
@@ -474,6 +475,12 @@ trait SimpleLocaleConstants
     // in ApplyLanguage) ist ein seltenes Ereignis, waehrend das ungestoerte manuelle
     // Editieren des Formulars haeufig und die eigentliche Beschwerde ist.
     private const PENDING_ROW_UPDATE_DEBOUNCE_SECONDS = 720;
+
+    // Build 98 (Nutzer-Wunsch): "Aufräumen" darf das Ergebnis-Popup nicht sofort
+    // durch ReloadForm() wieder verschwinden lassen (siehe CleanupOrphanedRows) -
+    // erst nach dieser Wartezeit läuft der eigentliche Formular-Reload, damit der
+    // Nutzer die Erfolgsmeldung tatsächlich lesen kann.
+    private const CLEANUP_RELOAD_DELAY_SECONDS = 5;
 
     // Statuscodes
     private const STATUS_ROOT_CATEGORY_MISSING = 201;
