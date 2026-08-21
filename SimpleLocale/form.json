@@ -493,11 +493,6 @@
                     ]
                 },
                 {
-                    "type": "Label",
-                    "name": "GreetingModeHint",
-                    "caption": "Begrüßung: keine Kachel-Visualisierungs-Instanz ausgewählt (siehe Feld \"Kachel-Visualisierung\" oben)."
-                },
-                {
                     "type": "List",
                     "name": "ObjectGreeting",
                     "caption": "Begrüßung",
@@ -512,6 +507,11 @@
                             "save": true
                         }
                     ]
+                },
+                {
+                    "type": "Label",
+                    "name": "GreetingModeHint",
+                    "caption": "Begrüßung: keine Kachel-Visualisierungs-Instanz ausgewählt (siehe Feld \"Kachel-Visualisierung\" oben)."
                 },
                 {
                     "type": "List",
@@ -756,6 +756,13 @@
             "caption": "Entfernt dauerhaft alle Zeilen aus Objektnamen, Eigenen Texten, Beschriftungen und Automations, die bei einem frischen Scan der aktuell konfigurierten Visualisierung nicht mehr gefunden werden - z.B. weil das zugehörige Objekt gelöscht oder aus der Visualisierung entfernt/verschoben wurde. Anders als ein normaler Rescan (der solche Zeilen bewusst unangetastet lässt, siehe oben) werden sie hier komplett gelöscht, nicht nur übersprungen - bereits geleistete Übersetzungsarbeit für diese Zeilen geht dabei verloren (regeneriert sich automatisch, falls das Objekt später wieder auftaucht). Vor dem Klick prüfen, ob die \"Kachel-Visualisierung\"-Auswahl oben wirklich korrekt und vollständig ist - eine versehentlich falsche oder unvollständige Root-Kategorie würde sonst auch noch gültige Übersetzungen unwiederbringlich löschen. \"Begrüßung\" ist von dieser Funktion nicht betroffen (keine aus dem Baum gescannte Liste, sondern eine einzelne, direkt konfigurierte Einstellung)."
         },
         {
+            "type": "ProgressBar",
+            "name": "CleanupProgressBar",
+            "indeterminate": true,
+            "caption": "",
+            "visible": false
+        },
+        {
             "type": "Button",
             "caption": "Übersetzungs-Cache leeren",
             "onClick": "IPS_RequestAction($id, 'ClearTranslationCache', true);"
@@ -772,6 +779,13 @@
         {
             "type": "Label",
             "caption": "Schickt eine einzelne Testanfrage (\"Testabfrage\" -> Englisch) an jeden eingerichteten Anbieter (Google/DeepL, falls ein API-Key eingetragen ist, sowie immer MyMemory) und meldet direkt zurück, welcher davon gerade tatsächlich funktioniert. Läuft dabei am Cache vorbei (immer eine echte, frische Anfrage) und beendet eine ggf. laufende Pause sofort, sobald ein Anbieter wieder erfolgreich antwortet - nützlich z.B. direkt nach einem Kontingent-/Abo-Upgrade beim Anbieter, ohne auf das automatische Ende der Pause warten zu müssen."
+        },
+        {
+            "type": "ProgressBar",
+            "name": "ProviderCheckProgressBar",
+            "indeterminate": true,
+            "caption": "",
+            "visible": false
         },
         {
             "name": "ProviderCheckResultPopup",
