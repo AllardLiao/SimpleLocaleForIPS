@@ -1370,6 +1370,13 @@ private const LANGUAGE_FLAGS = [
             return;
         }
 
+        // Build 96 (Nutzer-Wunsch): dieselbe Live-Rueckmeldung wie beim Rescan (siehe
+        // SetRescanProgress) - der Baum-Durchlauf ist hier zwar normalerweise deutlich
+        // schneller (keine Uebersetzungs-API-Aufrufe), soll dem Nutzer aber trotzdem
+        // sichtbar bestaetigen, dass der Klick tatsaechlich etwas ausloest, auch wenn
+        // es nur ein kurzes Aufblitzen ist.
+        $this->SetButtonProgress('CleanupProgressBar', 'Verwaiste Einträge werden gesucht…');
+
         $liveNames = [];
         $liveTexts = [];
         $liveOptions = [];
@@ -1430,6 +1437,7 @@ private const LANGUAGE_FLAGS = [
         // Fürs einmalige Anzeigen im CleanupResultPopup nach dem gleich folgenden
         // ReloadForm() - siehe attributeLastCleanupRemovedCount/PopulateFormElements.
         $this->WriteAttributeInteger(self::attributeLastCleanupRemovedCount, $removedCount);
+        $this->SetButtonProgress('CleanupProgressBar', '');
         $this->ReloadForm();
     }
 
@@ -1467,6 +1475,12 @@ private const LANGUAGE_FLAGS = [
     // zu müssen.
     private function CheckProviders(): void
     {
+        // Build 96 (Nutzer-Wunsch): mehrere echte Netzwerk-Anfragen nacheinander
+        // (siehe Schleife unten) koennen spuerbar dauern - dieselbe Live-Rueckmeldung
+        // wie beim Rescan, damit der Klick sichtbar etwas ausloest statt scheinbar
+        // nichts zu tun, bis das Ergebnis-Popup ganz am Ende erscheint.
+        $this->SetButtonProgress('ProviderCheckProgressBar', 'Übersetzungsanbieter werden geprüft…');
+
         $testText = 'Testabfrage';
         $source = 'de';
         $target = 'en';
@@ -1551,6 +1565,7 @@ private const LANGUAGE_FLAGS = [
             $this->UpdateFormField('ProviderCheck' . $prefix . 'PauseClearedLabel', 'visible', $result['succeeded'] && $result['wasPaused']);
         }
 
+        $this->SetButtonProgress('ProviderCheckProgressBar', '');
         $this->UpdateFormField('ProviderCheckResultPopup', 'visible', true);
     }
 
@@ -3457,6 +3472,19 @@ private const LANGUAGE_FLAGS = [
         $this->WriteAttributeString(self::attributeRescanProgressMessage, $Message);
         $this->UpdateFormField('RescanProgressBar', 'caption', $Message);
         $this->UpdateFormField('RescanProgressBar', 'visible', $Message !== '');
+    }
+
+    // Build 96 (Nutzer-Wunsch): dieselbe Live-Rückmeldung wie SetRescanProgress, aber
+    // ohne den dortigen persistierten Attribut-Zustand (attributeRescanProgressMessage) -
+    // "Aufräumen"/"Übersetzungsanbieter prüfen" laufen synchron innerhalb EINES
+    // RequestAction()-Aufrufs und typischerweise nur Sekundenbruchteile bis wenige
+    // Sekunden, ein erneutes Öffnen des Formulars MITTEN im Lauf ist praktisch
+    // ausgeschlossen - eine Wiederherstellung beim Formular-Neuaufbau (wie bei einem
+    // ggf. minutenlangen Rescan) wird hier also nicht gebraucht.
+    private function SetButtonProgress(string $ElementName, string $Message): void
+    {
+        $this->UpdateFormField($ElementName, 'caption', $Message);
+        $this->UpdateFormField($ElementName, 'visible', $Message !== '');
     }
 
     // $ReloadFormAfterward: siehe Rescan()/AutoRescan() - false unterdrückt beide

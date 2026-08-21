@@ -1318,6 +1318,28 @@ Beschreibung des Moduls.
   legitime externe-Update-Anwendungsfall aus Build 70 (z. B. ein häufig
   aktualisiertes Wetter-Widget) bleibt davon unberührt, da ein echter neuer
   Messwert praktisch nie mit einer gespeicherten Übersetzung übereinstimmt.
+
+  **Build 96, auf Nutzer-Wunsch: sichtbare Rückmeldung für alle Buttons im
+  Konfigurationsformular.** "Lizenz aktivieren" hatte bereits ein passendes
+  Popup und "Übersetzungs-Cache leeren" stellte sich bei der Durchsicht als
+  bereits vollständig umgesetzt heraus (Popup `CacheClearedPopup` mit
+  Erfolgsmeldung, in allen vier Sprachen lokalisiert, nach demselben Muster
+  wie das Ergebnis-Popup der Anbieter-Prüfung) - keine Änderung nötig. Neu
+  bekommen "Übersetzungen gelöschter Elemente entfernen" (Aufräumen) und
+  "Übersetzungsanbieter prüfen" je einen eigenen Fortschrittsbalken
+  (`CleanupProgressBar`/`ProviderCheckProgressBar`, dieselbe `ProgressBar`-
+  Anzeige wie beim Rescan seit Build 88), sichtbar ab Klick bis kurz vor dem
+  jeweiligen Ergebnis (Popup bzw. Formular-Neuladen) - selbst wenn "Aufräumen"
+  in der Praxis meist nur einen kurzen Moment dauert, bestätigt das kurze
+  Aufblitzen dem Nutzer, dass der Klick etwas ausgelöst hat, statt scheinbar
+  wirkungslos zu bleiben. Neue gemeinsame Hilfsfunktion `SetButtonProgress()`
+  - dieselbe Live-Push-Logik wie `SetRescanProgress()`, aber ohne dessen
+  persistierten Attribut-Zustand (der nur für einen ggf. minutenlangen Rescan
+  gebraucht wird, den ein wieder geöffnetes Formular nachträglich anzeigen
+  können muss - "Aufräumen"/"Anbieter prüfen" laufen synchron innerhalb eines
+  einzigen `RequestAction()`-Aufrufs und sind dafür zu kurzlebig). Das
+  bestehende Ergebnis-Popup der Anbieter-Prüfung bleibt unverändert - der
+  Fortschrittsbalken blendet sich unmittelbar davor aus.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
