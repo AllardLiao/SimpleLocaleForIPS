@@ -4828,7 +4828,27 @@ private const LANGUAGE_FLAGS = [
             // JSON-Inhalt komplett von der Uebersetzung ausgenommen - ResolveRowValue()
             // liefert ueber den bestehenden Rohtext-Fallback ohnehin denselben
             // unveraenderten Wert fuer jede Gast-Sprache.
-            if ($fromText !== '' && !$this->LooksLikeJson($fromText) && !$this->IsRowLanguageTranslationCurrent($row, $ToField, $TargetLanguageCode)) {
+            $isJson = $fromText !== '' && $this->LooksLikeJson($fromText);
+            $isCurrent = $fromText !== '' && $this->IsRowLanguageTranslationCurrent($row, $ToField, $TargetLanguageCode);
+            // TEMP-DIAG (leere Zielsprachen-Zellen nach Rescan, live gemeldet 2026-08-21):
+            // json_encode() macht unsichtbare/Whitespace-Zeichen im ToField-Wert
+            // eindeutig sichtbar - Kernverdacht ist, dass eine als "leer" wahrgenommene
+            // Zelle in Wahrheit einen nicht-leeren Wert traegt (z.B. ein Leerzeichen aus
+            // einer manuellen Loesch-Aktion im Formular), wodurch der strikte "===''"-Check
+            // in IsRowLanguageTranslationCurrent() faelschlich "bereits aktuell" liefert.
+            if ($fromText !== '' && !$isJson) {
+                $this->SendDebug('IPSSL_TranslateGapDiag', sprintf(
+                    'FillLanguageColumn: ObjectID=%s ToField=%s currentToFieldValue=%s isJson=%s isCurrent=%s sourceChangedAt=%s translatedAt=%s',
+                    $row['ObjectID'] ?? '?',
+                    $ToField,
+                    json_encode($row[$ToField] ?? null),
+                    $isJson ? 'true' : 'false',
+                    $isCurrent ? 'true' : 'false',
+                    (string) ($row[self::fieldSourceChangedAt] ?? 0),
+                    json_encode($row[self::fieldTranslatedAtByLanguage][$TargetLanguageCode] ?? null)
+                ), 0);
+            }
+            if ($fromText !== '' && !$isJson && !$isCurrent) {
                 $pending[$index] = $fromText;
             }
         }
