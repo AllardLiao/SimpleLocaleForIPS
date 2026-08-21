@@ -2761,6 +2761,27 @@ private const LANGUAGE_FLAGS = [
     // existiert.
     private function ApplyEnumerationOptionsToVariable(int $ValueObjectID, array $RowsByFieldPath, string $Language, string $SourceLanguage): void
     {
+        // Build 97: dieselbe Absicherung wie in ReadTranslatablePresentation() - auf
+        // Symcon < 8.0 existieren IPS_GetVariablePresentation()/
+        // IPS_SetVariableCustomPresentation() schlicht nicht (siehe Abschnitt
+        // "Voraussetzungen" in der README, dort seit jeher als "Teilbereich bleibt
+        // komplett inaktiv, kein Fehler" dokumentiert). Bisher hing dieses Versprechen
+        // nur indirekt daran, dass ReadTranslatablePresentation() auf so einer
+        // Instanz nie Zeilen fuer propertyEnumerationOptions liefert (WalkTree ruft
+        // NUR darueber ScannedOptions), diese Funktion hier selbst hatte KEINEN
+        // eigenen Schutz - `@` unterdrueckt nur Warnungen, nicht den Fatal Error einer
+        // unbekannten Funktion. Betraf zwar auf einer frisch auf < 8.0 gescannten
+        // Instanz nie den Live-Betrieb (leere propertyEnumerationOptions => diese
+        // Funktion wird gar nicht erst aufgerufen), aber sehr wohl den Fall einer
+        // bereits auf Symcon >= 8.0 befuellten Instanz, die anschliessend auf eine
+        // Version < 8.0 downgegradet (oder deren Konfiguration auf eine solche
+        // uebertragen) wird - dort stehen bereits reale Zeilen in
+        // propertyEnumerationOptions, und der naechste Sprachwechsel haette
+        // ungeschuetzt gecrasht.
+        if (!function_exists('IPS_GetVariablePresentation')) {
+            return;
+        }
+
         if (!@IPS_ObjectExists($ValueObjectID)) {
             return;
         }
