@@ -1340,6 +1340,34 @@ Beschreibung des Moduls.
   einzigen `RequestAction()`-Aufrufs und sind dafür zu kurzlebig). Das
   bestehende Ergebnis-Popup der Anbieter-Prüfung bleibt unverändert - der
   Fortschrittsbalken blendet sich unmittelbar davor aus.
+
+  **Build 97, auf Nutzer-Nachfrage geprüft: die in `library.json` deklarierte
+  Mindestversion Symcon 7.1 stimmt weiterhin, ein realer Lücke in der
+  Absicherung von `ApplyEnumerationOptionsToVariable()` wurde dabei aber
+  gefunden und geschlossen.** `IPS_SetVariableCustomPresentation()` und
+  `IPS_GetVariablePresentation()` - Symcons Presentation-System, seit Build 90
+  Grundlage für die Übersetzung von Enum-/Profil-Beschriftungen (Dropdowns,
+  Status-Variablen usw.) - sind laut offizieller Symcon-Dokumentation erst
+  "seit 8.0" verfügbar. Die Lese-Seite (`ReadTranslatablePresentation()`,
+  Quelle für `propertyEnumerationOptions`) hat dafür bereits seit jeher einen
+  `function_exists('IPS_GetVariablePresentation')`-Schutz (liefert auf
+  Symcon < 8.0 einfach `null`, siehe auch [Abschnitt
+  3](#3-voraussetzungen): "bleibt komplett inaktiv, kein Fehler") -
+  `ApplyEnumerationOptionsToVariable()` (die Schreib-Seite, angewendet bei
+  jedem Sprachwechsel) hatte denselben Schutz aber NIE bekommen (nur `@`,
+  unterdrückt bloß Warnungen, keinen Fatal Error bei einer unbekannten
+  Funktion). Auf einer frisch auf Symcon < 8.0 gescannten Instanz blieb das
+  bisher folgenlos, weil `propertyEnumerationOptions` dort dank der
+  Lese-Seiten-Sperre ohnehin nie Zeilen enthält (die Schleife, die
+  `ApplyEnumerationOptionsToVariable()` aufruft, läuft dann schlicht nie an) -
+  betroffen wäre aber eine Instanz gewesen, deren Konfiguration ursprünglich
+  auf Symcon ≥ 8.0 gescannt wurde (also bereits reale Zeilen in
+  `propertyEnumerationOptions` stehen) und die anschließend auf eine Version
+  < 8.0 zurückgestuft bzw. deren Konfiguration dorthin übertragen wird - dort
+  hätte der nächste Sprachwechsel einen Fatal Error ausgelöst. Jetzt trägt
+  `ApplyEnumerationOptionsToVariable()` denselben Schutz wie die Lese-Seite.
+  Der ursprünglich für Symcon 7.1 dokumentierte Kompatibilitätsanspruch bleibt
+  damit korrekt, ohne Einschränkung.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
