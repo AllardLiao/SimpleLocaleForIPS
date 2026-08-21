@@ -1587,6 +1587,30 @@ Beschreibung des Moduls.
   angewendet. Das ursprüngliche Ziel von Build 71 (ein gepufferter externer
   Schreibvorgang darf durch ein unabhängiges "Übernehmen" nicht verloren
   gehen) bleibt für jedes nicht betroffene Feld unverändert bestehen.
+
+  **Build 106, rein diagnostisch: Build 105 hat das live gemeldete Problem
+  NICHT behoben - live gefunden, dass es sich um "Objektnamen" handelt (nicht
+  "Eigene Texte"), für die aktuell aktive Sprache.** Ein frischer Debug-Export
+  zeigte statt eines Puffer-Flushes einen kompletten RESCAN rund 2 Sekunden
+  nach der manuellen Korrektur (zwei `EnsureSourceLanguageIsTarget`-Zeilen im
+  Abstand von 2s, vermutlich der Auto-Rescan-Timer) - `MergeRows()` (per
+  Code-Analyse bestätigt korrekt: friert Rohtext/Übersetzungen für bereits
+  bekannte `ObjectID`s ein) und ein Abgleich mit der "Eigenen
+  Übersetzungstabelle" (Build 93 - Glossareintrag würde jede Rescan-gestützte
+  Korrektur zurücksetzen) wurden beide geprüft und ausgeschlossen (keine
+  passende Glossar-Zeile vorhanden). Bleibt als Verdacht:
+  `FillLanguageColumn()`s "bereits aktuell"-Prüfung (`IsRowLanguageTranslationCurrent()`)
+  erkennt die frisch manuell bearbeitete Zelle fälschlich als "veraltet" und
+  übersetzt sie beim Rescan neu, wodurch die manuelle Korrektur überschrieben
+  wird - dieselbe Funktion, bei der Build 100/101 bereits einmal eine
+  verwandte Lücke fand (dort: Rohtext wurde leer). Neues
+  `SendDebug('IPSSL_NameRevertDiag', ...)` in `FillLanguageColumn()` (ersetzt
+  das in Build 101 entfernte `IPSSL_TranslateGapDiag`) protokolliert für jede
+  nicht-leere, nicht als JSON erkannte Zeile die vollständige
+  Pending/Aktuell-Entscheidung. Rein additiv, keine Verhaltensänderung (volle
+  Regressionssuite unverändert grün) - wird entfernt bzw. durch die
+  eigentliche Korrektur ersetzt, sobald die Logs den Mechanismus bestätigt
+  haben.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der

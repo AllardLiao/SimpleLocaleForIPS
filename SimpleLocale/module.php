@@ -4961,6 +4961,22 @@ private const LANGUAGE_FLAGS = [
                 }
                 continue;
             }
+            // TEMP-DIAG (manuell editierte Zelle wird nach einem Rescan zurueckgesetzt,
+            // live gemeldet 2026-08-21, betrifft laut Nutzer "Objektnamen"): loggt fuer
+            // JEDE Zeile mit nicht-leerem, nicht-JSON Rohtext die vollstaendige
+            // Pending/Current-Entscheidung, damit sichtbar wird, ob eine bereits manuell
+            // korrigierte Zelle hier faelschlich erneut als "pending" erkannt und somit
+            // ueberschrieben wird.
+            $isCurrentForDiag = !$this->LooksLikeJson($fromText) && $this->IsRowLanguageTranslationCurrent($row, $ToField, $TargetLanguageCode);
+            $this->SendDebug('IPSSL_NameRevertDiag', sprintf(
+                'FillLanguageColumn: ObjectID=%s ToField=%s currentToFieldValue=%s isCurrent=%s sourceChangedAt=%s translatedAt=%s',
+                $row['ObjectID'] ?? '?',
+                $ToField,
+                json_encode($row[$ToField] ?? null),
+                $isCurrentForDiag ? 'true' : 'false',
+                (string) ($row[self::fieldSourceChangedAt] ?? 0),
+                json_encode($row[self::fieldTranslatedAtByLanguage][$TargetLanguageCode] ?? null)
+            ), 0);
             if (!$this->LooksLikeJson($fromText) && !$this->IsRowLanguageTranslationCurrent($row, $ToField, $TargetLanguageCode)) {
                 $pending[$index] = $fromText;
             }
