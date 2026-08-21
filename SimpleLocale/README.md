@@ -2645,3 +2645,26 @@ der ursprünglichen Fassung übernommen.
   eingeführte `ExcludeChartRowsForIndependentlyNamedVariables()`-Filter
   bleibt unverändert bestehen und greift weiterhin zuverlässig für
   eigenständig im Baum stehende Variablen wie bei "Irradiación luminosa".
+* **Build 111, rein diagnostisch: live gemeldet, dass "Aufräumen" zwar
+  tatsächlich verwaiste Zeilen entfernt (nach Löschen einer kompletten
+  Instanz samt vier Kind-Variablen aus dem Root-Baum), das Ergebnis-Popup
+  aber "Removed: " mit LEEREM statt dem tatsächlichen Zähler anzeigt.**
+  Betrifft "Objektnamen", nicht die neue "Charts"-Liste. Der Code-Pfad
+  selbst (`CleanupOrphanedRows()`/`GetConfigurationForm()`, Build 76/98)
+  sieht bei genauer Durchsicht strukturell korrekt aus - Verdacht: der
+  "einmal lesen, dann auf -1 zurücksetzen"-Mechanismus für
+  `attributeLastCleanupRemovedCount` wird zwischen dem sofortigen
+  Live-Push (`UpdateFormField('CleanupResultCountLabel', ...)`) und dem um
+  `CLEANUP_RELOAD_DELAY_SECONDS` (5s) verzögerten `ReloadForm()`
+  (`ProcessDeferredCleanupReload()`) durch einen ZUSÄTZLICHEN,
+  nicht selbst ausgelösten `GetConfigurationForm()`-Aufruf vorzeitig
+  konsumiert - noch nicht bestätigt. Neues `SendDebug('IPSSL_CleanupCountDiag',
+  ...)` protokolliert mit `microtime(true)`-Zeitstempeln jeden
+  `GetConfigurationForm()`-Aufruf (gelesener Zählerwert, ob zurückgesetzt),
+  das Ende von `CleanupOrphanedRows()` (geschriebener Zählerwert) und den
+  Zeitpunkt, an dem `ProcessDeferredCleanupReload()` tatsächlich feuert -
+  damit sich die genaue Reihenfolge/das Timing zwischen diesen Ereignissen
+  rekonstruieren lässt. Rein additiv, keine Verhaltensänderung (volle
+  Regressionssuite unverändert grün) - wird entfernt bzw. durch die
+  eigentliche Korrektur ersetzt, sobald die Logs den Mechanismus bestätigt
+  haben.
