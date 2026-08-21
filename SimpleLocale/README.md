@@ -1260,6 +1260,31 @@ Beschreibung des Moduls.
   `TranslateBatch()` bleibt zusätzlich bestehen - notwendig für die live
   nachübersetzten "Eigenen Texte" (siehe `ApplyTrackedVariableUpdate`),
   die nicht über den normalen Rescan-Pfad laufen.
+
+  **Build 94, rein diagnostisch: temporäres `SendDebug`-Logging (Kategorie
+  `IPSSL_GreetingDiag`) rund um die "Begrüßung" (Modus "Variable").** Live
+  gemeldet: nach einem Sprachwechsel in der Gäste-Visu (de → en) und einem
+  anschließenden Rescan stand `ORIGINAL_IMPORT` der Begrüßungs-Zeile
+  fälschlich auf dem englischen Text, obwohl die Quellsprache weiterhin
+  `de` ist - trotz des seit Build (siehe Commit `6ae1bd3`) bestehenden
+  `IsSourceLanguageActive`-Schutzes in `MergeGreetingRows()`, der genau
+  das verhindern soll. Reine Code-Analyse konnte den genauen Leck-Punkt
+  nicht zweifelsfrei bestimmen - zwei Kandidaten: (a) der Schutz in
+  `MergeGreetingRows()` selbst greift in diesem konkreten Fall nicht wie
+  erwartet, oder (b) der eigentliche Schreib-/Übersetzungsvorgang von
+  `ApplyGreetingLanguage()` (beim Sprachwechsel selbst, nicht erst beim
+  Rescan) über `HandleTrackedVariableUpdate()`/`ApplyTrackedVariableUpdate()`
+  läuft - letztere Funktion hat KEINEN `IsSourceLanguageActive`-Schutz und
+  würde jeden als "extern" erkannten Schreibvorgang ungeprüft als frischen
+  Rohtext übernehmen. Das Logging deckt beide Kandidaten ab: Reihenfolge
+  von `SetValueString()` und dem Self-Write-Guard-Attribut in
+  `WriteTrackedValueString()`, den tatsächlich ausgewerteten
+  `IsSourceLanguageActive`-Wert in `ScanRootTree()`, sowie jeden Schreibpfad
+  in `ApplyGreetingLanguage()`/`ApplyTrackedVariableUpdate()` mit den
+  jeweils beteiligten Rohwerten. Rein additiv, keine Verhaltensänderung
+  (volle Regressionssuite unverändert grün) - wird entfernt bzw. durch die
+  eigentliche Korrektur ersetzt, sobald die Logs den Mechanismus bestätigt
+  haben.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
