@@ -1433,6 +1433,35 @@ Beschreibung des Moduls.
   Verhaltensänderung (volle Regressionssuite unverändert grün) - wird
   entfernt bzw. durch die eigentliche Korrektur ersetzt, sobald die Logs den
   Mechanismus bestätigt haben.
+
+  **Build 101 behebt einen per direkter Property-Abfrage bestätigten Bug:
+  wird ein Rohtext leer, bleiben veraltete Übersetzungen in den
+  Zielsprachen-Spalten unverändert stehen, statt mit-geleert zu werden.**
+  Live gefunden (Nutzer-Diagnose über ein kleines Inspektions-Skript, siehe
+  unten): eine "Eigene Texte"-Zeile mit dynamischem Inhalt (springt je nach
+  Bedingung zwischen echtem Text und `""`) zeigte `ORIGINAL_IMPORT_Text` aktuell
+  leer, `Text_en` aber weiterhin eine längst nicht mehr zutreffende alte
+  Übersetzung. Ursache: `ApplyTrackedVariableUpdate()` übernimmt einen leeren
+  Wert korrekt als frischen Rohtext und markiert per `MarkRowSourceChanged()`
+  bewusst alle Zielsprachen-Zellen als veraltet, OHNE ihren bisherigen
+  (Fallback-)Wert zu löschen (siehe dortiger Kommentar) - die eigentliche
+  Auffrischung sollte der nächste Rescan übernehmen. `FillLanguageColumn()`/
+  `FillLanguageColumnFromRawSource()` übersprangen eine Zeile mit leerem
+  Rohtext bisher aber komplett ("nichts zu übersetzen") - dabei blieb die
+  laengst veraltete Zielsprachen-Zelle als Karteileiche stehen, statt
+  wenigstens geleert zu werden. Trifft ein Rescan die Zeile wiederholt in
+  ihrem leeren Zustand (z. B. weil der Inhalt öfter leer als gefüllt ist),
+  konnte das faktisch dauerhaft so bleiben. Fix: eine bereits befüllte
+  Zielsprachen-Zelle wird jetzt aktiv mit-geleert, sobald der Rohtext selbst
+  leer ist - konsistent mit `ResolveRowValue()`, das bei leerem Rohtext
+  ohnehin nichts anzuzeigen hätte. Entfernt außerdem das temporäre Build-100-
+  Logging wieder. **Ein zweiter, separater Verdacht aus derselben Live-Diagnose
+  wird noch geprüft:** zwei GANZ ANDERE, statische (nie live aktualisierte)
+  "Eigene Texte"-Zeilen mit langen Rohtexten (über bzw. unter MyMemorys
+  bekannter 500-Byte-Grenze pro Anfrage, siehe `TranslateSingleFree()`)
+  zeigten ebenfalls dauerhaft leeres Spanisch bei gefülltem Englisch - dieser
+  Fall ist NICHT durch den obigen Fix abgedeckt (der Rohtext ist dort nie
+  leer) und wird separat weiterverfolgt.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
