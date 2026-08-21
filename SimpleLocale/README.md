@@ -1553,6 +1553,40 @@ Beschreibung des Moduls.
   aktive Sprache relevanter Zellinhalt seit dem letzten Durchlauf geändert
   hat - eine Korrektur an einer GERADE NICHT aktiven Zielsprache löst dabei
   bewusst nichts aus (für den aktuellen Gast ändert sich ja nichts sichtbar).
+
+  **Build 105 behebt einen direkten Nebeneffekt von Build 104, live gefunden:
+  eine manuelle Korrektur wurde kurz angezeigt, dann aber "einen Augenblick
+  später" wieder auf den alten Wert zurückgesetzt - in der Tabelle stand
+  weiterhin die Korrektur, in der Visualisierung wieder der alte Wert.**
+  Ursache: `StagePendingTrackedRowUpdates()` (der verzögerte, gepufferte
+  Flush externer VM_UPDATE-Änderungen, siehe `BufferPendingTrackedRowUpdate`/
+  `PENDING_ROW_UPDATE_DEBOUNCE_SECONDS` oben) überschrieb Zeilenfelder beim
+  tatsächlichen Schreiben bislang bedingungslos mit dem gepufferten Wert -
+  völlig unabhängig davon, ob die Zelle inzwischen längst anderweitig
+  geändert wurde. `FlushPendingTrackedRowUpdates()` läuft am Anfang JEDES
+  `ApplyChanges()`-Durchlaufs, auch genau desjenigen, den das eigene
+  "Übernehmen" der manuellen Korrektur gerade selbst auslöst - ein zu diesem
+  Zeitpunkt noch ausstehender, längst veralteter Puffer-Eintrag (aus einem
+  früheren externen Schreibvorgang oder einem Selbst-Schreib-Echo, siehe
+  Build 95) konnte die frische Korrektur damit im selben oder einem knapp
+  späteren `ApplyChanges()`-Durchlauf kommentarlos wieder überschreiben -
+  ein Bug, der schon vor Build 104 bestand, aber unsichtbar blieb, weil
+  `ApplyLanguage()` bis dahin nur bei einem echten Sprachwechsel erneut
+  lief. Build 104s neue, häufigere `ApplyLanguage()`-Aufrufe machten genau
+  diesen alten Bug jetzt sichtbar. Fix: `BufferPendingTrackedRowUpdate()`
+  sichert jetzt zusätzlich eine Baseline (den Feldwert UNMITTELBAR VOR der
+  externen Änderung) für die beiden eigentlichen Inhaltsfelder (Rohtext und
+  ggf. die live nachübersetzte Zielsprachen-Zelle - reine
+  Zeitstempel-Buchführung bleibt unverändert bedingungslos). Beim
+  tatsächlichen Schreiben wendet `StagePendingTrackedRowUpdates()` ein
+  gepuffertes Feld nur noch an, wenn der aktuelle Zeilenwert noch exakt der
+  Baseline entspricht (also seither NICHTS anderes - typischerweise eine
+  manuelle Korrektur - die Zelle verändert hat) - andernfalls wird gezielt
+  NUR dieses eine Feld übersprungen, alle anderen gepufferten Felder
+  derselben Zeile sowie alle anderen Zeilen werden weiterhin normal
+  angewendet. Das ursprüngliche Ziel von Build 71 (ein gepufferter externer
+  Schreibvorgang darf durch ein unabhängiges "Übernehmen" nicht verloren
+  gehen) bleibt für jedes nicht betroffene Feld unverändert bestehen.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der

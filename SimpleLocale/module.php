@@ -3148,6 +3148,15 @@ private const LANGUAGE_FLAGS = [
             return;
         }
 
+        // Build 105 (live gefunden): Baseline VOR jeder Mutation sichern - siehe
+        // StagePendingTrackedRowUpdates fuer den Grund. Ohne diese Baseline ueberschrieb
+        // der spaeter (ggf. erst nach der Debounce-Ruhephase) gepufferte Wert eine
+        // zwischenzeitliche manuelle Korrektur derselben Zelle im Konfigurationsformular
+        // kommentarlos wieder mit dem laengst veralteten externen Stand.
+        $baselineRawValue = $Rows[$RowIndex][$RawField] ?? '';
+        $translatedField = $TranslatedPrefix . $currentLanguage;
+        $baselineTranslatedValue = $Rows[$RowIndex][$translatedField] ?? '';
+
         $Rows[$RowIndex][$RawField] = $NewValue;
         // Build 70: der Rohtext hat sich JETZT nachweislich geändert - macht alle
         // bisher übersetzten Zielsprachen-Zellen dieser Zeile rückwirkend als
@@ -3193,7 +3202,7 @@ private const LANGUAGE_FLAGS = [
             // Fallback (siehe TranslateBatchUncached) und bei ReconcileRowFields.
             $translatedText = $translated[0] ?? '';
             if ($translatedText !== '') {
-                $Rows[$RowIndex][$TranslatedPrefix . $currentLanguage] = $translatedText;
+                $Rows[$RowIndex][$translatedField] = $translatedText;
                 $this->MarkRowLanguageTranslated($Rows[$RowIndex], $currentLanguage);
                 $displayText = $translatedText;
             }
@@ -3212,13 +3221,20 @@ private const LANGUAGE_FLAGS = [
             $RawField => $Rows[$RowIndex][$RawField],
             self::fieldSourceChangedAt => $Rows[$RowIndex][self::fieldSourceChangedAt],
         ];
+        // Build 105: nur fuer die beiden eigentlichen INHALTS-Felder (Rohtext + ggf.
+        // die live nachuebersetzte Zielsprachen-Zelle) wird eine Baseline mitgegeben -
+        // die Zeitstempel-Buchfuehrung direkt darunter/darueber ist reine interne
+        // Verwaltung ohne Konfliktpotenzial mit einer manuellen Formular-Bearbeitung,
+        // die bekommt beim Flush weiterhin bedingungslos den neuesten Stand.
+        $baselineValues = [$RawField => $baselineRawValue];
         if (isset($Rows[$RowIndex][self::fieldTranslatedAtByLanguage])) {
             $fieldUpdates[self::fieldTranslatedAtByLanguage] = $Rows[$RowIndex][self::fieldTranslatedAtByLanguage];
         }
         if ($displayText !== $NewValue) {
-            $fieldUpdates[$TranslatedPrefix . $currentLanguage] = $Rows[$RowIndex][$TranslatedPrefix . $currentLanguage];
+            $fieldUpdates[$translatedField] = $Rows[$RowIndex][$translatedField];
+            $baselineValues[$translatedField] = $baselineTranslatedValue;
         }
-        $this->BufferPendingTrackedRowUpdate($Property, (string) $ValueObjectID, $fieldUpdates);
+        $this->BufferPendingTrackedRowUpdate($Property, (string) $ValueObjectID, $fieldUpdates, $baselineValues);
 
         if ($displayText !== $NewValue) {
             $this->WriteTrackedValueString($ValueObjectID, $displayText);
@@ -3231,13 +3247,20 @@ private const LANGUAGE_FLAGS = [
     // DIESELBE ValueObjectID ERSETZT den bisherigen Pufferinhalt (nicht summiert ihn),
     // korrekt fuer einen Debounce: nur der ZULETZT berechnete Stand vor Eintritt der
     // Ruhephase muss am Ende geschrieben werden.
-    private function BufferPendingTrackedRowUpdate(string $Property, string $ValueObjectIDKey, array $FieldUpdates): void
+    //
+    // Build 105: $BaselineValues (Feldname => Wert VOR dieser Aenderung, siehe
+    // ApplyTrackedVariableUpdate) reist ab jetzt mit - StagePendingTrackedRowUpdates
+    // vergleicht beim tatsaechlichen Schreiben damit, ob die Zelle inzwischen
+    // anderweitig (typischerweise: manuelle Korrektur im Formular) veraendert wurde,
+    // und ueberspringt in dem Fall genau dieses eine Feld statt es kommentarlos zu
+    // ueberschreiben.
+    private function BufferPendingTrackedRowUpdate(string $Property, string $ValueObjectIDKey, array $FieldUpdates, array $BaselineValues = []): void
     {
         $pending = json_decode($this->ReadAttributeString(self::attributePendingTrackedRowUpdates), true);
         if (!is_array($pending)) {
             $pending = [];
         }
-        $pending[$Property][$ValueObjectIDKey] = $FieldUpdates;
+        $pending[$Property][$ValueObjectIDKey] = ['fields' => $FieldUpdates, 'baseline' => $BaselineValues];
         $this->WriteAttributeString(self::attributePendingTrackedRowUpdates, json_encode($pending));
 
         $this->SetTimerInterval($this->GetPendingRowUpdateFlushTimerIdent(), self::PENDING_ROW_UPDATE_DEBOUNCE_SECONDS * 1000);
@@ -3284,16 +3307,41 @@ private const LANGUAGE_FLAGS = [
         $this->UpdateFormField('PendingRowUpdateFlushAtLabel', 'caption', '');
 
         $anyChanged = false;
-        foreach ($pending as $property => $fieldUpdatesByValueObjectID) {
+        foreach ($pending as $property => $entriesByValueObjectID) {
             $rows = $this->DecodeRows($property);
             $propertyChanged = false;
             foreach ($rows as $index => $row) {
                 $valueObjectIDKey = (string) ($row['ValueObjectID'] ?? $row['ObjectID'] ?? 0);
-                if (!isset($fieldUpdatesByValueObjectID[$valueObjectIDKey])) {
+                if (!isset($entriesByValueObjectID[$valueObjectIDKey])) {
                     continue;
                 }
-                $rows[$index] = array_replace($row, $fieldUpdatesByValueObjectID[$valueObjectIDKey]);
-                $propertyChanged = true;
+                $entry = $entriesByValueObjectID[$valueObjectIDKey];
+                // Build 105: Rueckwaertskompatibilitaet fuer einen bereits VOR diesem
+                // Update gepufferten, noch unverarbeiteten Eintrag im alten, flachen
+                // Format (Feldname => Wert direkt, kein 'fields'/'baseline'-Wrapper) -
+                // wird ohne Baseline (also bedingungslos, wie bisher) angewendet.
+                $fieldUpdates = $entry['fields'] ?? $entry;
+                $baseline = $entry['baseline'] ?? [];
+
+                foreach ($fieldUpdates as $field => $value) {
+                    // Build 105 (live gefunden): dieses Feld wurde seit dem Puffern
+                    // bereits anderweitig veraendert (typischerweise eine manuelle
+                    // Korrektur derselben Zelle im Konfigurationsformular per
+                    // "Uebernehmen") - der laengst veraltete gepufferte Wert wuerde
+                    // diese neuere Aenderung sonst kommentarlos wieder ueberschreiben.
+                    // Ueberspringt gezielt NUR dieses eine Feld; alle anderen
+                    // gepufferten Felder derselben Zeile (und alle anderen Zeilen)
+                    // werden weiterhin normal angewendet - das urspruengliche Ziel
+                    // von Build 71 (ein gepufferter externer Schreibvorgang darf bei
+                    // einem unabhaengigen "Uebernehmen" nicht verlorengehen) bleibt
+                    // damit fuer jedes NICHT betroffene Feld unveraendert bestehen.
+                    if (array_key_exists($field, $baseline) && ($row[$field] ?? null) !== $baseline[$field]) {
+                        continue;
+                    }
+                    $row[$field] = $value;
+                    $propertyChanged = true;
+                }
+                $rows[$index] = $row;
             }
             if ($propertyChanged) {
                 IPS_SetProperty($this->InstanceID, $property, json_encode(array_values($rows)));
