@@ -101,6 +101,20 @@ class SimpleLocale extends IPSModuleStrict
     // einen Tag länger als nötig aktiv, nie kürzer.
     private const DAILY_QUOTA_COOLDOWN_SECONDS = 86400;
 
+    // Build 102 (Nutzer-Hinweis): DeepLs kostenfreie Stufe ist inzwischen KEIN
+    // wiederkehrendes Monats-/Tageskontingent mehr, sondern ein einmaliges
+    // Frei-Kontingent (aktuell 1 Mio. Zeichen) - danach bleibt der Key auf Dauer
+    // gesperrt (HTTP 456 "Quota Exceeded"), bis der Nutzer selbst eingreift (neuer
+    // Key, Upgrade). Die generische DAILY_QUOTA_COOLDOWN_SECONDS-Sperre (siehe
+    // DetectRateLimitCooldown) ging bislang faelschlich von einer taeglichen
+    // Erholung aus - das Modul haette DeepL dadurch JEDEN Tag erneut (erfolglos)
+    // angefragt, obwohl das einmalige Kontingent nie zurueckkehrt. Deutlich
+    // laengere Sperre statt dessen: haelt automatische Wiederholungsversuche
+    // praktisch an, ohne den Key dauerhaft ganz zu deaktivieren - ein manueller
+    // "Übersetzungsanbieter prüfen"-Klick (siehe CheckProviders) nach einem
+    // Key-Wechsel/Upgrade beendet die Sperre wie gewohnt sofort bei Erfolg.
+    private const DEEPL_QUOTA_EXHAUSTED_COOLDOWN_SECONDS = 2592000; // 30 Tage
+
     // ===== Lizenz / Testversion =====
     // Für den Vollversion-Build vor dem echten Release auf false setzen (siehe
     // README) - dann entfallen alle Einschränkungen unten unabhängig vom
@@ -5037,16 +5051,27 @@ private const LANGUAGE_FLAGS = [
     // Einschränkungen"):
     // - Google: HTTP 403 mit "rate limit" in der Antwort (z.B. "User Rate Limit
     //   Exceeded") = kurzes Burst-Limit, oder HTTP 429 = ebenfalls Rate-Limit.
-    // - DeepL: HTTP 429 (Too Many Requests) oder 456 (dediziert "Quota Exceeded").
+    // - DeepL: HTTP 429 (Too Many Requests) oder 456 (dediziert "Quota
+    //   Exceeded") - 456 ist bei DeepL inzwischen KEIN wiederkehrendes
+    //   Monats-/Tageskontingent mehr, sondern ein EINMALIGES Frei-Kontingent
+    //   (aktuell 1 Mio. Zeichen, danach dauerhaft gesperrt bis Key-Wechsel/
+    //   Upgrade) - bekommt deshalb bewusst die deutlich laengere
+    //   DEEPL_QUOTA_EXHAUSTED_COOLDOWN_SECONDS statt der fuer taeglich
+    //   zurueckkehrende Kontingente gedachten DAILY_QUOTA_COOLDOWN_SECONDS
+    //   (siehe dortiger Kommentar) - sonst wuerde das Modul DeepL jeden Tag
+    //   erneut erfolglos anfragen, obwohl das Kontingent nie zurueckkehrt.
     // - MyMemory (kostenfrei): HTTP 429 mit "quota"/"day"/"today" in der Antwort
     //   ("MYMEMORY WARNING: YOU USED ALL AVAILABLE FREE TRANSLATIONS FOR TODAY").
     // Enthält die Antwort einen Tages-/Kontingent-Hinweis (Schlüsselwörter
     // "day"/"today"/"daily"/"quota"), gilt die lange Sperre, sonst die kurze.
     private function DetectRateLimitCooldown(int $HttpCode, ?string $Response): ?int
     {
+        if ($HttpCode === 456) {
+            return self::DEEPL_QUOTA_EXHAUSTED_COOLDOWN_SECONDS;
+        }
+
         $isRateLimitSignature = $HttpCode === 429
-            || ($HttpCode === 403 && $Response !== null && stripos($Response, 'rate limit') !== false)
-            || $HttpCode === 456; // DeepL: "Quota Exceeded"
+            || ($HttpCode === 403 && $Response !== null && stripos($Response, 'rate limit') !== false);
 
         if (!$isRateLimitSignature) {
             return null;
@@ -5103,8 +5128,17 @@ private const LANGUAGE_FLAGS = [
         if ($ExactUntil !== null) {
             $until = max((int) ($state[$Provider]['until'] ?? 0), $ExactUntil);
         } else {
+            // Build 102: ein bereits als "langfristig bekannt" erkannter Fehlschlag
+            // (Tageskontingent ODER, neu, DeepLs einmaliges Frei-Kontingent - siehe
+            // DEEPL_QUOTA_EXHAUSTED_COOLDOWN_SECONDS) startet direkt beim jeweils
+            // UEBERGEBENEN Wert, statt ihn wieder auf DAILY_QUOTA_COOLDOWN_SECONDS
+            // herunterzukappen - genau dieses Herunterkappen haette
+            // DEEPL_QUOTA_EXHAUSTED_COOLDOWN_SECONDS sonst wirkungslos gemacht.
+            // Nur die generische Kurzsperren-Eskalation (Streak-Verdopplung fuer ein
+            // NICHT als Tages-/Einmalkontingent erkanntes Rate-Limit) bleibt bei der
+            // bisherigen Deckelung auf DAILY_QUOTA_COOLDOWN_SECONDS.
             $escalated = $BaseCooldownSeconds >= self::DAILY_QUOTA_COOLDOWN_SECONDS
-                ? self::DAILY_QUOTA_COOLDOWN_SECONDS
+                ? $BaseCooldownSeconds
                 : min(self::RATE_LIMIT_COOLDOWN_SECONDS * (2 ** ($streak - 1)), self::DAILY_QUOTA_COOLDOWN_SECONDS);
             $until = max((int) ($state[$Provider]['until'] ?? 0), time() + $escalated);
         }

@@ -1455,13 +1455,36 @@ Beschreibung des Moduls.
   Zielsprachen-Zelle wird jetzt aktiv mit-geleert, sobald der Rohtext selbst
   leer ist - konsistent mit `ResolveRowValue()`, das bei leerem Rohtext
   ohnehin nichts anzuzeigen hätte. Entfernt außerdem das temporäre Build-100-
-  Logging wieder. **Ein zweiter, separater Verdacht aus derselben Live-Diagnose
-  wird noch geprüft:** zwei GANZ ANDERE, statische (nie live aktualisierte)
-  "Eigene Texte"-Zeilen mit langen Rohtexten (über bzw. unter MyMemorys
-  bekannter 500-Byte-Grenze pro Anfrage, siehe `TranslateSingleFree()`)
-  zeigten ebenfalls dauerhaft leeres Spanisch bei gefülltem Englisch - dieser
-  Fall ist NICHT durch den obigen Fix abgedeckt (der Rohtext ist dort nie
-  leer) und wird separat weiterverfolgt.
+  Logging wieder. **Der zweite, separate Verdacht aus derselben Live-Diagnose
+  ist inzwischen aufgeklärt** (siehe Build 102 direkt im Anschluss) - zwei
+  statische "Eigene Texte"-Zeilen mit langen Rohtexten zeigten dauerhaft
+  leeres Spanisch bei gefülltem Englisch; der Meldungen-Log des Nutzers zeigte
+  den tatsächlichen Grund: "alle Anbieter der Kette (deepl [pausiert], google
+  [pausiert], free) haben 'de' -> 'es' abgelehnt" - kein Logikfehler, sondern
+  eine echte Anbieter-Erschöpfung (siehe Build 102).
+
+  **Build 102, auf Nutzer-Hinweis: DeepLs kostenfreie Stufe ist inzwischen
+  KEIN wiederkehrendes Monats-/Tageskontingent mehr, sondern ein EINMALIGES
+  Frei-Kontingent (aktuell 1 Mio. Zeichen), danach bleibt der Key dauerhaft
+  gesperrt.** `DetectRateLimitCooldown()` behandelte DeepLs dediziertes HTTP
+  456 ("Quota Exceeded") bisher wie jedes andere erkannte
+  Tageskontingent-Signal (`DAILY_QUOTA_COOLDOWN_SECONDS`, 24h) - das Modul
+  hätte einen einmalig aufgebrauchten DeepL-Key dadurch jeden einzigen Tag
+  aufs Neue (erfolglos) angefragt, obwohl das Kontingent nie zurückkehrt.
+  HTTP 456 bekommt jetzt die deutlich längere, neue
+  `DEEPL_QUOTA_EXHAUSTED_COOLDOWN_SECONDS` (30 Tage) - stoppt die
+  automatischen Wiederholungsversuche faktisch, ohne den Anbieter für immer
+  zu deaktivieren; ein Klick auf "Übersetzungsanbieter prüfen" nach einem
+  Key-Wechsel/Upgrade beendet die Sperre wie gewohnt sofort bei Erfolg. Dabei
+  einen zweiten, unabhängigen Bug in `RecordProviderPaused()` gefunden und
+  mitbehoben: die Eskalations-Deckelung rundete JEDEN übergebenen
+  Basis-Cooldown ab `DAILY_QUOTA_COOLDOWN_SECONDS` bedingungslos auf genau
+  24h herunter - das hätte die neue, längere DeepL-Sperre stillschweigend
+  wirkungslos gemacht. Ein bereits als "langfristig bekannt" erkannter
+  Fehlschlag (Tageskontingent ODER jetzt auch DeepLs Einmalkontingent) startet
+  jetzt direkt beim tatsächlich übergebenen Wert; nur die generische
+  Kurzsperren-Eskalation (Streak-Verdopplung für ein nicht näher erkanntes
+  Rate-Limit) bleibt weiterhin auf 24h gedeckelt.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
