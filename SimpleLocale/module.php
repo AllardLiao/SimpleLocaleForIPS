@@ -1442,6 +1442,11 @@ private const LANGUAGE_FLAGS = [
         $this->WalkTree($rootID, $liveNames, $liveTexts, $liveOptions, $liveCharts, $visitedIDs, []);
         $liveNames += $this->ScanFavoriteObjectsOutsideRootTree($liveNames);
         $liveAutomationIDs = $this->ScanAutomationsByID();
+        // Build 109: dieselbe Filterung wie beim Rescan (siehe ScanRootTree) - eine
+        // Chart-Zeile, deren Variable eigenständig im Baum steht, gilt hier bewusst
+        // NICHT als "live" und wird von "Aufräumen" entfernt (Symcon übernimmt die
+        // Übersetzung ohnehin automatisch über "Objektnamen").
+        $liveCharts = $this->ExcludeChartRowsForIndependentlyNamedVariables($liveCharts, $liveNames);
 
         $removedCount = 0;
 
@@ -3878,9 +3883,12 @@ private const LANGUAGE_FLAGS = [
 
         // Charts (Build 108): anders als Automations kein separater Scan - $scannedCharts
         // kommt bereits fertig aus WalkTree() oben (Charts sitzen normal im Root-Baum).
+        // Build 109: erst jetzt (nach Abschluss des kompletten WalkTree()-Durchlaufs,
+        // $scannedNames ist vollständig) Zeilen für eigenständig im Baum stehende
+        // Variablen herausfiltern - siehe ExcludeChartRowsForIndependentlyNamedVariables.
         $objectCharts = $this->MergeChartRows(
             $this->DecodeRows(self::propertyObjectCharts),
-            $scannedCharts
+            $this->ExcludeChartRowsForIndependentlyNamedVariables($scannedCharts, $scannedNames)
         );
 
         // Begrüßungstext, alle drei Modi (siehe ScanGreetingText) - ebenfalls
@@ -4110,29 +4118,23 @@ private const LANGUAGE_FLAGS = [
                                 continue;
                             }
 
-                            // Live gefunden (2026-08-21): entspricht der Titel exakt dem
-                            // AKTUELLEN Live-Namen der zugrunde liegenden Variable, hält
-                            // Symcon selbst beide automatisch synchron - beobachtet an
-                            // einer Variable, die zusätzlich als eigene Anzeige im
-                            // Root-Baum liegt und dadurch bereits über "Objektnamen"
-                            // umbenannt wird (IPS_SetName): ihr neuer Name zog automatisch
-                            // in die Chart-Legende nach, OHNE dass dieses Modul den
-                            // Chart-Inhalt je angefasst hätte. Für diesen Fall wäre eine
-                            // eigene Übersetzung hier doppelte (und potenziell mit Symcons
-                            // eigener Synchronisierung konkurrierende) Arbeit - keine
-                            // Zeile anlegen. Weicht der Titel dagegen vom aktuellen
-                            // Variablennamen ab (bewusst im Chart selbst manuell
-                            // umbenannt/überschrieben), ist es ein echter, eigenständiger
-                            // Text - ganz normal tracken/übersetzen. Reine Momentaufnahme
-                            // beim Scan: wird die Variable ERST NACH dem Scan zusätzlich
-                            // separat im Baum platziert, bleibt eine bereits angelegte
-                            // Zeile bestehen (dieselbe Übergangs-Toleranz wie bei
-                            // ExcludeGreetingVariableFromTextRows) - regelt sich beim
-                            // nächsten "Aufräumen".
-                            if ($datasetTitle === @IPS_GetName($datasetVariableID)) {
-                                continue;
-                            }
-
+                            // Build 109 (live korrigiert): NICHT hier gegen IPS_GetName()
+                            // vergleichen - Symcon füllt "title" beim Anlegen einer
+                            // Datenreihe standardmäßig mit dem damaligen Variablennamen,
+                            // unabhängig davon, ob diese Variable später irgendwo sonst im
+                            // Baum eigenständig steht. Ein Titel, der zufällig (noch) dem
+                            // Live-Namen entspricht, heißt also NICHT automatisch "Symcon
+                            // synct das schon selbst" - das gilt nur, wenn die Variable
+                            // TATSÄCHLICH zusätzlich als eigenes Objekt im Root-Baum liegt
+                            // (dann bekommt sie über "Objektnamen" ihren übersetzten Namen,
+                            // den Symcon nachweislich in die Chart-Legende übernimmt).
+                            // Dieser Fall wird deshalb erst NACH Abschluss des kompletten
+                            // Baum-Durchlaufs entschieden (siehe Aufrufer:
+                            // ExcludeChartRowsForIndependentlyNamedVariables) - zum
+                            // jetzigen Zeitpunkt könnte $ScannedNames die betroffene
+                            // Variable noch gar nicht enthalten, je nach Reihenfolge im
+                            // Baum. Hier wird also erst einmal jede nicht-leere Zeile
+                            // angelegt.
                             $ScannedCharts[$childID . ':' . $datasetVariableID] = [
                                 'ChartID'                                   => $childID,
                                 'VariableID'                                => $datasetVariableID,
@@ -4812,6 +4814,33 @@ private const LANGUAGE_FLAGS = [
         }
 
         return $result;
+    }
+
+    // Build 109 (live korrigiert - siehe README Change-Log): entfernt aus einem
+    // frischen Chart-Scan jede Zeile, deren Variable ZUSÄTZLICH als eigenständiges
+    // Objekt im selben Root-Baum-Durchlauf gefunden wurde (also einen eigenen
+    // Eintrag in $ScannedNames hat) - eine solche Variable bekommt über
+    // "Objektnamen" ohnehin ihren übersetzten Namen, und Symcon übernimmt diesen
+    // nachweislich automatisch in die Chart-Legende (live bestätigt). Eine eigene
+    // Übersetzung wäre hier doppelte, im schlechtesten Fall mit Symcons eigener
+    // Synchronisierung konkurrierende Arbeit. Läuft bewusst ERST NACH dem
+    // vollständigen WalkTree()-Durchlauf (nicht direkt beim Antreffen des Charts):
+    // die referenzierte Variable kann an einer beliebigen anderen Stelle im Baum
+    // liegen, VOR oder NACH dem Chart selbst - erst wenn $ScannedNames vollständig
+    // ist, lässt sich zuverlässig sagen, ob eine Variable eigenständig vorkommt.
+    // Wird von ScanRootTree() (vor dem Merge) und CleanupOrphanedRows() (vor dem
+    // "welche Zeilen sind noch live"-Vergleich) gleichermaßen aufgerufen, damit
+    // "Aufräumen" eine wegen dieser Regel nie angelegte bzw. nachträglich
+    // redundant gewordene Zeile ebenfalls korrekt entfernt.
+    private function ExcludeChartRowsForIndependentlyNamedVariables(array $ScannedCharts, array $ScannedNames): array
+    {
+        foreach ($ScannedCharts as $key => $row) {
+            if (isset($ScannedNames[(int) ($row['VariableID'] ?? 0)])) {
+                unset($ScannedCharts[$key]);
+            }
+        }
+
+        return $ScannedCharts;
     }
 
     // Merged bereits gespeicherte Zeilen mit frisch gescannten Objekt-IDs. ORIGINAL_IMPORT

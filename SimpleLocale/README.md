@@ -106,16 +106,15 @@ Beschreibung des Moduls.
   Chart-Element (WebFront-Visualisierung → "Add Chart") - jede Datenreihe
   kann dort einen eigenen, frei editierbaren Titel tragen (z. B.
   "Außentemperatur", "Wohnzimmer"). Ein Chart liegt normal im Root-Baum und
-  wird daher automatisch mit erfasst, kein separater Scan nötig. Entspricht
-  der Titel einer Datenreihe genau dem aktuellen Live-Namen ihrer
-  zugrunde liegenden Variable (Symcon-Standard, solange der Titel nie
-  manuell im Chart selbst überschrieben wurde), hält Symcon beide
-  automatisch synchron - wird diese Variable also ohnehin an anderer Stelle
-  im Root-Baum verwendet (z. B. als eigene Anzeige-Kachel) und damit über
-  die normale Objektnamen-Übersetzung umbenannt, übersetzt sich die Legende
-  bereits automatisch mit, ganz ohne eigene Chart-Zeile. Weicht der Titel
-  bewusst vom Variablennamen ab, wird er wie jeder andere Text eigenständig
-  getrackt und übersetzt.
+  wird daher automatisch mit erfasst, kein separater Scan nötig. Steht die
+  zugrunde liegende Variable einer Datenreihe zusätzlich als eigenständiges
+  Objekt im Root-Baum (z. B. als eigene Anzeige-Kachel), wird sie ohnehin
+  über die normale Objektnamen-Übersetzung umbenannt - Symcon übernimmt
+  diesen neuen Namen nachweislich automatisch in die Chart-Legende, ganz
+  ohne eigene Chart-Zeile. Für alle anderen Datenreihen (die überwiegende
+  Mehrheit - eine Variable, die nur vom Chart selbst referenziert wird, aber
+  sonst nirgends eigenständig im Baum steht) übernimmt Simple Locale die
+  Übersetzung des Titels selbst.
 
 ### 2. Bekannte Einschränkungen
 
@@ -470,7 +469,7 @@ Name                            | Beschreibung
 Zielsprachen                    | Sprachen, in die übersetzt werden soll. Auswahl-Optionen kommen ab Werk aus der eingebauten Liste, mit konfiguriertem Google-/DeepL-Key aus deren dynamisch geladener Liste (siehe oben). Ausgegraut, wenn ein bezahlter Anbieter konfiguriert ist, aber noch keine Liste laden konnte, oder wenn das Sprachlimit einer "Spezialversion"-Lizenz erreicht ist (siehe Abschnitt 8). Wichtig: Nach dem Klick auf "Sprachliste aktualisieren" die Instanzkonfiguration einmal schließen und neu öffnen, bevor Häkchen gesetzt werden - sonst kann die Konsole falsche Sprachen speichern.
 Objektnamen / Eigene Texte / Beschriftungen | Listen der gefundenen Objekte mit Quelltext und je einer Spalte pro Zielsprache. Übersetzungen sind hier direkt editierbar; leere Zellen werden beim nächsten Rescan automatisch übersetzt. "Beschriftungen" siehe [Abschnitt 2](#2-bekannte-einschränkungen) (Fork-Mechanismus). **Hinweis:** Das Konfigurationsformular persistiert extern (per `VM_UPDATE`) automatisch geänderte Texte alle 12 Minuten, wenn es Änderungen gibt, was zu einem Refresh dieses Formulars führt - bitte speichere Deine eigene Arbeit rechtzeitig. Solange etwas ansteht, zeigt das Formular oben einen Hinweis mit der nächsten Refresh-Zeit an (siehe [Abschnitt 2](#2-bekannte-einschränkungen) für die genauen Details, was dabei geschützt ist und was nicht).
 Automations                     | Liste der gefundenen Automation-Einträge der oben unter "Kachel-Visualisierung" gewählten Instanz mit Quelltext und je einer Spalte pro Zielsprache - funktioniert genauso wie Objektnamen.
-Charts                          | Liste der Legenden-Titel gefundener Chart-Elemente (Symcons eingebautes Chart-Widget) im Root-Baum, je Datenreihe eine Zeile (Schlüssel Chart-Objekt-ID + Variablen-ID) - funktioniert genauso wie Objektnamen. Entspricht der Titel einer Datenreihe beim Scan exakt dem aktuellen Live-Namen ihrer Variable, taucht dafür **keine** Zeile hier auf - Symcon hält Titel und Variablenname in diesem Fall selbst automatisch synchron, eine eigene Übersetzung wäre doppelte Arbeit. Nur bewusst vom Variablennamen abweichende (individuell gesetzte) Titel erscheinen in dieser Liste.
+Charts                          | Liste der Legenden-Titel gefundener Chart-Elemente (Symcons eingebautes Chart-Widget) im Root-Baum, je Datenreihe eine Zeile (Schlüssel Chart-Objekt-ID + Variablen-ID) - funktioniert genauso wie Objektnamen. Steht die zugrunde liegende Variable einer Datenreihe zusätzlich als eigenständiges Objekt im Root-Baum (z. B. als eigene Anzeige-Kachel), taucht dafür **keine** Zeile hier auf - diese Variable wird ohnehin über "Objektnamen" übersetzt, und Symcon übernimmt diesen Namen nachweislich automatisch in die Chart-Legende. Alle anderen Datenreihen (die überwiegende Mehrheit) erscheinen normal in dieser Liste und werden hier übersetzt.
 Begrüßung                       | Übersetzt den Begrüßungstext der Kachel-Visualisierung, unabhängig davon, ob "Show Greeting" gerade "Automatic"/"Static" (freier Text, Feld "Name"/Property `GreetingName`) oder "Variable" (Live-Wert einer String-Variable) ist - beide landen in derselben einen Zeile hier, siehe eigenen Absatz unten. Ein Hinweistext direkt über der Liste zeigt an, welcher Modus gerade aktiv ist. Bei "Show Greeting" = "None" bleibt die Liste leer.
 
 **Wann sollte ein Rescan ausgeführt werden?**
@@ -2574,20 +2573,45 @@ der ursprünglichen Fassung übernommen.
   dessen Medien-Inhalt angefasst hätte. Ursache, per Screenshot des
   "Configure Graph"-Dialogs bestätigt: Symcon hält den Titel einer
   Datenreihe automatisch synchron mit dem LIVE-Namen ihrer zugrunde
-  liegenden Variable, solange der Titel nie manuell im Chart selbst davon
-  abweichend gesetzt wurde. Ist diese Variable zusätzlich an anderer Stelle
-  im Root-Baum als eigenes Objekt platziert (z. B. eine eigene
+  liegenden Variable. Ist diese Variable zusätzlich an anderer Stelle im
+  Root-Baum als eigenes Objekt platziert (z. B. eine eigene
   Anzeige-Kachel), wird sie ohnehin schon über "Objektnamen" umbenannt -
   und Symcon zieht diesen neuen Namen automatisch auch in die
-  Chart-Legende nach. Eine eigene Übersetzung wäre in diesem Fall doppelte
+  Chart-Legende nach, eine eigene Übersetzung wäre hier doppelte
   (und potenziell mit Symcons eigener Synchronisierung konkurrierende)
-  Arbeit. `WalkTree()` vergleicht daher beim Scan jeden Datenreihen-Titel
-  gegen `IPS_GetName()` der zugehörigen Variable: stimmen beide exakt
-  überein, wird keine Charts-Zeile angelegt (Symcon synct selbst weiter);
-  weicht der Titel bewusst davon ab, ist es ein echter, eigenständiger Text
-  und wird ganz normal getrackt/übersetzt. Reine Momentaufnahme beim Scan -
-  wird eine Variable erst NACH dem Scan zusätzlich separat im Baum
-  platziert, bleibt eine bereits angelegte Charts-Zeile zunächst bestehen
-  (dieselbe Übergangs-Toleranz wie bei
-  `ExcludeGreetingVariableFromTextRows()`), regelt sich spätestens beim
-  nächsten "Aufräumen".
+  Arbeit. Als erster Ansatz verglich `WalkTree()` dafür jeden
+  Datenreihen-Titel beim Scan direkt gegen `IPS_GetName()` der zugehörigen
+  Variable - **dieser Ansatz erwies sich kurz darauf als falsch, siehe
+  Build 109.**
+
+* **Build 109 (live gefunden, direkt im Anschluss an Build 108): der dortige
+  Live-Namens-Vergleich schloss ein zweites, unabhängiges Chart komplett
+  aus der neuen "Charts"-Liste aus.** Ein vom Nutzer getesteter
+  Luftfeuchtigkeits-Chart mit drei Datenreihen tauchte nach Build 108 gar
+  nicht mehr in "Charts" auf - keine der drei Zeilen wurde angelegt.
+  Ursache: Symcon füllt das `title`-Feld beim erstmaligen Anlegen einer
+  Datenreihe standardmäßig mit dem DAMALIGEN Namen der gewählten Variable -
+  unabhängig davon, ob diese Variable jemals sonst irgendwo im Baum
+  eigenständig auftaucht. Build 108s Vergleich "Titel == aktueller
+  Live-Name" traf auf alle drei Datenreihen zu (der Titel war seit dem
+  Anlegen nie geändert worden), obwohl keine der drei Variablen anderswo im
+  Baum stand und sie folglich NIE von irgendetwas übersetzt worden wären -
+  der Live-Namens-Vergleich ist also kein zuverlässiges Signal dafür, ob
+  Symcon tatsächlich synct, sondern trifft schlicht auf den unveränderten
+  Symcon-Standardzustand IMMER zu, auch ohne jede Synchronisierung. Die
+  tatsächlich zuverlässige Bedingung ist stattdessen exakt die aus dem
+  Build-108-Nachtrag beschriebene Ursache selbst: nicht der Titel-Vergleich,
+  sondern ob die Variable TATSÄCHLICH als eigenständiges Objekt im selben
+  Root-Baum-Scan gefunden wurde. Neue Funktion
+  `ExcludeChartRowsForIndependentlyNamedVariables()` prüft das jetzt direkt
+  gegen die bereits gescannten Objektnamen (`$ScannedNames`/`$ScannedCharts`
+  aus demselben `WalkTree()`-Durchlauf) - bewusst ERST NACH dessen
+  vollständigem Abschluss aufgerufen (sowohl in `ScanRootTree()` vor dem
+  Merge als auch in `CleanupOrphanedRows()`), da die referenzierte Variable
+  an einer beliebigen anderen Stelle im Baum liegen kann, vor oder nach dem
+  Chart selbst - erst ein vollständiges `$ScannedNames` beantwortet
+  zuverlässig, ob eine Variable eigenständig vorkommt. Der fehlerhafte
+  `IPS_GetName()`-Vergleich wurde komplett entfernt. Regressionstest um den
+  genau gegenteiligen Fall ergänzt (keine der Variablen eigenständig im
+  Baum → alle Zeilen müssen erhalten bleiben), damit dieser konkrete Fehler
+  nicht erneut einschleicht.
