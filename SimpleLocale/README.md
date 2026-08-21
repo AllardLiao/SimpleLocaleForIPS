@@ -1285,6 +1285,39 @@ Beschreibung des Moduls.
   (volle Regressionssuite unverändert grün) - wird entfernt bzw. durch die
   eigentliche Korrektur ersetzt, sobald die Logs den Mechanismus bestätigt
   haben.
+
+  **Build 95 behebt den in Build 94 diagnostizierten Bug und entfernt das
+  dortige temporäre Logging wieder.** Der Log-Dump des Nutzers hat den
+  Mechanismus zweifelsfrei belegt (Kandidat b aus Build 94): `existingGreeting`
+  und `mergedGreeting` beim Rescan waren korrekt deutsch -
+  `IsSourceLanguageActive` in `MergeGreetingRows()` funktioniert also wie
+  vorgesehen. Trotzdem zeigte die Zeile direkt nach `IPS_SetProperty()` +
+  `IPS_ApplyChanges()` wieder den englischen Text, während `de`/`en`/`es`
+  unverändert blieben - ein klares Zeichen für einen gezielten Feld-Patch,
+  keinen vollständigen Zeilenaustausch. Ursache: irgendwann zuvor (Zeitpunkt
+  unklar, vermutlich ein seltenes Timing-Fenster im Selbst-Schreib-Schutz
+  `attributeLastSelfWrittenValues`) hatte `WriteTrackedValueString()`s
+  eigener Übersetzungs-Schreibvorgang für die Begrüßungsvariable
+  `HandleTrackedVariableUpdate()` ausgelöst, ohne vom Selbst-Schreib-Schutz
+  erkannt zu werden - `ApplyTrackedVariableUpdate()` hat den englischen Text
+  daraufhin (ohne jeden `IsSourceLanguageActive`-Schutz, den nur
+  `MergeGreetingRows()` kennt) als vermeintlich frischen deutschen Rohtext
+  übernommen und über `BufferPendingTrackedRowUpdate()` gepuffert. Dieser
+  längst veraltete Puffer-Eintrag blieb liegen, bis der o. g. Rescan lief:
+  dessen abschließendes `IPS_ApplyChanges()` reentert in `ApplyChanges()`,
+  das als einen seiner ersten Schritte `FlushPendingTrackedRowUpdates()`
+  aufruft - und DAS hat den falschen Puffer-Eintrag über das gerade eben
+  korrekt geschriebene Ergebnis geschrieben. Ein zeitpunktunabhängiger Fix
+  direkt am Symptom statt am (schwer greifbaren) Timing-Fenster:
+  `ApplyTrackedVariableUpdate()` bricht jetzt sofort ab, wenn der neu
+  beobachtete Wert exakt der bereits gespeicherten Übersetzung dieser Zeile
+  für die AKTUELL aktive Sprache entspricht - das ist so gut wie sicher ein
+  Echo des eigenen Schreibvorgangs, kein echter externer Inhaltswechsel (ein
+  Fremdmodul/Zeitplan-Skript, das z. B. eine Tageszeit-Begrüßung schreibt,
+  träfe kaum je zufällig exakt den Text einer vorhandenen Übersetzung). Der
+  legitime externe-Update-Anwendungsfall aus Build 70 (z. B. ein häufig
+  aktualisiertes Wetter-Widget) bleibt davon unberührt, da ein echter neuer
+  Messwert praktisch nie mit einer gespeicherten Übersetzung übereinstimmt.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
