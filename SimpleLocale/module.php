@@ -2241,11 +2241,30 @@ private const LANGUAGE_FLAGS = [
 
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
 
+        // Build 107 (live gefunden): jedes Objekt mit gesetztem Ident bekommt beim
+        // Scan IMMER eine Zeile in "Objektnamen" (siehe WalkTree - "für JEDES Objekt
+        // mit gesetztem Ident"). Eine getrackte "Eigene Texte"-Variable (String-
+        // Variable, ebenfalls mit Ident) landet dadurch zwangsläufig gleichzeitig in
+        // BEIDEN Listen - "Objektnamen" UND "Eigene Texte" (letztere pflegt für ihre
+        // Zeilen zusätzlich eine EIGENE, unabhängige Namens-Übersetzung, siehe
+        // fieldOriginalImportName/fieldNamePrefix weiter unten). $writtenNameObjectIDs
+        // merkt sich, welches Objekt bereits eine Name-Zuweisung aus "Objektnamen"
+        // bekommen hat - die "Eigene Texte"-Schleife überspringt ihre EIGENE (dann
+        // zwangsläufig redundante, im schlechtesten Fall abweichende/veraltete)
+        // Namens-Zuweisung für dasselbe Objekt. Ohne diese Absicherung überschrieb
+        // die "Eigene Texte"-Schleife (läuft IMMER nach "Objektnamen") jede gerade
+        // erst manuell im "Objektnamen"-Formular korrigierte Zelle sofort wieder mit
+        // ihrem eigenen, unveränderten Stand - sichtbar als "Korrektur wird
+        // geschrieben, verschwindet aber sofort wieder", da beides innerhalb
+        // desselben ApplyLanguage()-Laufs passiert.
+        $writtenNameObjectIDs = [];
+
         foreach ($this->DecodeRows(self::propertyObjectNames) as $row) {
             $objectID = (int) ($row['ObjectID'] ?? 0);
             if ($objectID === 0 || !@IPS_ObjectExists($objectID)) {
                 continue;
             }
+            $writtenNameObjectIDs[$objectID] = true;
 
             // @ wie bei WriteTrackedValueString: gesperrte Objekte lehnen auch das
             // Umbenennen ab (live gefunden), soll aber nicht die ganze
@@ -2264,7 +2283,7 @@ private const LANGUAGE_FLAGS = [
         foreach ($this->DecodeRows(self::propertyObjectTexts) as $row) {
             $rowSourceLanguage = $this->GetRowSourceLanguage($row, $sourceLanguage);
             $objectID = (int) ($row['ObjectID'] ?? 0);
-            if ($objectID !== 0 && @IPS_ObjectExists($objectID)) {
+            if ($objectID !== 0 && @IPS_ObjectExists($objectID) && !isset($writtenNameObjectIDs[$objectID])) {
                 @IPS_SetName($objectID, $this->ResolveRowValue(
                     $row,
                     $Language,
@@ -2272,6 +2291,7 @@ private const LANGUAGE_FLAGS = [
                     $rowSourceLanguage,
                     self::fieldOriginalImportName
                 ));
+                $writtenNameObjectIDs[$objectID] = true;
             }
 
             // Bei Links auf eine String-Variable ist ValueObjectID die Zielvariable,
@@ -4961,22 +4981,6 @@ private const LANGUAGE_FLAGS = [
                 }
                 continue;
             }
-            // TEMP-DIAG (manuell editierte Zelle wird nach einem Rescan zurueckgesetzt,
-            // live gemeldet 2026-08-21, betrifft laut Nutzer "Objektnamen"): loggt fuer
-            // JEDE Zeile mit nicht-leerem, nicht-JSON Rohtext die vollstaendige
-            // Pending/Current-Entscheidung, damit sichtbar wird, ob eine bereits manuell
-            // korrigierte Zelle hier faelschlich erneut als "pending" erkannt und somit
-            // ueberschrieben wird.
-            $isCurrentForDiag = !$this->LooksLikeJson($fromText) && $this->IsRowLanguageTranslationCurrent($row, $ToField, $TargetLanguageCode);
-            $this->SendDebug('IPSSL_NameRevertDiag', sprintf(
-                'FillLanguageColumn: ObjectID=%s ToField=%s currentToFieldValue=%s isCurrent=%s sourceChangedAt=%s translatedAt=%s',
-                $row['ObjectID'] ?? '?',
-                $ToField,
-                json_encode($row[$ToField] ?? null),
-                $isCurrentForDiag ? 'true' : 'false',
-                (string) ($row[self::fieldSourceChangedAt] ?? 0),
-                json_encode($row[self::fieldTranslatedAtByLanguage][$TargetLanguageCode] ?? null)
-            ), 0);
             if (!$this->LooksLikeJson($fromText) && !$this->IsRowLanguageTranslationCurrent($row, $ToField, $TargetLanguageCode)) {
                 $pending[$index] = $fromText;
             }

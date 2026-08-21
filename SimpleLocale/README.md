@@ -1611,6 +1611,43 @@ Beschreibung des Moduls.
   Regressionssuite unverändert grün) - wird entfernt bzw. durch die
   eigentliche Korrektur ersetzt, sobald die Logs den Mechanismus bestätigt
   haben.
+
+  **Build 107 fand die eigentliche Ursache - nicht in `FillLanguageColumn()`,
+  sondern in `ApplyLanguage()` selbst.** Der Build-106-Diagnose-Export zeigte
+  bei allen 99 protokollierten Zeilen `isCurrent=true` (korrekt nicht
+  pending), und die tatsächlich bearbeitete `ObjectID` tauchte im gesamten
+  Log kein einziges Mal auf - der Verdacht aus Build 106 war damit widerlegt.
+  Ein direkt per Skript in der Symcon-Konsole ausgelesener Property-Snapshot
+  bewies stattdessen, dass die manuelle Korrektur den Rücksprung binnen des
+  GLEICHEN `ApplyLanguage()`-Laufs erlitt, nicht erst Sekunden später durch
+  einen Rescan. Grund: `WalkTree()` legt für JEDES Objekt mit gesetztem Ident
+  eine Zeile in "Objektnamen" an - unabhängig davon, ob es sich zusätzlich um
+  eine getrackte "Eigene Texte"-Variable handelt. Eine solche Variable landet
+  dadurch zwangsläufig gleichzeitig in BEIDEN Listen, und "Eigene Texte"
+  pflegt für ihre eigenen Zeilen eine komplett unabhängige, eigene
+  Namens-Übersetzung (`ORIGINAL_IMPORT_Name`/`Name_<lang>`). `ApplyLanguage()`
+  rief für dasselbe Objekt daher zwei voneinander unabhängige `IPS_SetName()`
+  auf - zuerst aus "Objektnamen" (die gerade korrigierte, richtige Zeile),
+  direkt darauf aus "Eigene Texte" (der eigene, unveränderte, damit
+  zwangsläufig veraltete Stand) -, wobei der zweite Aufruf den ersten
+  kommentarlos wieder überschrieb. Ein Schutz gegen doppeltes Schreiben
+  existierte bereits für Werte (`$writtenValueObjectIDs`, gegen zwei
+  "Eigene Texte"-Zeilen mit derselben `ValueObjectID`), aber nicht für Namen
+  über beide Listen hinweg. Fix: neues `$writtenNameObjectIDs`, von der
+  "Objektnamen"-Schleife befüllt - die "Eigene Texte"-Schleife überspringt
+  ihren eigenen `IPS_SetName()`-Aufruf jetzt für jedes Objekt, das bereits
+  über "Objektnamen" benannt wurde. Betraf nur Objekte, die in beiden Listen
+  gleichzeitig auftauchen (jede sinnvoll benannte "Eigene Texte"-Variable mit
+  gesetztem Ident, ein häufiger Fall) - reiner Namens-Bug, Werte
+  (`SetValueString`) waren nie betroffen. Kein Rescan/Sprachwechsel nötig,
+  damit der Fix greift: er wirkt bereits beim nächsten `ApplyLanguage()`-Lauf
+  nach der jeweiligen Korrektur. Für "Beschriftungen", "Automations" und
+  "Begrüßung" besteht dasselbe Risiko nicht - sie schreiben auf strukturell
+  andere Ziele (Custom Presentation bzw. die `Automations`-/`GreetingName`-
+  Property der Kachel-Visualisierungs-Instanz), nie über `IPS_SetName()`; der
+  einzige denkbare Überschneidungsfall (Begrüßung im Variable-Modus teilt
+  sich eine `ValueObjectID` mit einer "Eigene Texte"-Zeile) war bereits vor
+  Build 107 über denselben `$writtenValueObjectIDs`-Mechanismus abgesichert.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der
