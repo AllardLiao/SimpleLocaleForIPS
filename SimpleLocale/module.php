@@ -755,17 +755,26 @@ private const LANGUAGE_FLAGS = [
         $this->RefreshTranslateChainStatus();
 
         // Build 76: Ergebnis eines evtl. GERADE eben abgeschlossenen "Aufräumen"-Laufs
-        // (siehe CleanupOrphanedRows) genau EINMAL abholen, bevor PopulateFormElements()
-        // rekursiv durch alle (verschachtelten) Elemente läuft - nicht dort selbst
-        // gelesen+zurückgesetzt, weil jede rekursive Selbstaufruf-Ebene sonst den
-        // bereits zurückgesetzten Wert der äußeren Ebene sehen würde (Lese-und-
-        // Zurücksetzen ist hier bewusst NICHT idempotent, anders als z.B.
-        // attributeUnnamedObjects, das nur gelesen, nie hier zurückgeschrieben wird).
+        // (siehe CleanupOrphanedRows) fürs Popup lesen.
+        //
+        // Build 114 (live per Debug-Log bestätigt): NICHT mehr hier zurücksetzen.
+        // Die Symcon-Konsole ruft GetConfigurationForm() nachweislich automatisch
+        // selbst ein weiteres Mal auf, ca. 30ms NACH Abschluss von
+        // CleanupOrphanedRows() (noch vor dem bewusst per Timer um
+        // CLEANUP_RELOAD_DELAY_SECONDS verzögerten ReloadForm() aus
+        // ProcessDeferredCleanupReload) - das alte "beim ersten Lesen sofort
+        // zurücksetzen" verbrauchte den Zähler dadurch IMMER schon durch diesen
+        // automatischen Zwischenaufruf, bevor der eigentlich dafür vorgesehene
+        // verzögerte Reload ihn zeigen konnte: das Ergebnis-Popup zeigte nach den
+        // vollen 5 Sekunden zuverlässig einen leeren Zähler, obwohl "Aufräumen"
+        // korrekt gearbeitet hatte. Der Wert wird jetzt bei JEDEM
+        // GetConfigurationForm()-Aufruf unverändert gelesen (beliebig oft
+        // wiederholbar, kein Zustand wird hier verändert) - das tatsächliche
+        // Zurücksetzen übernimmt jetzt ProcessDeferredCleanupReload() selbst,
+        // NACHDEM sein eigener ReloadForm()-Aufruf (und damit der letzte
+        // beabsichtigte Aufruf dieser Funktion für diesen Cleanup-Lauf)
+        // abgeschlossen ist.
         $cleanupResultCount = $this->ReadAttributeInteger(self::attributeLastCleanupRemovedCount);
-        if ($cleanupResultCount >= 0) {
-            $this->WriteAttributeInteger(self::attributeLastCleanupRemovedCount, -1);
-        }
-        $this->SendDebug('IPSSL_CleanupCountDiag', 'GetConfigurationForm() called at ' . microtime(true) . ' - read cleanupResultCount=' . $cleanupResultCount . ' (now reset to -1: ' . ($cleanupResultCount >= 0 ? 'yes' : 'no, was already -1') . ')', 0);
 
         $form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
         $this->PopulateFormElements($form['elements'], $cleanupResultCount);
@@ -1382,6 +1391,14 @@ private const LANGUAGE_FLAGS = [
         $this->SendDebug('IPSSL_CleanupCountDiag', 'ProcessDeferredCleanupReload() fired at ' . microtime(true) . ' - about to call ReloadForm()', 0);
         $this->SetTimerInterval($this->GetCleanupReloadTimerIdent(), 0);
         $this->ReloadForm();
+
+        // Build 114: das eigentliche Zurücksetzen passiert jetzt HIER, NACH dem
+        // eigenen ReloadForm() - nicht mehr beim erstbesten GetConfigurationForm()-
+        // Aufruf (siehe dortiger Kommentar). Dieser Reload ist der letzte
+        // beabsichtigte Aufruf für diesen Cleanup-Lauf; ab jetzt soll das Popup bei
+        // jedem KÜNFTIGEN Öffnen/Neuaufbau des Formulars wieder ausgeblendet
+        // bleiben, bis der nächste "Aufräumen"-Lauf einen neuen Wert schreibt.
+        $this->WriteAttributeInteger(self::attributeLastCleanupRemovedCount, -1);
     }
 
     // Build 76: "Aufräumen" (Nutzer-Wunsch, analog zur gleichnamigen Funktion in
