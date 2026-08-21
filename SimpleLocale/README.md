@@ -1485,6 +1485,52 @@ Beschreibung des Moduls.
   jetzt direkt beim tatsächlich übergebenen Wert; nur die generische
   Kurzsperren-Eskalation (Streak-Verdopplung für ein nicht näher erkanntes
   Rate-Limit) bleibt weiterhin auf 24h gedeckelt.
+* **Lange Texte über den kostenfreien Anbieter: 500-Byte-Grenze pro Anfrage.**
+  Der kostenfreie Anbieter (MyMemory) akzeptiert pro Übersetzungsanfrage
+  maximal 500 Byte Text - längere Inhalte lehnt er bewusst sofort ab
+  (`TranslateSingleFree()`), statt sie fehlerhaft abzuschneiden. Betrifft in
+  der Praxis vor allem längere "Eigene Texte" (z. B. ein vollständiges
+  HTMLBox-Widget mit mehreren Absätzen als Hinweistext), selten kurze
+  Objektnamen oder Beschriftungen. Ist zusätzlich ein bezahlter Anbieter
+  (Google Cloud Translate oder DeepL) konfiguriert, reicht die Anbieterkette
+  einen von MyMemory abgelehnten Text automatisch an diesen weiter - beide
+  kennen kein vergleichbares Zeichenlimit. Steht dagegen nur der kostenfreie
+  Anbieter zur Verfügung, bleibt genau diese eine Zielsprachen-Zelle
+  unübersetzt (die Kachel zeigt übergangsweise den unveränderten
+  Original-Rohtext, kein Absturz) - live gefunden (2026-08-21): das sieht auf
+  den ersten Blick wie ein stiller Fehler ohne erkennbaren Grund aus, ist
+  aber genau diese Längenbegrenzung. Der Symcon-Meldungen-Log der Instanz
+  nennt den tatsächlichen Grund explizit ("alle Anbieter der Kette ...
+  abgelehnt"), sobald wirklich JEDER konfigurierte Anbieter denselben Text
+  ablehnt - siehe auch [Abschnitt 5](#5-einrichten-der-instanzen-in-symcon)
+  zur Anbieterkette insgesamt. Kein Chunking/Aufteilen langer Texte in v1 -
+  ein zu langer Text wird also nicht in mehrere kürzere Anfragen zerlegt,
+  sondern komplett über den kostenfreien Anbieter übersprungen.
+
+  **Build 103 behebt einen direkten Nebeneffekt dieser Längengrenze, live
+  gefunden anhand einer irreführenden Meldungen-Log-Zeile.** Ein Eintrag
+  "alle Anbieter der Kette (deepl [pausiert], google [pausiert], free) haben
+  'de' -> 'es' abgelehnt (77 Text(e), erster Text: 'Echo Info')" sah aus, als
+  hätte selbst ein triviales 9-Zeichen-Wort abgelehnt - der zugehörige Debug-
+  Log-Eintrag zeigte für "Echo Info" aber eine echte, erfolgreiche MyMemory-
+  Antwort (HTTP 200, `quotaFinished: false`). Der Text im Log ist nur der
+  ERSTE von 77 angefragten Texten (`$Texts[0]` in der Fehler-Zusammenfassung),
+  nicht zwangsläufig der eigentliche Übeltäter. Ursache: MyMemory hat keinen
+  echten Batch-Endpunkt (ein HTTP-Request pro Text, siehe oben) -
+  `TranslateChunkFree()` brach bei EINEM einzelnen `null`-Ergebnis (egal an
+  welcher Position) bislang sofort für den GESAMTEN Aufruf ab und verwarf
+  dabei alle bereits erfolgreich übersetzten Texte desselben Aufrufs. Ein
+  einzelner über 500 Byte langer Text irgendwo unter den 77 angefragten
+  reichte also aus, um alle 76 übrigen, problemlos übersetzbaren Texte mit
+  sich zu reißen. `TranslateSingleFree()` liefert für diesen Fall jetzt `''`
+  (Leerstring) statt `null` - dasselbe Signal wie beim bereits bestehenden
+  Leerstring-Fall für einen leeren Rohtext direkt darüber -
+  `TranslateChunkFree()` fährt dadurch mit den restlichen Texten fort, statt
+  abzubrechen. Die zu lange Zelle selbst bleibt weiterhin leer (wird beim
+  nächsten Rescan erneut versucht, dann ggf. über einen zwischenzeitlich
+  wieder verfügbaren bezahlten Anbieter ohne diese Längenbegrenzung) - alle
+  anderen Texte desselben Aufrufs werden jetzt aber sofort korrekt gefüllt,
+  statt unnötig auf den nächsten Rescan warten zu müssen.
 * **Die automatische Übersetzung kann trotzdem Fehler machen.** Google
   Translate liefert nicht immer eine passende Übersetzung. (Ein früherer,
   strukturell inzwischen ausgeschlossener Fall: Google erkannte bei der

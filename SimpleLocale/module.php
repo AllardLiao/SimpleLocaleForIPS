@@ -6535,16 +6535,37 @@ private const LANGUAGE_FLAGS = [
     // (propertyFreeTranslateContactEmail, Parameter "de") 50.000 Zeichen/Tag. Kein
     // Batch-Endpoint, "q" ist zudem auf 500 Byte pro Aufruf begrenzt - laengere
     // Texte (z.B. vollstaendige HTMLBox-Widgets als "Eigene Texte") koennen ueber
-    // diesen Anbieter grundsaetzlich nicht uebersetzt werden und scheitern hier
-    // bewusst frueh (kein sinnloser Request), damit die Kette ggf. zu einem
-    // bezahlten Anbieter ohne diese Begrenzung weiterreicht.
+    // diesen Anbieter grundsaetzlich nicht uebersetzt werden.
+    //
+    // Build 103 (live gefunden, Nutzer-Diagnose): dieser Fall lieferte bis hierhin
+    // `null` zurueck - dasselbe Signal wie ein ECHTER Fehlschlag (Netzwerk,
+    // Kontingent). TranslateChunkFree() (der Aufrufer, siehe dort) bricht bei JEDEM
+    // `null` sofort die GESAMTE Anfrage ab und verwirft dabei alle bereits
+    // erfolgreich uebersetzten Texte desselben Aufrufs - bei MyMemorys Fehlen eines
+    // echten Batch-Endpunkts (ein Request PRO Text, siehe oben) konnte so EIN
+    // einzelner zu langer Text unter z.B. 77 angefragten Texten alle uebrigen 76,
+    // durchweg problemlos uebersetzbaren Texte mit sich reissen - live beobachtet:
+    // ein Meldungen-Log-Eintrag "alle Anbieter der Kette ... abgelehnt (77 Texte)"
+    // wirkte dadurch so, als waere ein harmloses 9-Zeichen-Wort ("Echo Info")
+    // abgelehnt worden (es stand nur zufaellig als erster Text in der Liste, siehe
+    // die "erster Text"-Angabe in dieser Meldung) - tatsaechlich hatte MyMemory
+    // dafuer laengst erfolgreich geantwortet (HTTP 200, `quotaFinished: false`),
+    // nur ein ANDERER, laengerer Text im selben Aufruf ist an der 500-Byte-Grenze
+    // gescheitert und hat den kompletten restlichen Batch mit sich gerissen.
+    // Liefert jetzt stattdessen `''` (Leerstring) - dieselbe "nichts zu tun, weiter
+    // im Text" wie beim bereits bestehenden Leerstring-Fall direkt darunter -
+    // TranslateChunkFree() faehrt dadurch mit den restlichen Texten fort, statt
+    // abzubrechen; die zu lange Zelle selbst bleibt einfach leer (wie jede andere
+    // (noch) nicht erfolgreich uebersetzte Zelle auch) und wird beim naechsten
+    // Rescan erneut versucht - dann ggf. bereits ueber einen zwischenzeitlich
+    // wieder verfuegbaren bezahlten Anbieter ohne diese Laengenbegrenzung.
     private function TranslateSingleFree(string $Text, string $Source, string $Target, string $DebugContext = ''): ?string
     {
         if (trim($Text) === '') {
             return '';
         }
         if (strlen($Text) > 500) {
-            return null;
+            return '';
         }
 
         $email = $this->ReadPropertyString(self::propertyFreeTranslateContactEmail);
