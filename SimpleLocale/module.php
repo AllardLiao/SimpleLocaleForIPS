@@ -1450,17 +1450,33 @@ private const LANGUAGE_FLAGS = [
         // Übersetzung ohnehin automatisch über "Objektnamen").
         $liveCharts = $this->ExcludeChartRowsForIndependentlyNamedVariables($liveCharts, $liveNames);
 
+        // Build 113 (Diagnose): live gemeldeter Verdacht auf massenhaften
+        // Datenverlust nach "Aufräumen" (siehe Kommentar am Chart-Scan-try/catch
+        // in WalkTree) - vergleicht die Größe des frischen Scans gegen die
+        // bestehende Property, BEVOR irgendetwas gelöscht wird. Ein auffällig
+        // kleinerer Live-Scan (z.B. deutlich weniger als die Hälfte) ist ein
+        // starkes Warnsignal für einen unvollständigen Baum-Durchlauf.
+        $existingObjectNamesCount = count($this->DecodeRows(self::propertyObjectNames));
+        $this->SendDebug('IPSSL_CleanupCountDiag', 'CleanupOrphanedRows(): vor dem Filtern - liveNames=' . count($liveNames) . ' vs. bestehende ObjectNames-Zeilen=' . $existingObjectNamesCount . ' (liveTexts=' . count($liveTexts) . ', liveOptions=' . count($liveOptions) . ', liveCharts=' . count($liveCharts) . ', liveAutomationIDs=' . count($liveAutomationIDs) . ')', 0);
+
         $removedCount = 0;
+        $removedObjectNameIDs = [];
 
         $objectNames = array_values(array_filter(
             $this->DecodeRows(self::propertyObjectNames),
-            function (array $row) use ($liveNames, &$removedCount): bool {
+            function (array $row) use ($liveNames, &$removedCount, &$removedObjectNameIDs): bool {
                 $keep = isset($liveNames[(int) ($row['ObjectID'] ?? 0)]);
-                $removedCount += $keep ? 0 : 1;
+                if (!$keep) {
+                    $removedCount++;
+                    $removedObjectNameIDs[] = (int) ($row['ObjectID'] ?? 0);
+                }
 
                 return $keep;
             }
         ));
+        if ($removedObjectNameIDs !== []) {
+            $this->SendDebug('IPSSL_CleanupCountDiag', 'CleanupOrphanedRows(): folgende ObjectNames-ObjectIDs werden entfernt (bitte pruefen, ob diese Objekte tatsaechlich geloescht wurden): ' . implode(', ', $removedObjectNameIDs), 0);
+        }
 
         $objectTexts = array_values(array_filter(
             $this->DecodeRows(self::propertyObjectTexts),
@@ -4109,64 +4125,86 @@ private const LANGUAGE_FLAGS = [
             // (IPS_GetMediaContent, base64-kodiertes JSON mit einem "datasets"-Array).
             // Ein Chart kann mehrere Datenreihen gleichzeitig zeigen - Schlüssel ist
             // daher ChartID+VariableID, nicht ChartID allein.
+            // Build 113 (Absicherung): der komplette Chart-Scan-Block läuft jetzt in
+            // einem eigenen try/catch. Live gemeldet: nach "Aufräumen" fehlten
+            // plötzlich viele manuell korrigierte "Objektnamen"-Zeilen, deren
+            // Objekte in der Visualisierung nachweislich noch existierten -
+            // starker Verdacht, dass ein bislang unentdeckter Fehler (z.B.
+            // IPS_GetMedia()/IPS_GetMediaContent() auf einem ungewöhnlich
+            // konfigurierten oder defekten Medienobjekt) eine PHP-Exception wirft,
+            // die @ NICHT unterdrückt (@ unterdrückt nur Warnungen/Notices, keine
+            // geworfenen Exceptions) - eine solche Exception würde den GESAMTEN
+            // WalkTree()-Durchlauf abbrechen und dadurch $ScannedNames für ALLE
+            // NOCH NICHT besuchten Geschwister-/Nachfolgeobjekte unvollständig
+            // lassen. "Aufräumen" hält dann jedes fehlende (in Wahrheit weiterhin
+            // existierende) Objekt fälschlich für verwaist und löscht seine Zeile
+            // - ein nachfolgender Rescan legt sie als "neu" an und übersetzt sie
+            // frisch, wodurch jede manuelle Korrektur verloren geht. Ein Fehler
+            // bei einem einzelnen Chart darf daher nie mehr den kompletten
+            // restlichen Baum-Scan gefährden - wird jetzt abgefangen, geloggt,
+            // und die Rekursion läuft normal weiter.
             if ($object['ObjectType'] === OBJECTTYPE_MEDIA) {
-                $media = @IPS_GetMedia($childID);
-                if (is_array($media) && ($media['MediaType'] ?? null) === MEDIATYPE_CHART) {
-                    $chartContent = json_decode(base64_decode((string) @IPS_GetMediaContent($childID)), true);
-                    if (is_array($chartContent) && is_array($chartContent['datasets'] ?? null)) {
-                        foreach ($chartContent['datasets'] as $dataset) {
-                            $datasetVariableID = (int) ($dataset['variableID'] ?? 0);
-                            if ($datasetVariableID === 0) {
-                                continue;
-                            }
-                            $datasetTitle = (string) ($dataset['title'] ?? '');
+                try {
+                    $media = @IPS_GetMedia($childID);
+                    if (is_array($media) && ($media['MediaType'] ?? null) === MEDIATYPE_CHART) {
+                        $chartContent = json_decode(base64_decode((string) @IPS_GetMediaContent($childID)), true);
+                        if (is_array($chartContent) && is_array($chartContent['datasets'] ?? null)) {
+                            foreach ($chartContent['datasets'] as $dataset) {
+                                $datasetVariableID = (int) ($dataset['variableID'] ?? 0);
+                                if ($datasetVariableID === 0) {
+                                    continue;
+                                }
+                                $datasetTitle = (string) ($dataset['title'] ?? '');
 
-                            // Build 110 (live per Rohdump bestätigt, korrigiert eine
-                            // falsche Annahme aus Build 108/109): ein LEERER Titel ist
-                            // der Symcon-Regelfall, nicht die Ausnahme - Symcon füllt
-                            // "title" beim Anlegen einer Datenreihe NICHT automatisch mit
-                            // dem damaligen Variablennamen (das war die falsche Annahme
-                            // aus Build 109). Ist "title" leer, rendert die Chart-Legende
-                            // stattdessen live den AKTUELLEN Namen der Variable
-                            // (IPS_GetName) - exakt das, was ein Gast ohne dieses Modul
-                            // sehen würde. Als Quelltext gilt daher: der explizite Titel,
-                            // falls gesetzt, sonst ersatzweise der aktuelle Variablenname.
-                            $sourceText = $datasetTitle !== '' ? $datasetTitle : (string) @IPS_GetName($datasetVariableID);
-                            if ($sourceText === '') {
-                                continue;
-                            }
+                                // Build 110 (live per Rohdump bestätigt, korrigiert eine
+                                // falsche Annahme aus Build 108/109): ein LEERER Titel ist
+                                // der Symcon-Regelfall, nicht die Ausnahme - Symcon füllt
+                                // "title" beim Anlegen einer Datenreihe NICHT automatisch mit
+                                // dem damaligen Variablennamen (das war die falsche Annahme
+                                // aus Build 109). Ist "title" leer, rendert die Chart-Legende
+                                // stattdessen live den AKTUELLEN Namen der Variable
+                                // (IPS_GetName) - exakt das, was ein Gast ohne dieses Modul
+                                // sehen würde. Als Quelltext gilt daher: der explizite Titel,
+                                // falls gesetzt, sonst ersatzweise der aktuelle Variablenname.
+                                $sourceText = $datasetTitle !== '' ? $datasetTitle : (string) @IPS_GetName($datasetVariableID);
+                                if ($sourceText === '') {
+                                    continue;
+                                }
 
-                            // Build 109 weiterhin gültig: steht die Variable zusätzlich
-                            // als eigenständiges Objekt im Root-Baum, bekommt sie über
-                            // "Objektnamen" ohnehin ihren übersetzten Namen - und Symcon
-                            // rendert genau diesen Namen live in die Chart-Legende
-                            // (derselbe Leer-Titel-Fallback wie oben, nur mit bereits
-                            // übersetztem statt rohem Namen). Eine eigene Zeile wäre hier
-                            // überflüssig. Dieser Fall wird deshalb erst NACH Abschluss des kompletten
-                            // Baum-Durchlaufs entschieden (siehe Aufrufer:
-                            // ExcludeChartRowsForIndependentlyNamedVariables) - zum
-                            // jetzigen Zeitpunkt könnte $ScannedNames die betroffene
-                            // Variable noch gar nicht enthalten, je nach Reihenfolge im
-                            // Baum. Hier wird also erst einmal jede nicht-leere Zeile
-                            // angelegt.
-                            $ScannedCharts[$childID . ':' . $datasetVariableID] = [
-                                'ChartID'                                   => $childID,
-                                'VariableID'                                => $datasetVariableID,
-                                'Path'                                      => $path,
-                                self::langOriginalImport                    => $sourceText,
-                                self::fieldRowSourceLanguage                => $currentScanSourceLanguage,
-                                self::fieldTranslatedAgainstSourceLanguage  => $currentScanSourceLanguage,
-                                // Build 112 (live korrigiert): rein transientes Merkmal,
-                                // NIE persistiert (siehe MergeChartRows) - steuert nur
-                                // ExcludeChartRowsForIndependentlyNamedVariables() weiter
-                                // unten. Nur wenn der Quelltext aus dem Leer-Titel-Fallback
-                                // stammt (nicht bei einem echten, eigenen Chart-Titel) darf
-                                // eine zusätzlich im Baum stehende Variable diese Zeile
-                                // verdrängen.
-                                '_EmptyTitleFallback'                       => $datasetTitle === '',
-                            ];
+                                // Build 109 weiterhin gültig: steht die Variable zusätzlich
+                                // als eigenständiges Objekt im Root-Baum, bekommt sie über
+                                // "Objektnamen" ohnehin ihren übersetzten Namen - und Symcon
+                                // rendert genau diesen Namen live in die Chart-Legende
+                                // (derselbe Leer-Titel-Fallback wie oben, nur mit bereits
+                                // übersetztem statt rohem Namen). Eine eigene Zeile wäre hier
+                                // überflüssig. Dieser Fall wird deshalb erst NACH Abschluss des kompletten
+                                // Baum-Durchlaufs entschieden (siehe Aufrufer:
+                                // ExcludeChartRowsForIndependentlyNamedVariables) - zum
+                                // jetzigen Zeitpunkt könnte $ScannedNames die betroffene
+                                // Variable noch gar nicht enthalten, je nach Reihenfolge im
+                                // Baum. Hier wird also erst einmal jede nicht-leere Zeile
+                                // angelegt.
+                                $ScannedCharts[$childID . ':' . $datasetVariableID] = [
+                                    'ChartID'                                   => $childID,
+                                    'VariableID'                                => $datasetVariableID,
+                                    'Path'                                      => $path,
+                                    self::langOriginalImport                    => $sourceText,
+                                    self::fieldRowSourceLanguage                => $currentScanSourceLanguage,
+                                    self::fieldTranslatedAgainstSourceLanguage  => $currentScanSourceLanguage,
+                                    // Build 112 (live korrigiert): rein transientes Merkmal,
+                                    // NIE persistiert (siehe MergeChartRows) - steuert nur
+                                    // ExcludeChartRowsForIndependentlyNamedVariables() weiter
+                                    // unten. Nur wenn der Quelltext aus dem Leer-Titel-Fallback
+                                    // stammt (nicht bei einem echten, eigenen Chart-Titel) darf
+                                    // eine zusätzlich im Baum stehende Variable diese Zeile
+                                    // verdrängen.
+                                    '_EmptyTitleFallback'                       => $datasetTitle === '',
+                                ];
+                            }
                         }
                     }
+                } catch (\Throwable $e) {
+                    $this->SendDebug('IPSSL_ChartScanError', 'Chart-Scan für ObjectID ' . $childID . ' fehlgeschlagen (übersprungen, restlicher Baum-Scan läuft normal weiter): ' . $e->getMessage(), 0);
                 }
             }
 

@@ -2695,3 +2695,33 @@ der ursprünglichen Fassung übernommen.
   persistiert wird (kein Ballast in der gespeicherten Property/Tabelle).
   Regressionstest um beide Fälle nebeneinander ergänzt (echter Titel bleibt
   erhalten, Leer-Titel-Fallback wird weiterhin korrekt ausgeschlossen).
+* **Build 113 (live gemeldet, schwerwiegend): nach "Aufräumen" fehlten
+  plötzlich viele manuell korrigierte "Objektnamen"-Zeilen, deren Objekte in
+  der Visualisierung nachweislich noch existierten - u. a. eine seit
+  Stunden stabile eigene Korrektur ("Idioma") wurde durch eine frische
+  Maschinenübersetzung ersetzt.** Auslöser laut Nutzer: ein einmaliger
+  Testklick auf "Aufräumen". Root Cause noch nicht abschließend bestätigt
+  (Diagnose läuft), aber starker, plausibler Verdacht: `@IPS_GetMedia()`/
+  `@IPS_GetMediaContent()` (neu seit Build 108, siehe dort) wirft für ein
+  ungewöhnlich konfiguriertes oder defektes Medienobjekt eine echte
+  PHP-Exception - der `@`-Operator unterdrückt nur Warnungen/Notices,
+  NIEMALS eine tatsächlich geworfene Exception. Eine solche Exception würde
+  mitten im `WalkTree()`-Durchlauf den KOMPLETTEN restlichen Baum-Scan
+  abbrechen: jedes ab diesem Punkt noch nicht besuchte, in Wahrheit
+  weiterhin existierende Objekt fehlt dann in `$ScannedNames` - "Aufräumen"
+  hält es fälschlich für verwaist und löscht seine Zeile unwiederbringlich;
+  ein nachfolgender Rescan legt sie als "neu" an und übersetzt sie komplett
+  frisch, jede manuelle Korrektur ist damit verloren. Fix: der gesamte
+  Chart-Scan-Block in `WalkTree()` läuft jetzt in einem eigenen
+  `try`/`catch (\Throwable $e)` - ein Fehler bei einem einzelnen Chart wird
+  geloggt (`SendDebug('IPSSL_ChartScanError', ...)`) und übersprungen, statt
+  den kompletten restlichen Baum-Scan (und damit potenziell zahllose andere,
+  völlig unbeteiligte Objekte) zu gefährden. Zusätzlich neues
+  `SendDebug('IPSSL_CleanupCountDiag', ...)` in `CleanupOrphanedRows()`:
+  protokolliert vor jedem Löschen die Größe des frischen Live-Scans gegen
+  die bestehende Property sowie die exakten ObjectIDs jeder tatsächlich zu
+  entfernenden "Objektnamen"-Zeile - damit sich ein unvollständiger Scan
+  (deutlich kleinerer `liveNames`-Count als erwartet) im Debug-Log sofort
+  erkennen lässt, auch falls die eigentliche Ursache doch woanders liegt.
+  Regressionstest ergänzt (Chart-Scan-Block läuft nachweislich in
+  try/catch), volle Suite grün.
