@@ -4828,27 +4828,30 @@ private const LANGUAGE_FLAGS = [
             // JSON-Inhalt komplett von der Uebersetzung ausgenommen - ResolveRowValue()
             // liefert ueber den bestehenden Rohtext-Fallback ohnehin denselben
             // unveraenderten Wert fuer jede Gast-Sprache.
-            $isJson = $fromText !== '' && $this->LooksLikeJson($fromText);
-            $isCurrent = $fromText !== '' && $this->IsRowLanguageTranslationCurrent($row, $ToField, $TargetLanguageCode);
-            // TEMP-DIAG (leere Zielsprachen-Zellen nach Rescan, live gemeldet 2026-08-21):
-            // json_encode() macht unsichtbare/Whitespace-Zeichen im ToField-Wert
-            // eindeutig sichtbar - Kernverdacht ist, dass eine als "leer" wahrgenommene
-            // Zelle in Wahrheit einen nicht-leeren Wert traegt (z.B. ein Leerzeichen aus
-            // einer manuellen Loesch-Aktion im Formular), wodurch der strikte "===''"-Check
-            // in IsRowLanguageTranslationCurrent() faelschlich "bereits aktuell" liefert.
-            if ($fromText !== '' && !$isJson) {
-                $this->SendDebug('IPSSL_TranslateGapDiag', sprintf(
-                    'FillLanguageColumn: ObjectID=%s ToField=%s currentToFieldValue=%s isJson=%s isCurrent=%s sourceChangedAt=%s translatedAt=%s',
-                    $row['ObjectID'] ?? '?',
-                    $ToField,
-                    json_encode($row[$ToField] ?? null),
-                    $isJson ? 'true' : 'false',
-                    $isCurrent ? 'true' : 'false',
-                    (string) ($row[self::fieldSourceChangedAt] ?? 0),
-                    json_encode($row[self::fieldTranslatedAtByLanguage][$TargetLanguageCode] ?? null)
-                ), 0);
+            // Build 101 (live gemeldet, Nutzer-Diagnose via Build 100): manche
+            // getrackten Inhalte sind ihrer Natur nach DYNAMISCH und werden zeitweise
+            // leer (z.B. ein Hinweistext, der nur bei bestimmten Bedingungen etwas
+            // anzeigt) - ApplyTrackedVariableUpdate() uebernimmt so einen leeren Wert
+            // korrekt als frischen Rohtext, laesst dabei aber bewusst die bisherigen
+            // Zielsprachen-Zellen als Fallback stehen (siehe MarkRowSourceChanged).
+            // Trifft ein nachfolgender Rescan die Zeile GENAU in diesem leeren Zustand,
+            // ueberspringt der naechste Block sie zurecht (nichts zu uebersetzen) -
+            // vorher wurden die dabei laengst veralteten (den Rohtext nicht mehr
+            // widerspiegelnden) Zielsprachen-Zellen dabei aber NIE aufgeraeumt, sodass
+            // z.B. Englisch dauerhaft eine laengst nicht mehr zutreffende alte
+            // Uebersetzung zeigte, waehrend eine bislang noch nie befuellte Sprache
+            // (z.B. Spanisch) auf den naechsten Rescan wartete, der die Zeile zufaellig
+            // NICHT leer antrifft - je nach Aktualisierungsrhythmus des Inhalts konnte
+            // das nie eintreten. Jetzt wird eine bereits befuellte Zielsprachen-Zelle
+            // aktiv mit-geleert, sobald der Rohtext selbst leer ist - konsistent mit
+            // ResolveRowValue(), das bei leerem Rohtext ohnehin nichts anzuzeigen hat.
+            if ($fromText === '') {
+                if (($row[$ToField] ?? '') !== '') {
+                    $Rows[$index][$ToField] = '';
+                }
+                continue;
             }
-            if ($fromText !== '' && !$isJson && !$isCurrent) {
+            if (!$this->LooksLikeJson($fromText) && !$this->IsRowLanguageTranslationCurrent($row, $ToField, $TargetLanguageCode)) {
                 $pending[$index] = $fromText;
             }
         }
@@ -4912,6 +4915,16 @@ private const LANGUAGE_FLAGS = [
             }
             $row = $Rows[$index];
             $fromText = $row[$FromField] ?? '';
+            // Build 101: derselbe Grund wie in FillLanguageColumn() - ein Rohtext, der
+            // (z.B. durch einen dynamischen, zeitweise leeren Inhalt) jetzt leer ist,
+            // muss eine bereits vorhandene (jetzt veraltete) Kopie in dieser Spalte
+            // aktiv mit-leeren, statt sie unangetastet stehen zu lassen.
+            if ($fromText === '') {
+                if (($row[$ToField] ?? '') !== '') {
+                    $Rows[$index][$ToField] = '';
+                }
+                continue;
+            }
             // Build 84: JSON-Rohtext bleibt auch hier unangetastet (siehe LooksLikeJson/
             // FillLanguageColumn) - selbst wenn Ziel- und Quellsprache identisch sind,
             // wuerde ein Kopieren in eine eigene Spalte eine zweite Kopie des
@@ -4919,7 +4932,7 @@ private const LANGUAGE_FLAGS = [
             // Original-Daten nicht mehr automatisch mitgeht (MarkRowSourceChanged
             // erkennt nur Aenderungen am Rohfeld selbst). Der Rohtext-Fallback in
             // ResolveRowValue() liefert ohnehin denselben Wert.
-            if ($fromText === '' || $this->LooksLikeJson($fromText) || $this->IsRowLanguageTranslationCurrent($row, $ToField, $TargetLanguageCode)) {
+            if ($this->LooksLikeJson($fromText) || $this->IsRowLanguageTranslationCurrent($row, $ToField, $TargetLanguageCode)) {
                 continue;
             }
 
