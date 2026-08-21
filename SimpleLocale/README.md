@@ -2725,3 +2725,27 @@ der ursprünglichen Fassung übernommen.
   erkennen lässt, auch falls die eigentliche Ursache doch woanders liegt.
   Regressionstest ergänzt (Chart-Scan-Block läuft nachweislich in
   try/catch), volle Suite grün.
+* **Build 114 löst den in Build 111 diagnostizierten leeren Zähler im
+  "Aufräumen"-Ergebnis-Popup - ein echter Debug-Log-Export bewies die
+  exakte Ursache mit Zeitstempeln.** Ablauf laut Log: `CleanupOrphanedRows()`
+  schreibt den Zähler (T+0,00s) - rund 30 Millisekunden später ruft die
+  Symcon-Konsole SELBSTSTÄNDIG (nicht vom Modul ausgelöst) erneut
+  `GetConfigurationForm()` auf und liest den Zähler korrekt, setzte ihn
+  bislang aber SOFORT wieder auf -1 zurück (Build 76) - lange bevor der
+  bewusst um `CLEANUP_RELOAD_DELAY_SECONDS` (5s) verzögerte, eigentlich für
+  die Anzeige vorgesehene `ProcessDeferredCleanupReload()`-Reload überhaupt
+  feuert (T+5,00s). Dessen `GetConfigurationForm()`-Aufruf sah den Zähler
+  dadurch IMMER schon verbraucht (-1) und zeigte das Popup folgerichtig mit
+  leerem statt dem tatsächlichen Wert - unabhängig vom tatsächlichen
+  `removedCount` und reproduzierbar bei jedem einzelnen "Aufräumen"-Lauf,
+  kein seltenes Race. Fix: `GetConfigurationForm()` liest den Zähler jetzt
+  nur noch (beliebig oft wiederholbar, kein Zustand wird dabei verändert) -
+  das tatsächliche Zurücksetzen übernimmt `ProcessDeferredCleanupReload()`
+  selbst, erst NACHDEM sein eigener `ReloadForm()`-Aufruf (der letzte
+  beabsichtigte Aufruf für diesen Cleanup-Lauf) abgeschlossen ist. Der in
+  Build 113 geäußerte Verdacht auf massenhaften Datenverlust durch einen
+  abgebrochenen `WalkTree()`-Durchlauf ist durch denselben Log NICHT
+  bestätigt (in diesem Lauf war `removedCount=0`, kein
+  `IPSSL_ChartScanError` aufgetreten) - bleibt aber vorsorglich abgesichert,
+  bis ein Lauf mit tatsächlich zu entfernenden Zeilen das endgültig klärt.
+  Regressionstest ergänzt, volle Suite grün.
