@@ -20,3 +20,8 @@ config.json
 # Betriebssystem
 .DS_Store
 Thumbs.db
+
+# Debug-Log-Exporte aus der Symcon-Konsole (.claude/dump*.txt) - koennen echte
+# Objektnamen/-werte aus einer laufenden Installation enthalten, sollen nie
+# versehentlich committet werden. .claude/launch.json bleibt bewusst getrackt.
+.claude/dump*.txt
