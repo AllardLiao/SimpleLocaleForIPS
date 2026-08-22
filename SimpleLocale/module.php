@@ -1388,7 +1388,6 @@ private const LANGUAGE_FLAGS = [
     // wieder ab (SetTimerInterval(...,0)), analog zu ProcessPendingRowUpdateFlush.
     public function ProcessDeferredCleanupReload(): void
     {
-        $this->SendDebug('IPSSL_CleanupCountDiag', 'ProcessDeferredCleanupReload() fired at ' . microtime(true) . ' - about to call ReloadForm()', 0);
         $this->SetTimerInterval($this->GetCleanupReloadTimerIdent(), 0);
         $this->ReloadForm();
 
@@ -1467,33 +1466,17 @@ private const LANGUAGE_FLAGS = [
         // Übersetzung ohnehin automatisch über "Objektnamen").
         $liveCharts = $this->ExcludeChartRowsForIndependentlyNamedVariables($liveCharts, $liveNames);
 
-        // Build 113 (Diagnose): live gemeldeter Verdacht auf massenhaften
-        // Datenverlust nach "Aufräumen" (siehe Kommentar am Chart-Scan-try/catch
-        // in WalkTree) - vergleicht die Größe des frischen Scans gegen die
-        // bestehende Property, BEVOR irgendetwas gelöscht wird. Ein auffällig
-        // kleinerer Live-Scan (z.B. deutlich weniger als die Hälfte) ist ein
-        // starkes Warnsignal für einen unvollständigen Baum-Durchlauf.
-        $existingObjectNamesCount = count($this->DecodeRows(self::propertyObjectNames));
-        $this->SendDebug('IPSSL_CleanupCountDiag', 'CleanupOrphanedRows(): vor dem Filtern - liveNames=' . count($liveNames) . ' vs. bestehende ObjectNames-Zeilen=' . $existingObjectNamesCount . ' (liveTexts=' . count($liveTexts) . ', liveOptions=' . count($liveOptions) . ', liveCharts=' . count($liveCharts) . ', liveAutomationIDs=' . count($liveAutomationIDs) . ')', 0);
-
         $removedCount = 0;
-        $removedObjectNameIDs = [];
 
         $objectNames = array_values(array_filter(
             $this->DecodeRows(self::propertyObjectNames),
-            function (array $row) use ($liveNames, &$removedCount, &$removedObjectNameIDs): bool {
+            function (array $row) use ($liveNames, &$removedCount): bool {
                 $keep = isset($liveNames[(int) ($row['ObjectID'] ?? 0)]);
-                if (!$keep) {
-                    $removedCount++;
-                    $removedObjectNameIDs[] = (int) ($row['ObjectID'] ?? 0);
-                }
+                $removedCount += $keep ? 0 : 1;
 
                 return $keep;
             }
         ));
-        if ($removedObjectNameIDs !== []) {
-            $this->SendDebug('IPSSL_CleanupCountDiag', 'CleanupOrphanedRows(): folgende ObjectNames-ObjectIDs werden entfernt (bitte pruefen, ob diese Objekte tatsaechlich geloescht wurden): ' . implode(', ', $removedObjectNameIDs), 0);
-        }
 
         $objectTexts = array_values(array_filter(
             $this->DecodeRows(self::propertyObjectTexts),
@@ -1548,7 +1531,6 @@ private const LANGUAGE_FLAGS = [
         // ProcessDeferredCleanupReload weiter unten) - PopulateFormElements liest und
         // verbraucht diesen Wert einmalig, siehe dort.
         $this->WriteAttributeInteger(self::attributeLastCleanupRemovedCount, $removedCount);
-        $this->SendDebug('IPSSL_CleanupCountDiag', 'CleanupOrphanedRows() finished at ' . microtime(true) . ' - removedCount=' . $removedCount . ', wrote attribute, about to push UpdateFormField', 0);
         $this->SetButtonProgress('CleanupProgressBar', '');
 
         // Build 98 (live gemeldeter Bug): das Ergebnis-Popup SOFORT auf dem noch
@@ -2302,30 +2284,24 @@ private const LANGUAGE_FLAGS = [
 
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
 
-        // Build 107 (live gefunden): jedes Objekt mit gesetztem Ident bekommt beim
-        // Scan IMMER eine Zeile in "Objektnamen" (siehe WalkTree - "für JEDES Objekt
-        // mit gesetztem Ident"). Eine getrackte "Eigene Texte"-Variable (String-
-        // Variable, ebenfalls mit Ident) landet dadurch zwangsläufig gleichzeitig in
-        // BEIDEN Listen - "Objektnamen" UND "Eigene Texte" (letztere pflegt für ihre
-        // Zeilen zusätzlich eine EIGENE, unabhängige Namens-Übersetzung, siehe
-        // fieldOriginalImportName/fieldNamePrefix weiter unten). $writtenNameObjectIDs
-        // merkt sich, welches Objekt bereits eine Name-Zuweisung aus "Objektnamen"
-        // bekommen hat - die "Eigene Texte"-Schleife überspringt ihre EIGENE (dann
-        // zwangsläufig redundante, im schlechtesten Fall abweichende/veraltete)
-        // Namens-Zuweisung für dasselbe Objekt. Ohne diese Absicherung überschrieb
-        // die "Eigene Texte"-Schleife (läuft IMMER nach "Objektnamen") jede gerade
-        // erst manuell im "Objektnamen"-Formular korrigierte Zelle sofort wieder mit
-        // ihrem eigenen, unveränderten Stand - sichtbar als "Korrektur wird
-        // geschrieben, verschwindet aber sofort wieder", da beides innerhalb
-        // desselben ApplyLanguage()-Laufs passiert.
-        $writtenNameObjectIDs = [];
-
+        // Build 115 (Nutzer-Wunsch): "Objektnamen" deckt UNBEDINGT jedes Objekt im
+        // Baum ab (siehe WalkTree - für JEDES Objekt eine Zeile), auch jede
+        // getrackte "Eigene Texte"-Variable. Eine ZUSÄTZLICHE, eigene
+        // Namens-Übersetzung in "Eigene Texte" (früher: fieldOriginalImportName/
+        // fieldNamePrefix) wäre daher für JEDES Objekt strukturell redundant -
+        // nie eine eigenständige, sondern immer eine doppelte Datenquelle für
+        // exakt denselben Namen, bearbeitbar an zwei Stellen gleichzeitig (mit dem
+        // Risiko, dass beide auseinanderlaufen) und zusätzlich zweimal übersetzt.
+        // Build 107 hatte diesen Konflikt nur beim SCHREIBEN entschärft
+        // ($writtenNameObjectIDs ließ "Objektnamen" gewinnen) - Build 115 entfernt
+        // die zweite Datenquelle stattdessen komplett: "Eigene Texte" trackt jetzt
+        // ausschließlich den WERT einer String-Variable, der Name kommt
+        // ausschließlich aus "Objektnamen".
         foreach ($this->DecodeRows(self::propertyObjectNames) as $row) {
             $objectID = (int) ($row['ObjectID'] ?? 0);
             if ($objectID === 0 || !@IPS_ObjectExists($objectID)) {
                 continue;
             }
-            $writtenNameObjectIDs[$objectID] = true;
 
             // @ wie bei WriteTrackedValueString: gesperrte Objekte lehnen auch das
             // Umbenennen ab (live gefunden), soll aber nicht die ganze
@@ -2344,16 +2320,6 @@ private const LANGUAGE_FLAGS = [
         foreach ($this->DecodeRows(self::propertyObjectTexts) as $row) {
             $rowSourceLanguage = $this->GetRowSourceLanguage($row, $sourceLanguage);
             $objectID = (int) ($row['ObjectID'] ?? 0);
-            if ($objectID !== 0 && @IPS_ObjectExists($objectID) && !isset($writtenNameObjectIDs[$objectID])) {
-                @IPS_SetName($objectID, $this->ResolveRowValue(
-                    $row,
-                    $Language,
-                    self::fieldNamePrefix . $Language,
-                    $rowSourceLanguage,
-                    self::fieldOriginalImportName
-                ));
-                $writtenNameObjectIDs[$objectID] = true;
-            }
 
             // Bei Links auf eine String-Variable ist ValueObjectID die Zielvariable,
             // die den eigentlichen Wert hält - sonst identisch mit ObjectID.
@@ -2438,7 +2404,6 @@ private const LANGUAGE_FLAGS = [
                 ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],
             ],
             self::propertyObjectTexts => [
-                ['raw' => self::fieldOriginalImportName, 'prefix' => self::fieldNamePrefix, 'capitalizeFirst' => true],
                 ['raw' => self::langOriginalImportText, 'prefix' => self::fieldTextPrefix, 'capitalizeFirst' => false, 'isHtml' => true],
             ],
             self::propertyEnumerationOptions => [
@@ -3973,11 +3938,10 @@ private const LANGUAGE_FLAGS = [
         ], $sourceLanguage, $targetLanguages);
 
         $objectTexts = $this->FillMissingTranslations($objectTexts, [
-            ['raw' => self::fieldOriginalImportName, 'prefix' => self::fieldNamePrefix, 'capitalizeFirst' => true],
             // isHtml=true: der eigentliche Variablenwert kann ein vollständiges
             // HTMLBox-Widget sein (siehe Abschnitt 1 README) - dort werden HTML-
             // Entities korrekt vom Browser interpretiert, im Gegensatz zu reinen
-            // Textfeldern wie Namen/Beschriftungen.
+            // Textfeldern wie Beschriftungen.
             ['raw' => self::langOriginalImportText, 'prefix' => self::fieldTextPrefix, 'capitalizeFirst' => false, 'isHtml' => true],
         ], $sourceLanguage, $targetLanguages);
 
@@ -4088,14 +4052,15 @@ private const LANGUAGE_FLAGS = [
             // dann die verlinkte Zielvariable, nicht das Link-Objekt.
             $stringVariableID = $this->ResolveStringVariableID($childID, $object);
             if ($stringVariableID !== null) {
+                // Build 115 (Nutzer-Wunsch): kein eigenes Namensfeld mehr hier - das
+                // Objekt hat ohnehin bereits eine eigene Zeile in "Objektnamen" (siehe
+                // oben, jedes Objekt bekommt dort eine Zeile) - "Path" identifiziert
+                // die Zeile hier eindeutig genug, ein zweites, separat übersetztes
+                // Namensfeld wäre nur eine unnötige, potenziell abweichende Kopie.
                 $ScannedTexts[$childID] = [
                     'ObjectID'                       => $childID,
                     'ValueObjectID'                  => $stringVariableID,
                     'Path'                           => $path,
-                    // Name des Objekts als Kontext (z.B. "Hinweis:"), damit gleichnamige
-                    // Inhalte an unterschiedlichen Stellen unterscheidbar bleiben. Wie
-                    // der Inhalt beim ersten Fund eingefroren, nicht die Live-Anzeige.
-                    self::fieldOriginalImportName    => $name,
                     self::langOriginalImportText     => GetValueString($stringVariableID),
                     self::fieldRowSourceLanguage                  => $currentScanSourceLanguage,
                     self::fieldTranslatedAgainstSourceLanguage    => $currentScanSourceLanguage,
@@ -4221,7 +4186,9 @@ private const LANGUAGE_FLAGS = [
                         }
                     }
                 } catch (\Throwable $e) {
-                    $this->SendDebug('IPSSL_ChartScanError', 'Chart-Scan für ObjectID ' . $childID . ' fehlgeschlagen (übersprungen, restlicher Baum-Scan läuft normal weiter): ' . $e->getMessage(), 0);
+                    // Absichtlich stillschweigend übersprungen (siehe Kommentar oben) -
+                    // ein Fehler bei einem einzelnen Chart darf nie den kompletten
+                    // restlichen Baum-Scan gefährden.
                 }
             }
 
@@ -8098,17 +8065,11 @@ HTML;
         if ($Kind === 'texts') {
             $columns[] = ['caption' => 'Wert-Objekt-ID', 'name' => 'ValueObjectID', 'width' => '90px', 'save' => true];
 
-            $columns[] = [
-                'caption' => $this->Translate('Original-Import (Name)'),
-                'name'    => self::fieldOriginalImportName,
-                'width'   => '150px',
-                'save'    => true,
-            ];
-            $columns = array_merge(
-                $columns,
-                $this->BuildLanguageColumnSet(self::fieldNamePrefix, $this->Translate('Name'), $SourceLanguage, $TargetLanguages)
-            );
-
+            // Build 115 (Nutzer-Wunsch): keine eigene Namens-Spalte mehr hier - der
+            // Objektname kommt ausschließlich aus "Objektnamen" (jedes Objekt hat
+            // dort ohnehin eine Zeile), eine zweite, separat editierbare/übersetzte
+            // Namens-Kopie war strukturell immer redundant und funktionslos (siehe
+            // ApplyLanguage - "Objektnamen" gewann dort schon seit Build 107 immer).
             $columns[] = [
                 'caption' => $this->Translate('Original-Import (Text)'),
                 'name'    => self::langOriginalImportText,

@@ -414,20 +414,22 @@ trait SimpleLocaleConstants
 
     // Reservierter Pseudo-Sprachcode für den unangetasteten Rohtext beim ersten Scan
     // (Tippfehler inklusive). Nicht vom Gast über die Sprachauswahl erreichbar.
-    // Objektnamen: ein Feld (Name des Objekts). Eigene Texte: zwei getrennte Felder
-    // (Objektname als Kontext + eigentlicher Inhalt).
+    // Objektnamen: ein Feld (Name des Objekts). Eigene Texte: der eigentliche
+    // Variablen-Inhalt (der Name kommt ausschließlich aus "Objektnamen" - siehe
+    // Build 115, entfernt die vormals zusätzliche, redundante Namens-Übersetzung
+    // je "Eigene Texte"-Zeile).
     private const langOriginalImport = 'ORIGINAL_IMPORT';
-    private const fieldOriginalImportName = 'ORIGINAL_IMPORT_Name';
     private const langOriginalImportText = 'ORIGINAL_IMPORT_Text';
 
     // Build 78: Zeilen-Schlüssel für propertyOwnUiTexts (siehe dort) - ein fester,
     // im Code vergebener String (z.B. "pausedNoticePrefix"), kein ObjectID.
     private const fieldOwnUiTextKey = 'Key';
 
-    // Präfixe für die Übersetzungsspalten von "Eigene Texte" - dort gibt es sowohl
-    // Name- als auch Inhalts-Übersetzungen, die Sprachcodes allein wären sonst
-    // mehrdeutig (z.B. "en" für Name UND Inhalt gleichzeitig).
-    private const fieldNamePrefix = 'Name_';
+    // Präfix für die Text-Übersetzungsspalten von "Eigene Texte" (z.B. "Text_es") -
+    // seit Build 115 das einzige Präfix dort, bewusst trotzdem als Präfix belassen
+    // (nicht der rohe Sprachcode), damit bestehende gespeicherte Zeilen kompatibel
+    // bleiben und sich "Eigene Texte" strukturell nicht von den übrigen
+    // Präfix-basierten Zeilen-Properties unterscheidet.
     private const fieldTextPrefix = 'Text_';
 
     // Quellsprache PRO ZEILE (nicht mehr nur instanzweit über propertySourceLanguage,
