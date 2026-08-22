@@ -3022,3 +3022,29 @@ der ursprünglichen Fassung übernommen.
   (reales Ed25519-Testpaar) grün. Entsprechende Shop-Seite (Checkbox
   "Aktiv" + Ablaufdatum-Override, Synergetix-Website-Repo,
   `shop/admin/order.php`) ist ein separater Commit in diesem Repo.
+
+* **Build 121 (Nutzer-Report, live per Debug-Log gefunden): ein Medienplayer-
+  Widget ("Echo Info", Alexa/Echo-Kachel) mit eingebettetem Cover-Bild
+  (`<img src="data:image/png;base64,...">`, mehrere zehntausend Zeichen ganz
+  ohne `<`/`>`) verbrauchte bei JEDER Aktualisierung einen zweistelligen
+  Kilozeichen-Betrag Übersetzungs-Kontingent, obwohl das Widget gar keinen
+  echten Text enthielt.** Ursache: `SplitHtmlIntoTextNodes()`s Tag-
+  Aufteilungs-Regex (`preg_split('/(<[^>]*>)/s', ...)`) scheiterte an so
+  einem großen, zusammenhängenden Block an PHPs PCRE-Backtrack-Grenze -
+  `preg_split()` lieferte `false`, und der dafür bereits vorhandene Fallback
+  griff: der KOMPLETTE Rohinhalt (inklusive Bilddaten) wurde unverändert als
+  EIN einziger "Textknoten" an den Übersetzer geschickt, statt (wie
+  beabsichtigt) in einzelne kurze Textstücke zerlegt zu werden. Kein Crash,
+  keine kaputte Rekonstruktion - aber live per Debug-Log bestätigt: über
+  22.000 Zeichen pro Anfrage, wiederholt bei praktisch jeder
+  Medienplayer-Aktualisierung (VM_UPDATE), nicht nur bei einem Rescan.
+  Fix: Data-URIs (`data:...;base64,...`) werden jetzt VOR jeder weiteren
+  Verarbeitung durch kurze Platzhalter ersetzt (macht die Regex wieder
+  unproblematisch kurz) und beim Zusammenbau des übersetzten Ergebnisses
+  exakt wieder eingesetzt - unabhängig davon, ob am Ende doch noch der
+  Fallback greift. Betrifft jedes HTML-Widget mit eingebettetem Bild
+  (Cover-Art, Icons, ...) als "Eigene Texte"-Zeile oder Begrüßung, nicht nur
+  Echo-Kacheln. Neuer Regressionstest (großes eingebettetes Bild taucht in
+  keinem Textknoten mehr auf, Rekonstruktion bleibt exakt, kein
+  Platzhalter-Rest im Ergebnis, normales HTML ohne Data-URI unverändert),
+  volle Suite grün.
