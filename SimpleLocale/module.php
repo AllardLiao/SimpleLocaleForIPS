@@ -6492,19 +6492,61 @@ private const LANGUAGE_FLAGS = [
         // HTML-Widgets (z. B. mehrere Wettervorhersage-Tage mit derselben
         // Beschreibung "Überwiegend bewölkt") wurden dadurch weiterhin einzeln
         // angefragt - live per Debug-Log bestätigt (bis zu 12 identische Anfragen
-        // für denselben Text in wenigen Sekunden). Dedupliziert jetzt zusätzlich
-        // hier, auf der tatsächlich an den Anbieter geschickten Knotenebene -
-        // $translatedFlat behält exakt dieselbe Länge/Reihenfolge wie $translatable
-        // (für die nachfolgende Cursor-basierte Rekonstruktion unten unverändert
-        // kompatibel), intern wird aber jeder eindeutige Text nur einmal
-        // tatsächlich angefragt.
+        // für denselben Text in wenigen Sekunden).
+        //
+        // Build 119 (Nutzer-Wunsch, direkt im Anschluss): Build 118 vermied nur
+        // DOPPELTE Anfragen INNERHALB dieses einen Aufrufs - der persistente Cache
+        // (GetCachedTranslation/StoreCachedTranslation) und die "Eigene
+        // Übersetzungstabelle" (FindManualTranslation) wurden in TranslateBatch()
+        // bisher nur auf der Ebene ganzer Zeilen-Rohtexte geprüft, NIE auf dieser
+        // Knotenebene. Für ein Wetter-Widget, dessen GESAMTER HTML-Roh-Inhalt sich
+        // durch neue Messwerte bei JEDER Aktualisierung ändert, trifft der
+        // Zeilen-Cache so gut wie NIE - obwohl viele einzelne Knoten darin (z.B.
+        // Wochentags-Kürzel, wiederkehrende Wetterbeschreibungen wie "Überwiegend
+        // bewölkt") bei JEDER Aktualisierung identisch bleiben und daher eigentlich
+        // eine hohe Cache-Trefferquote haben müssten. Prüft jetzt zusätzlich JEDEN
+        // eindeutigen Knoten einzeln gegen die manuelle Übersetzungstabelle und den
+        // persistenten Cache, BEVOR er überhaupt an den Anbieter geschickt wird -
+        // nur tatsächlich unbekannte Knoten lösen noch einen echten Anbieter-Aufruf
+        // aus, dessen Ergebnis anschließend selbst wieder gecacht wird.
+        // $translatedFlat behält weiterhin exakt dieselbe Länge/Reihenfolge wie
+        // $translatable (für die nachfolgende Cursor-basierte Rekonstruktion unten
+        // unverändert kompatibel).
         $uniqueTranslatable = array_values(array_unique($translatable));
-        $uniqueTranslatedFlat = [];
-        foreach (array_chunk($uniqueTranslatable, self::translateMaxTextsPerRequest) as $chunk) {
-            $uniqueTranslatedFlat = array_merge($uniqueTranslatedFlat, $this->TranslateChunk($chunk, $Source, $Target, $DebugContext, $IsHtml));
+        $manualTranslationsForNodes = $this->HasLicenseFeature('manual_translations')
+            ? $this->DecodeRows(self::propertyManualTranslations)
+            : [];
+
+        $translatedByText = [];
+        $freshNodes = [];
+        foreach ($uniqueTranslatable as $node) {
+            $manual = $this->FindManualTranslation($manualTranslationsForNodes, $Source, $Target, $node);
+            if ($manual !== null) {
+                $translatedByText[$node] = $manual;
+                continue;
+            }
+            $cached = $this->GetCachedTranslation($Source, $Target, $node);
+            if ($cached !== null) {
+                $translatedByText[$node] = $cached;
+                $this->RecordCacheSavingsStats(mb_strlen($node, 'UTF-8'));
+                continue;
+            }
+            $freshNodes[] = $node;
         }
-        $translatedByText = array_combine($uniqueTranslatable, $uniqueTranslatedFlat);
-        $translatedFlat = array_map(static fn (string $text): string => $translatedByText[$text], $translatable);
+
+        $freshNodesTranslated = [];
+        foreach (array_chunk($freshNodes, self::translateMaxTextsPerRequest) as $chunk) {
+            $freshNodesTranslated = array_merge($freshNodesTranslated, $this->TranslateChunk($chunk, $Source, $Target, $DebugContext, $IsHtml));
+        }
+        foreach ($freshNodes as $position => $node) {
+            $translated = $freshNodesTranslated[$position] ?? '';
+            $translatedByText[$node] = $translated;
+            if ($translated !== '') {
+                $this->StoreCachedTranslation($Source, $Target, $node, $translated);
+            }
+        }
+
+        $translatedFlat = array_map(static fn (string $text): string => $translatedByText[$text] ?? '', $translatable);
 
         $result = [];
         $cursor = 0;

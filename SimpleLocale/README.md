@@ -2921,3 +2921,37 @@ der ursprünglichen Fassung übernommen.
   Regressionstest ergänzt (bildet exakt den gemeldeten Fall nach - fünf
   Text-Knoten einer einzigen HTML-Zeile mit drei eindeutigen Werten), volle
   Suite grün.
+* **Build 119 (Nutzer-Wunsch, direkt im Anschluss an Build 118): warum
+  profitieren Wochentags-Kürzel und wiederkehrende Wetterbeschreibungen
+  nicht vom persistenten Cache, obwohl sie bei jeder Aktualisierung
+  identisch bleiben?** Berechtigter Einwand. Sowohl der persistente
+  Übersetzungs-Cache (`GetCachedTranslation`/`StoreCachedTranslation`) als
+  auch die "Eigene Übersetzungstabelle" (`FindManualTranslation`) wurden
+  bislang nur in `TranslateBatch()` geprüft - auf der Ebene ganzer
+  Zeilen-Rohtexte. Ein Wetter-Widget als HTML-Zeile ändert aber bei JEDER
+  Aktualisierung seinen GESAMTEN Roh-Inhalt (neue Messwerte), daher trifft
+  dieser Zeilen-Cache so gut wie nie - obwohl viele einzelne Text-Knoten
+  darin (Wochentags-Kürzel, Beschreibungen wie "Überwiegend bewölkt")
+  Aktualisierung für Aktualisierung identisch bleiben und daher eine hohe
+  Trefferquote haben müssten. Genau die Knotenebene, auf der Build 118 die
+  Innerhalb-eines-Aufrufs-Deduplizierung eingeführt hat, kannte weder den
+  Cache noch die manuelle Tabelle.
+
+  Fix: `TranslateBatchUncached()` prüft jetzt jeden eindeutigen Knoten
+  zusätzlich einzeln gegen die manuelle Übersetzungstabelle und den
+  persistenten Cache, BEVOR er überhaupt an den Anbieter geschickt wird -
+  nur tatsächlich unbekannte Knoten lösen noch einen echten
+  Anbieter-Aufruf aus, dessen Ergebnis anschließend selbst wieder gecacht
+  wird. Damit werden Wochentags-Kürzel und wiederkehrende Beschreibungen
+  spätestens ab der zweiten Aktualisierung nie wieder angefragt, egal wie
+  oft sich der umgebende HTML-Rohtext (Messwerte) ändert. Nebenbei
+  bestätigt: die "Aktiv, aber pausiert"-Sperre (`GetGlobalPauseUntil()`,
+  siehe `TranslateChunk()`) sitzt bereits strukturell UNTERHALB von
+  Cache-/Tabellen-Prüfung - ein Cache- oder Tabellentreffer wurde und wird
+  nie durch eine laufende Anbieter-Pause blockiert.
+
+  Regressionstest ergänzt (ein bereits gecachtes Wochentags-Kürzel/eine
+  bereits gecachte Beschreibung dürfen bei einem neuen Update mit
+  komplett anderem umgebendem Rohtext nicht erneut angefragt werden;
+  ein manueller Tabelleneintrag greift ebenfalls auf Knotenebene), volle
+  Suite grün.
