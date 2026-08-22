@@ -504,12 +504,6 @@ trait SimpleLocaleConstants
     // Editieren des Formulars haeufig und die eigentliche Beschwerde ist.
     private const PENDING_ROW_UPDATE_DEBOUNCE_SECONDS = 720;
 
-    // Build 98 (Nutzer-Wunsch): "Aufräumen" darf das Ergebnis-Popup nicht sofort
-    // durch ReloadForm() wieder verschwinden lassen (siehe CleanupOrphanedRows) -
-    // erst nach dieser Wartezeit läuft der eigentliche Formular-Reload, damit der
-    // Nutzer die Erfolgsmeldung tatsächlich lesen kann.
-    private const CLEANUP_RELOAD_DELAY_SECONDS = 5;
-
     // Statuscodes
     private const STATUS_ROOT_CATEGORY_MISSING = 201;
     private const STATUS_UNNAMED_OBJECTS = 202;

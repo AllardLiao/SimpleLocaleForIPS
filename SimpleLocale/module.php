@@ -412,6 +412,20 @@ private const LANGUAGE_FLAGS = [
             }
         }
 
+        // Build 116 (Nutzer-Wunsch): der Build-98-Verzögerungstimer für den
+        // "Aufräumen"-Formular-Reload wird nicht mehr gebraucht (siehe
+        // CleanupOrphanedRows) - Symcons Konsole lädt das Konfigurationsformular
+        // nach JEDEM RequestAction ohnehin bereits selbst automatisch neu (live
+        // bestätigt: sowohl "Aufräumen" als auch "Rescan" luden bislang sichtbar
+        // ZWEIMAL neu - einmal automatisch von der Konsole, einmal zusätzlich
+        // durch das Modul selbst). Bereits eingerichtete Instanzen behalten das
+        // per RegisterTimer angelegte Event-Objekt sonst dauerhaft als
+        // toten Ballast im Objektbaum - einmalige Bereinigung wie oben.
+        $staleTimerID = @IPS_GetObjectIDByIdent(self::timerPrefix . $this->InstanceID . self::timerIdentCleanupReload, $this->InstanceID);
+        if ($staleTimerID !== false) {
+            IPS_DeleteEvent($staleTimerID);
+        }
+
         // IPSSL_AutoRescan(), NICHT IPSSL_Rescan() - siehe Kommentar dort (kein
         // ReloadForm(), damit ein offenes Konfigurationsformular während der
         // Bearbeitung nicht mitten drin neu geladen wird).
@@ -426,11 +440,6 @@ private const LANGUAGE_FLAGS = [
         // ProcessPendingRowUpdateFlush - ruehrt das Konfigurationsformular nie direkt
         // an, schreibt nur die betroffene(n) Property(s).
         $this->RegisterTimer($this->GetPendingRowUpdateFlushTimerIdent(), 0, 'IPSSL_ProcessPendingRowUpdateFlush($_IPS[\'TARGET\']);');
-        // Build 98: einmaliger, verzoegerter Formular-Reload nach "Aufräumen" - siehe
-        // CleanupOrphanedRows/ProcessDeferredCleanupReload fuer den Grund (ein
-        // sofortiger ReloadForm() liesse das gerade erst live gezeigte Ergebnis-Popup
-        // direkt wieder verschwinden, bevor der Nutzer es lesen konnte).
-        $this->RegisterTimer($this->GetCleanupReloadTimerIdent(), 0, 'IPSSL_ProcessDeferredCleanupReload($_IPS[\'TARGET\']);');
     }
 
     public function Destroy(): void
@@ -755,26 +764,22 @@ private const LANGUAGE_FLAGS = [
         $this->RefreshTranslateChainStatus();
 
         // Build 76: Ergebnis eines evtl. GERADE eben abgeschlossenen "Aufräumen"-Laufs
-        // (siehe CleanupOrphanedRows) fürs Popup lesen.
+        // (siehe CleanupOrphanedRows) genau EINMAL abholen, bevor PopulateFormElements()
+        // rekursiv durch alle (verschachtelten) Elemente läuft - nicht dort selbst
+        // gelesen+zurückgesetzt, weil jede rekursive Selbstaufruf-Ebene sonst den
+        // bereits zurückgesetzten Wert der äußeren Ebene sehen würde.
         //
-        // Build 114 (live per Debug-Log bestätigt): NICHT mehr hier zurücksetzen.
-        // Die Symcon-Konsole ruft GetConfigurationForm() nachweislich automatisch
-        // selbst ein weiteres Mal auf, ca. 30ms NACH Abschluss von
-        // CleanupOrphanedRows() (noch vor dem bewusst per Timer um
-        // CLEANUP_RELOAD_DELAY_SECONDS verzögerten ReloadForm() aus
-        // ProcessDeferredCleanupReload) - das alte "beim ersten Lesen sofort
-        // zurücksetzen" verbrauchte den Zähler dadurch IMMER schon durch diesen
-        // automatischen Zwischenaufruf, bevor der eigentlich dafür vorgesehene
-        // verzögerte Reload ihn zeigen konnte: das Ergebnis-Popup zeigte nach den
-        // vollen 5 Sekunden zuverlässig einen leeren Zähler, obwohl "Aufräumen"
-        // korrekt gearbeitet hatte. Der Wert wird jetzt bei JEDEM
-        // GetConfigurationForm()-Aufruf unverändert gelesen (beliebig oft
-        // wiederholbar, kein Zustand wird hier verändert) - das tatsächliche
-        // Zurücksetzen übernimmt jetzt ProcessDeferredCleanupReload() selbst,
-        // NACHDEM sein eigener ReloadForm()-Aufruf (und damit der letzte
-        // beabsichtigte Aufruf dieser Funktion für diesen Cleanup-Lauf)
-        // abgeschlossen ist.
+        // Build 116: seit dem Wegfall des Build-98-Verzögerungstimers (siehe
+        // CleanupOrphanedRows) ist dieser Aufruf hier wieder der EINZIGE Ort, an
+        // dem der Zähler gelesen wird (Symcons automatischer Konsolen-Reload nach
+        // dem RequestAction ist der einzige nachfolgende GetConfigurationForm()-
+        // Aufruf) - "sofort zurücksetzen" ist damit wieder sicher, die
+        // Build-114-Sonderbehandlung (Reset erst in ProcessDeferredCleanupReload)
+        // ist mit dessen Entfernung hinfällig geworden.
         $cleanupResultCount = $this->ReadAttributeInteger(self::attributeLastCleanupRemovedCount);
+        if ($cleanupResultCount >= 0) {
+            $this->WriteAttributeInteger(self::attributeLastCleanupRemovedCount, -1);
+        }
 
         $form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
         $this->PopulateFormElements($form['elements'], $cleanupResultCount);
@@ -1343,26 +1348,26 @@ private const LANGUAGE_FLAGS = [
         $this->RequestAction(self::identLanguage, $LanguageCode);
     }
 
-    // Manuell ausgelöst (Formular-Button oder IPSSL_Rescan()) - lädt das
-    // Konfigurationsformular danach bewusst neu (siehe ScanRootTree), der Admin hat
-    // den Rescan ja selbst angestoßen und erwartet, die aktualisierte Liste sofort
-    // zu sehen.
+    // Manuell ausgelöst (Formular-Button oder IPSSL_Rescan()) - der Admin hat den
+    // Rescan selbst angestoßen und sieht die aktualisierte Liste bereits über
+    // Symcons automatischen Konsolen-Reload nach dem RequestAction (siehe Build
+    // 116/ScanRootTree - kein eigener ReloadForm()-Aufruf mehr nötig).
     public function Rescan(): void
     {
-        $this->ScanRootTree(true);
+        $this->ScanRootTree();
     }
 
     // Wird AUSSCHLIESSLICH vom Auto-Rescan-Timer aufgerufen (siehe RegisterTimer in
-    // Create()) - inhaltlich identisch zu Rescan(), aber OHNE das abschließende
-    // ReloadForm(). Live gemeldeter Bug (2026-08-19): ein automatischer
-    // Hintergrund-Rescan während eines GERADE OFFENEN Konfigurationsformulars
-    // erzwang per ReloadForm() ein komplettes Neuladen im Browser - dabei gingen
-    // alle gerade im Formular eingetragenen, noch NICHT per "Übernehmen"
-    // gespeicherten Änderungen (z. B. eine manuell korrigierte Übersetzung)
-    // ersatzlos verloren, mitten in der Bearbeitung.
+    // Create()) - inhaltlich identisch zu Rescan(). Läuft NIE über eine
+    // RequestAction, bekommt daher (anders als der manuelle Button) auch NIE einen
+    // automatischen Konsolen-Reload - genau das ist gewollt: ein automatischer
+    // Hintergrund-Rescan soll ein GERADE OFFENES Konfigurationsformular nicht
+    // mitten in der Bearbeitung neu laden und dabei unsavte Änderungen (z. B. eine
+    // manuell korrigierte Übersetzung) verwerfen (live gemeldeter Bug,
+    // 2026-08-19).
     public function AutoRescan(): void
     {
-        $this->ScanRootTree(false);
+        $this->ScanRootTree();
     }
 
     // Timer-Callback (siehe RegisterTimer in Create()) - Build 71: schreibt gepufferte
@@ -1373,31 +1378,6 @@ private const LANGUAGE_FLAGS = [
     public function ProcessPendingRowUpdateFlush(): void
     {
         $this->FlushPendingTrackedRowUpdates();
-    }
-
-    // Timer-Callback (siehe RegisterTimer in Create()) - Build 98: der eigentliche
-    // Formular-Reload nach "Aufräumen" (siehe CleanupOrphanedRows), verzögert um
-    // CLEANUP_RELOAD_DELAY_SECONDS statt sofort im selben Aufruf. Live gemeldeter
-    // Bug: ein sofortiges ReloadForm() direkt nach dem Live-Push von
-    // "CleanupResultPopup" (visible=true) liess das gerade erst gezeigte
-    // Ergebnis-Popup augenblicklich wieder verschwinden, bevor der Nutzer es lesen
-    // konnte - derselbe komplette Formular-Neuaufbau, der einerseits noetig ist
-    // (ein offenes Formular haette sonst weiterhin den alten Listen-Stand im
-    // "Übernehmen"-Puffer, siehe ScanRootTree), andererseits aber jedes gerade
-    // offene Popup mit aus dem DOM reisst. Schaltet sich nach dem Reload selbst
-    // wieder ab (SetTimerInterval(...,0)), analog zu ProcessPendingRowUpdateFlush.
-    public function ProcessDeferredCleanupReload(): void
-    {
-        $this->SetTimerInterval($this->GetCleanupReloadTimerIdent(), 0);
-        $this->ReloadForm();
-
-        // Build 114: das eigentliche Zurücksetzen passiert jetzt HIER, NACH dem
-        // eigenen ReloadForm() - nicht mehr beim erstbesten GetConfigurationForm()-
-        // Aufruf (siehe dortiger Kommentar). Dieser Reload ist der letzte
-        // beabsichtigte Aufruf für diesen Cleanup-Lauf; ab jetzt soll das Popup bei
-        // jedem KÜNFTIGEN Öffnen/Neuaufbau des Formulars wieder ausgeblendet
-        // bleiben, bis der nächste "Aufräumen"-Lauf einen neuen Wert schreibt.
-        $this->WriteAttributeInteger(self::attributeLastCleanupRemovedCount, -1);
     }
 
     // Build 76: "Aufräumen" (Nutzer-Wunsch, analog zur gleichnamigen Funktion in
@@ -1527,28 +1507,29 @@ private const LANGUAGE_FLAGS = [
         IPS_SetProperty($this->InstanceID, self::propertyObjectCharts, json_encode($objectCharts));
         IPS_ApplyChanges($this->InstanceID);
 
-        // Fürs Anzeigen im CleanupResultPopup NACH dem verzögerten ReloadForm() (siehe
-        // ProcessDeferredCleanupReload weiter unten) - PopulateFormElements liest und
+        // Fürs Anzeigen im CleanupResultPopup - PopulateFormElements liest und
         // verbraucht diesen Wert einmalig, siehe dort.
         $this->WriteAttributeInteger(self::attributeLastCleanupRemovedCount, $removedCount);
         $this->SetButtonProgress('CleanupProgressBar', '');
 
         // Build 98 (live gemeldeter Bug): das Ergebnis-Popup SOFORT auf dem noch
         // offenen Formular live einblenden (derselbe erwiesenermaßen funktionierende
-        // Mechanismus wie bei CacheClearedPopup/ProviderCheckResultPopup) - der
-        // eigentliche ReloadForm() (siehe unten) läuft absichtlich NICHT mehr im
-        // selben Aufruf, sondern erst zeitverzögert über einen eigenen Timer, damit
-        // er das gerade erst gezeigte Popup nicht augenblicklich wieder aus dem DOM
-        // reißt, bevor der Nutzer es lesen konnte.
+        // Mechanismus wie bei CacheClearedPopup/ProviderCheckResultPopup).
         $this->UpdateFormField('CleanupResultCountLabel', 'caption', (string) $removedCount);
         $this->UpdateFormField('CleanupResultPopup', 'visible', true);
 
-        // Der eigentliche Formular-Reload (weiterhin zwingend nötig - siehe
-        // Kommentar an ProcessDeferredCleanupReload/im Rescan-Kommentar weiter unten:
-        // ein offen gebliebenes Formular hätte sonst weiterhin den alten Listen-Stand
-        // im "Übernehmen"-Puffer) läuft jetzt erst nach CLEANUP_RELOAD_DELAY_SECONDS,
-        // ausgelöst über ProcessDeferredCleanupReload().
-        $this->SetTimerInterval($this->GetCleanupReloadTimerIdent(), self::CLEANUP_RELOAD_DELAY_SECONDS * 1000);
+        // Build 116 (Nutzer-Wunsch): KEIN eigener ReloadForm()-Aufruf mehr hier -
+        // Symcons Konsole lädt das Konfigurationsformular nach jedem RequestAction
+        // ohnehin bereits automatisch selbst neu (live per Debug-Log bestätigt,
+        // siehe README Change-Log), inklusive korrekt aktualisiertem
+        // "Übernehmen"-Puffer (derselbe Formular-Neuaufbau wie ein expliziter
+        // ReloadForm() - kein funktionaler Unterschied). Ein zusätzlicher eigener
+        // Aufruf produzierte dadurch nur ein sichtbares zweites, überflüssiges
+        // Neuladen kurz nacheinander. Der Build-98-Timer (verzögerte 2. Ladung, um
+        // ein sofortiges Verschwinden des Popups zu vermeiden) wird dadurch
+        // ebenfalls hinfällig und wurde komplett entfernt (siehe
+        // ProcessDeferredCleanupReload/GetCleanupReloadTimerIdent/
+        // CLEANUP_RELOAD_DELAY_SECONDS - allesamt gelöscht).
     }
 
     // Manueller Reset des Uebersetzungs-Caches (attributeTranslationCache,
@@ -3766,13 +3747,19 @@ private const LANGUAGE_FLAGS = [
         $this->UpdateFormField($ElementName, 'visible', $Message !== '');
     }
 
-    // $ReloadFormAfterward: siehe Rescan()/AutoRescan() - false unterdrückt beide
-    // ReloadForm()-Aufrufe unten (Abbruch wegen unbenannter Objekte UND regulärer
-    // Abschluss), damit ein automatischer Hintergrund-Rescan ein GERADE OFFENES
-    // Konfigurationsformular nicht mitten in der Bearbeitung neu lädt und dabei
-    // unsavte Änderungen (z.B. eine manuell korrigierte Übersetzung) verwirft. Live
-    // gemeldeter Bug (2026-08-19).
-    private function ScanRootTree(bool $ReloadFormAfterward = true): void
+    // Build 116 (Nutzer-Wunsch): kein eigener ReloadForm()-Aufruf mehr am Ende
+    // (siehe Rescan()/AutoRescan() für die Begründung) - weder für den manuellen
+    // Rescan-Button noch für den Auto-Rescan-Timer. Symcons Konsole lädt das
+    // Konfigurationsformular nach jedem RequestAction (also nach jedem manuellen
+    // Rescan-Klick) ohnehin bereits automatisch selbst neu; ein zusätzlicher
+    // eigener Aufruf produzierte nur ein sichtbares zweites, überflüssiges
+    // Neuladen kurz nacheinander (live bestätigt). Der automatische
+    // Hintergrund-Rescan (AutoRescan()) ruft ohnehin nie eine RequestAction auf
+    // und bekommt daher gar keinen automatischen Reload - genau das ist
+    // weiterhin gewollt (siehe Build 60/AutoRescan()-Kommentar: ein gerade
+    // offenes Formular soll dadurch nicht mitten in der Bearbeitung neu geladen
+    // werden).
+    private function ScanRootTree(): void
     {
         // Notaus-Schalter (siehe propertyActive/ApplyChanges) - deckt sowohl den
         // manuellen Rescan-Button als auch den Auto-Rescan-Timer ab (beide laufen
@@ -3852,9 +3839,6 @@ private const LANGUAGE_FLAGS = [
             $this->SendDebug('IPSSL_Debug', 'ScanRootTree: abort - unnamed objects found: ' . json_encode($unnamedObjects), 0);
             $this->SetStatus(self::STATUS_UNNAMED_OBJECTS);
             $this->SetRescanProgress('');
-            if ($ReloadFormAfterward) {
-                $this->ReloadForm();
-            }
 
             return;
         }
@@ -3986,23 +3970,19 @@ private const LANGUAGE_FLAGS = [
         IPS_ApplyChanges($this->InstanceID);
         $this->SendDebug('IPSSL_Debug', 'ScanRootTree: persisted, ObjectGreeting now=' . IPS_GetProperty($this->InstanceID, self::propertyObjectGreeting), 0);
 
-        // Build 88: unabhaengig von $ReloadFormAfterward geleert - ein automatischer
-        // Hintergrund-Rescan (siehe AutoRescan(), $ReloadFormAfterward=false) ruft
-        // ReloadForm() unten NICHT auf, wuerde die Fortschrittsanzeige also sonst auf
-        // dem letzten Stand ("...wird gespeichert") einfrieren, obwohl laengst nichts
-        // mehr laeuft - dieselbe Art von Stale-Anzeige-Bug wie der zuvor behobene
+        // Build 88: unabhaengig davon geleert, ob ein Reload folgt - ein Hintergrund-
+        // Rescan (AutoRescan(), kein RequestAction, daher kein automatischer
+        // Konsolen-Reload) wuerde die Fortschrittsanzeige sonst auf dem letzten
+        // Stand ("...wird gespeichert") einfrieren, obwohl laengst nichts mehr
+        // laeuft - dieselbe Art von Stale-Anzeige-Bug wie der zuvor behobene
         // haengenbleibende Pause-Hinweis (siehe Build 87).
         $this->SetRescanProgress('');
 
-        // Kompletter Formular-Neuaufbau statt UpdateFormField: ein offenes Formular hat
-        // sonst noch den alten (leeren) Stand im Speicher und würde ihn bei "Übernehmen"
-        // über die gerade gespeicherten Scan-Ergebnisse zurückschreiben. NUR beim
-        // manuellen Rescan (siehe Rescan()) - der automatische Hintergrund-Timer
-        // (siehe AutoRescan()) unterdrückt das bewusst, siehe Kommentar oben an der
-        // Funktion.
-        if ($ReloadFormAfterward) {
-            $this->ReloadForm();
-        }
+        // Build 116: kein eigener ReloadForm()-Aufruf mehr hier (siehe Kommentar an
+        // der Funktion) - ein manueller Rescan-Klick bekommt seinen
+        // Formular-Neuaufbau (inkl. aktualisiertem "Übernehmen"-Puffer, siehe
+        // Build 60) bereits automatisch von Symcons Konsole nach dem RequestAction;
+        // ein Hintergrund-Rescan (AutoRescan()) wollte ohnehin nie einen Reload.
     }
 
     // Symcon lässt einen wirklich leeren Namen nicht zu - IPS_SetName('') (bzw. ein
@@ -8379,11 +8359,6 @@ HTML;
     private function GetPendingRowUpdateFlushTimerIdent(): string
     {
         return self::timerPrefix . $this->InstanceID . self::timerIdentPendingRowUpdateFlush;
-    }
-
-    private function GetCleanupReloadTimerIdent(): string
-    {
-        return self::timerPrefix . $this->InstanceID . self::timerIdentCleanupReload;
     }
 
     // Timer-Callback (siehe RegisterTimer in Create()) - schickt bereits offenen
