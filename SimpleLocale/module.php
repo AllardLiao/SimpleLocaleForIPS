@@ -6053,6 +6053,21 @@ private const LANGUAGE_FLAGS = [
         $results = [];
         $freshIndexes = [];
         $freshTexts = [];
+        // Build 117 (live gefunden, 8 identische MyMemory-Anfragen fuer denselben
+        // Text innerhalb eines einzigen Rescans - siehe README Change-Log):
+        // $textToFreshPosition merkt sich, an welcher Position in $freshTexts ein
+        // bestimmter Rohtext BEREITS zum ersten Mal in DIESEM Batch zur Uebersetzung
+        // vorgemerkt wurde. Ohne das landete jedes weitere Vorkommen desselben
+        // Texts (z.B. mehrere Text-Knoten eines HTML-Widgets mit identischem
+        // Inhalt, wie mehrere Tage einer Wettervorhersage mit derselben
+        // Beschreibung "Überwiegend bewölkt") ebenfalls in $freshTexts, weil der
+        // persistente Cache (GetCachedTranslation) erst NACH Abschluss des
+        // GESAMTEN Batches befuellt wird (siehe unten) - fuer Anbieter ohne
+        // echten Batch-Aufruf (MyMemory: ein HTTP-Request pro Text, siehe
+        // TranslateChunkFree) bedeutete das einen komplett unnoetigen,
+        // wiederholten API-Aufruf fuer jedes weitere Vorkommen desselben Texts.
+        $textToFreshPosition = [];
+        $duplicateFreshPositions = [];
         foreach ($Texts as $i => $text) {
             $manual = $this->FindManualTranslation($manualTranslations, $Source, $Target, $text);
             if ($manual !== null) {
@@ -6063,10 +6078,15 @@ private const LANGUAGE_FLAGS = [
             if ($cached !== null) {
                 $results[$i] = $cached;
                 $this->RecordCacheSavingsStats(mb_strlen($text, 'UTF-8'));
-            } else {
-                $freshIndexes[] = $i;
-                $freshTexts[] = $text;
+                continue;
             }
+            if (isset($textToFreshPosition[$text])) {
+                $duplicateFreshPositions[$i] = $textToFreshPosition[$text];
+                continue;
+            }
+            $textToFreshPosition[$text] = count($freshTexts);
+            $freshIndexes[] = $i;
+            $freshTexts[] = $text;
         }
 
         if ($freshTexts !== []) {
@@ -6098,6 +6118,18 @@ private const LANGUAGE_FLAGS = [
                 if ($translated !== '') {
                     $this->StoreCachedTranslation($Source, $Target, $freshTexts[$position], $translated);
                 }
+            }
+
+            // Build 117: jedes weitere Vorkommen desselben Rohtexts im selben Batch
+            // uebernimmt das bereits aufgeloeste Ergebnis seines ersten Vorkommens -
+            // kein zweiter API-Aufruf fuer identische Texte innerhalb eines Batches.
+            // Zaehlt fuer die Statistik ("Durch den Cache eingespart") genauso als
+            // vermiedene Anfrage - aus Nutzersicht macht es keinen Unterschied, ob
+            // der ersparte Aufruf aus dem persistenten Cache oder aus demselben
+            // Batch stammt.
+            foreach ($duplicateFreshPositions as $originalIndex => $freshPosition) {
+                $results[$originalIndex] = $results[$freshIndexes[$freshPosition]] ?? '';
+                $this->RecordCacheSavingsStats(mb_strlen($Texts[$originalIndex], 'UTF-8'));
             }
         }
 

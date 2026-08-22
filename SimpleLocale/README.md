@@ -2841,3 +2841,50 @@ der ursprünglichen Fassung übernommen.
   automatischer Konsolen-Reload) bleibt davon unberührt und lädt weiterhin
   nie ein gerade offenes Formular neu (Build 60), wie schon zuvor.
   Regressionstests aktualisiert, volle Suite grün.
+* **Build 117 (live gefunden): dieselbe Wetter-Beschreibung wurde acht Mal
+  hintereinander identisch beim kostenfreien Anbieter angefragt, statt nur
+  einmal.** Ein Debug-Log-Export zeigte acht exakt identische
+  MyMemory-Requests für denselben Text ("Überwiegend bewölkt") innerhalb
+  weniger Sekunden während einer Wetter-Kachel-Aktualisierung. Ursache:
+  eine Wettervorhersage-HTMLBox (z. B. "8-Tage Vorhersage") wird per
+  `SplitHtmlIntoTextNodes()` in einzelne Text-Knoten zerlegt und alle
+  zusammen in einem einzigen `TranslateBatch()`-Aufruf übersetzt - teilen
+  sich mehrere Tage zufällig dieselbe Beschreibung, landete `TranslateBatch()`
+  bislang jedes weitere Vorkommen genauso im "braucht frische Übersetzung"-
+  Topf wie das erste, weil der persistente Cache
+  (`GetCachedTranslation`/`StoreCachedTranslation`) für diesen Text zu
+  diesem Zeitpunkt noch leer war - er wird erst NACH Abschluss des
+  GESAMTEN Batches befüllt, zu spät für weitere Vorkommen IM SELBEN Batch.
+  Für den kostenfreien Anbieter (kein echter Batch-Endpunkt, ein
+  HTTP-Request pro Text, siehe `TranslateChunkFree`) bedeutete das: derselbe
+  Text wurde so oft angefragt, wie er im Batch vorkam, statt nur einmal -
+  unnötiger Verbrauch des ohnehin knappen Tageskontingents.
+
+  Fix: `TranslateBatch()` merkt sich jetzt zusätzlich zum bestehenden
+  persistenten Cache eine reine Batch-interne Text→Position-Zuordnung -
+  jedes weitere Vorkommen desselben Rohtexts im selben Batch wird direkt als
+  Duplikat erkannt und übernimmt nach Abschluss des Batches das bereits für
+  sein erstes Vorkommen aufgelöste Ergebnis, ganz ohne eigenen Anbieter-
+  Aufruf. Zählt dabei genauso in die Statistik "Durch den Cache eingespart"
+  wie ein echter Cache-Treffer - aus Nutzersicht ist es exakt dieselbe Art
+  von vermiedener Anfrage. Betrifft strukturell jeden Aufrufer von
+  `TranslateBatch()` mit mehreren, potenziell identischen Texten im selben
+  Aufruf (v. a. HTML-Widgets mit mehreren, inhaltlich manchmal
+  übereinstimmenden Text-Knoten), nicht nur Wetter-Widgets.
+
+  **Separat dazu, kein Modul-Bug:** derselbe Nutzer beobachtete außerdem,
+  dass MyMemorys Web-Oberfläche für denselben Suchbegriff (z. B.
+  "Sprache"→"Idioma") ein ANDERES Ergebnis liefert als die von diesem Modul
+  genutzte API (z. B. "Español"). Das ist eine Eigenheit des kostenfreien
+  Anbieters selbst - MyMemory ist eine reine Übersetzungsspeicher-Datenbank
+  (Translation Memory) aus unzähligen, unterschiedlich zuverlässigen
+  Quellen; Web-Oberfläche und API können für sehr kurze, mehrdeutige Texte
+  (einzelne Wörter ohne Satzkontext, z. B. "Sprache" oder "Shuffle") einen
+  unterschiedlichen Top-Treffer aus dieser Datenbank ausliefern. Simple
+  Locale übernimmt exakt das, was die API liefert - dieselbe bereits
+  dokumentierte Einschränkung wie "Die automatische Übersetzung kann
+  trotzdem Fehler machen" ([Abschnitt 2](#2-bekannte-einschränkungen)): bei
+  kurzen, kontextlosen Einzelwörtern lohnt sich eine manuelle Prüfung/
+  Korrektur besonders.
+
+  Regressionstest ergänzt, volle Suite grün.
