@@ -6773,17 +6773,45 @@ private const LANGUAGE_FLAGS = [
     // <div data-x="a>b">) wuerde die Tag-Grenze falsch erkennen - in der
     // Praxis bei Symcon-HTMLBox-Widgets nicht relevant (dieselbe Annahme
     // macht bereits SplitProtectedSegments fuer <style>/<script>-Bloecke).
+    // Build 121 (Nutzer-Report, live gefunden): ein <img src="data:..."> mit
+    // eingebettetem Base64-Bild (zehntausende Zeichen ganz ohne '<'/'>') ließ die
+    // Tag-Aufteilungs-Regex unten an PHPs PCRE-Backtrack-Grenze scheitern -
+    // preg_split() liefert dann false, und der (schon vorher vorhandene)
+    // Fallback greift: der KOMPLETTE Rohinhalt landet als EIN einziger
+    // "Textknoten". Kein Crash, keine kaputte Rekonstruktion - aber der
+    // gesamte Block inklusive Bilddaten wurde dadurch ungefiltert an den
+    // Übersetzer geschickt, live bestätigt: über 22.000 Zeichen für ein Widget
+    // ganz ohne echten Text. Data-URIs sind nie übersetzbarer Inhalt - werden
+    // hier VOR jeder weiteren Verarbeitung durch kurze Platzhalter ersetzt
+    // (macht die Regex wieder unproblematisch lang) und danach überall wieder
+    // eingesetzt, unabhängig davon, ob am Ende doch der Fallback greift.
     private function SplitHtmlIntoTextNodes(string $Html): array
     {
-        $fallback = ['nodes' => [$Html], 'reassemble' => function (array $translated) use ($Html) {
-            return $translated[0] ?? $Html;
+        $dataUris = [];
+        $html = preg_replace_callback(
+            '/data:[a-zA-Z0-9\/+.-]+;base64,[A-Za-z0-9+\/=]+/',
+            function (array $match) use (&$dataUris): string {
+                $placeholder = '@@SIMPLELOCALE_DATAURI_' . count($dataUris) . '@@';
+                $dataUris[$placeholder] = $match[0];
+
+                return $placeholder;
+            },
+            $Html
+        ) ?? $Html;
+
+        $restore = static function (string $text) use ($dataUris): string {
+            return $dataUris === [] ? $text : strtr($text, $dataUris);
+        };
+
+        $fallback = ['nodes' => [$html], 'reassemble' => function (array $translated) use ($html, $restore) {
+            return $restore($translated[0] ?? $html);
         }];
 
-        if (trim($Html) === '') {
+        if (trim($html) === '') {
             return $fallback;
         }
 
-        $tokens = preg_split('/(<[^>]*>)/s', $Html, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+        $tokens = preg_split('/(<[^>]*>)/s', $html, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
         if ($tokens === false || $tokens === []) {
             return $fallback;
         }
@@ -6802,12 +6830,12 @@ private const LANGUAGE_FLAGS = [
             return $fallback;
         }
 
-        $reassemble = function (array $translatedTexts) use ($tokens, $textTokenIndexes) {
+        $reassemble = function (array $translatedTexts) use ($tokens, $textTokenIndexes, $restore) {
             foreach ($textTokenIndexes as $position => $tokenIndex) {
                 $tokens[$tokenIndex] = $translatedTexts[$position] ?? $tokens[$tokenIndex];
             }
 
-            return implode('', $tokens);
+            return $restore(implode('', $tokens));
         };
 
         return ['nodes' => $nodes, 'reassemble' => $reassemble];
