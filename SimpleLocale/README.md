@@ -3120,3 +3120,51 @@ der ursprünglichen Fassung übernommen.
   alten Cache-Eintrag, bereits synchroner Eintrag verursacht keinen
   Schreibvorgang, Quellsprache und leere Zellen werden nie gesynct), volle
   Suite grün.
+
+* **Build 126 (dringende Korrektur eines mit Build 125 live ausgelösten
+  Fatal Error, sofort nach Meldung behoben): `ApplyChanges()` schlug für
+  jede Instanz mit mindestens einer rein numerischen Original-Import-Zeile
+  (z.B. ein rein aus Ziffern bestehender Automations-/Objektname) komplett
+  fehl.** Ursache: `SyncCurrentLanguageIntoCache()` (Build 125) verwendet
+  den Rohtext als Array-Schlüssel (`$updates[$sprache][$rohtext] = ...`) -
+  PHP wandelt einen rein numerisch aussehenden String-Schlüssel dabei
+  automatisch in einen echten Integer um (bekanntes PHP-Verhalten). Der so
+  wieder ausgelesene Integer wurde ungeprüft an `BuildTranslationCacheKey()`
+  weitergereicht, deren dritter Parameter zwingend einen String erwartet -
+  Ergebnis: `TypeError: ... must be of type string, int given` bei JEDEM
+  `ApplyChanges()`-Lauf, live bestätigt als "Error while applying changes".
+  Erneutes `(string)`-Casting direkt vor der Verwendung behebt es. Zusätzlich
+  in diesem Build:
+  - Die "GoogleTranslate_Mapping"-Debug-Zeile (Diagnosehilfe, zeigt Rohtext
+    je Batch-Position) kürzte lange Rohtexte nicht - ein umfangreiches
+    HTML-Widget erzeugte dadurch eine einzelne Debug-Zeile von über 60.000
+    Zeichen, obwohl die tatsächlich gesendeten Anfragen dank Knoten-
+    Aufteilung längst klein waren. Auf 200 Zeichen pro Zeile gekürzt
+    (Gesamtlänge bleibt sichtbar, ObjectID-Zuordnung bleibt vollständig
+    erhalten).
+  - Der persistente Übersetzungs-Cache (`GetCachedTranslation`/
+    `StoreCachedTranslation`/`SyncCurrentLanguageIntoCache`) hatte keinerlei
+    Schutz gegen überlappende Zugriffe. Nutzer-Report + eigene Bestätigung
+    ("Vorhersage und Aktuelle Bedingungen werden vom gleichen Script
+    aktualisiert"): Symcon dispatcht VM_UPDATE-Nachrichten nicht blockierend
+    im auslösenden Skript, sondern als eigene, potenziell überlappende
+    Skriptausführungen - setzt ein externes Skript kurz hintereinander
+    mehrere Variablen, können zwei Übersetzungsläufe für denselben Rohtext
+    (z.B. "Überwiegend Klar", das sowohl in "Aktuelle Bedingungen" als auch
+    in der "Vorhersage" vorkommt) einander überholen: beide lesen den Cache,
+    bevor der jeweils andere geschrieben hat - live bestätigt als zwei
+    identische Anbieter-Anfragen im Sekundenabstand, bei einem alle 180
+    Sekunden aktualisierenden Echo-Widget sogar wiederholt. Ein knapper,
+    instanzweiter `IPS_SemaphoreEnter()`/`IPS_SemaphoreLeave()`-Sperrbereich
+    um die jeweilige Lese-/Schreibsequenz auf `attributeTranslationCache`
+    schließt die Lücke - best-effort (gelingt der Sperrerwerb binnen 1s
+    nicht, wird ohne Sperre weitergemacht statt die Übersetzung ganz zu
+    verwerfen). Zusätzlich temporäres Diagnose-Logging bei jedem Cache-Miss/
+    -Schreibvorgang, um eine über die reine Gleichzeitigkeit hinausgehende
+    Cache-Lücke (derselbe Text blieb auch nach 10 Minuten Abstand
+    ungecacht) weiter einzugrenzen - wird nach Abschluss der Untersuchung
+    wieder entfernt.
+  Neuer Regressionstest für den numerischen-Schlüssel-Fix (löst keinen
+  TypeError mehr aus, Symmetrie-Check gegen den realen `(string)`-Cast) und
+  für die Mapping-Kürzung (lange Zeilen werden gekürzt, ObjectID-Zuordnung
+  bleibt erhalten, kurze Texte unverändert), volle Suite grün.

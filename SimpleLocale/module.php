@@ -2537,42 +2537,61 @@ private const LANGUAGE_FLAGS = [
             return;
         }
 
-        $cache = json_decode($this->ReadAttributeString(self::attributeTranslationCache), true);
-        if (!is_array($cache)) {
-            $cache = [];
-        }
+        // Build 126: derselbe Sperrbereich wie Get-/StoreCachedTranslation (siehe
+        // dort) - auch dieser Lese-/Schreibvorgang auf attributeTranslationCache
+        // muss gegen ueberlappende VM_UPDATE-Skriptausfuehrungen geschuetzt sein.
+        $ident = $this->GetTranslationCacheSemaphoreIdent();
+        $locked = IPS_SemaphoreEnter($ident, 1000);
 
-        $changed = false;
-        foreach ($updates as $rowSourceLanguage => $byRawText) {
-            foreach ($byRawText as $rawText => $value) {
-                $key = $this->BuildTranslationCacheKey($rowSourceLanguage, $Language, $rawText);
-                if (($cache[$key]['v'] ?? null) === $value) {
-                    continue;
+        try {
+            $cache = json_decode($this->ReadAttributeString(self::attributeTranslationCache), true);
+            if (!is_array($cache)) {
+                $cache = [];
+            }
+
+            $changed = false;
+            foreach ($updates as $rowSourceLanguage => $byRawText) {
+                foreach ($byRawText as $rawText => $value) {
+                    // Build 126-Nachbesserung (live gefunden, Fatal Error): ein rein
+                    // numerischer Rohtext (z.B. eine Zeile mit einer Zahl als
+                    // Original-Import) wurde als Array-Schlüssel automatisch von PHP
+                    // in einen echten Integer umgewandelt (klassisches numerische-
+                    // String-Schlüssel-Verhalten) - BuildTranslationCacheKey()
+                    // erwartet aber zwingend einen String. Erneutes Casting hier
+                    // stellt den ursprünglichen String-Typ wieder her.
+                    $key = $this->BuildTranslationCacheKey($rowSourceLanguage, $Language, (string) $rawText);
+                    if (($cache[$key]['v'] ?? null) === $value) {
+                        continue;
+                    }
+                    $cache[$key] = [
+                        'v' => $value,
+                        'h' => (int) ($cache[$key]['h'] ?? 0),
+                        't' => time(),
+                    ];
+                    $changed = true;
                 }
-                $cache[$key] = [
-                    'v' => $value,
-                    'h' => (int) ($cache[$key]['h'] ?? 0),
-                    't' => time(),
-                ];
-                $changed = true;
+            }
+
+            if (!$changed) {
+                return;
+            }
+
+            // Dieselbe Verdraengungslogik wie StoreCachedTranslation - siehe dort
+            // fuer die Begruendung (haeufig genutzte Eintraege ueberleben, nicht
+            // die zuletzt eingefuegten).
+            if (count($cache) > self::TRANSLATION_CACHE_MAX_ENTRIES) {
+                uasort($cache, static function ($a, $b): int {
+                    return (($a['h'] ?? 0) <=> ($b['h'] ?? 0)) ?: (($a['t'] ?? 0) <=> ($b['t'] ?? 0));
+                });
+                $cache = array_slice($cache, count($cache) - self::TRANSLATION_CACHE_MAX_ENTRIES, null, true);
+            }
+
+            $this->WriteAttributeString(self::attributeTranslationCache, json_encode($cache));
+        } finally {
+            if ($locked) {
+                IPS_SemaphoreLeave($ident);
             }
         }
-
-        if (!$changed) {
-            return;
-        }
-
-        // Dieselbe Verdraengungslogik wie StoreCachedTranslation - siehe dort fuer
-        // die Begruendung (haeufig genutzte Eintraege ueberleben, nicht die
-        // zuletzt eingefuegten).
-        if (count($cache) > self::TRANSLATION_CACHE_MAX_ENTRIES) {
-            uasort($cache, static function ($a, $b): int {
-                return (($a['h'] ?? 0) <=> ($b['h'] ?? 0)) ?: (($a['t'] ?? 0) <=> ($b['t'] ?? 0));
-            });
-            $cache = array_slice($cache, count($cache) - self::TRANSLATION_CACHE_MAX_ENTRIES, null, true);
-        }
-
-        $this->WriteAttributeString(self::attributeTranslationCache, json_encode($cache));
     }
 
     // Build 70: Nachhol-Mechanismus fuer den "nur aktive Sprache sofort"-Ansatz (siehe
@@ -5485,10 +5504,21 @@ private const LANGUAGE_FLAGS = [
         // zum Abgleich mit den GoogleTranslate_Request/_Response-Logs bei Verdacht auf
         // einen Zeilen-Verrutscher (Position hier entspricht der Position in q[], solange
         // der Text keine <style>/<script>-Blöcke enthält, die separat behandelt werden).
+        // Build 126 (Nutzer-Report, live gefunden): der volle, ungekürzte Rohtext
+        // JEDER anstehenden Zeile landete hier - bei einem umfangreichen
+        // HTML-Widget (z.B. ein Wetter-Skript mit <style>-Block) ergab das
+        // Debug-Zeilen von über 60.000 Zeichen, obwohl die tatsächlich an den
+        // Anbieter geschickten Anfragen (siehe GoogleTranslate_Request direkt
+        // darunter) dank Knoten-Aufteilung längst klein sind - reine
+        // Log-Aufblähung ohne zusätzlichen Diagnosewert (die ObjectID-Zuordnung
+        // braucht keinen vollständigen Text). Auf 200 Zeichen pro Zeile gekürzt.
         $debugMapping = [];
         $batchPosition = 0;
         foreach ($pending as $rowIndex => $text) {
-            $debugMapping[] = sprintf('[%d] ObjectID=%s: "%s"', $batchPosition, $Rows[$rowIndex]['ObjectID'] ?? '?', $text);
+            $preview = mb_strlen($text, 'UTF-8') > 200
+                ? mb_substr($text, 0, 200, 'UTF-8') . '... (gekürzt, ' . mb_strlen($text, 'UTF-8') . ' Zeichen gesamt)'
+                : $text;
+            $debugMapping[] = sprintf('[%d] ObjectID=%s: "%s"', $batchPosition, $Rows[$rowIndex]['ObjectID'] ?? '?', $preview);
             $batchPosition++;
         }
         $this->SendDebug('GoogleTranslate_Mapping', $debugContext . "\n" . implode("\n", $debugMapping), 0);
@@ -6379,69 +6409,131 @@ private const LANGUAGE_FLAGS = [
     // fuer die Verdraengungslogik, die darauf aufbaut) - ein lokaler Attribut-
     // Schreibvorgang, verschwindend billig gegenüber der API-Anfrage, die dieser
     // Cache-Treffer gerade eingespart hat.
+    // Build 126 (Nutzer-Report, live per Debug-Log gefunden und vom Nutzer selbst
+    // bestätigt: "Vorhersage und Aktuelle Bedingungen werden vom gleichen Script
+    // aktualisiert"): Symcon dispatcht VM_UPDATE-Nachrichten NICHT blockierend
+    // innerhalb des ausloesenden Skripts, sondern als eigene, potenziell
+    // ueberlappende Skriptausfuehrungen - setzt ein externes Skript kurz
+    // hintereinander mehrere Variablen (z.B. "Aktuelle Bedingungen" und
+    // "Vorhersage" derselben Wetter-Abfrage), koennen zwei
+    // HandleTrackedVariableUpdate()-Laeufe fuer denselben Rohtext (z.B.
+    // "Überwiegend Klar", das in beiden Widgets vorkommt) echt GLEICHZEITIG
+    // laufen. Ohne Schutz lasen beide den Cache, BEVOR der jeweils andere
+    // geschrieben hatte - live bestaetigt als zwei identische Anbieter-Anfragen
+    // im Sekundenabstand fuer denselben Text UND als bis zu 4 identische
+    // Anfragen fuer ein alle 180 Sekunden aktualisierendes Echo-Widget. Schlimmer
+    // als nur verpasste Cache-Treffer: ein echtes Race beim SCHREIBEN
+    // (read-decode-modify-encode-write derselben Attribut-Property) kann sogar
+    // frisch geschriebene Eintraege der jeweils anderen, ueberlappenden
+    // Ausfuehrung wieder verlieren ("lost update"). Ein knapper, instanzweiter
+    // Namens-Sperrbereich um genau diese read-modify-write-Sequenz schliesst
+    // beide Luecken. Best-effort: gelingt der Sperrerwerb innerhalb kurzer Zeit
+    // nicht (sollte praktisch nie vorkommen, da der geschuetzte Abschnitt rein
+    // lokal ist, kein Netzwerk-Aufruf), wird ohne Sperre weitergemacht statt die
+    // Uebersetzung ganz zu verwerfen - ein gelegentlich verpasster Cache-Treffer
+    // ist immer noch besser als eine dauerhaft blockierte Instanz.
+    private function GetTranslationCacheSemaphoreIdent(): string
+    {
+        return 'IPSSL_TranslationCache_' . $this->InstanceID;
+    }
+
     private function GetCachedTranslation(string $SourceLanguage, string $TargetLanguage, string $SourceText): ?string
     {
-        $cache = json_decode($this->ReadAttributeString(self::attributeTranslationCache), true);
-        if (!is_array($cache)) {
-            return null;
+        $ident = $this->GetTranslationCacheSemaphoreIdent();
+        $locked = IPS_SemaphoreEnter($ident, 1000);
+
+        try {
+            $cache = json_decode($this->ReadAttributeString(self::attributeTranslationCache), true);
+            if (!is_array($cache)) {
+                // Build 126, temporaer (Diagnose eines gemeldeten, wiederholten
+                // Cache-Miss-Falls): zeigt, ob der Cache zum Zeitpunkt eines Miss
+                // ueberhaupt existiert/befuellt ist - wird nach Abschluss der
+                // Untersuchung wieder entfernt.
+                $this->SendDebug('IPSSL_Debug', "GetCachedTranslation MISS (kein Cache vorhanden) fuer '" . mb_substr($SourceText, 0, 60, 'UTF-8') . "' ($SourceLanguage->$TargetLanguage)", 0);
+
+                return null;
+            }
+
+            $key = $this->BuildTranslationCacheKey($SourceLanguage, $TargetLanguage, $SourceText);
+            if (!isset($cache[$key]) || !is_array($cache[$key])) {
+                $this->SendDebug('IPSSL_Debug', "GetCachedTranslation MISS (Cache hat " . count($cache) . ' Eintraege, aber nicht diesen) fuer \'' . mb_substr($SourceText, 0, 60, 'UTF-8') . "' ($SourceLanguage->$TargetLanguage) key=$key", 0);
+
+                return null;
+            }
+
+            $entry = $cache[$key];
+            $now = time();
+            // Naehert "Treffer der letzten 24 Stunden" an, ohne eine unbegrenzt
+            // wachsende Historie einzelner Zeitstempel je Eintrag speichern zu
+            // muessen: war der letzte Zugriff laenger als
+            // TRANSLATION_CACHE_HIT_DECAY_SECONDS her, gilt der Eintrag als "neu
+            // wieder aufgewaermt" (Zaehler auf 1 zurueckgesetzt) statt seinen alten
+            // Zaehler auf ewig fortzuschreiben - sonst wuerde ein frueher einmal
+            // populaerer, inzwischen laengst nicht mehr gebrauchter Eintrag bei der
+            // naechsten Verdraengung (siehe StoreCachedTranslation) faelschlich
+            // einen frisch aktiven Eintrag verdraengen.
+            $cache[$key]['h'] = ($now - ($entry['t'] ?? 0)) > self::TRANSLATION_CACHE_HIT_DECAY_SECONDS
+                ? 1
+                : (int) ($entry['h'] ?? 0) + 1;
+            $cache[$key]['t'] = $now;
+            $this->WriteAttributeString(self::attributeTranslationCache, json_encode($cache));
+
+            return $entry['v'] ?? null;
+        } finally {
+            if ($locked) {
+                IPS_SemaphoreLeave($ident);
+            }
         }
-
-        $key = $this->BuildTranslationCacheKey($SourceLanguage, $TargetLanguage, $SourceText);
-        if (!isset($cache[$key]) || !is_array($cache[$key])) {
-            return null;
-        }
-
-        $entry = $cache[$key];
-        $now = time();
-        // Naehert "Treffer der letzten 24 Stunden" an, ohne eine unbegrenzt
-        // wachsende Historie einzelner Zeitstempel je Eintrag speichern zu muessen:
-        // war der letzte Zugriff laenger als TRANSLATION_CACHE_HIT_DECAY_SECONDS her,
-        // gilt der Eintrag als "neu wieder aufgewaermt" (Zaehler auf 1 zurueckgesetzt)
-        // statt seinen alten Zaehler auf ewig fortzuschreiben - sonst wuerde ein
-        // frueher einmal populaerer, inzwischen laengst nicht mehr gebrauchter
-        // Eintrag bei der naechsten Verdraengung (siehe StoreCachedTranslation)
-        // faelschlich einen frisch aktiven Eintrag verdraengen.
-        $cache[$key]['h'] = ($now - ($entry['t'] ?? 0)) > self::TRANSLATION_CACHE_HIT_DECAY_SECONDS
-            ? 1
-            : (int) ($entry['h'] ?? 0) + 1;
-        $cache[$key]['t'] = $now;
-        $this->WriteAttributeString(self::attributeTranslationCache, json_encode($cache));
-
-        return $entry['v'] ?? null;
     }
 
     private function StoreCachedTranslation(string $SourceLanguage, string $TargetLanguage, string $SourceText, string $TranslatedText): void
     {
-        $cache = json_decode($this->ReadAttributeString(self::attributeTranslationCache), true);
-        if (!is_array($cache)) {
-            $cache = [];
+        $ident = $this->GetTranslationCacheSemaphoreIdent();
+        $locked = IPS_SemaphoreEnter($ident, 1000);
+
+        try {
+            $cache = json_decode($this->ReadAttributeString(self::attributeTranslationCache), true);
+            if (!is_array($cache)) {
+                $cache = [];
+            }
+
+            $storeKey = $this->BuildTranslationCacheKey($SourceLanguage, $TargetLanguage, $SourceText);
+            $cache[$storeKey] = [
+                'v' => $TranslatedText,
+                'h' => 1,
+                't' => time(),
+            ];
+
+            // Build 126, temporaer (Diagnose): zeigt Cache-Groesse und Schluessel
+            // bei jedem Schreibvorgang - wird nach Abschluss der Untersuchung
+            // wieder entfernt.
+            $this->SendDebug('IPSSL_Debug', 'StoreCachedTranslation: key=' . $storeKey . ' cacheSizeBeforeEviction=' . count($cache) . " fuer '" . mb_substr($SourceText, 0, 60, 'UTF-8') . "'", 0);
+
+            if (count($cache) > self::TRANSLATION_CACHE_MAX_ENTRIES) {
+                // Build 72: statt bisher der aeltesten (reine Einfuegereihenfolge,
+                // FIFO) werden jetzt die Eintraege mit dem GERINGSTEN Hit-Zaehler
+                // zuerst verdraengt (siehe GetCachedTranslation) - schuetzt haeufig
+                // wiederverwendete Kern-Inhalte (z.B. feste Objektnamen/Automations-
+                // Beschriftungen) davor, durch einen Schwung einmaliger, nie wieder
+                // vorkommender Texte verdraengt zu werden, nur weil diese zufaellig
+                // zuletzt eingefuegt wurden. Bei gleichem Hit-Zaehler entscheidet der
+                // Zeitpunkt des letzten Zugriffs (sekundaeres Sortierkriterium) - ein
+                // aelterer, unter der vorigen Schema-Version noch als reiner String
+                // gespeicherter Eintrag hat dabei ueber ?? 0 sicher Hit-Zaehler 0 und
+                // wird dadurch garantiert zuerst verdraengt (siehe
+                // TRANSLATION_CACHE_SCHEMA_VERSION).
+                uasort($cache, static function ($a, $b): int {
+                    return (($a['h'] ?? 0) <=> ($b['h'] ?? 0)) ?: (($a['t'] ?? 0) <=> ($b['t'] ?? 0));
+                });
+                $cache = array_slice($cache, count($cache) - self::TRANSLATION_CACHE_MAX_ENTRIES, null, true);
+            }
+
+            $this->WriteAttributeString(self::attributeTranslationCache, json_encode($cache));
+        } finally {
+            if ($locked) {
+                IPS_SemaphoreLeave($ident);
+            }
         }
-
-        $cache[$this->BuildTranslationCacheKey($SourceLanguage, $TargetLanguage, $SourceText)] = [
-            'v' => $TranslatedText,
-            'h' => 1,
-            't' => time(),
-        ];
-
-        if (count($cache) > self::TRANSLATION_CACHE_MAX_ENTRIES) {
-            // Build 72: statt bisher der aeltesten (reine Einfuegereihenfolge, FIFO)
-            // werden jetzt die Eintraege mit dem GERINGSTEN Hit-Zaehler zuerst
-            // verdraengt (siehe GetCachedTranslation) - schuetzt haeufig
-            // wiederverwendete Kern-Inhalte (z.B. feste Objektnamen/Automations-
-            // Beschriftungen) davor, durch einen Schwung einmaliger, nie wieder
-            // vorkommender Texte verdraengt zu werden, nur weil diese zufaellig
-            // zuletzt eingefuegt wurden. Bei gleichem Hit-Zaehler entscheidet der
-            // Zeitpunkt des letzten Zugriffs (sekundaeres Sortierkriterium) - ein
-            // aelterer, unter der vorigen Schema-Version noch als reiner String
-            // gespeicherter Eintrag hat dabei ueber ?? 0 sicher Hit-Zaehler 0 und
-            // wird dadurch garantiert zuerst verdraengt (siehe TRANSLATION_CACHE_SCHEMA_VERSION).
-            uasort($cache, static function ($a, $b): int {
-                return (($a['h'] ?? 0) <=> ($b['h'] ?? 0)) ?: (($a['t'] ?? 0) <=> ($b['t'] ?? 0));
-            });
-            $cache = array_slice($cache, count($cache) - self::TRANSLATION_CACHE_MAX_ENTRIES, null, true);
-        }
-
-        $this->WriteAttributeString(self::attributeTranslationCache, json_encode($cache));
     }
 
     // Hash statt Klartext als Schluessel - Texte koennen beliebig lang sein (z.B.
