@@ -1382,6 +1382,10 @@ private const LANGUAGE_FLAGS = [
     // 2026-08-19).
     public function AutoRescan(): void
     {
+        // Build 122, temporaer (Diagnose): einzige Stelle, die den Auto-Timer von
+        // einem manuellen Rescan-Klick unterscheidbar macht - wird nach Abschluss
+        // der Untersuchung wieder entfernt.
+        $this->SendDebug('IPSSL_Debug', 'AutoRescan: Timer-ausgeloester Rescan startet jetzt', 0);
         $this->ScanRootTree();
     }
 
