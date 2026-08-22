@@ -2804,3 +2804,40 @@ der ursprünglichen Fassung übernommen.
   (kein Name-Feld mehr in "Eigene Texte", kein Schreibkonflikt mehr
   möglich, da strukturell ausgeschlossen statt nur verhindert), volle
   Suite grün.
+* **Build 116 (Nutzer-Wunsch): sowohl "Rescan" als auch "Aufräumen" luden das
+  Konfigurationsformular bislang sichtbar ZWEIMAL neu pro Klick.** Der
+  Build-115-Debug-Log (siehe dort) hatte es bereits nebenbei aufgedeckt:
+  Symcons Konsole ruft `GetConfigurationForm()` nachweislich SELBSTSTÄNDIG
+  ein weiteres Mal auf, kurz (~30ms) nach jedem `RequestAction()` - dieses
+  automatische Verhalten war die ganze Zeit schon da, unabhängig davon, ob
+  das Modul selbst zusätzlich einen eigenen `ReloadForm()`-Aufruf machte.
+  Sowohl `ScanRootTree()` (nach einem manuellen Rescan-Klick) als auch
+  `CleanupOrphanedRows()` (über den in Build 98 eingeführten, um
+  `CLEANUP_RELOAD_DELAY_SECONDS` verzögerten `ProcessDeferredCleanupReload()`)
+  lösten zusätzlich zu diesem automatischen Reload noch einen EIGENEN aus -
+  macht zwei komplette Formular-Neuaufbauten kurz nacheinander pro Klick,
+  sichtbar als spürbares doppeltes Neuladen.
+
+  Fix: beide eigenen, jetzt nachweislich redundanten `ReloadForm()`-Aufrufe
+  wurden ersatzlos entfernt - Symcons automatischer Reload übernimmt beide
+  ursprünglichen Aufgaben bereits vollständig (frische Listendaten anzeigen
+  UND den "Übernehmen"-Puffer aktualisieren, siehe Build 60/88 für den Grund,
+  warum Letzteres überhaupt nötig ist - ein expliziter `ReloadForm()` und der
+  automatische Konsolen-Reload lösen strukturell denselben
+  `GetConfigurationForm()`-Neuaufbau aus, es gibt keinen funktionalen
+  Unterschied). Damit vollständig entfernt: der komplette Build-98-
+  Verzögerungsmechanismus (`ProcessDeferredCleanupReload()`,
+  `GetCleanupReloadTimerIdent()`, `CLEANUP_RELOAD_DELAY_SECONDS`, der
+  zugehörige `RegisterTimer()`-Aufruf in `Create()` samt einmaliger
+  Alt-Instanzen-Bereinigung des dadurch verwaisten Timer-Objekts) sowie der
+  komplette `$ReloadFormAfterward`-Parameter von `ScanRootTree()` (war seit
+  dieser Entfernung in beiden Aufrufern `Rescan()`/`AutoRescan()` ohne jede
+  Wirkung mehr). `GetConfigurationForm()` setzt den "Aufräumen"-Zähler
+  dadurch auch wieder wie ursprünglich in Build 76 sofort beim ersten Lesen
+  zurück (die Build-114-Sonderbehandlung, die einen konkurrierenden ZWEITEN
+  Aufruf überleben musste, ist mit dessen Wegfall hinfällig - es gibt jetzt
+  wieder nur den einen automatischen Konsolen-Aufruf). Ein automatischer
+  Hintergrund-Rescan (`AutoRescan()`, kein `RequestAction()`, daher auch kein
+  automatischer Konsolen-Reload) bleibt davon unberührt und lädt weiterhin
+  nie ein gerade offenes Formular neu (Build 60), wie schon zuvor.
+  Regressionstests aktualisiert, volle Suite grün.
