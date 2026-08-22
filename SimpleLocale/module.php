@@ -6823,17 +6823,37 @@ private const LANGUAGE_FLAGS = [
             return $dataUris === [] ? $text : strtr($text, $dataUris);
         };
 
-        $fallback = ['nodes' => [$html], 'reassemble' => function (array $translated) use ($html, $restore) {
+        // Build 122 (Nutzer-Report, live per Debug-Log gefunden, direkt im
+        // Anschluss an Build 121): ein Segment ganz OHNE echten Text (z.B. nur
+        // leere <div>s rund um das jetzt durch einen Platzhalter ersetzte
+        // Cover-Bild) landete bisher trotzdem im selben "ganzer Block als EIN
+        // Knoten"-Fallback wie ein echter Parse-Fehler - unnötig, UND live
+        // bestätigt als wiederholte identische Anfrage (derselbe leere Block
+        // bleibt ja bei jedem Update gleich, wird aber trotzdem jedes Mal neu
+        // "übersetzt"). $noop liefert KEINE Knoten (nichts zu übersetzen) statt
+        // den kompletten - wenn auch dank Build 121 jetzt viel kürzeren - Block
+        // ungefragt an den Anbieter zu schicken.
+        $noop = ['nodes' => [], 'reassemble' => static function (array $translated) use ($html, $restore) {
+            return $restore($html);
+        }];
+
+        // Nur ein echter Parse-Fehler (z.B. PHPs PCRE-Backtrack-Grenze bei einem
+        // ungewöhnlich großen, zusammenhängenden Block) bekommt weiterhin den
+        // konservativen "ganzer Block als ein Knoten"-Fallback - hier WISSEN wir
+        // nicht, ob darin übersetzbarer Text steckt, also lieber den ganzen
+        // Block schicken als möglicherweise echten Text stillschweigend zu
+        // verlieren.
+        $parseErrorFallback = ['nodes' => [$html], 'reassemble' => function (array $translated) use ($html, $restore) {
             return $restore($translated[0] ?? $html);
         }];
 
         if (trim($html) === '') {
-            return $fallback;
+            return $noop;
         }
 
         $tokens = preg_split('/(<[^>]*>)/s', $html, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
         if ($tokens === false || $tokens === []) {
-            return $fallback;
+            return $parseErrorFallback;
         }
 
         $nodes = [];
@@ -6847,7 +6867,7 @@ private const LANGUAGE_FLAGS = [
         }
 
         if ($nodes === []) {
-            return $fallback;
+            return $noop;
         }
 
         $reassemble = function (array $translatedTexts) use ($tokens, $textTokenIndexes, $restore) {

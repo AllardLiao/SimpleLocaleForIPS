@@ -3071,3 +3071,21 @@ der ursprünglichen Fassung übernommen.
   Untersuchung (siehe Build 122) zu bestätigen oder auszuschließen, ob ein
   gemeldeter Vorfall zeitlich mit einem automatischen Hintergrund-Rescan
   zusammenfällt. Wird zusammen mit dem Build-122-Logging wieder entfernt.
+
+* **Build 124 (direkter Nachbericht zu Build 121, live per Debug-Log
+  bestätigt): ein HTML-Segment ganz ohne echten Text landete weiterhin im
+  "ganzer Block als ein Knoten"-Fallback.** Build 121 verhinderte, dass ein
+  eingebettetes Base64-Bild selbst zum Übersetzungsgegenstand wird - aber
+  der umgebende Rest (z.B. leere `<div>`s einer Medienplayer-Kachel ohne
+  aktuell laufenden Titel) hatte danach zwar keine Bilddaten mehr, aber
+  eben auch KEINEN echten Text - und wurde trotzdem komplett an den
+  Übersetzer geschickt, live bestätigt als wiederholte identische Anfrage
+  bei jedem Update (derselbe leere Block ändert sich ja nie). `SplitHtmlIntoTextNodes()`
+  unterscheidet jetzt sauber zwischen einem echten Parse-Fehler (weiterhin
+  konservativ: ganzer Block als ein Knoten, da unbekannter Inhalt) und
+  einem erfolgreich geparsten, aber ausschließlich aus Tags/Leerraum
+  bestehenden Segment (liefert jetzt gar keinen Übersetzungs-Knoten mehr -
+  nichts zu tun, keine Anfrage nötig). Regressionstest erweitert (leeres
+  Segment mit eingebettetem Bild liefert null Knoten, Bild bleibt trotzdem
+  exakt erhalten; echter Text neben einem Bild liefert weiterhin genau
+  diesen einen Knoten), volle Suite grün.
