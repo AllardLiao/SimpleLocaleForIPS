@@ -3048,3 +3048,16 @@ der ursprünglichen Fassung übernommen.
   keinem Textknoten mehr auf, Rekonstruktion bleibt exakt, kein
   Platzhalter-Rest im Ergebnis, normales HTML ohne Data-URI unverändert),
   volle Suite grün.
+
+* **Build 122, rein diagnostisch: temporäres Debug-Logging in
+  `ReconcileRowSourceLanguageChanges()`.** Läuft der Untersuchung eines
+  gemeldeten Falls nach, bei dem manuell korrigierte Übersetzungen in
+  "Automations" und "Objektnamen" ohne erkennbaren Auslöser (kein
+  "Aufräumen"-Klick, keine manuelle Löschung) durch frische
+  Maschinenübersetzungen ersetzt wurden - ein Property-Dump zeigte dabei
+  alle betroffenen Zielsprachen-Zellen mit nahezu identischem Zeitstempel
+  neu befüllt, ein Muster, das zu `ReconcileRowFields()`s
+  "Quellsprache hat sich geändert"-Erkennung passt. Loggt vor jeder
+  Mutation Property, Zeilen-Schlüssel sowie die alten
+  `Quellsprache`/`UebersetztGegen`-Werte einer Zeile, für die dieser Pfad
+  auslösen wird - wird nach Abschluss der Untersuchung wieder entfernt.
