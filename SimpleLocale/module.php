@@ -3803,6 +3803,22 @@ private const LANGUAGE_FLAGS = [
 
             $propertyChanged = false;
             foreach ($rows as $index => $row) {
+                // Build 121, temporaer (Diagnose fuer den Automations/ObjectNames/
+                // Captions-Korruptionsverdacht): loggt VOR der Mutation, WELCHE Zeile
+                // ReconcileRowFields() fuer "Quellsprache geaendert" haelt und mit
+                // welchen alten Werten - wird nach Abschluss der Untersuchung wieder
+                // entfernt.
+                $beforeSource = (string) ($row[self::fieldRowSourceLanguage] ?? '');
+                $beforeReconciledAgainst = (string) ($row[self::fieldTranslatedAgainstSourceLanguage] ?? '');
+                if ($beforeSource !== '' && $beforeSource !== $beforeReconciledAgainst) {
+                    $rowKey = $row['ObjectID'] ?? $row['AutomationID'] ?? $row['SourceKey'] ?? $row['ValueObjectID'] ?? '?';
+                    $this->SendDebug(
+                        'IPSSL_Debug',
+                        "ReconcileRowFields WIRD AUSLOESEN: property=$property rowKey=$rowKey "
+                            . "Quellsprache(vorher)='$beforeSource' UebersetztGegen(vorher)='$beforeReconciledAgainst'",
+                        0
+                    );
+                }
                 $rows[$index] = $this->ReconcileRowFields($row, $propertyChanged);
             }
 
