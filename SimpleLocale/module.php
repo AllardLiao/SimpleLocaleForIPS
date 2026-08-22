@@ -6483,10 +6483,28 @@ private const LANGUAGE_FLAGS = [
             }
         }
 
-        $translatedFlat = [];
-        foreach (array_chunk($translatable, self::translateMaxTextsPerRequest) as $chunk) {
-            $translatedFlat = array_merge($translatedFlat, $this->TranslateChunk($chunk, $Source, $Target, $DebugContext, $IsHtml));
+        // Build 118 (live gefunden, Build 117 reichte hierfür nicht aus - siehe
+        // README Change-Log): $translatable ist eine FLACHE Liste aller einzelnen
+        // HTML-Text-Knoten (und nicht-HTML-Segmente) ÜBER ALLE Zeilen dieses Aufrufs
+        // hinweg. Build 117s Deduplizierung in TranslateBatch() wirkt eine Ebene
+        // HÖHER (pro ganzem Zeilen-Rohtext) und greift hier gar nicht: mehrere
+        // identische Text-Knoten INNERHALB eines feingranular zerlegten
+        // HTML-Widgets (z. B. mehrere Wettervorhersage-Tage mit derselben
+        // Beschreibung "Überwiegend bewölkt") wurden dadurch weiterhin einzeln
+        // angefragt - live per Debug-Log bestätigt (bis zu 12 identische Anfragen
+        // für denselben Text in wenigen Sekunden). Dedupliziert jetzt zusätzlich
+        // hier, auf der tatsächlich an den Anbieter geschickten Knotenebene -
+        // $translatedFlat behält exakt dieselbe Länge/Reihenfolge wie $translatable
+        // (für die nachfolgende Cursor-basierte Rekonstruktion unten unverändert
+        // kompatibel), intern wird aber jeder eindeutige Text nur einmal
+        // tatsächlich angefragt.
+        $uniqueTranslatable = array_values(array_unique($translatable));
+        $uniqueTranslatedFlat = [];
+        foreach (array_chunk($uniqueTranslatable, self::translateMaxTextsPerRequest) as $chunk) {
+            $uniqueTranslatedFlat = array_merge($uniqueTranslatedFlat, $this->TranslateChunk($chunk, $Source, $Target, $DebugContext, $IsHtml));
         }
+        $translatedByText = array_combine($uniqueTranslatable, $uniqueTranslatedFlat);
+        $translatedFlat = array_map(static fn (string $text): string => $translatedByText[$text], $translatable);
 
         $result = [];
         $cursor = 0;

@@ -2888,3 +2888,36 @@ der ursprünglichen Fassung übernommen.
   Korrektur besonders.
 
   Regressionstest ergänzt, volle Suite grün.
+* **Build 118 (live gefunden, Build 117 reichte nicht aus): dieselbe
+  Wetter-Beschreibung wurde weiterhin bis zu zwölf Mal identisch beim
+  Anbieter angefragt, trotz des Build-117-Fixes.** Ein neuer Debug-Log-
+  Export bestätigte, dass das Problem unverändert bestand. Ursache: Build
+  117 deduplizierte identische Texte nur auf der Ebene ganzer
+  Zeilen-Rohtexte (dem `$Texts`-Array, das `TranslateBatch()` von seinem
+  Aufrufer bekommt) - für HTML-Inhalte (z. B. ein Wetter-Widget als einzelne
+  "Eigene Texte"-Zeile) zerlegt `TranslateBatchUncached()` aber JEDE Zeile
+  intern NOCHMAL in einzelne Text-Knoten (`SplitHtmlIntoTextNodes`) und
+  sammelt ALLE Knoten über alle Zeilen hinweg in einer eigenen, flachen
+  Liste (`$translatable`), die erst DANACH an den Anbieter geschickt wird -
+  diese Knoten-Ebene liegt UNTERHALB der Ebene, auf der Build 117
+  dedupliziert. Teilen sich mehrere Vorhersage-Tage INNERHALB EINER
+  EINZIGEN Wetter-Widget-Zeile zufällig dieselbe Beschreibung, blieben die
+  daraus resultierenden identischen Text-Knoten von Build 117 komplett
+  unberührt und wurden weiterhin einzeln angefragt.
+
+  Fix: `TranslateBatchUncached()` dedupliziert jetzt zusätzlich auf dieser
+  tieferen Knotenebene, direkt bevor die Liste an den Anbieter geschickt
+  wird (`array_unique($translatable)`, Übersetzung nur für die eindeutigen
+  Werte, danach per `array_combine()` auf die volle, ursprüngliche
+  Knotenliste zurückgemappt). Die nachgelagerte Cursor-basierte
+  Rekonstruktion (die exakt dieselbe Länge/Reihenfolge wie die Eingabe
+  erwartet, siehe Kommentar bei `SplitHtmlIntoTextNodes`) bleibt dadurch
+  unverändert kompatibel - nur die tatsächliche Anzahl der
+  Anbieter-Anfragen sinkt auf die Anzahl eindeutiger Knoten. Bonus-Effekt:
+  da Duplikate jetzt schon vor dem Chunking (`translateMaxTextsPerRequest`)
+  herausfallen, geht das Chunk-Größenlimit nicht mehr unnötig durch
+  wiederholte identische Knoten verloren.
+
+  Regressionstest ergänzt (bildet exakt den gemeldeten Fall nach - fünf
+  Text-Knoten einer einzigen HTML-Zeile mit drei eindeutigen Werten), volle
+  Suite grün.
