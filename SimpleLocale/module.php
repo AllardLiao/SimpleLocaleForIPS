@@ -3515,7 +3515,11 @@ private const LANGUAGE_FLAGS = [
         // liefert jetzt aktiv eine frische Übersetzung statt des rohen Quelltexts,
         // eben über den neuen Nachhol-Mechanismus statt hier vorab für alle Sprachen.
         if ($rowSourceLanguage !== $currentLanguage && $currentLanguage !== self::langOriginalImport) {
-            $translated = $this->TranslateBatch([$NewValue], $rowSourceLanguage, $currentLanguage, '', $IsHtml);
+            // Build 127 (Nutzer-Wunsch): ValueObjectID statt eines leeren
+            // DebugContext mitgeben - macht die GoogleTranslate_Request/
+            // Get-/StoreCachedTranslation-Debug-Zeilen eindeutig einem
+            // konkreten Objekt im Baum zuordenbar, statt nur den Text zu zeigen.
+            $translated = $this->TranslateBatch([$NewValue], $rowSourceLanguage, $currentLanguage, 'ValueObjectID=' . $ValueObjectID, $IsHtml);
             // TranslateBatch liefert bei einem fehlgeschlagenen/pausierten Anbieter
             // einen Leerstring zurück (nicht null) - ein reines "??" würde diesen
             // Fehlerfall nicht abfangen. Die gespeicherte Spalte wird bei einem
@@ -6340,7 +6344,7 @@ private const LANGUAGE_FLAGS = [
                 $results[$i] = $manual;
                 continue;
             }
-            $cached = $this->GetCachedTranslation($Source, $Target, $text);
+            $cached = $this->GetCachedTranslation($Source, $Target, $text, $DebugContext);
             if ($cached !== null) {
                 $results[$i] = $cached;
                 $this->RecordCacheSavingsStats(mb_strlen($text, 'UTF-8'));
@@ -6381,8 +6385,22 @@ private const LANGUAGE_FLAGS = [
                 // und bleibt fuer den naechsten Versuch offen.
                 $translated = $item['failed'] ? '' : $item['text'];
                 $results[$originalIndex] = $translated;
-                if ($translated !== '') {
-                    $this->StoreCachedTranslation($Source, $Target, $freshTexts[$position], $translated);
+                // Build 127 (Nutzer-Report, live per Debug-Log bestaetigt: Cache
+                // dauerhaft bei "1000 Eintraege", staendige Verdraengung): bei
+                // $IsHtml wird der GANZE Zeilen-Rohtext hier zusaetzlich zum
+                // (viel wertvolleren) Knoten-Cache in TranslateBatchUncached()
+                // gecacht - fuer ein HTML-Widget, dessen Gesamtinhalt sich durch
+                // neue Messwerte bei JEDER Aktualisierung aendert (Wetter-/
+                // Medienplayer-Widgets), ist dieser ganze-Zeile-Eintrag praktisch
+                // NIE wiederverwendbar, belegt aber dauerhaft einen der
+                // begrenzten TRANSLATION_CACHE_MAX_ENTRIES-Plaetze und verdraengt
+                // dadurch echte, oft wiederverwendete Knoten-Eintraege (z.B.
+                // "Überwiegend Klar"), bevor die überhaupt einen zweiten Treffer
+                // landen konnten. Fuer $IsHtml lohnt sich nur der (bereits
+                // vorhandene) Knoten-Cache - die ganze Zeile wird nicht mehr
+                // zusaetzlich gecacht.
+                if ($translated !== '' && !$IsHtml) {
+                    $this->StoreCachedTranslation($Source, $Target, $freshTexts[$position], $translated, $DebugContext);
                 }
             }
 
@@ -6437,7 +6455,7 @@ private const LANGUAGE_FLAGS = [
         return 'IPSSL_TranslationCache_' . $this->InstanceID;
     }
 
-    private function GetCachedTranslation(string $SourceLanguage, string $TargetLanguage, string $SourceText): ?string
+    private function GetCachedTranslation(string $SourceLanguage, string $TargetLanguage, string $SourceText, string $DebugContext = ''): ?string
     {
         $ident = $this->GetTranslationCacheSemaphoreIdent();
         $locked = IPS_SemaphoreEnter($ident, 1000);
@@ -6445,18 +6463,20 @@ private const LANGUAGE_FLAGS = [
         try {
             $cache = json_decode($this->ReadAttributeString(self::attributeTranslationCache), true);
             if (!is_array($cache)) {
-                // Build 126, temporaer (Diagnose eines gemeldeten, wiederholten
+                // Build 126/127, temporaer (Diagnose eines gemeldeten, wiederholten
                 // Cache-Miss-Falls): zeigt, ob der Cache zum Zeitpunkt eines Miss
-                // ueberhaupt existiert/befuellt ist - wird nach Abschluss der
-                // Untersuchung wieder entfernt.
-                $this->SendDebug('IPSSL_Debug', "GetCachedTranslation MISS (kein Cache vorhanden) fuer '" . mb_substr($SourceText, 0, 60, 'UTF-8') . "' ($SourceLanguage->$TargetLanguage)", 0);
+                // ueberhaupt existiert/befuellt ist, sowie (Build 127, Nutzer-
+                // Wunsch) den mitgegebenen Kontext (z.B. "ValueObjectID=46091") zur
+                // eindeutigen Zuordnung im Konfigurationsformular - wird nach
+                // Abschluss der Untersuchung wieder entfernt.
+                $this->SendDebug('IPSSL_Debug', "GetCachedTranslation MISS (kein Cache vorhanden) [$DebugContext] fuer '" . mb_substr($SourceText, 0, 60, 'UTF-8') . "' ($SourceLanguage->$TargetLanguage)", 0);
 
                 return null;
             }
 
             $key = $this->BuildTranslationCacheKey($SourceLanguage, $TargetLanguage, $SourceText);
             if (!isset($cache[$key]) || !is_array($cache[$key])) {
-                $this->SendDebug('IPSSL_Debug', "GetCachedTranslation MISS (Cache hat " . count($cache) . ' Eintraege, aber nicht diesen) fuer \'' . mb_substr($SourceText, 0, 60, 'UTF-8') . "' ($SourceLanguage->$TargetLanguage) key=$key", 0);
+                $this->SendDebug('IPSSL_Debug', "GetCachedTranslation MISS (Cache hat " . count($cache) . " Eintraege, aber nicht diesen) [$DebugContext] fuer '" . mb_substr($SourceText, 0, 60, 'UTF-8') . "' ($SourceLanguage->$TargetLanguage) key=$key", 0);
 
                 return null;
             }
@@ -6486,7 +6506,7 @@ private const LANGUAGE_FLAGS = [
         }
     }
 
-    private function StoreCachedTranslation(string $SourceLanguage, string $TargetLanguage, string $SourceText, string $TranslatedText): void
+    private function StoreCachedTranslation(string $SourceLanguage, string $TargetLanguage, string $SourceText, string $TranslatedText, string $DebugContext = ''): void
     {
         $ident = $this->GetTranslationCacheSemaphoreIdent();
         $locked = IPS_SemaphoreEnter($ident, 1000);
@@ -6504,10 +6524,12 @@ private const LANGUAGE_FLAGS = [
                 't' => time(),
             ];
 
-            // Build 126, temporaer (Diagnose): zeigt Cache-Groesse und Schluessel
-            // bei jedem Schreibvorgang - wird nach Abschluss der Untersuchung
-            // wieder entfernt.
-            $this->SendDebug('IPSSL_Debug', 'StoreCachedTranslation: key=' . $storeKey . ' cacheSizeBeforeEviction=' . count($cache) . " fuer '" . mb_substr($SourceText, 0, 60, 'UTF-8') . "'", 0);
+            // Build 126/127, temporaer (Diagnose): zeigt Cache-Groesse und
+            // Schluessel bei jedem Schreibvorgang, sowie (Build 127, Nutzer-
+            // Wunsch) den mitgegebenen Kontext (z.B. "ValueObjectID=46091") zur
+            // eindeutigen Zuordnung im Konfigurationsformular - wird nach
+            // Abschluss der Untersuchung wieder entfernt.
+            $this->SendDebug('IPSSL_Debug', 'StoreCachedTranslation: key=' . $storeKey . ' cacheSizeBeforeEviction=' . count($cache) . " [$DebugContext] fuer '" . mb_substr($SourceText, 0, 60, 'UTF-8') . "'", 0);
 
             if (count($cache) > self::TRANSLATION_CACHE_MAX_ENTRIES) {
                 // Build 72: statt bisher der aeltesten (reine Einfuegereihenfolge,
@@ -6853,7 +6875,7 @@ private const LANGUAGE_FLAGS = [
                 $translatedByText[$node] = $manual;
                 continue;
             }
-            $cached = $this->GetCachedTranslation($Source, $Target, $node);
+            $cached = $this->GetCachedTranslation($Source, $Target, $node, $DebugContext);
             if ($cached !== null) {
                 $translatedByText[$node] = $cached;
                 $this->RecordCacheSavingsStats(mb_strlen($node, 'UTF-8'));
@@ -6870,7 +6892,7 @@ private const LANGUAGE_FLAGS = [
             $translated = $freshNodesTranslated[$position] ?? '';
             $translatedByText[$node] = $translated;
             if ($translated !== '') {
-                $this->StoreCachedTranslation($Source, $Target, $node, $translated);
+                $this->StoreCachedTranslation($Source, $Target, $node, $translated, $DebugContext);
             }
         }
 
