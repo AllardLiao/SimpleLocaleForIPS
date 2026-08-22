@@ -1009,6 +1009,45 @@ gültigen Schlüssel einzutragen, ohne dass die Kachel sofort auf die
 unbearbeiteten Original-Texte zurückfällt. Ein Hinweis-Popup informiert
 beim Aktivieren entsprechend.
 
+**Tägliche Statusprüfung, Widerruf und Ablaufverlängerung ohne neuen
+Schlüssel:** Zusätzlich zur einmaligen Aktivierungsmeldung oben fragt das
+Modul **einmal täglich** (unabhängig davon, ob sich der eingetragene
+Schlüssel geändert hat) beim selben Meldeserver-Endpoint nach, ob die
+Lizenz noch aktiv ist (`CheckLicenseStatus()`/`PerformDailyLicenseCheck()`).
+Das schließt eine Lücke des reinen Aktivierungs-Checks: ohne diesen
+täglichen Timer würde ein Widerruf/eine Rückerstattung (siehe
+Synergetix-Website-Repo, `shop/admin/order.php`, Checkbox "Aktiv") nie bei
+einer bereits laufenden Installation ankommen, solange der Admin dort
+nichts am Konfigurationsformular ändert.
+
+Zwei mögliche Antworten, beide **eigenständig** neben dem bestehenden
+`{"blocked": true}`:
+
+- `{"revoked": true}` - der Admin hat die Lizenz im Shop deaktiviert (z. B.
+  Widerruf). Anders als "blocked" oben wird dabei **keine** frische
+  Testphase gewährt - der Schlüssel bleibt einfach ungültig (`valid =>
+  false, revoked => true` in `GetLicenseInfo()`), fällt aber auf dieselbe
+  bereits bestehende "Testphase abgelaufen"-Darstellung zurück wie jeder
+  andere ungültige Schlüssel auch (kein eigenes Gast-Popup nötig).
+- `{"active": true, "expiresAt": <Unix-Timestamp>}` - Bestätigung plus das
+  aktuell effektive Ablaufdatum laut Shop. Dieser Wert **überschreibt** das
+  im Schlüssel selbst signierte `expiresAt` vollständig (siehe
+  `attributeLicenseExpiresAtOverride`) - ein Admin kann ein Abo damit
+  verlängern ODER verkürzen, ohne einen neuen signierten Schlüssel
+  auszustellen und zuzusenden. Der Override gilt nur für genau den
+  Schlüssel, für den er zuletzt gemeldet wurde (Hash-Vergleich) - ein
+  später eingetragener anderer Schlüssel erbt ihn nicht.
+
+**Fail open, wie überall bei diesem Meldeserver:** Ein nicht erreichbarer
+oder fehlerhaft antwortender Server bei der täglichen Prüfung ändert
+NICHTS am zuletzt bekannten Stand - weder wird eine Lizenz dadurch
+fälschlich widerrufen, noch geht ein bereits gesetzter Ablauf-Override
+verloren. Eine offline betriebene Installation bekommt einen Widerruf
+oder eine Verlängerung entsprechend erst mit, sobald sie wieder online
+ist und der tägliche Timer erfolgreich durchläuft - keine sofortige/
+Push-basierte Sperrung möglich, siehe README/Plan zur bewusst offline
+gehaltenen Signaturprüfung oben.
+
 Für Entwickler: Ob ein Build die Testversion-Einschränkungen überhaupt
 anwendet, steuert die Konstante `IS_TRIAL_BUILD` in `module.php` - für einen
 Vollversion-Build (z. B. an zahlende Kunden nach Kauf) dort auf `false`
@@ -2955,3 +2994,31 @@ der ursprünglichen Fassung übernommen.
   komplett anderem umgebendem Rohtext nicht erneut angefragt werden;
   ein manueller Tabelleneintrag greift ebenfalls auf Knotenebene), volle
   Suite grün.
+
+* **Build 120 (Nutzer-Wunsch): Lizenz-Widerruf braucht eine Möglichkeit,
+  eine bereits ausgestellte Lizenz zu deaktivieren.** Bisher gab es nur den
+  einmaligen Aktivierungs-Check (siehe Abschnitt 8, "Upgrade-Lizenzen und
+  der Blockier-Mechanismus") - der greift aber nur bei einer ÄNDERUNG des
+  eingetragenen Schlüssels, nicht laufend. Für einen Widerruf/eine
+  Rückerstattung reicht das nicht: die Installation läuft dabei ja
+  unverändert weiter.
+  Neuer täglicher Timer (`CheckLicenseStatus()`/`PerformDailyLicenseCheck()`,
+  Ident `timerIdentLicenseCheck`, 24h-Intervall wie von Kai gewünscht) fragt
+  denselben Meldeserver-Endpoint unabhängig von einer Schlüssel-Änderung ab.
+  Zwei neue Antwort-Formen, ausgewertet über eine mit `RecordLicenseActivation()`
+  geteilte `ApplyActivationReportResponse()`: `{"revoked": true}` (Admin hat
+  im Shop deaktiviert - anders als "blocked" OHNE Testphasen-Reset, siehe
+  `attributeRevokedLicenseKeyHash`) und `{"active": true, "expiresAt": ...}`
+  (bestätigt aktiv, liefert das aktuell effektive Ablaufdatum). Letzteres
+  ermöglicht als Nebeneffekt eine Abo-Verlängerung/-Verkürzung rein
+  serverseitig, ohne neuen signierten Schlüssel (`GetLicenseInfo()`
+  überschreibt das signierte `expiresAt` mit einem passenden, per Hash an
+  den aktuellen Schlüssel gebundenen Override). Fail-open wie beim
+  bestehenden Meldeserver-Aufruf: eine nicht erreichbare/fehlerhafte
+  Antwort ändert nichts am zuletzt bekannten Stand.
+  Standalone-Simulationstest (7 Szenarien: Widerruf ohne Testphasen-Reset,
+  serverseitiges Zurücknehmen, Verlängerung/Verkürzung per Override,
+  Fail-open, "blocked"-Regression) gegen einen echt signierten Testschlüssel
+  (reales Ed25519-Testpaar) grün. Entsprechende Shop-Seite (Checkbox
+  "Aktiv" + Ablaufdatum-Override, Synergetix-Website-Repo,
+  `shop/admin/order.php`) ist ein separater Commit in diesem Repo.

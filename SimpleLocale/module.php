@@ -372,6 +372,10 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterAttributeString(self::attributeActivationLog, '[]');
         $this->RegisterAttributeString(self::attributeBlockedLicenseKeyHash, '');
         $this->RegisterAttributeString(self::attributeLastCheckedLicenseKeyHash, '');
+        $this->RegisterAttributeString(self::attributeRevokedLicenseKeyHash, '');
+        $this->RegisterAttributeInteger(self::attributeLicenseExpiresAtOverride, 0);
+        $this->RegisterAttributeString(self::attributeLicenseExpiresAtOverrideKeyHash, '');
+        $this->RegisterAttributeInteger(self::attributeLastDailyLicenseCheckAt, 0);
         $this->RegisterAttributeInteger(self::attributeLastLanguageSwitchAt, 0);
         // Default = derselbe Wert wie propertyCurrentLanguage's eigener Default, damit
         // ApplyChanges() beim allerersten Aufruf (frisch angelegte Instanz, noch keine
@@ -440,6 +444,11 @@ private const LANGUAGE_FLAGS = [
         // ProcessPendingRowUpdateFlush - ruehrt das Konfigurationsformular nie direkt
         // an, schreibt nur die betroffene(n) Property(s).
         $this->RegisterTimer($this->GetPendingRowUpdateFlushTimerIdent(), 0, 'IPSSL_ProcessPendingRowUpdateFlush($_IPS[\'TARGET\']);');
+        // Taegliche Lizenz-Statuspruefung (Widerruf/Ablaufverlaengerung ohne neuen
+        // Schluessel, siehe CheckLicenseStatus/GetLicenseInfo) - Intervall wird erst in
+        // ApplyChanges() gesetzt (nur waehrend IS_TRIAL_BUILD, wie die bestehende
+        // Aktivierungsmeldung).
+        $this->RegisterTimer($this->GetLicenseCheckTimerIdent(), 0, 'IPSSL_CheckLicenseStatus($_IPS[\'TARGET\']);');
     }
 
     public function Destroy(): void
@@ -585,6 +594,12 @@ private const LANGUAGE_FLAGS = [
         // PushVisualizationUpdate()-Neuberechnung ohne jeden API-Aufruf, also auch bei
         // dieser Taktung keine spuerbare Last.
         $this->SetTimerInterval($this->GetTranslationStatsTimerIdent(), 2 * 60 * 1000);
+
+        // Taegliche Lizenz-Statuspruefung (Widerruf/Ablaufverlaengerung, siehe
+        // CheckLicenseStatus) - nur waehrend IS_TRIAL_BUILD, dieselbe Bedingung wie
+        // die bestehende Aktivierungsmeldung (TrackLicenseActivationIfNew oben) - ein
+        // Vollversion-Build ohne Lizenzpruefung braucht auch keinen taeglichen Check.
+        $this->SetTimerInterval($this->GetLicenseCheckTimerIdent(), self::IS_TRIAL_BUILD ? self::LICENSE_CHECK_INTERVAL_SECONDS * 1000 : 0);
 
         $this->SyncValueUpdateRegistrations();
 
@@ -1380,6 +1395,18 @@ private const LANGUAGE_FLAGS = [
         $this->FlushPendingTrackedRowUpdates();
     }
 
+    // Timer-Callback (taeglich, siehe RegisterTimer in Create()/SetTimerInterval in
+    // ApplyChanges()) - fragt online nach, ob der eingetragene Lizenzschluessel noch
+    // aktiv ist bzw. ob sich sein effektives Ablaufdatum geaendert hat (siehe
+    // PerformDailyLicenseCheck). Unabhaengig von TrackLicenseActivationIfNew (die nur
+    // bei einer AENDERUNG des eingetragenen Schluessels fragt) - erst dieser Timer
+    // sorgt dafuer, dass ein Widerruf oder eine Ablaufverlaengerung ankommt, OHNE dass
+    // der Admin selbst etwas am Konfigurationsformular aendert.
+    public function CheckLicenseStatus(): void
+    {
+        $this->PerformDailyLicenseCheck();
+    }
+
     // Build 76: "Aufräumen" (Nutzer-Wunsch, analog zur gleichnamigen Funktion in
     // Symcons eigener Lösung) - entfernt Zeilen aus "Objektnamen"/"Eigene Texte"/
     // "Beschriftungen"/"Automations"/"Charts" (Build 108), die bei einem FRISCHEN
@@ -1711,10 +1738,11 @@ private const LANGUAGE_FLAGS = [
     private function TrackLicenseActivationIfNew(bool $AllowRecheck = false): void
     {
         $info = $this->GetLicenseInfo();
-        if (!($info['valid'] ?? false) && !($info['blocked'] ?? false)) {
-            // Kein (mehr) gültiger/geblockter Schlüssel aktiv - eine später erneut
-            // eingetragene Lizenz (auch falls es zufällig wieder derselbe Schlüssel
-            // wie vorher ist) soll auf jeden Fall wieder frisch geprüft werden.
+        if (!($info['valid'] ?? false) && !($info['blocked'] ?? false) && !($info['revoked'] ?? false)) {
+            // Kein (mehr) gültiger/geblockter/widerrufener Schlüssel aktiv - eine
+            // später erneut eingetragene Lizenz (auch falls es zufällig wieder
+            // derselbe Schlüssel wie vorher ist) soll auf jeden Fall wieder frisch
+            // geprüft werden.
             $this->WriteAttributeString(self::attributeLastCheckedLicenseKeyHash, '');
 
             return;
@@ -1722,7 +1750,10 @@ private const LANGUAGE_FLAGS = [
 
         $keyHash = hash('sha256', $this->ReadPropertyString(self::propertyLicenseKey));
         $licensee = $this->GetLicenseeIdentifier();
-        $recheckBlocked = $AllowRecheck && $this->ReadAttributeString(self::attributeBlockedLicenseKeyHash) === $keyHash;
+        $recheckBlocked = $AllowRecheck && (
+            $this->ReadAttributeString(self::attributeBlockedLicenseKeyHash) === $keyHash
+            || $this->ReadAttributeString(self::attributeRevokedLicenseKeyHash) === $keyHash
+        );
 
         if (!$recheckBlocked && $this->ReadAttributeString(self::attributeLastCheckedLicenseKeyHash) === $keyHash) {
             return;
@@ -1753,15 +1784,10 @@ private const LANGUAGE_FLAGS = [
     // Weitergabe des Schlüssels (z.B. als "gebraucht" im Ebay) - das wird server-
     // seitig ausgewertet (siehe shop/admin/activations.php), nicht hier.
     //
-    // Die Antwort des Report-Servers wird ausgewertet, um EINMALIG (bei diesem
-    // Aufruf) zu pruefen, ob dieser Schluessel laut Shop bereits gegen eine
-    // hoeherwertige Edition eingetauscht wurde (siehe includes SLIPS_UPGRADE_
-    // PRODUCTS/upgraded_to_license_id) - {"blocked": true} statt der sonst
-    // immer leeren 204-Antwort. Ein geblockter Schluessel wird NICHT hart
-    // ungueltig, sondern setzt die Testphase dieser Instanz frisch auf 30 Tage
-    // mit vollem Funktionsumfang zurueck (siehe README Abschnitt 8) - genug Zeit,
-    // um einen gueltigen Schluessel einzutragen, ohne die Kachel sofort
-    // zurückzustufen.
+    // Die Antwort des Report-Servers wird ueber ApplyActivationReportResponse()
+    // ausgewertet (geteilt mit der taeglichen Statuspruefung, siehe
+    // PerformDailyLicenseCheck) - {"blocked": true}/{"revoked": true}/
+    // {"active": true, "expiresAt": ...} statt der sonst immer leeren 204-Antwort.
     private function RecordLicenseActivation(string $KeyHash, string $Licensee, array $Log): void
     {
         $entry = [
@@ -1779,19 +1805,98 @@ private const LANGUAGE_FLAGS = [
         }
 
         $response = $this->CallActivationReportAPI(self::LICENSE_ACTIVATION_REPORT_URL, json_encode($entry));
-        $decoded = $response !== null ? json_decode($response, true) : null;
-        $blocked = is_array($decoded) && ($decoded['blocked'] ?? false) === true;
+        $this->ApplyActivationReportResponse($KeyHash, $response);
+    }
 
-        if ($blocked) {
+    // Geteilte Antwort-Auswertung fuer RecordLicenseActivation() (einmalig, bei
+    // Schluessel-Aenderung) UND PerformDailyLicenseCheck() (taeglich, unabhaengig
+    // vom Schluessel-Wert) - beide rufen denselben Meldeserver-Endpoint mit
+    // demselben Payload auf, siehe shop/license-activation-report.php im
+    // Synergetix-Website-Repo. "Fail open": eine nicht verwertbare/fehlende
+    // Antwort (Netzwerkfehler, siehe CallActivationReportAPI) aendert NICHTS am
+    // zuletzt bekannten Stand - weder blocked/revoked noch der Ablauf-Override
+    // werden dabei zurueckgesetzt.
+    //
+    // "revoked" (Admin hat die Lizenz im Shop deaktiviert, z.B. Widerruf/
+    // Rueckerstattung) ist bewusst UNABHAENGIG von "blocked" (Upgrade-Sperre) -
+    // anders als dort wird die Testphase NICHT auf frische 30 Tage zurueckgesetzt,
+    // siehe attributeRevokedLicenseKeyHash/README Abschnitt 8. Ein vom Server
+    // zurueckgemeldetes expiresAt (nur im "weder blocked noch revoked"-Fall
+    // gesetzt) ueberschreibt in GetLicenseInfo() das im Schluessel selbst
+    // signierte Ablaufdatum, OHNE dass ein neuer Schluessel ausgestellt werden
+    // muss - ermoeglicht eine Abo-Verlaengerung/-Verkuerzung rein serverseitig.
+    private function ApplyActivationReportResponse(string $KeyHash, ?string $ResponseJson): void
+    {
+        $decoded = $ResponseJson !== null ? json_decode($ResponseJson, true) : null;
+        if (!is_array($decoded)) {
+            return;
+        }
+
+        if (($decoded['revoked'] ?? false) === true) {
+            $this->WriteAttributeString(self::attributeRevokedLicenseKeyHash, $KeyHash);
+
+            return;
+        }
+        if ($this->ReadAttributeString(self::attributeRevokedLicenseKeyHash) === $KeyHash) {
+            // Server meldet jetzt "nicht (mehr) widerrufen" fuer genau diesen
+            // Schluessel (z.B. Widerruf im Shop zurueckgenommen) - lokale Sperre
+            // aufheben.
+            $this->WriteAttributeString(self::attributeRevokedLicenseKeyHash, '');
+        }
+
+        if (($decoded['blocked'] ?? false) === true) {
             $this->WriteAttributeString(self::attributeBlockedLicenseKeyHash, $KeyHash);
             $this->WriteAttributeInteger(self::attributeTrialStartedAt, time());
-        } elseif ($this->ReadAttributeString(self::attributeBlockedLicenseKeyHash) === $KeyHash) {
+
+            return;
+        }
+        if ($this->ReadAttributeString(self::attributeBlockedLicenseKeyHash) === $KeyHash) {
             // Server meldet jetzt "nicht (mehr) geblockt" fuer genau diesen
             // Schluessel (z.B. serverseitig manuell entsperrt) - lokale Sperre
             // aufheben. Die bereits zurueckgesetzte Testphase bleibt unangetastet
             // (kein Grund, dem Nutzer die verbleibenden Tage wieder wegzunehmen).
             $this->WriteAttributeString(self::attributeBlockedLicenseKeyHash, '');
         }
+
+        $expiresAt = $decoded['expiresAt'] ?? null;
+        if (is_int($expiresAt) || (is_float($expiresAt) && floor($expiresAt) === $expiresAt)) {
+            $this->WriteAttributeInteger(self::attributeLicenseExpiresAtOverride, (int) $expiresAt);
+            $this->WriteAttributeString(self::attributeLicenseExpiresAtOverrideKeyHash, $KeyHash);
+        }
+    }
+
+    // Taegliche Statuspruefung (siehe CheckLicenseStatus) - anders als
+    // TrackLicenseActivationIfNew() NICHT an eine Aenderung des eingetragenen
+    // Schluessels gekoppelt, sondern feuert unabhaengig davon einmal pro Tag, damit
+    // ein Widerruf/eine Ablaufverlaengerung auch ohne jedes Zutun des Admins
+    // ankommt. Kein eigener Eintrag in attributeActivationLog (das bleibt
+    // ausschliesslich fuer echte Aktivierungsereignisse - ein taeglicher
+    // Heartbeat wuerde die letzten-20-Eintraege-Historie sonst binnen weniger
+    // Wochen komplett verdraengen und fuer die Weiterverkauf-Erkennung nutzlos
+    // machen, siehe shop/admin/activations.php).
+    private function PerformDailyLicenseCheck(): void
+    {
+        $key = $this->ReadPropertyString(self::propertyLicenseKey);
+        if ($key === '' || self::LICENSE_ACTIVATION_REPORT_URL === '') {
+            return;
+        }
+        // Nur ein signaturtechnisch gueltiger Schluessel wird taeglich geprueft -
+        // ein falscher/kaputter Schluessel ergab ohnehin nie eine gueltige Lizenz
+        // und braucht keine taegliche Netzwerkanfrage.
+        if ($this->ValidateLicenseKey($key) === null) {
+            return;
+        }
+
+        $keyHash = hash('sha256', $key);
+        $entry = [
+            'licenseKeyHash' => $keyHash,
+            'licensee'       => $this->GetLicenseeIdentifier(),
+            'activatedAt'    => time(),
+        ];
+
+        $response = $this->CallActivationReportAPI(self::LICENSE_ACTIVATION_REPORT_URL, json_encode($entry));
+        $this->ApplyActivationReportResponse($keyHash, $response);
+        $this->WriteAttributeInteger(self::attributeLastDailyLicenseCheckAt, time());
     }
 
     // Eigene, überschreibbare Methode fürs HTTP-POST (wie CallGoogleTranslateAPI) - so
@@ -1909,7 +2014,20 @@ private const LANGUAGE_FLAGS = [
             return ['valid' => false];
         }
 
+        $keyHash = hash('sha256', $key);
+
+        // Ein vom Meldeserver ueber die taegliche Statuspruefung zurueckgemeldetes
+        // Ablaufdatum (siehe attributeLicenseExpiresAtOverride/
+        // ApplyActivationReportResponse) ERSETZT das im Schluessel selbst
+        // signierte expiresAt vollstaendig (Verlaengerung ODER Verkuerzung eines
+        // Abos moeglich) - nur wirksam fuer GENAU den Schluessel, fuer den er
+        // zuletzt gemeldet wurde (Hash-Vergleich), damit ein spaeter eingetragener
+        // ANDERER Schluessel ihn nicht versehentlich erbt.
         $expiresAt = (int) $payload['expiresAt'];
+        if ($this->ReadAttributeString(self::attributeLicenseExpiresAtOverrideKeyHash) === $keyHash) {
+            $expiresAt = $this->ReadAttributeInteger(self::attributeLicenseExpiresAtOverride);
+        }
+
         $common = [
             'type'             => $payload['type'],
             'expiresAt'        => $expiresAt,
@@ -1923,11 +2041,22 @@ private const LANGUAGE_FLAGS = [
         }
 
         // Rein lokaler Vergleich gegen den zuletzt vom Aktivierungs-Report-Server
+        // gemeldeten Widerrufs-Status (siehe attributeRevokedLicenseKeyHash/
+        // ApplyActivationReportResponse) - kein erneuter Online-Check bei jedem
+        // Aufruf, nur einmal taeglich (siehe PerformDailyLicenseCheck). Anders als
+        // "blocked" unten wird dabei KEINE frische Testphase gewaehrt - siehe
+        // README Abschnitt 8.
+        $revokedHash = $this->ReadAttributeString(self::attributeRevokedLicenseKeyHash);
+        if ($revokedHash !== '' && $keyHash === $revokedHash) {
+            return ['valid' => false, 'revoked' => true] + $common;
+        }
+
+        // Rein lokaler Vergleich gegen den zuletzt vom Aktivierungs-Report-Server
         // gemeldeten Block-Status (siehe attributeBlockedLicenseKeyHash/
         // RecordLicenseActivation) - kein erneuter Online-Check bei jedem Aufruf.
         // Ein ANDERER, hier eingetragener Schluessel ist davon nicht betroffen.
         $blockedHash = $this->ReadAttributeString(self::attributeBlockedLicenseKeyHash);
-        if ($blockedHash !== '' && hash('sha256', $key) === $blockedHash) {
+        if ($blockedHash !== '' && $keyHash === $blockedHash) {
             return ['valid' => false, 'blocked' => true] + $common;
         }
 
@@ -6888,7 +7017,18 @@ private const LANGUAGE_FLAGS = [
             array_sum(array_map(fn ($text) => mb_strlen($text, 'UTF-8'), $Texts))
         );
 
-        $this->SendDebug('GoogleTranslate_Response', $DebugContext . ' | ' . ($response ?? '(keine Antwort)'), 0);
+        // Build 120 (Nutzer gefunden, live per Debug-Log): CallGoogleTranslateAPI()
+        // liefert bei JEDEM Fehler (HTTP-Fehlercode oder cURL-Netzwerkfehler)
+        // bewusst `null` zurück - das interne "fehlgeschlagen"-Signal, das die
+        // gesamte restliche Verarbeitungskette (TranslateChunk, Provider-Fallback,
+        // ...) benötigt. Die tatsächliche, oft aufschlussreiche Fehlerantwort (HTTP-
+        // Code + Body) wurde dabei bereits VORHER in der eigenen "GoogleTranslate"-
+        // Debug-Zeile vollständig geloggt (siehe CallGoogleTranslateAPI) - der
+        // bisherige Text "(keine Antwort)" hier war deshalb irreführend: er suggerierte
+        // "der Server hat gar nicht geantwortet", obwohl in Wahrheit eine klare
+        // Fehlerantwort (z.B. "User Rate Limit Exceeded") empfangen UND bereits
+        // geloggt wurde - nur eben nicht als Übersetzungsergebnis verwertbar.
+        $this->SendDebug('GoogleTranslate_Response', $DebugContext . ' | ' . ($response ?? '(fehlgeschlagen - Details in der "GoogleTranslate"-Zeile direkt darüber)'), 0);
 
         if ($response === null) {
             return null;
@@ -6949,7 +7089,7 @@ private const LANGUAGE_FLAGS = [
             array_sum(array_map(fn ($text) => mb_strlen($text, 'UTF-8'), $Texts))
         );
 
-        $this->SendDebug('DeepLTranslate_Response', $DebugContext . ' | ' . ($response ?? '(keine Antwort)'), 0);
+        $this->SendDebug('DeepLTranslate_Response', $DebugContext . ' | ' . ($response ?? '(fehlgeschlagen - Details in der "DeepLTranslate"-Zeile direkt darüber)'), 0);
 
         if ($response === null) {
             return null;
@@ -7039,7 +7179,7 @@ private const LANGUAGE_FLAGS = [
 
         $response = $this->CallFreeTranslateAPI($url, mb_strlen($Text, 'UTF-8'));
 
-        $this->SendDebug('FreeTranslate_Response', $DebugContext . ' | ' . ($response ?? '(keine Antwort)'), 0);
+        $this->SendDebug('FreeTranslate_Response', $DebugContext . ' | ' . ($response ?? '(fehlgeschlagen - Details in der "FreeTranslate"-Zeile direkt darüber)'), 0);
 
         if ($response === null) {
             return null;
@@ -8451,6 +8591,11 @@ HTML;
     private function GetPendingRowUpdateFlushTimerIdent(): string
     {
         return self::timerPrefix . $this->InstanceID . self::timerIdentPendingRowUpdateFlush;
+    }
+
+    private function GetLicenseCheckTimerIdent(): string
+    {
+        return self::timerPrefix . $this->InstanceID . self::timerIdentLicenseCheck;
     }
 
     // Timer-Callback (siehe RegisterTimer in Create()) - schickt bereits offenen

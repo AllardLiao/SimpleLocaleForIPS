@@ -249,6 +249,32 @@ trait SimpleLocaleConstants
     // geblockt wurde.
     private const attributeLastCheckedLicenseKeyHash = 'LastCheckedLicenseKeyHash';
 
+    // SHA-256-Hash des aktuell als WIDERRUFEN bekannten Lizenzschluessels (leer =
+    // keiner) - gesetzt von der taeglichen Statuspruefung (siehe
+    // CheckLicenseStatus/ApplyActivationReportResponse), wenn der Meldeserver
+    // {"revoked": true} liefert (Admin hat die Lizenz im Shop deaktiviert, z.B.
+    // nach einem Widerruf/einer Rueckerstattung - siehe Synergetix-Website-Repo,
+    // shop/admin/order.php). Bewusst ein EIGENES Attribut statt
+    // attributeBlockedLicenseKeyHash mitzubenutzen: anders als ein Upgrade-Block
+    // setzt "revoked" die Testphase NICHT auf frische 30 Tage zurueck - siehe
+    // README Abschnitt 8.
+    private const attributeRevokedLicenseKeyHash = 'RevokedLicenseKeyHash';
+
+    // Vom Meldeserver ueber die taegliche Statuspruefung zurueckgemeldetes,
+    // ggf. AKTUALISIERTES Ablaufdatum (Unix-Timestamp, 0 = kein Override
+    // bekannt) fuer genau den Schluessel in attributeLicenseExpiresAtOverrideKeyHash
+    // - ueberschreibt in GetLicenseInfo() das im Schluessel selbst signierte
+    // expiresAt, OHNE dass ein neuer Schluessel ausgestellt/eingetragen werden
+    // muss (siehe shop/admin/order.php's "Ablaufdatum ueberschreiben"-Feld). Der
+    // Schluessel-Hash wird mitgespeichert, damit ein spaeter eingetragener
+    // ANDERER Schluessel diesen Override nicht versehentlich erbt.
+    private const attributeLicenseExpiresAtOverride = 'LicenseExpiresAtOverride';
+    private const attributeLicenseExpiresAtOverrideKeyHash = 'LicenseExpiresAtOverrideKeyHash';
+
+    // Zeitpunkt (Unix-Timestamp) der letzten taeglichen Statuspruefung, rein
+    // informativ/fuer Debugging - keine Fachlogik haengt daran.
+    private const attributeLastDailyLicenseCheckAt = 'LastDailyLicenseCheckAt';
+
     // Zeitpunkt (Unix-Timestamp) des letzten TATSAECHLICHEN Sprachwechsels (zu einer
     // anderen als der bis dahin aktiven Sprache) - nur relevant ohne das Feature
     // "unlimited_language_switch" (siehe IsLanguageSwitchRateLimited), z.B. bei der
@@ -494,6 +520,11 @@ trait SimpleLocaleConstants
     private const timerIdentTranslationStats = 'TranslationStats';
     private const timerIdentPendingRowUpdateFlush = 'PendingRowUpdateFlush';
     private const timerIdentCleanupReload = 'CleanupReload';
+    private const timerIdentLicenseCheck = 'LicenseCheck';
+
+    // Intervall der taeglichen Lizenz-Statuspruefung (siehe CheckLicenseStatus) -
+    // bewusst 24h, wie von Kai gewuenscht (kein Push, nur einmal taeglich).
+    private const LICENSE_CHECK_INTERVAL_SECONDS = 86400;
 
     // Build 71: Debounce-Fenster fuer BufferPendingTrackedRowUpdate - erst wenn eine
     // extern getrackte "Eigene Texte"-Variable fuer diese Zeitspanne RUHIG bleibt
