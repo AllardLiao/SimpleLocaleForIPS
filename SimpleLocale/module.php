@@ -2486,6 +2486,93 @@ private const LANGUAGE_FLAGS = [
         $this->ApplyAutomationsLanguage($Language, $sourceLanguage);
         $this->ApplyChartsLanguage($Language, $sourceLanguage);
         $this->ApplyGreetingLanguage($Language, $sourceLanguage, $writtenValueObjectIDs);
+
+        $this->SyncCurrentLanguageIntoCache($Language, $sourceLanguage);
+    }
+
+    // Build 125 (Nutzer-Wunsch, direkter Nachbericht der Automations/Objektnamen-
+    // Korruptions-Untersuchung): eine manuelle Korrektur einer Zielsprachen-Zelle
+    // im Formular landet nur in der jeweiligen Zeilen-Property, NIE im
+    // persistenten Übersetzungs-Cache (siehe StoreCachedTranslation - wird
+    // ausschließlich nach einem frischen Anbieter-Aufruf befüllt). Wird eine
+    // Zeile später aus irgendeinem Grund erneut als "veraltet" erkannt (siehe
+    // ReconcileRowFields/FillMissingTranslations), liefert ein Cache-Treffer für
+    // denselben Rohtext die ALTE, VOR der manuellen Korrektur gecachte
+    // Maschinenübersetzung zurück - und die wird dann ganz normal in die
+    // Property zurückgeschrieben, die manuelle Korrektur damit nicht nur
+    // angezeigt-überschrieben, sondern dauerhaft persistiert verloren.
+    // Synct deshalb bei jedem tatsächlichen ApplyLanguage()-Lauf (siehe
+    // ApplyChanges' Fingerprint-Kurzschluss - läuft nicht bei jedem VM_UPDATE)
+    // den aktuell aufgelösten Zellwert JEDER Zeile für die gerade aktive
+    // Sprache in den Cache zurück - ob der Wert ursprünglich von einem
+    // Anbieter oder von Hand kam, spielt für den Cache ab sofort keine Rolle
+    // mehr. Ein einziger Lese-/Schreibvorgang für die gesamte Cache-Property
+    // statt je Zeile einzeln; schreibt nur, wenn sich mindestens ein Eintrag
+    // tatsächlich geändert hat.
+    private function SyncCurrentLanguageIntoCache(string $Language, string $InstanceSourceLanguage): void
+    {
+        if ($Language === self::langOriginalImport) {
+            return;
+        }
+
+        $updates = [];
+        foreach ($this->GetTranslatableFieldGroupsByProperty() as $property => $fieldGroups) {
+            foreach ($this->DecodeRows($property) as $row) {
+                $rowSourceLanguage = $this->GetRowSourceLanguage($row, $InstanceSourceLanguage);
+                if ($Language === $rowSourceLanguage) {
+                    continue;
+                }
+                foreach ($fieldGroups as $group) {
+                    $rawText = (string) ($row[$group['raw']] ?? '');
+                    $cellValue = (string) ($row[$group['prefix'] . $Language] ?? '');
+                    if ($rawText === '' || $cellValue === '') {
+                        continue;
+                    }
+                    $updates[$rowSourceLanguage][$rawText] = $cellValue;
+                }
+            }
+        }
+
+        if ($updates === []) {
+            return;
+        }
+
+        $cache = json_decode($this->ReadAttributeString(self::attributeTranslationCache), true);
+        if (!is_array($cache)) {
+            $cache = [];
+        }
+
+        $changed = false;
+        foreach ($updates as $rowSourceLanguage => $byRawText) {
+            foreach ($byRawText as $rawText => $value) {
+                $key = $this->BuildTranslationCacheKey($rowSourceLanguage, $Language, $rawText);
+                if (($cache[$key]['v'] ?? null) === $value) {
+                    continue;
+                }
+                $cache[$key] = [
+                    'v' => $value,
+                    'h' => (int) ($cache[$key]['h'] ?? 0),
+                    't' => time(),
+                ];
+                $changed = true;
+            }
+        }
+
+        if (!$changed) {
+            return;
+        }
+
+        // Dieselbe Verdraengungslogik wie StoreCachedTranslation - siehe dort fuer
+        // die Begruendung (haeufig genutzte Eintraege ueberleben, nicht die
+        // zuletzt eingefuegten).
+        if (count($cache) > self::TRANSLATION_CACHE_MAX_ENTRIES) {
+            uasort($cache, static function ($a, $b): int {
+                return (($a['h'] ?? 0) <=> ($b['h'] ?? 0)) ?: (($a['t'] ?? 0) <=> ($b['t'] ?? 0));
+            });
+            $cache = array_slice($cache, count($cache) - self::TRANSLATION_CACHE_MAX_ENTRIES, null, true);
+        }
+
+        $this->WriteAttributeString(self::attributeTranslationCache, json_encode($cache));
     }
 
     // Build 70: Nachhol-Mechanismus fuer den "nur aktive Sprache sofort"-Ansatz (siehe

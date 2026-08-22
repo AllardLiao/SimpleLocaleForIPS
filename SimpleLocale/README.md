@@ -3089,3 +3089,34 @@ der ursprünglichen Fassung übernommen.
   Segment mit eingebettetem Bild liefert null Knoten, Bild bleibt trotzdem
   exakt erhalten; echter Text neben einem Bild liefert weiterhin genau
   diesen einen Knoten), volle Suite grün.
+
+* **Build 125 (Nutzer-Wunsch, direkter Nachbericht der Automations/
+  Objektnamen-Korruptions-Untersuchung): der persistente Übersetzungs-Cache
+  war nie mit manuellen Korrekturen synchronisiert.** Eine im Formular von
+  Hand korrigierte Zielsprachen-Zelle (z.B. "Salir" statt der ursprünglich
+  maschinell übersetzten "Andar") landete bisher ausschließlich in der
+  jeweiligen Zeilen-Property - der persistente Cache
+  (`StoreCachedTranslation`) wird ausschließlich nach einem frischen
+  Anbieter-Aufruf befüllt, nie bei einer manuellen Eingabe. Wurde eine
+  solche Zeile später aus irgendeinem Grund erneut als "veraltet" erkannt
+  (z.B. durch `ReconcileRowFields`, siehe die noch laufende Untersuchung in
+  Build 122/123), lieferte ein Cache-Treffer für denselben Rohtext die
+  ALTE, vor der Korrektur gecachte Maschinenübersetzung zurück - und die
+  landete dann ganz normal wieder in der Property: die manuelle Korrektur
+  wurde nicht nur angezeigt-überschrieben, sondern dauerhaft persistiert
+  verloren, unabhängig davon, was genau die Neuübersetzung ursprünglich
+  ausgelöst hat.
+  `ApplyLanguage()` synct jetzt bei jedem tatsächlichen Lauf (läuft dank
+  des bestehenden Fingerprint-Kurzschlusses nicht bei jedem VM_UPDATE) den
+  aktuell aufgelösten Zellwert jeder Zeile für die gerade aktive Sprache in
+  den Cache zurück - ob der Wert ursprünglich von einem Anbieter oder von
+  Hand kam, spielt für den Cache ab sofort keine Rolle mehr. Behebt damit
+  nicht zwingend die noch unbekannte URSACHE der Automations/Objektnamen-
+  Korruption, verhindert aber wirksam, dass eine erneute Übersetzung
+  überhaupt noch auf einen veralteten, vor-korrigierten Cache-Eintrag
+  zurückgreifen kann. Ein Lese-/Schreibvorgang für die gesamte
+  Cache-Property statt je Zeile einzeln, schreibt nur bei tatsächlicher
+  Änderung. Neuer Regressionstest (manuelle Korrektur überschreibt den
+  alten Cache-Eintrag, bereits synchroner Eintrag verursacht keinen
+  Schreibvorgang, Quellsprache und leere Zellen werden nie gesynct), volle
+  Suite grün.
