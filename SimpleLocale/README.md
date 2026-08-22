@@ -3061,3 +3061,13 @@ der ursprünglichen Fassung übernommen.
   Mutation Property, Zeilen-Schlüssel sowie die alten
   `Quellsprache`/`UebersetztGegen`-Werte einer Zeile, für die dieser Pfad
   auslösen wird - wird nach Abschluss der Untersuchung wieder entfernt.
+
+* **Build 123, rein diagnostisch: `AutoRescan()` loggt jetzt seinen eigenen
+  Start.** Bisher waren ein manueller Rescan (Button) und ein
+  Timer-ausgelöster Auto-Rescan im Debug-Log nicht unterscheidbar (beide
+  riefen `ScanRootTree()` identisch auf). Neue Zeile
+  `AutoRescan: Timer-ausgeloester Rescan startet jetzt` direkt beim
+  Timer-Callback - hilft, im Rahmen derselben Automations-Korruptions-
+  Untersuchung (siehe Build 122) zu bestätigen oder auszuschließen, ob ein
+  gemeldeter Vorfall zeitlich mit einem automatischen Hintergrund-Rescan
+  zusammenfällt. Wird zusammen mit dem Build-122-Logging wieder entfernt.
