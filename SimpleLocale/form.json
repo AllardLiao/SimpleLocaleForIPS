@@ -393,7 +393,7 @@
                 {
                     "type": "List",
                     "name": "ObjectTexts",
-                    "caption": "Eigene Texte",
+                    "caption": "Eigene Texte (String-Variablen)",
                     "add": false,
                     "delete": true,
                     "rowCount": 10,
@@ -414,12 +414,6 @@
                             "caption": "Pfad",
                             "name": "Path",
                             "width": "200px",
-                            "save": true
-                        },
-                        {
-                            "caption": "Original-Import (Name)",
-                            "name": "ORIGINAL_IMPORT_Name",
-                            "width": "150px",
                             "save": true
                         },
                         {

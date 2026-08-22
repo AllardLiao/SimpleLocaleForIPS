@@ -471,7 +471,7 @@ Bewusst außerhalb von v1: Google und DeepL gleichzeitig für dieselbe Übersetz
 Name                            | Beschreibung
 -------------------------------- | ------------------
 Zielsprachen                    | Sprachen, in die übersetzt werden soll. Auswahl-Optionen kommen ab Werk aus der eingebauten Liste, mit konfiguriertem Google-/DeepL-Key aus deren dynamisch geladener Liste (siehe oben). Ausgegraut, wenn ein bezahlter Anbieter konfiguriert ist, aber noch keine Liste laden konnte, oder wenn das Sprachlimit einer "Spezialversion"-Lizenz erreicht ist (siehe Abschnitt 8). Wichtig: Nach dem Klick auf "Sprachliste aktualisieren" die Instanzkonfiguration einmal schließen und neu öffnen, bevor Häkchen gesetzt werden - sonst kann die Konsole falsche Sprachen speichern.
-Objektnamen / Eigene Texte / Beschriftungen | Listen der gefundenen Objekte mit Quelltext und je einer Spalte pro Zielsprache. Übersetzungen sind hier direkt editierbar; leere Zellen werden beim nächsten Rescan automatisch übersetzt. "Beschriftungen" siehe [Abschnitt 2](#2-bekannte-einschränkungen) (Fork-Mechanismus). **Hinweis:** Das Konfigurationsformular persistiert extern (per `VM_UPDATE`) automatisch geänderte Texte alle 12 Minuten, wenn es Änderungen gibt, was zu einem Refresh dieses Formulars führt - bitte speichere Deine eigene Arbeit rechtzeitig. Solange etwas ansteht, zeigt das Formular oben einen Hinweis mit der nächsten Refresh-Zeit an (siehe [Abschnitt 2](#2-bekannte-einschränkungen) für die genauen Details, was dabei geschützt ist und was nicht).
+Objektnamen / Eigene Texte (String-Variablen) / Beschriftungen | Listen der gefundenen Objekte mit Quelltext und je einer Spalte pro Zielsprache. Übersetzungen sind hier direkt editierbar; leere Zellen werden beim nächsten Rescan automatisch übersetzt. "Eigene Texte" enthält ausschließlich String-Variablen und trackt dort ausschließlich den WERT - der Name derselben Variable wird ausschließlich in "Objektnamen" geführt (jedes Objekt bekommt dort ohnehin eine eigene Zeile), keine zweite, separat editierbare Namens-Kopie. "Beschriftungen" siehe [Abschnitt 2](#2-bekannte-einschränkungen) (Fork-Mechanismus). **Hinweis:** Das Konfigurationsformular persistiert extern (per `VM_UPDATE`) automatisch geänderte Texte alle 12 Minuten, wenn es Änderungen gibt, was zu einem Refresh dieses Formulars führt - bitte speichere Deine eigene Arbeit rechtzeitig. Solange etwas ansteht, zeigt das Formular oben einen Hinweis mit der nächsten Refresh-Zeit an (siehe [Abschnitt 2](#2-bekannte-einschränkungen) für die genauen Details, was dabei geschützt ist und was nicht).
 Automations                     | Liste der gefundenen Automation-Einträge der oben unter "Kachel-Visualisierung" gewählten Instanz mit Quelltext und je einer Spalte pro Zielsprache - funktioniert genauso wie Objektnamen.
 Charts                          | Liste der Legenden-Titel gefundener Chart-Elemente (Symcons eingebautes Chart-Widget) im Root-Baum, je Datenreihe eine Zeile (Schlüssel Chart-Objekt-ID + Variablen-ID) - funktioniert genauso wie Objektnamen. Als Quelltext gilt der im Chart selbst gesetzte Titel, oder - falls das Titel-Feld leer gelassen wurde - ersatzweise der aktuelle Name der zugrunde liegenden Variable (genau das zeigt Symcon in diesem Fall selbst in der Legende an). Nur im Leer-Titel-Fall gilt zusätzlich: steht diese Variable auch als eigenständiges Objekt im Root-Baum (z. B. als eigene Anzeige-Kachel), taucht dafür **keine** Zeile hier auf - diese Variable wird ohnehin über "Objektnamen" übersetzt, Symcon übernimmt diesen Namen automatisch in die Chart-Legende. Ein bewusst gesetzter, eigener Titel erscheint dagegen immer hier, unabhängig davon, ob seine Variable zusätzlich eigenständig im Baum steht.
 Begrüßung                       | Übersetzt den Begrüßungstext der Kachel-Visualisierung, unabhängig davon, ob "Show Greeting" gerade "Automatic"/"Static" (freier Text, Feld "Name"/Property `GreetingName`) oder "Variable" (Live-Wert einer String-Variable) ist - beide landen in derselben einen Zeile hier, siehe eigenen Absatz unten. Ein Hinweistext direkt über der Liste zeigt an, welcher Modus gerade aktiv ist. Bei "Show Greeting" = "None" bleibt die Liste leer.
@@ -2749,3 +2749,58 @@ der ursprünglichen Fassung übernommen.
   `IPSSL_ChartScanError` aufgetreten) - bleibt aber vorsorglich abgesichert,
   bis ein Lauf mit tatsächlich zu entfernenden Zeilen das endgültig klärt.
   Regressionstest ergänzt, volle Suite grün.
+* **Build 115 klärt den "N+1"-Zähler bei "Aufräumen" endgültig auf (kein
+  Bug) und entfernt als direkte Folge davon eine echte, vom Nutzer
+  identifizierte strukturelle Redundanz.** Ein exakter Vorher/Nachher-
+  Vergleich aller Zeilen-Properties (eigens dafür geschriebenes
+  Diagnose-Skript, dreimal ausgeführt: vor dem Anlegen einer Test-Instanz,
+  danach, nach deren Löschen + "Aufräumen") zeigte: 5 gelöschte Objekte →
+  6 gemeldete Zeilen, exakt weil eine der 5 Variablen ("Aktive Szene") eine
+  String-Variable war und dadurch sowohl in "Objektnamen" (1 Zeile) als
+  auch in "Eigene Texte" (1 weitere Zeile) stand - macht 4×1 + 1×2 = 6.
+  Derselbe Mechanismus erklärte rückwirkend auch einen früheren Test (7
+  Objekte → 8 gemeldet). "Aufräumen" zählt schlicht Zeilen über mehrere
+  Listen hinweg, nicht "Objekte" - korrektes, erwartbares Verhalten.
+
+  **Die zugrunde liegende Redundanz selbst wurde vom Nutzer zu Recht als
+  eigenständiges Problem erkannt:** da "Objektnamen" ausnahmslos JEDES
+  Objekt im Baum abdeckt (siehe `WalkTree()`), war die zusätzliche, eigene
+  Namens-Übersetzung, die "Eigene Texte" bislang für ihre Zeilen führte
+  (`ORIGINAL_IMPORT_Name`/`Name_<lang>`, siehe Build 107), für JEDES
+  Objekt strukturell redundant - nie eine eigenständige Datenquelle,
+  sondern immer eine zweite, unabhängig editierbare und unabhängig
+  übersetzte Kopie desselben Namens. Build 107 hatte nur den daraus
+  entstehenden SCHREIB-Konflikt entschärft (`$writtenNameObjectIDs` ließ
+  "Objektnamen" beim Sprachwechsel gewinnen) - der Name ließ sich in der
+  Admin-Tabelle aber weiterhin an ZWEI Stellen bearbeiten, mit dem Risiko,
+  dass beide auseinanderlaufen, und wurde weiterhin zweimal (unnötig)
+  übersetzt.
+
+  Build 115 entfernt die zweite Datenquelle komplett statt nur ihren
+  Schreibkonflikt zu entschärfen: "Eigene Texte" trackt jetzt
+  ausschließlich noch den WERT einer String-Variable, keinen Namen mehr -
+  der Name kommt ausschließlich aus "Objektnamen". Entfernt: die Felder/
+  Konstanten `fieldOriginalImportName`/`fieldNamePrefix`, die komplette
+  `$writtenNameObjectIDs`-Logik in `ApplyLanguage()` (die "Eigene
+  Texte"-Schleife ruft jetzt nie mehr `IPS_SetName()` auf, nur noch
+  `WriteTrackedValueString()`), die Spalte "Original-Import (Name)" samt
+  ihrem Sprachspalten-Satz in `BuildListColumns()`/`form.json`, und das
+  Namensfeld beim Scan in `WalkTree()`. Bestehende Installationen behalten
+  die alten `ORIGINAL_IMPORT_Name`/`Name_<lang>`-Schlüssel als harmlosen,
+  nie wieder gelesenen/geschriebenen Ballast in ihrer gespeicherten
+  `ObjectTexts`-Property - keine Migration nötig.
+
+  Bei dieser Gelegenheit umbenannt, da explizit nachgefragt und bestätigt
+  (`ResolveStringVariableID()` filtert ausschließlich auf
+  `VARIABLETYPE_STRING`): "Eigene Texte" heißt jetzt "Eigene Texte
+  (String-Variablen)", in allen vier Sprachen.
+
+  Als Nebenaufräumung außerdem entfernt: das komplette temporäre
+  Diagnose-Logging aus Build 111/113 (`IPSSL_CleanupCountDiag`/
+  `IPSSL_ChartScanError`) - beide damit untersuchten Verdachtsfälle sind
+  jetzt aufgeklärt bzw. abgesichert, die zugehörigen `try`/`catch`-Schutz-
+  mechanismen selbst bleiben unverändert bestehen, nur ihr Logging wurde
+  entfernt. Regressionstest komplett auf die neue Architektur umgeschrieben
+  (kein Name-Feld mehr in "Eigene Texte", kein Schreibkonflikt mehr
+  möglich, da strukturell ausgeschlossen statt nur verhindert), volle
+  Suite grün.
