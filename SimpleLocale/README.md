@@ -3168,3 +3168,36 @@ der ursprünglichen Fassung übernommen.
   TypeError mehr aus, Symmetrie-Check gegen den realen `(string)`-Cast) und
   für die Mapping-Kürzung (lange Zeilen werden gekürzt, ObjectID-Zuordnung
   bleibt erhalten, kurze Texte unverändert), volle Suite grün.
+
+* **Build 127 (direkter Nachbericht zu Build 126, live per Debug-Log
+  aufgeklärt): der persistente Übersetzungs-Cache war bei jedem Zugriff
+  exakt bei seiner Obergrenze von 1000 Einträgen - ständige Verdrängung,
+  selbst ein bei jedem Update exakt gleichbleibender Text ("Echo Info" in
+  einer Alexa-Medienplayer-Kachel) landete zehn Minuten in Folge wiederholt
+  beim Anbieter statt aus dem Cache bedient zu werden.** Ursache
+  gemeinsam mit dem Nutzer aufgeklärt: `TranslateBatch()` cachte bisher
+  zusätzlich zum (eigentlich wertvollen) Knoten-Cache aus
+  `TranslateBatchUncached()` auch den KOMPLETTEN Zeilen-Rohtext. Für ein
+  HTML-Widget, dessen Gesamtinhalt sich durch neue Messwerte/Songtitel bei
+  praktisch jedem Update ändert (live bestätigt: der Rohtext enthielt den
+  aktuell auf dem Echo-Gerät laufenden Songtitel/Interpreten, z.B. "Más
+  Cara [Explicit]" von "Bad Gyal"), ist so ein Eintrag so gut wie nie
+  wiederverwendbar - belegt aber dauerhaft einen der 1000 begrenzten
+  Cache-Plätze und verdrängt dadurch echte, oft wiederverwendete
+  Knoten-Einträge wie den festen HTML-`<title>`-Text "Echo Info", noch
+  bevor die überhaupt einen zweiten Treffer landen konnten. Für
+  `$IsHtml`-Inhalte wird die ganze Zeile jetzt nicht mehr zusätzlich
+  gecacht - nur noch die (bereits vorhandene, feingranulare) Knotenebene,
+  wie vom Nutzer bestätigt ("im Cache sollten nur die API-gefeuerten
+  Übersetzungen landen, nicht der HTML... Zerlegte HTML im Cache ist ok").
+  Nicht-HTML-Zeilen (Objektnamen, Automations, ...) sind unverändert
+  weiterhin auf Zeilenebene gecacht, da die typischerweise kurz und exakt
+  wiederkehrend sind.
+  Zusätzlich (Nutzer-Wunsch): die Diagnose-Log-Zeilen aus Build 126
+  (Cache-Hit/Miss, Schreibvorgang) zeigen jetzt zusätzlich den mitgegebenen
+  Kontext (z.B. `ValueObjectID=46091`) statt nur den Text - macht einen
+  Log-Eintrag im Konfigurationsformular eindeutig einem konkreten Objekt
+  zuordenbar.
+  Neuer Regressionstest (HTML-Inhalt landet nicht mehr als ganze Zeile im
+  Cache, Nicht-HTML-Zeilen bleiben unverändert gecacht, Symmetrie-Check
+  gegen den realen `$IsHtml`-Schutz), volle Suite grün.
