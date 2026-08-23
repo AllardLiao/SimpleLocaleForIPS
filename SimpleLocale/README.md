@@ -3316,3 +3316,33 @@ der ursprünglichen Fassung übernommen.
   Scan-Sprachen-Erklärung, 100%-Breite aller Tabellen, Info-Popups statt
   Dauertext, Lizenz-Panel-Bedingung, generische Formular-Rekursion), volle
   Suite grün.
+
+* **Build 131 (direkter Nachbericht zu Build 130, Nutzer-Feedback): mehrere
+  Korrekturen und Ergänzungen an der Formular-Überarbeitung.**
+  - **"Statistiken" fehlte komplett in `locale.json`** - live gefunden,
+    blieb in einer nicht-deutschen Konsolensprache unübersetzt stehen.
+    Ergänzt in allen vier Sprachen. Bei der Gelegenheit auch zwei weitere,
+    schon länger bestehende Lücken geschlossen ("- Google Cloud
+    Translate:", "- DeepL:" in den Anbieter-Pausenzeilen, sowie
+    "Quelltext" in der Eigenen Übersetzungstabelle).
+  - Neuer, genereller Regressionstest: gleicht jetzt JEDE buchstabenhaltige
+    Formular-Beschriftung (inkl. Popups, Spalten-Überschriften) gegen
+    `locale.json` ab, mit expliziten Ausnahmen für reine Marken-/
+    Produktnamen und das Info-Symbol - hätte den "Statistiken"-Bug von
+    Anfang an gefangen.
+  - Neue Erklärung direkt nach "Bevorzugter Anbieter" (Nutzer-Nachfrage,
+    gemeinsam verifiziert): DeepL verlangt für Englisch/Portugiesisch
+    zwingend eine großgeschriebene Regionsvariante (EN-GB/EN-US,
+    PT-PT/PT-BR) statt eines einfachen "EN"/"PT" wie bei Google - ein
+    Anbieterwechsel kann daher bereits gewählte Zielsprachen ungültig
+    machen. Verweist auf Abschnitt 7 der Dokumentation.
+  - Die vier Info-Popup-Buttons aus Build 130 sind jetzt schmal (40px)
+    statt in voller Button-Breite - sollte optisch eher wie ein
+    Icon-Knopf statt wie ein zweiter vollwertiger Button wirken. Zusätzlich
+    ein experimenteller `"icon": "information"`-Versuch, um Symcons
+    Standard-Zahnradsymbol auf PopupButton-Elementen zu ersetzen -
+    ungewiss, ob Symcons Formular-Renderer das tatsächlich unterstützt,
+    Rückmeldung nach Installation nötig.
+  Neuer Regressionstest (locale.json-Vollständigkeit für das gesamte
+  Formular, DeepL-Erklärung vorhanden und korrekt platziert, schmale
+  Info-Buttons), volle Suite grün.
