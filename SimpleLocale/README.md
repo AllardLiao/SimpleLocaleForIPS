@@ -3278,3 +3278,41 @@ der ursprünglichen Fassung übernommen.
   HTML-Inhalten (kein Aufruf mehr, Text läuft trotzdem normal in die
   Knoten-Aufteilung weiter; Nicht-HTML-Zeilen unverändert), volle Suite
   grün.
+
+* **Build 130 (Nutzer-Wunsch): Überarbeitung der Nutzerführung im
+  Konfigurationsformular, mehrere Verbesserungen für mehr Übersicht.**
+  - Alle Kachel-bezogenen Optionen (Symbole ein-/ausblenden,
+    Übersetzungsstatistik in der Kachel, eigene Sprachauswahl-Kachel inkl.
+    HTML-Editor) sind jetzt in einem eigenen, standardmäßig eingeklappten
+    ExpansionPanel "Kachel-Einstellungen" zusammengefasst, statt einzeln
+    im Konfiguration-Panel zu stehen.
+  - Die Statistiken sind jetzt zweispaltig/eingerückt dargestellt: links
+    steht einmalig "Statistiken" als Überschrift, rechts die eigentlichen
+    Werte (Laufzeit, stündlich, insgesamt, durch Cache eingespart).
+  - "Automatischer Rescan" steht jetzt direkt über dem neuen
+    "Kachel-Einstellungen"-Panel statt am Ende des Konfiguration-Panels.
+  - Neue kurze Erklärung direkt unter "Scan-Sprache": weist auf das in
+    Abschnitt 7 dokumentierte Verhalten hin, dass bereits erfasste Zeilen
+    ihre eigene, eingefrorene Quellsprache behalten, und dass ein
+    laufender Automatischer Rescan ein neues Objekt fälschlich in der
+    falschen Sprache einfrieren kann, wenn dabei nicht "Aktuell aktive
+    Sprache" = Scan-Sprache aktiv ist.
+  - Alle neun Übersetzungstabellen (Zielsprachen, Objektnamen, Eigene
+    Texte, Beschriftungen, Automations, Charts, Begrüßung, Unbenannte
+    Objekte, Eigene Übersetzungstabelle) sind jetzt einheitlich auf 100%
+    Bildschirmbreite gestreckt.
+  - Das Lizenz-Panel klappt nicht mehr allein deshalb automatisch auf,
+    weil irgendein Lizenzschlüssel eingetragen ist (betraf praktisch jede
+    aktiv genutzte Instanz dauerhaft) - nur noch, wenn die Testphase
+    tatsächlich abgelaufen ist.
+  - Die langen Erläuterungstexte unter den vier Aktions-Buttons ("Rescan",
+    "Aufräumen", "Cache leeren", "Anbieter prüfen") stehen nicht mehr als
+    Dauertext im Formular, sondern sind in ein Info-Popup ausgelagert,
+    erreichbar über ein ℹ️-Symbol direkt neben dem jeweiligen Button.
+  Zwei neue Sprachdatei-Einträge (Panel-Beschriftung "Kachel-
+  Einstellungen", neue Scan-Sprachen-Erklärung) in allen vier
+  Konsolensprachen ergänzt. Neuer Regressionstest (neues Panel + Inhalt,
+  Positionierung von Automatischem Rescan, zweispaltige Statistiken,
+  Scan-Sprachen-Erklärung, 100%-Breite aller Tabellen, Info-Popups statt
+  Dauertext, Lizenz-Panel-Bedingung, generische Formular-Rekursion), volle
+  Suite grün.

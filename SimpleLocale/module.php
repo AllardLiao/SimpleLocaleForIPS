@@ -1146,11 +1146,15 @@ private const LANGUAGE_FLAGS = [
                     break;
 
                 // Lizenz-Panel nur im Testversion-Build relevant; klappt automatisch auf,
-                // wenn gerade etwas Aufmerksamkeit braucht (Testphase abgelaufen oder
-                // bereits ein Schlüssel eingetragen) statt es standardmäßig zu verstecken.
+                // wenn gerade etwas Aufmerksamkeit braucht (Testphase abgelaufen), bleibt
+                // sonst standardmäßig eingeklappt. Build 130 (Nutzer-Wunsch, Nutzerführung):
+                // bisher klappte es auch schon allein deshalb auf, weil IRGENDEIN
+                // Lizenzschlüssel eingetragen war - das betraf praktisch jede aktiv
+                // genutzte Instanz dauerhaft, obwohl ein gültig eingetragener Schlüssel
+                // für sich genommen keine Aufmerksamkeit braucht.
                 case 'LicensePanel':
                     $element['visible'] = self::IS_TRIAL_BUILD;
-                    $element['expanded'] = $this->IsTrialLocked() || $this->ReadPropertyString(self::propertyLicenseKey) !== '';
+                    $element['expanded'] = $this->IsTrialLocked();
                     break;
 
                 // Zeigt die Details des aktiven Lizenzschlüssels an (Edition, Typ,
