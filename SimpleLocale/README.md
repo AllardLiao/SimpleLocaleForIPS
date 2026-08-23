@@ -3240,3 +3240,41 @@ der ursprünglichen Fassung übernommen.
   Ergebnis liefern (keine falsche "Wunder-Fix"-Erwartung), verifiziert den
   tatsächlichen Vorteil (ein einziger Sperr-/Lese-/Schreibzyklus statt N),
   und bestätigt die erhöhte Kapazität, volle Suite grün.
+
+* **Build 129, zwei gemeinsam hergeleitete Verbesserungen des
+  Übersetzungs-Caches (Nutzer-Wunsch/-Report):**
+  - **Cache-Kapazität weiter erhöht, 3000 → 10.000.** Gemeinsame Herleitung
+    mit dem Nutzer: der "harte Kern" tatsächlich dauerhaft wertvoller
+    Cache-Einträge ist klein (nur Zeilen, deren Rohtext sich bei JEDER
+    Aktualisierung ändert, durchlaufen überhaupt `TranslateBatch()` -
+    bereits gefüllte statische Zeilen wie Objektnamen/Automations werden
+    über `ResolveRowValue()` DIREKT aus der Property gelesen, nie über den
+    Cache). Grob geschätzt 50-150 wirklich wiederkehrende Rohtexte
+    (Wochentags-Kürzel, gängige Wetterbeschreibungen, feste Widget-Label) ×
+    2-3 Zielsprachen ergeben etwa 100-450 Einträge harten Kern. Da der
+    Cache (ein lokaler JSON-Attribut-Zugriff, keine Netzwerklatenz) selbst
+    bei deutlich größeren Werten um Größenordnungen schneller bleibt als
+    jeder Anbieter-Aufruf (spürbare Verlangsamung realistisch erst im
+    Bereich mehrerer Zehntausend Einträge/mehrerer MB JSON), gibt es keinen
+    Nachteil darin, die Kapazität komfortabel über den harten Kern zu
+    setzen - schützt insbesondere deutlich größere Installationen als
+    diese vor dem in Build 126-128 behobenen Verdrängungseffekt und spart
+    Übersetzungskontingent.
+  - **Der äußere, zeilen-weite Cache-Check in `TranslateBatch()` wird für
+    `$IsHtml`-Inhalte komplett übersprungen.** Live per Debug-Log gefunden
+    (Nutzer-Beobachtung): seit Build 127 landet der komplette
+    HTML-Zeilen-Rohtext nie mehr im Cache (nur noch seine Knoten, siehe
+    `TranslateBatchUncached`/`StoreCachedTranslationsBatch`) - ein
+    `GetCachedTranslation()`-Aufruf dafür ist bei `$IsHtml=true` also
+    strukturell IMMER ein Fehlschlag, kostete aber trotzdem
+    Semaphor-Erwerb, volles Lesen/Dekodieren des gesamten (jetzt bis zu
+    10.000 Einträge großen) Caches und eine Hash-Berechnung über ein
+    komplettes HTML-Dokument - live bestätigt als wiederholte garantierte
+    Leerläufe für ganze `<!doctype html>`/`<style>`/`<table>`-Blöcke.
+    Nicht-HTML-Inhalte (Objektnamen, Automations, ...) sind unverändert
+    weiterhin auf Zeilenebene gecacht, da dort ein Treffer tatsächlich
+    möglich ist.
+  Neuer Regressionstest für den übersprungenen Zeilen-Cache-Check bei
+  HTML-Inhalten (kein Aufruf mehr, Text läuft trotzdem normal in die
+  Knoten-Aufteilung weiter; Nicht-HTML-Zeilen unverändert), volle Suite
+  grün.
