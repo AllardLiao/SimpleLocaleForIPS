@@ -59,6 +59,7 @@
                     "name": "TranslationStatsRow1",
                     "visible": false,
                     "items": [
+                        {"type": "Label", "caption": "Statistiken", "width": "150px"},
                         {"type": "Label", "caption": "Seit Inbetriebnahme am"},
                         {"type": "Label", "name": "TranslationStatsSinceDateLabel", "caption": ""},
                         {"type": "Label", "caption": "Tag(e)."}
@@ -69,6 +70,7 @@
                     "name": "TranslationStatsRow2",
                     "visible": false,
                     "items": [
+                        {"type": "Label", "caption": "", "width": "150px"},
                         {"type": "Label", "caption": "Stündlich:"},
                         {"type": "Label", "name": "TranslationStatsRequestsPerHourLabel", "caption": ""},
                         {"type": "Label", "caption": "Anfrage(n),"},
@@ -81,6 +83,7 @@
                     "name": "TranslationStatsRow3",
                     "visible": false,
                     "items": [
+                        {"type": "Label", "caption": "", "width": "150px"},
                         {"type": "Label", "caption": "Insgesamt:"},
                         {"type": "Label", "name": "TranslationStatsTotalRequestsLabel", "caption": ""},
                         {"type": "Label", "caption": "Anfrage(n),"},
@@ -93,6 +96,7 @@
                     "name": "TranslationStatsRow4",
                     "visible": false,
                     "items": [
+                        {"type": "Label", "caption": "", "width": "150px"},
                         {"type": "Label", "caption": "Durch den Cache eingespart:"},
                         {"type": "Label", "name": "TranslationStatsCacheSavedRequestsLabel", "caption": ""},
                         {"type": "Label", "caption": "Anfrage(n),"},
@@ -121,6 +125,10 @@
                     ]
                 },
                 {
+                    "type": "Label",
+                    "caption": "Nur die Voreinstellung für neu gefundene Objekte - bereits erfasste Zeilen behalten dauerhaft ihre eigene, beim ersten Fund eingefrorene Quellsprache (pro Zeile in \"Übersetzung\" unten änderbar). Wichtig bei laufendem Automatischem Rescan: ein neues Objekt wird immer mit seinem gerade LIVE angezeigten Namen als \"Original\" übernommen - bleibt dabei nicht \"Aktuell aktive Sprache\" = Scan-Sprache aktiv, friert der Rescan den Namen fälschlich in der falschen Sprache ein. Siehe Abschnitt 7 der Dokumentation."
+                },
+                {
                     "type": "Select",
                     "name": "CurrentLanguage",
                     "caption": "Aktuell aktive Sprache",
@@ -132,64 +140,78 @@
                     ]
                 },
                 {
-                    "type": "CheckBox",
-                    "name": "ShowGlobeIcon",
-                    "caption": "Simple-Locale-Symbol in der Kachel anzeigen"
+                    "type": "NumberSpinner",
+                    "name": "AutoRescanInterval",
+                    "caption": "Automatischer Rescan (Minuten, 0 = aus)",
+                    "minimum": 0
                 },
                 {
-                    "type": "CheckBox",
-                    "name": "ShowInfoIcon",
-                    "caption": "Info-Symbol in der Kachel anzeigen"
-                },
-                {
-                    "type": "CheckBox",
-                    "name": "ShowTranslationStats",
-                    "caption": "Übersetzungsstatistik in der Kachel anzeigen"
-                },
-                {
-                    "type": "Label",
-                    "caption": "Kleiner Hinweis unter dem Dropdown (\"30 Übersetzungen/h, 500 Zeichen/h\") - rein informativ, aktualisiert sich in bereits offenen Kacheln alle 10 Minuten. Für eigene Kacheln stehen unabhängig von diesem Haken die Platzhalter <!--COUNT_TRANSLATIONS--> und <!--COUNT_SIGNES--> zur Verfügung (liefern nur die Zahl, siehe Abschnitt 7 der Dokumentation)."
-                },
-                {
-                    "type": "CheckBox",
-                    "name": "UseCustomTile",
-                    "caption": "Eigene Sprachauswahl-Kachel verwenden"
-                },
-                {
-                    "type": "Label",
-                    "caption": "Aktiviert: diese Instanz liefert statt der eingebauten Optik den HTML-Code aus dem Bearbeiten-Dialog unten aus (Platzhalter werden automatisch gefüllt) - die Instanz bleibt dabei weiterhin selbst als Kachel in der Visualisierung platziert. Siehe Dokumentation Abschnitt 7 für die Platzhalter/Vorgaben."
-                },
-                {
-                    "type": "PopupButton",
-                    "name": "CustomTileHtmlButton",
-                    "caption": "Eigenen Kachel-HTML-Code bearbeiten",
-                    "popup": {
-                        "caption": "Eigener Kachel-HTML-Code",
-                        "items": [
-                            {
-                                "type": "ValidationTextBox",
-                                "name": "CustomTileHtml",
-                                "caption": "HTML-Code",
-                                "multiline": true,
-                                "width": "100%"
-                            },
-                            {
-                                "type": "Label",
-                                "caption": "Sprachauswahl (ersetzt den Platzhalter <!--LANGUAGE_SELECT--> oben): unten vorbefüllt mit einem funktionierenden Beispiel (zwei Flaggen statt Dropdown, feste Sprachcodes) - direkt anpassbar. Feld leeren, um stattdessen wieder die automatisch generierte Dropdown-Sprachauswahl zu verwenden."
-                            },
-                            {
-                                "type": "ValidationTextBox",
-                                "name": "CustomLanguageSelectHtml",
-                                "caption": "Sprachauswahl-HTML-Code",
-                                "multiline": true,
-                                "width": "100%"
+                    "type": "ExpansionPanel",
+                    "name": "TileSettingsPanel",
+                    "caption": "Kachel-Einstellungen",
+                    "expanded": false,
+                    "items": [
+                        {
+                            "type": "CheckBox",
+                            "name": "ShowGlobeIcon",
+                            "caption": "Simple-Locale-Symbol in der Kachel anzeigen"
+                        },
+                        {
+                            "type": "CheckBox",
+                            "name": "ShowInfoIcon",
+                            "caption": "Info-Symbol in der Kachel anzeigen"
+                        },
+                        {
+                            "type": "CheckBox",
+                            "name": "ShowTranslationStats",
+                            "caption": "Übersetzungsstatistik in der Kachel anzeigen"
+                        },
+                        {
+                            "type": "Label",
+                            "caption": "Kleiner Hinweis unter dem Dropdown (\"30 Übersetzungen/h, 500 Zeichen/h\") - rein informativ, aktualisiert sich in bereits offenen Kacheln alle 10 Minuten. Für eigene Kacheln stehen unabhängig von diesem Haken die Platzhalter <!--COUNT_TRANSLATIONS--> und <!--COUNT_SIGNES--> zur Verfügung (liefern nur die Zahl, siehe Abschnitt 7 der Dokumentation)."
+                        },
+                        {
+                            "type": "CheckBox",
+                            "name": "UseCustomTile",
+                            "caption": "Eigene Sprachauswahl-Kachel verwenden"
+                        },
+                        {
+                            "type": "Label",
+                            "caption": "Aktiviert: diese Instanz liefert statt der eingebauten Optik den HTML-Code aus dem Bearbeiten-Dialog unten aus (Platzhalter werden automatisch gefüllt) - die Instanz bleibt dabei weiterhin selbst als Kachel in der Visualisierung platziert. Siehe Dokumentation Abschnitt 7 für die Platzhalter/Vorgaben."
+                        },
+                        {
+                            "type": "PopupButton",
+                            "name": "CustomTileHtmlButton",
+                            "caption": "Eigenen Kachel-HTML-Code bearbeiten",
+                            "popup": {
+                                "caption": "Eigener Kachel-HTML-Code",
+                                "items": [
+                                    {
+                                        "type": "ValidationTextBox",
+                                        "name": "CustomTileHtml",
+                                        "caption": "HTML-Code",
+                                        "multiline": true,
+                                        "width": "100%"
+                                    },
+                                    {
+                                        "type": "Label",
+                                        "caption": "Sprachauswahl (ersetzt den Platzhalter <!--LANGUAGE_SELECT--> oben): unten vorbefüllt mit einem funktionierenden Beispiel (zwei Flaggen statt Dropdown, feste Sprachcodes) - direkt anpassbar. Feld leeren, um stattdessen wieder die automatisch generierte Dropdown-Sprachauswahl zu verwenden."
+                                    },
+                                    {
+                                        "type": "ValidationTextBox",
+                                        "name": "CustomLanguageSelectHtml",
+                                        "caption": "Sprachauswahl-HTML-Code",
+                                        "multiline": true,
+                                        "width": "100%"
+                                    }
+                                ]
                             }
-                        ]
-                    }
-                },
-                {
-                    "type": "Label",
-                    "caption": "Alternativ, unabhängig von diesem Feld: eine komplett eigenständige Kachel (z.B. eine separate HTMLBox-Instanz) lässt sich mit IPSSL_GetAvailableLanguages()/IPSSL_SetLanguage() bauen - siehe Dokumentation Abschnitt 9. Beide Wege benötigen dieselbe Pro Edition."
+                        },
+                        {
+                            "type": "Label",
+                            "caption": "Alternativ, unabhängig von diesem Feld: eine komplett eigenständige Kachel (z.B. eine separate HTMLBox-Instanz) lässt sich mit IPSSL_GetAvailableLanguages()/IPSSL_SetLanguage() bauen - siehe Dokumentation Abschnitt 9. Beide Wege benötigen dieselbe Pro Edition."
+                        }
+                    ]
                 },
                 {
                     "type": "ExpansionPanel",
@@ -292,12 +314,6 @@
                             "caption": "Kontakt-E-Mail für den kostenfreien Anbieter (optional, hebt das Tageskontingent von 5.000 auf 50.000 Zeichen)"
                         }
                     ]
-                },
-                {
-                    "type": "NumberSpinner",
-                    "name": "AutoRescanInterval",
-                    "caption": "Automatischer Rescan (Minuten, 0 = aus)",
-                    "minimum": 0
                 }
             ]
         },
@@ -311,6 +327,7 @@
                     "type": "List",
                     "name": "TargetLanguages",
                     "caption": "Zielsprachen",
+                    "width": "100%",
                     "add": true,
                     "delete": true,
                     "rowCount": 5,
@@ -344,6 +361,7 @@
                     "type": "List",
                     "name": "UnnamedObjects",
                     "caption": "Unbenannte Objekte",
+                    "width": "100%",
                     "add": false,
                     "delete": false,
                     "rowCount": 5,
@@ -366,6 +384,7 @@
                     "type": "List",
                     "name": "ObjectNames",
                     "caption": "Objektnamen",
+                    "width": "100%",
                     "add": false,
                     "delete": true,
                     "rowCount": 10,
@@ -394,6 +413,7 @@
                     "type": "List",
                     "name": "ObjectTexts",
                     "caption": "Eigene Texte (String-Variablen)",
+                    "width": "100%",
                     "add": false,
                     "delete": true,
                     "rowCount": 10,
@@ -428,6 +448,7 @@
                     "type": "List",
                     "name": "EnumerationOptions",
                     "caption": "Beschriftungen",
+                    "width": "100%",
                     "add": false,
                     "delete": true,
                     "rowCount": 10,
@@ -468,6 +489,7 @@
                     "type": "List",
                     "name": "ObjectAutomations",
                     "caption": "Automations",
+                    "width": "100%",
                     "add": false,
                     "delete": true,
                     "rowCount": 5,
@@ -490,6 +512,7 @@
                     "type": "List",
                     "name": "ObjectCharts",
                     "caption": "Charts",
+                    "width": "100%",
                     "add": false,
                     "delete": true,
                     "rowCount": 5,
@@ -524,6 +547,7 @@
                     "type": "List",
                     "name": "ObjectGreeting",
                     "caption": "Begrüßung",
+                    "width": "100%",
                     "add": false,
                     "delete": true,
                     "rowCount": 2,
@@ -545,6 +569,7 @@
                     "type": "List",
                     "name": "ManualTranslations",
                     "caption": "Eigene Übersetzungstabelle",
+                    "width": "100%",
                     "add": true,
                     "delete": true,
                     "rowCount": 8,
@@ -759,13 +784,27 @@
             "onClick": "IPS_RequestAction($id, 'ActivateLicense', true);"
         },
         {
-            "type": "Button",
-            "caption": "Visualisierung neu einlesen und fehlende Übersetzungen ergänzen",
-            "onClick": "IPS_RequestAction($id, 'Rescan', true);"
-        },
-        {
-            "type": "Label",
-            "caption": "Durchsucht den Root der Visualisierung erneut nach neuen/verschobenen Objekten und übersetzt nur noch leere Zellen in Objektnamen, Eigene Texte, Beschriftungen und Charts. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben."
+            "type": "RowLayout",
+            "items": [
+                {
+                    "type": "Button",
+                    "caption": "Visualisierung neu einlesen und fehlende Übersetzungen ergänzen",
+                    "onClick": "IPS_RequestAction($id, 'Rescan', true);"
+                },
+                {
+                    "type": "PopupButton",
+                    "caption": "ℹ️",
+                    "popup": {
+                        "caption": "Visualisierung neu einlesen und fehlende Übersetzungen ergänzen",
+                        "items": [
+                            {
+                                "type": "Label",
+                                "caption": "Durchsucht den Root der Visualisierung erneut nach neuen/verschobenen Objekten und übersetzt nur noch leere Zellen in Objektnamen, Eigene Texte, Beschriftungen und Charts. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben."
+                            }
+                        ]
+                    }
+                }
+            ]
         },
         {
             "type": "ProgressBar",
@@ -775,13 +814,27 @@
             "visible": false
         },
         {
-            "type": "Button",
-            "caption": "Übersetzungen gelöschter Elemente in der Visualisierung entfernen",
-            "onClick": "IPS_RequestAction($id, 'CleanupOrphanedRows', true);"
-        },
-        {
-            "type": "Label",
-            "caption": "Entfernt dauerhaft alle Zeilen aus Objektnamen, Eigenen Texten, Beschriftungen, Automations und Charts, die bei einem frischen Scan der aktuell konfigurierten Visualisierung nicht mehr gefunden werden - z.B. weil das zugehörige Objekt gelöscht oder aus der Visualisierung entfernt/verschoben wurde. Anders als ein normaler Rescan (der solche Zeilen bewusst unangetastet lässt, siehe oben) werden sie hier komplett gelöscht, nicht nur übersprungen - bereits geleistete Übersetzungsarbeit für diese Zeilen geht dabei verloren (regeneriert sich automatisch, falls das Objekt später wieder auftaucht). Vor dem Klick prüfen, ob die \"Kachel-Visualisierung\"-Auswahl oben wirklich korrekt und vollständig ist - eine versehentlich falsche oder unvollständige Root-Kategorie würde sonst auch noch gültige Übersetzungen unwiederbringlich löschen. \"Begrüßung\" ist von dieser Funktion nicht betroffen (keine aus dem Baum gescannte Liste, sondern eine einzelne, direkt konfigurierte Einstellung)."
+            "type": "RowLayout",
+            "items": [
+                {
+                    "type": "Button",
+                    "caption": "Übersetzungen gelöschter Elemente in der Visualisierung entfernen",
+                    "onClick": "IPS_RequestAction($id, 'CleanupOrphanedRows', true);"
+                },
+                {
+                    "type": "PopupButton",
+                    "caption": "ℹ️",
+                    "popup": {
+                        "caption": "Übersetzungen gelöschter Elemente in der Visualisierung entfernen",
+                        "items": [
+                            {
+                                "type": "Label",
+                                "caption": "Entfernt dauerhaft alle Zeilen aus Objektnamen, Eigenen Texten, Beschriftungen, Automations und Charts, die bei einem frischen Scan der aktuell konfigurierten Visualisierung nicht mehr gefunden werden - z.B. weil das zugehörige Objekt gelöscht oder aus der Visualisierung entfernt/verschoben wurde. Anders als ein normaler Rescan (der solche Zeilen bewusst unangetastet lässt, siehe oben) werden sie hier komplett gelöscht, nicht nur übersprungen - bereits geleistete Übersetzungsarbeit für diese Zeilen geht dabei verloren (regeneriert sich automatisch, falls das Objekt später wieder auftaucht). Vor dem Klick prüfen, ob die \"Kachel-Visualisierung\"-Auswahl oben wirklich korrekt und vollständig ist - eine versehentlich falsche oder unvollständige Root-Kategorie würde sonst auch noch gültige Übersetzungen unwiederbringlich löschen. \"Begrüßung\" ist von dieser Funktion nicht betroffen (keine aus dem Baum gescannte Liste, sondern eine einzelne, direkt konfigurierte Einstellung)."
+                            }
+                        ]
+                    }
+                }
+            ]
         },
         {
             "type": "ProgressBar",
@@ -791,22 +844,50 @@
             "visible": false
         },
         {
-            "type": "Button",
-            "caption": "Übersetzungs-Cache leeren",
-            "onClick": "IPS_RequestAction($id, 'ClearTranslationCache', true);"
+            "type": "RowLayout",
+            "items": [
+                {
+                    "type": "Button",
+                    "caption": "Übersetzungs-Cache leeren",
+                    "onClick": "IPS_RequestAction($id, 'ClearTranslationCache', true);"
+                },
+                {
+                    "type": "PopupButton",
+                    "caption": "ℹ️",
+                    "popup": {
+                        "caption": "Übersetzungs-Cache leeren",
+                        "items": [
+                            {
+                                "type": "Label",
+                                "caption": "Löscht nur den internen Zwischenspeicher für wiederkehrende Übersetzungen (spart normalerweise API-Aufrufe für Texte, die schon einmal übersetzt wurden) - nützlich, falls ein Text weiterhin eine veraltete/falsche Übersetzung zeigt. Bereits gespeicherte Übersetzungen in Objektnamen, Eigenen Texten und Beschriftungen bleiben davon unberührt und müssen bei Bedarf weiterhin einzeln im jeweiligen Feld geleert werden, damit sie beim nächsten Rescan/Sprachwechsel neu übersetzt werden."
+                            }
+                        ]
+                    }
+                }
+            ]
         },
         {
-            "type": "Label",
-            "caption": "Löscht nur den internen Zwischenspeicher für wiederkehrende Übersetzungen (spart normalerweise API-Aufrufe für Texte, die schon einmal übersetzt wurden) - nützlich, falls ein Text weiterhin eine veraltete/falsche Übersetzung zeigt. Bereits gespeicherte Übersetzungen in Objektnamen, Eigenen Texten und Beschriftungen bleiben davon unberührt und müssen bei Bedarf weiterhin einzeln im jeweiligen Feld geleert werden, damit sie beim nächsten Rescan/Sprachwechsel neu übersetzt werden."
-        },
-        {
-            "type": "Button",
-            "caption": "Übersetzungsanbieter prüfen",
-            "onClick": "IPS_RequestAction($id, 'CheckProviders', true);"
-        },
-        {
-            "type": "Label",
-            "caption": "Schickt eine einzelne Testanfrage (\"Testabfrage\" -> Englisch) an jeden eingerichteten Anbieter (Google/DeepL, falls ein API-Key eingetragen ist, sowie immer MyMemory) und meldet direkt zurück, welcher davon gerade tatsächlich funktioniert. Läuft dabei am Cache vorbei (immer eine echte, frische Anfrage) und beendet eine ggf. laufende Pause sofort, sobald ein Anbieter wieder erfolgreich antwortet - nützlich z.B. direkt nach einem Kontingent-/Abo-Upgrade beim Anbieter, ohne auf das automatische Ende der Pause warten zu müssen."
+            "type": "RowLayout",
+            "items": [
+                {
+                    "type": "Button",
+                    "caption": "Übersetzungsanbieter prüfen",
+                    "onClick": "IPS_RequestAction($id, 'CheckProviders', true);"
+                },
+                {
+                    "type": "PopupButton",
+                    "caption": "ℹ️",
+                    "popup": {
+                        "caption": "Übersetzungsanbieter prüfen",
+                        "items": [
+                            {
+                                "type": "Label",
+                                "caption": "Schickt eine einzelne Testanfrage (\"Testabfrage\" -> Englisch) an jeden eingerichteten Anbieter (Google/DeepL, falls ein API-Key eingetragen ist, sowie immer MyMemory) und meldet direkt zurück, welcher davon gerade tatsächlich funktioniert. Läuft dabei am Cache vorbei (immer eine echte, frische Anfrage) und beendet eine ggf. laufende Pause sofort, sobald ein Anbieter wieder erfolgreich antwortet - nützlich z.B. direkt nach einem Kontingent-/Abo-Upgrade beim Anbieter, ohne auf das automatische Ende der Pause warten zu müssen."
+                            }
+                        ]
+                    }
+                }
+            ]
         },
         {
             "type": "ProgressBar",
