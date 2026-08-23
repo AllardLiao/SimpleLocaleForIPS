@@ -403,17 +403,37 @@ trait SimpleLocaleConstants
     // attributeStatsCharacterCount summiert die dabei tatsaechlich zur Uebersetzung
     // eingereichte Zeichenzahl (roh, vor jeder HTML-Text-Knoten-Zerlegung o.ae.).
     private const attributeStatsSince = 'StatsSince';
-    private const attributeStatsRequestCount = 'StatsRequestCount';
-    private const attributeStatsCharacterCount = 'StatsCharacterCount';
+    // Build 132 (Nutzer-Wunsch, gemeinsam hergeleitet): IP-Symcons "Integer"-
+    // Attributtyp ist ein klassischer 32-Bit-Integer (Bereich bis
+    // 2.147.483.647) - unabhaengig davon, dass PHP selbst auf jedem
+    // 64-Bit-System einen 64-Bit-Integer verwendet. Bei sehr langer Laufzeit
+    // (Jahre) haette das die reinen Zaehl-Attribute unten irgendwann zum
+    // Ueberlaufen/Wraparound bringen koennen, ganz ohne dass PHPs eigene
+    // Rechenoperation je ueberlaeuft - der Fehler waere ausschliesslich beim
+    // Schreiben in Symcons 32-Bit-Speicher entstanden. Auf String umgestellt
+    // (praktisch unbegrenzt, Rechnen weiterhin ueber normale PHP-Ints, nur die
+    // Persistierung aendert sich) - "V2"-Suffix im Attributnamen, damit
+    // Symcon nicht denselben Attributnamen mit geaendertem Typ wiederverwendet
+    // (unklares/riskantes Verhalten) - stattdessen ein sauberer, einmaliger
+    // Migrations-Schritt in Create() von den alten Integer-Attributen (siehe
+    // *LegacyInt-Konstanten unten) in die neuen String-Attribute, bevor die
+    // alten Namen als reine, fortan nie mehr aktualisierte Altlast liegen
+    // bleiben (harmlos, da Attribute nicht im sichtbaren Objektbaum stehen).
+    private const attributeStatsRequestCount = 'StatsRequestCountV2';
+    private const attributeStatsCharacterCount = 'StatsCharacterCountV2';
+    private const attributeStatsRequestCountLegacyInt = 'StatsRequestCount';
+    private const attributeStatsCharacterCountLegacyInt = 'StatsCharacterCount';
 
     // Zaehlt separat, wie viele Uebersetzungsanfragen/Zeichen NICHT an einen
     // Anbieter geschickt werden mussten, weil ein Cache-Treffer vorlag (siehe
     // TranslateBatch/RecordCacheSavingsStats) - laeuft parallel zu
     // attributeStatsRequestCount/attributeStatsCharacterCount oben (die zaehlen
     // nur TATSAECHLICH gestellte Anfragen), ebenfalls seit attributeStatsSince,
-    // nie zurueckgesetzt.
-    private const attributeStatsCacheSavedRequestCount = 'StatsCacheSavedRequestCount';
-    private const attributeStatsCacheSavedCharacterCount = 'StatsCacheSavedCharacterCount';
+    // nie zurueckgesetzt. Build 132: dieselbe Integer->String-Migration wie oben.
+    private const attributeStatsCacheSavedRequestCount = 'StatsCacheSavedRequestCountV2';
+    private const attributeStatsCacheSavedCharacterCount = 'StatsCacheSavedCharacterCountV2';
+    private const attributeStatsCacheSavedRequestCountLegacyInt = 'StatsCacheSavedRequestCount';
+    private const attributeStatsCacheSavedCharacterCountLegacyInt = 'StatsCacheSavedCharacterCount';
 
     // Uebersetzungs-Cache (JSON-Map "Quellsprache|Zielsprache|SHA-256(Text)" =>
     // uebersetzter Text), siehe TranslateBatch/GetCachedTranslation/

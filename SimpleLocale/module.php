@@ -399,10 +399,35 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterAttributeString(self::attributeProviderPausedUntil, '{}');
         $this->RegisterAttributeString(self::attributeLastSeenProviderCredentialsHash, '{}');
         $this->RegisterAttributeInteger(self::attributeStatsSince, 0);
-        $this->RegisterAttributeInteger(self::attributeStatsRequestCount, 0);
-        $this->RegisterAttributeInteger(self::attributeStatsCharacterCount, 0);
-        $this->RegisterAttributeInteger(self::attributeStatsCacheSavedRequestCount, 0);
-        $this->RegisterAttributeInteger(self::attributeStatsCacheSavedCharacterCount, 0);
+        $this->RegisterAttributeString(self::attributeStatsRequestCount, '0');
+        $this->RegisterAttributeString(self::attributeStatsCharacterCount, '0');
+        $this->RegisterAttributeString(self::attributeStatsCacheSavedRequestCount, '0');
+        $this->RegisterAttributeString(self::attributeStatsCacheSavedCharacterCount, '0');
+        // Build 132: alte Integer-Attribute bleiben registriert, damit Symcon sie
+        // beim Laden der Instanz nicht als "unbekannt" behandelt - werden hier
+        // ausschliesslich fuer die einmalige Migration unten gelesen, danach nie
+        // wieder beschrieben.
+        $this->RegisterAttributeInteger(self::attributeStatsRequestCountLegacyInt, 0);
+        $this->RegisterAttributeInteger(self::attributeStatsCharacterCountLegacyInt, 0);
+        $this->RegisterAttributeInteger(self::attributeStatsCacheSavedRequestCountLegacyInt, 0);
+        $this->RegisterAttributeInteger(self::attributeStatsCacheSavedCharacterCountLegacyInt, 0);
+        // Einmalige Migration: eine bereits laenger laufende Installation hat evtl.
+        // schon reale Zaehlerstaende unter den alten Integer-Attributen angesammelt -
+        // die duerfen beim Umstieg auf das neue String-Attribut nicht verloren gehen.
+        // Greift nur, solange das neue Attribut noch bei seinem Default ('0') steht
+        // (garantiert einmalig, RecordTranslationRequestStats/RecordCacheSavingsStats
+        // schreiben danach ausschliesslich das neue String-Attribut).
+        foreach ([
+            [self::attributeStatsRequestCountLegacyInt, self::attributeStatsRequestCount],
+            [self::attributeStatsCharacterCountLegacyInt, self::attributeStatsCharacterCount],
+            [self::attributeStatsCacheSavedRequestCountLegacyInt, self::attributeStatsCacheSavedRequestCount],
+            [self::attributeStatsCacheSavedCharacterCountLegacyInt, self::attributeStatsCacheSavedCharacterCount],
+        ] as [$legacyAttribute, $newAttribute]) {
+            $legacyValue = $this->ReadAttributeInteger($legacyAttribute);
+            if ($legacyValue !== 0 && $this->ReadAttributeString($newAttribute) === '0') {
+                $this->WriteAttributeString($newAttribute, (string) $legacyValue);
+            }
+        }
 
         $this->SetVisualizationType(1);
 
@@ -5902,14 +5927,14 @@ private const LANGUAGE_FLAGS = [
     // FetchLanguageNamesGoogle/Deepl).
     private function RecordTranslationRequestStats(int $CharacterCount): void
     {
-        $this->WriteAttributeInteger(
+        $this->WriteAttributeString(
             self::attributeStatsRequestCount,
-            $this->ReadAttributeInteger(self::attributeStatsRequestCount) + 1
+            (string) ((int) $this->ReadAttributeString(self::attributeStatsRequestCount) + 1)
         );
         if ($CharacterCount > 0) {
-            $this->WriteAttributeInteger(
+            $this->WriteAttributeString(
                 self::attributeStatsCharacterCount,
-                $this->ReadAttributeInteger(self::attributeStatsCharacterCount) + $CharacterCount
+                (string) ((int) $this->ReadAttributeString(self::attributeStatsCharacterCount) + $CharacterCount)
             );
         }
     }
@@ -5921,14 +5946,14 @@ private const LANGUAGE_FLAGS = [
     // an einen Anbieter gestellt wird.
     private function RecordCacheSavingsStats(int $CharacterCount): void
     {
-        $this->WriteAttributeInteger(
+        $this->WriteAttributeString(
             self::attributeStatsCacheSavedRequestCount,
-            $this->ReadAttributeInteger(self::attributeStatsCacheSavedRequestCount) + 1
+            (string) ((int) $this->ReadAttributeString(self::attributeStatsCacheSavedRequestCount) + 1)
         );
         if ($CharacterCount > 0) {
-            $this->WriteAttributeInteger(
+            $this->WriteAttributeString(
                 self::attributeStatsCacheSavedCharacterCount,
-                $this->ReadAttributeInteger(self::attributeStatsCacheSavedCharacterCount) + $CharacterCount
+                (string) ((int) $this->ReadAttributeString(self::attributeStatsCacheSavedCharacterCount) + $CharacterCount)
             );
         }
     }
@@ -5941,8 +5966,8 @@ private const LANGUAGE_FLAGS = [
     private function ComputeTranslationStats(): array
     {
         $since = $this->ReadAttributeInteger(self::attributeStatsSince);
-        $requestCount = $this->ReadAttributeInteger(self::attributeStatsRequestCount);
-        $characterCount = $this->ReadAttributeInteger(self::attributeStatsCharacterCount);
+        $requestCount = (int) $this->ReadAttributeString(self::attributeStatsRequestCount);
+        $characterCount = (int) $this->ReadAttributeString(self::attributeStatsCharacterCount);
 
         // Auf MINDESTENS eine volle Stunde gedeckelt (nicht nur eine Sekunde) -
         // sonst würde die hochgerechnete Pro-Stunde-Rate direkt nach der
@@ -5968,8 +5993,8 @@ private const LANGUAGE_FLAGS = [
             // Reine Gesamtzaehler (keine Pro-Stunde-Rate) - siehe
             // RecordCacheSavingsStats, dort ist "seit wann" bereits identisch
             // attributeStatsSince, ein eigener Zeitbezug ist daher nicht noetig.
-            'cacheSavedRequestCount'   => $this->ReadAttributeInteger(self::attributeStatsCacheSavedRequestCount),
-            'cacheSavedCharacterCount' => $this->ReadAttributeInteger(self::attributeStatsCacheSavedCharacterCount),
+            'cacheSavedRequestCount'   => (int) $this->ReadAttributeString(self::attributeStatsCacheSavedRequestCount),
+            'cacheSavedCharacterCount' => (int) $this->ReadAttributeString(self::attributeStatsCacheSavedCharacterCount),
         ];
     }
 
