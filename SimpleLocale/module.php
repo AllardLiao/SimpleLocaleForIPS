@@ -6205,7 +6205,19 @@ private const LANGUAGE_FLAGS = [
     // GetCachedTranslation/StoreCachedTranslation) - beides zusammen macht den Cache
     // deutlich widerstandsfaehiger gegen einen Schwung einmaliger Texte, der sonst
     // haeufig wiederverwendete Kern-Inhalte hinausdraengen wuerde.
-    private const TRANSLATION_CACHE_MAX_ENTRIES = 1000;
+    // Build 128 (Nutzer-Report, live bestaetigt: Cache staendig bei genau 1000
+    // Eintraegen, staendige Verdraengung): mehrere Echo-/Alexa-Geraete mit
+    // staendig wechselndem Songtitel/Interpret pro Medienplayer-Update erzeugen
+    // einen konstanten Strom echt einmaliger, nie wiederverwendeter Knoten-
+    // Eintraege (siehe SplitHtmlIntoTextNodes/TranslateBatchUncached). Der
+    // Hit-Zaehler-Mechanismus schuetzt haeufig wiederverwendete Kerntexte
+    // (z.B. den festen HTML-Titel "Echo Info") zuverlaessig, sobald sie
+    // mindestens einen zweiten Treffer verzeichnet haben - 1000 Eintraege boten
+    // dafuer bei mehreren gleichzeitig aktiven, staendig wechselnden Quellen zu
+    // wenig Puffer, um dieses kurze Zeitfenster zuverlaessig zu ueberstehen. Auf
+    // 3000 erhoeht, gemeinsam mit dem Build-128-Fix gegen Selbst-Verdraengung
+    // innerhalb eines einzelnen Uebersetzungs-Batches.
+    private const TRANSLATION_CACHE_MAX_ENTRIES = 3000;
 
     // Build 72: "Treffer der letzten 24 Stunden" wird ueber einen Decay-Zaehler
     // angenaehert statt ueber eine vollstaendige Historie einzelner Zeitstempel
@@ -6558,6 +6570,75 @@ private const LANGUAGE_FLAGS = [
         }
     }
 
+    // Build 128 (Nutzer-Report, live per Debug-Log lueckenlos bestaetigt): ein
+    // einzelnes HTML-Widget uebersetzt oft MEHRERE brandneue Knoten auf einmal
+    // (z.B. "Überwiegend Klar" + Sonnenauf-/-untergang + Windgeschwindigkeit +
+    // Windrichtung, alle zum ersten Mal gesehen). TranslateBatchUncached() rief
+    // dafuer StoreCachedTranslation() bisher EINZELN je Knoten auf - da der
+    // Cache voll ist (alle 1000 bestehenden Eintraege haben bereits mindestens
+    // einen Treffer, siehe Build 127), loeste JEDER einzelne Aufruf sofort
+    // seine EIGENE Verdraengung aus. Alle Knoten DESSELBEN Batches haben aber
+    // selbst noch Hit-Zaehler 1 (brandneu) und oft (Sekundenaufloesung von
+    // time()) sogar denselben Zeitstempel - sie sind untereinander die
+    // schwaechsten Verdraengungs-Kandidaten. Ein zuerst eingefuegter Knoten
+    // (z.B. "Überwiegend Klar") konnte dadurch durch einen nur ein paar Zeilen
+    // spaeter eingefuegten Batch-Nachbarn wieder verdraengt werden - noch BEVOR
+    // die Funktion ueberhaupt zurueckkehrte. Live bestaetigt: "Überwiegend
+    // Klar" verschwand so innerhalb desselben Wetter-Widget-Updates und war
+    // eine Sekunde spaeter fuer eine ANDERE Zeile bereits wieder weg. Sammelt
+    // jetzt ALLE frisch uebersetzten Knoten EINES Aufrufs und schreibt sie in
+    // einem einzigen Lese-Einfuege-Verdraengungs-Schreib-Zyklus - Verdraengung
+    // trifft dadurch nur noch ECHT AELTERE Eintraege aus FRUEHEREN Aufrufen,
+    // nie mehr ein Geschwister aus demselben Batch.
+    private function StoreCachedTranslationsBatch(string $SourceLanguage, string $TargetLanguage, array $Entries, string $DebugContext = ''): void
+    {
+        if ($Entries === []) {
+            return;
+        }
+
+        $ident = $this->GetTranslationCacheSemaphoreIdent();
+        $locked = IPS_SemaphoreEnter($ident, 1000);
+
+        try {
+            $cache = json_decode($this->ReadAttributeString(self::attributeTranslationCache), true);
+            if (!is_array($cache)) {
+                $cache = [];
+            }
+
+            $now = time();
+            $storedKeys = [];
+            foreach ($Entries as $entry) {
+                $key = $this->BuildTranslationCacheKey($SourceLanguage, $TargetLanguage, $entry['text']);
+                $cache[$key] = [
+                    'v' => $entry['translated'],
+                    'h' => 1,
+                    't' => $now,
+                ];
+                $storedKeys[] = $key;
+            }
+
+            // Build 128, temporaer (Diagnose, siehe StoreCachedTranslation): zeigt
+            // Batch-Groesse und Cache-Groesse VOR einer evtl. Verdraengung - wird
+            // nach Abschluss der Untersuchung wieder entfernt.
+            $this->SendDebug('IPSSL_Debug', 'StoreCachedTranslationsBatch: ' . count($Entries) . ' Knoten, cacheSizeBeforeEviction=' . count($cache) . " [$DebugContext] keys=" . implode(',', $storedKeys), 0);
+
+            if (count($cache) > self::TRANSLATION_CACHE_MAX_ENTRIES) {
+                // Dieselbe Verdraengungslogik wie StoreCachedTranslation - siehe
+                // dort fuer die Begruendung.
+                uasort($cache, static function ($a, $b): int {
+                    return (($a['h'] ?? 0) <=> ($b['h'] ?? 0)) ?: (($a['t'] ?? 0) <=> ($b['t'] ?? 0));
+                });
+                $cache = array_slice($cache, count($cache) - self::TRANSLATION_CACHE_MAX_ENTRIES, null, true);
+            }
+
+            $this->WriteAttributeString(self::attributeTranslationCache, json_encode($cache));
+        } finally {
+            if ($locked) {
+                IPS_SemaphoreLeave($ident);
+            }
+        }
+    }
+
     // Hash statt Klartext als Schluessel - Texte koennen beliebig lang sein (z.B.
     // vollstaendige HTMLBox-Widgets als "Eigene Texte"), unhandliche/übergroße
     // JSON-Schluessel werden so vermieden. Kollisionen praktisch ausgeschlossen
@@ -6888,13 +6969,20 @@ private const LANGUAGE_FLAGS = [
         foreach (array_chunk($freshNodes, self::translateMaxTextsPerRequest) as $chunk) {
             $freshNodesTranslated = array_merge($freshNodesTranslated, $this->TranslateChunk($chunk, $Source, $Target, $DebugContext, $IsHtml));
         }
+        // Build 128: alle frisch uebersetzten Knoten dieses EINEN Aufrufs
+        // gesammelt in EINEM Rutsch cachen (siehe StoreCachedTranslationsBatch) -
+        // verhindert, dass sich mehrere brandneue Geschwister-Knoten desselben
+        // Widgets gegenseitig aus dem (vollen) Cache verdraengen, noch bevor
+        // diese Funktion ueberhaupt zurueckkehrt.
+        $freshEntriesForCache = [];
         foreach ($freshNodes as $position => $node) {
             $translated = $freshNodesTranslated[$position] ?? '';
             $translatedByText[$node] = $translated;
             if ($translated !== '') {
-                $this->StoreCachedTranslation($Source, $Target, $node, $translated, $DebugContext);
+                $freshEntriesForCache[] = ['text' => $node, 'translated' => $translated];
             }
         }
+        $this->StoreCachedTranslationsBatch($Source, $Target, $freshEntriesForCache, $DebugContext);
 
         $translatedFlat = array_map(static fn (string $text): string => $translatedByText[$text] ?? '', $translatable);
 

@@ -3201,3 +3201,42 @@ der ursprünglichen Fassung übernommen.
   Neuer Regressionstest (HTML-Inhalt landet nicht mehr als ganze Zeile im
   Cache, Nicht-HTML-Zeilen bleiben unverändert gecacht, Symmetrie-Check
   gegen den realen `$IsHtml`-Schutz), volle Suite grün.
+
+* **Build 128 (direkter Nachbericht zu Build 127, live per Debug-Log
+  lückenlos bestätigt): der Cache stand bei jedem einzelnen Zugriff exakt
+  auf seiner Obergrenze - "Überwiegend Klar" verschwand innerhalb
+  desselben Wetter-Widget-Updates wieder und war eine Sekunde später für
+  eine ANDERE Zeile bereits erneut weg, obwohl es gerade erst gecacht
+  wurde.** Ursache: ein einzelnes HTML-Widget übersetzt oft mehrere
+  brandneue Knoten auf einmal (z.B. "Überwiegend Klar" + Sonnenauf-/
+  -untergang + Windgeschwindigkeit + Windrichtung) - `TranslateBatchUncached()`
+  rief dafür `StoreCachedTranslation()` bisher einzeln je Knoten auf, jeder
+  einzelne Aufruf sperrte/las/schrieb den Cache für sich.
+  Präzisierung (per Nachrechnen bestätigt, siehe Test in
+  `test_batch_cache_write_no_self_eviction.php`): rein rechnerisch, ohne
+  Nebenläufigkeit, liefern Einzeln- und gesammeltes Schreiben bei
+  gleichem Ausgangszustand dasselbe Endergebnis - das gesammelte Schreiben
+  "rettet" für sich allein keinen Knoten vor echter Reservoir-Knappheit
+  (zu wenige längst etablierte, gering genutzte Alteinträge, die die
+  Verdrängung stattdessen treffen könnte). Der tatsächliche, belegbare
+  Vorteil des gesammelten Schreibens (neue `StoreCachedTranslationsBatch()`,
+  ersetzt den bisherigen Aufruf pro Knoten) ist ein anderer: nur noch EIN
+  Sperr-/Lese-/Schreibzyklus pro Übersetzungs-Batch statt N einzelner -
+  verkleinert das Zeitfenster für die in Build 126 bereits bestätigte
+  Ursache (überlappende, gleichzeitig laufende Skriptausführungen bei
+  einem Script, das mehrere Variablen kurz hintereinander setzt) und senkt
+  den Gesamt-Overhead.
+  Die eigentliche Abhilfe gegen das beobachtete "ständig voll"-Symptom ist
+  die gleichzeitig erhöhte Cache-Kapazität: `TRANSLATION_CACHE_MAX_ENTRIES`
+  1000 → 3000. Mehrere Echo-/Alexa-Geräte mit ständig wechselndem
+  Songtitel/Interpret pro Update erzeugen einen konstanten Strom echt
+  einmaliger Knoten-Einträge, die zwar korrekt via Hit-Zähler verdrängt
+  werden, dafür bei nur 1000 Plätzen aber zu wenig Puffer ließen, bis
+  häufig wiederverwendete Kerntexte (der feste "Echo Info"-Titel,
+  wiederkehrende Wetterbeschreibungen) einen rettenden zweiten Treffer
+  verzeichnen konnten.
+  Neuer Regressionstest: bestätigt per Nachrechnen, dass beide
+  Schreibvarianten bei knappem UND bei ausreichendem Reservoir dasselbe
+  Ergebnis liefern (keine falsche "Wunder-Fix"-Erwartung), verifiziert den
+  tatsächlichen Vorteil (ein einziger Sperr-/Lese-/Schreibzyklus statt N),
+  und bestätigt die erhöhte Kapazität, volle Suite grün.
