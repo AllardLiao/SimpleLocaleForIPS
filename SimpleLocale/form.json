@@ -309,6 +309,10 @@
                             ]
                         },
                         {
+                            "type": "Label",
+                            "caption": "Achtung: DeepL verwendet eigene, großgeschriebene Sprachcodes und verlangt für Englisch/Portugiesisch zwingend eine Regionsvariante (EN-GB/EN-US, PT-PT/PT-BR) statt eines einfachen \"EN\"/\"PT\" wie bei Google. Ein Wechsel des bevorzugten Anbieters kann daher bereits gewählte Zielsprachen ungültig machen - betroffene Zeilen in \"Zielsprachen\" unten müssen dann neu ausgewählt werden. Siehe Abschnitt 7 der Dokumentation."
+                        },
+                        {
                             "type": "ValidationTextBox",
                             "name": "FreeTranslateContactEmail",
                             "caption": "Kontakt-E-Mail für den kostenfreien Anbieter (optional, hebt das Tageskontingent von 5.000 auf 50.000 Zeichen)"
@@ -794,6 +798,8 @@
                 {
                     "type": "PopupButton",
                     "caption": "ℹ️",
+                    "icon": "information",
+                    "width": "40px",
                     "popup": {
                         "caption": "Visualisierung neu einlesen und fehlende Übersetzungen ergänzen",
                         "items": [
@@ -824,6 +830,8 @@
                 {
                     "type": "PopupButton",
                     "caption": "ℹ️",
+                    "icon": "information",
+                    "width": "40px",
                     "popup": {
                         "caption": "Übersetzungen gelöschter Elemente in der Visualisierung entfernen",
                         "items": [
@@ -854,6 +862,8 @@
                 {
                     "type": "PopupButton",
                     "caption": "ℹ️",
+                    "icon": "information",
+                    "width": "40px",
                     "popup": {
                         "caption": "Übersetzungs-Cache leeren",
                         "items": [
@@ -877,6 +887,8 @@
                 {
                     "type": "PopupButton",
                     "caption": "ℹ️",
+                    "icon": "information",
+                    "width": "40px",
                     "popup": {
                         "caption": "Übersetzungsanbieter prüfen",
                         "items": [
