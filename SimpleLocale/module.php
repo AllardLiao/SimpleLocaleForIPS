@@ -365,6 +365,7 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterAttributeInteger(self::attributeAvailableLanguagesFetchedAt, 0);
         $this->RegisterAttributeString(self::attributeGuestLanguageNamesCache, '{}');
         $this->RegisterAttributeString(self::attributeTranslationCache, '{}');
+        $this->RegisterAttributeString(self::attributeSeededManualTranslationKeys, '{}');
         $this->RegisterAttributeString(self::attributeUnnamedObjects, '[]');
         $this->RegisterAttributeInteger(self::attributeLastCleanupRemovedCount, -1);
         $this->RegisterAttributeString(self::attributeLicenseInfo, '{}');
@@ -2938,6 +2939,159 @@ private const LANGUAGE_FLAGS = [
         return $result;
     }
 
+    // Build 133 (Nutzer-Wunsch, gemeinsam hergeleitet): Zahlen mit angehängter
+    // Einheit ("0.82 m/s") haben Buchstaben und laufen deshalb bislang IMMER
+    // durch die Übersetzungs-API (siehe TextNeedsTranslation/
+    // ResolveNonTranslatableText - die reine Zahlen-Reformatierung dort deckt
+    // ausdrücklich NUR Suffixe OHNE Buchstaben ab). Fast alle SI-/gängigen
+    // Maßeinheiten sind aber sprachunabhängig identisch geschrieben - eine
+    // Übersetzungsanfrage dafür ist reine Verschwendung, UND laut Nutzer-Report
+    // nicht einmal zuverlässig (MyMemory hat wiederholt "°C" fälschlich zu "°F"
+    // übersetzt, bei gleichbleibendem Zahlenwert also eine falsche Anzeige).
+    // Bewusst NICHT als unsichtbare interne Tabelle umgesetzt (erste Idee),
+    // sondern als vorbefüllte Zeilen in der bereits vorhandenen "Eigene
+    // Übersetzungstabelle" (siehe MergeBundledManualTranslations) - sichtbar
+    // und vom Nutzer jederzeit löschbar, falls eine dieser kurzen
+    // Zeichenketten in seiner Installation zufällig etwas anderes bedeutet
+    // (Nutzer-Beispiel: "SSW" als Kürzel für einen Personennamen statt
+    // Windrichtung).
+    private const UNIT_BUNDLED_TRANSLATIONS = [
+        // Elektrisch
+        'V', 'mV', 'kV', 'A', 'mA', 'W', 'kW', 'MW', 'Wh', 'kWh', 'MWh', 'Hz', 'kHz', 'MHz', 'Ω', 'VA', 'kVA', 'Ah', 'mAh',
+        // Temperatur
+        '°C', '°F', 'K',
+        // Druck
+        'Pa', 'hPa', 'kPa', 'bar', 'mbar', 'psi',
+        // Geschwindigkeit
+        'm/s', 'km/h', 'kn',
+        // Länge
+        'mm', 'cm', 'm', 'km',
+        // Fläche/Volumen
+        'm²', 'cm²', 'km²', 'ha', 'ml', 'l', 'm³', 'cm³',
+        // Masse
+        'mg', 'g', 'kg', 't',
+        // Verhältnis/Konzentration
+        '%', '‰', 'ppm', 'ppb', 'mg/l', 'µg/m³', 'g/m³',
+        // Licht/Schall
+        'lx', 'lm', 'cd', 'dB',
+        // Zeit (kurz, absichtlich OHNE das mehrdeutige "h"/"d" alleine - siehe
+        // Nutzer-Warnung zu kurzen, mehrdeutigen Kürzeln)
+        'ms',
+        // Daten
+        'kB', 'MB', 'GB', 'TB', 'kbps', 'Mbps',
+        // Winkel
+        'rad',
+        // Kraft/Energie
+        'N', 'kN', 'J', 'kJ', 'kcal',
+        // Sonstiges
+        'rpm', 'UV',
+    ];
+
+    // Build 133: Kompassrichtungen sind das GEGENTEIL von sprachunabhängig -
+    // dasselbe Kürzel kann in verschiedenen Sprachen komplett Gegensätzliches
+    // bedeuten (Nutzer-Beispiel: deutsch "O" = Ost, spanisch "O" = Oeste/WEST).
+    // Russisch und Türkisch verwenden zusätzlich völlig andere Buchstaben
+    // (kyrillisch bzw. eigene Initialen) statt N/O/S/W. 16-Punkte-Kompassrose
+    // (inkl. Zwischenrichtungen, Nutzer-Wunsch), hergeleitet aus dem
+    // international einheitlichen Muster "näherer Haupthimmelsrichtung zuerst,
+    // dann die Zwischenhimmelsrichtung" (z.B. deutsch NNO = Nord+Nordost),
+    // konsistent auf jede Sprache angewendet. Deutsch (Quellsprache) selbst
+    // taucht hier nicht auf - die Zeile speichert es ohnehin als
+    // ORIGINAL_IMPORT.
+    // Die 9 Zielsprachen, fuer die UNIT_BUNDLED_TRANSLATIONS/COMPASS_BUNDLED_TRANSLATIONS
+    // Eintraege mitliefern (siehe Nutzer-Entscheidung: bewusst nicht weiter
+    // ausgebaut - jede zusaetzliche Sprache muesste die Kompass-Kuerzel und ihre
+    // sprachspezifische Bedeutung einzeln verifizieren, sonst droht genau die Art
+    // von Fehler, die diese Tabelle eigentlich vermeiden soll).
+    private const UNIT_COMPASS_BUNDLED_LANGUAGES = ['en', 'es', 'fr', 'it', 'pt', 'nl', 'pl', 'ru', 'tr'];
+
+    private const COMPASS_BUNDLED_TRANSLATIONS = [
+        'N'   => ['en' => 'N',   'es' => 'N',   'fr' => 'N',   'it' => 'N',   'pt' => 'N',   'nl' => 'N',   'pl' => 'N',   'ru' => 'С',   'tr' => 'K'],
+        'NNO' => ['en' => 'NNE', 'es' => 'NNE', 'fr' => 'NNE', 'it' => 'NNE', 'pt' => 'NNE', 'nl' => 'NNO', 'pl' => 'NNE', 'ru' => 'ССВ', 'tr' => 'KKD'],
+        'NO'  => ['en' => 'NE',  'es' => 'NE',  'fr' => 'NE',  'it' => 'NE',  'pt' => 'NE',  'nl' => 'NO',  'pl' => 'NE',  'ru' => 'СВ',  'tr' => 'KD'],
+        'ONO' => ['en' => 'ENE', 'es' => 'ENE', 'fr' => 'ENE', 'it' => 'ENE', 'pt' => 'ENE', 'nl' => 'ONO', 'pl' => 'ENE', 'ru' => 'ВСВ', 'tr' => 'DKD'],
+        'O'   => ['en' => 'E',   'es' => 'E',   'fr' => 'E',   'it' => 'E',   'pt' => 'E',   'nl' => 'O',   'pl' => 'E',   'ru' => 'В',   'tr' => 'D'],
+        'OSO' => ['en' => 'ESE', 'es' => 'ESE', 'fr' => 'ESE', 'it' => 'ESE', 'pt' => 'ESE', 'nl' => 'OZO', 'pl' => 'ESE', 'ru' => 'ВЮВ', 'tr' => 'DGD'],
+        'SO'  => ['en' => 'SE',  'es' => 'SE',  'fr' => 'SE',  'it' => 'SE',  'pt' => 'SE',  'nl' => 'ZO',  'pl' => 'SE',  'ru' => 'ЮВ',  'tr' => 'GD'],
+        'SSO' => ['en' => 'SSE', 'es' => 'SSE', 'fr' => 'SSE', 'it' => 'SSE', 'pt' => 'SSE', 'nl' => 'ZZO', 'pl' => 'SSE', 'ru' => 'ЮЮВ', 'tr' => 'GGD'],
+        'S'   => ['en' => 'S',   'es' => 'S',   'fr' => 'S',   'it' => 'S',   'pt' => 'S',   'nl' => 'Z',   'pl' => 'S',   'ru' => 'Ю',   'tr' => 'G'],
+        'SSW' => ['en' => 'SSW', 'es' => 'SSO', 'fr' => 'SSO', 'it' => 'SSO', 'pt' => 'SSO', 'nl' => 'ZZW', 'pl' => 'SSW', 'ru' => 'ЮЮЗ', 'tr' => 'GGB'],
+        'SW'  => ['en' => 'SW',  'es' => 'SO',  'fr' => 'SO',  'it' => 'SO',  'pt' => 'SO',  'nl' => 'ZW',  'pl' => 'SW',  'ru' => 'ЮЗ',  'tr' => 'GB'],
+        'WSW' => ['en' => 'WSW', 'es' => 'OSO', 'fr' => 'OSO', 'it' => 'OSO', 'pt' => 'OSO', 'nl' => 'WZW', 'pl' => 'WSW', 'ru' => 'ЗЮЗ', 'tr' => 'BGB'],
+        'W'   => ['en' => 'W',   'es' => 'O',   'fr' => 'O',   'it' => 'O',   'pt' => 'O',   'nl' => 'W',   'pl' => 'W',   'ru' => 'З',   'tr' => 'B'],
+        'WNW' => ['en' => 'WNW', 'es' => 'ONO', 'fr' => 'ONO', 'it' => 'ONO', 'pt' => 'ONO', 'nl' => 'WNW', 'pl' => 'WNW', 'ru' => 'ЗСЗ', 'tr' => 'BKB'],
+        'NW'  => ['en' => 'NW',  'es' => 'NO',  'fr' => 'NO',  'it' => 'NO',  'pt' => 'NO',  'nl' => 'NW',  'pl' => 'NW',  'ru' => 'СЗ',  'tr' => 'KB'],
+        'NNW' => ['en' => 'NNW', 'es' => 'NNO', 'fr' => 'NNO', 'it' => 'NNO', 'pt' => 'NNO', 'nl' => 'NNW', 'pl' => 'NNW', 'ru' => 'ССЗ', 'tr' => 'KKB'],
+    ];
+
+    // Build 133: fuegt fehlende Einheiten-/Kompass-Vorschlagszeilen zur "Eigenen
+    // Uebersetzungstabelle" hinzu - NUR ab Standard-Lizenz (manual_translations,
+    // siehe HasLicenseFeature), Light ruft fuer diese Faelle bewusst weiterhin
+    // ganz normal die API. Anders als MergeOwnUiTextRows() werden Zeilen HIER
+    // NIE zwangsweise neu erzeugt, wenn der Nutzer sie einmal geloescht hat -
+    // attributeSeededManualTranslationKeys merkt sich, welche Vorschlaege
+    // schon einmal angeboten wurden, damit eine bewusste Loeschung (z.B. weil
+    // "SSW" in dieser Installation ein Personen-Kuerzel ist, keine
+    // Windrichtung) dauerhaft geloescht bleibt statt beim naechsten Rescan
+    // zurueckzukehren.
+    private function MergeBundledManualTranslations(array $ExistingRows): array
+    {
+        if (!$this->HasLicenseFeature('manual_translations')) {
+            return $ExistingRows;
+        }
+
+        $existingKeys = [];
+        foreach ($ExistingRows as $row) {
+            if (($row[self::fieldRowSourceLanguage] ?? '') === 'de') {
+                $existingKeys[(string) ($row[self::langOriginalImport] ?? '')] = true;
+            }
+        }
+
+        $alreadySeeded = json_decode($this->ReadAttributeString(self::attributeSeededManualTranslationKeys), true);
+        if (!is_array($alreadySeeded)) {
+            $alreadySeeded = [];
+        }
+        $seededChanged = false;
+
+        $result = $ExistingRows;
+
+        foreach (self::UNIT_BUNDLED_TRANSLATIONS as $unit) {
+            if (isset($existingKeys[$unit]) || isset($alreadySeeded[$unit])) {
+                continue;
+            }
+            $row = [self::fieldRowSourceLanguage => 'de', self::langOriginalImport => $unit];
+            foreach (self::UNIT_COMPASS_BUNDLED_LANGUAGES as $language) {
+                // Universelle Einheit: fuer JEDE unterstuetzte Sprache identisch
+                // durchgereicht (siehe Klassen-Kommentar oben).
+                $row[$language] = $unit;
+                $this->MarkRowLanguageTranslated($row, $language);
+            }
+            $result[] = $row;
+            $alreadySeeded[$unit] = true;
+            $seededChanged = true;
+        }
+
+        foreach (self::COMPASS_BUNDLED_TRANSLATIONS as $germanCompass => $translationsByLanguage) {
+            if (isset($existingKeys[$germanCompass]) || isset($alreadySeeded[$germanCompass])) {
+                continue;
+            }
+            $row = [self::fieldRowSourceLanguage => 'de', self::langOriginalImport => $germanCompass];
+            foreach ($translationsByLanguage as $language => $translation) {
+                $row[$language] = $translation;
+                $this->MarkRowLanguageTranslated($row, $language);
+            }
+            $result[] = $row;
+            $alreadySeeded[$germanCompass] = true;
+            $seededChanged = true;
+        }
+
+        if ($seededChanged) {
+            $this->WriteAttributeString(self::attributeSeededManualTranslationKeys, json_encode($alreadySeeded));
+        }
+
+        return $result;
+    }
+
     // Build 78: Nachschlagen EINES übersetzten Gast-Oberflächentexts aus einer
     // bereits per BuildOwnUiTextRowsByKey() indizierten Zeilen-Map - reine
     // Fallback-Kette wie ResolveRowValue (weil die Zeilen genau deren Struktur
@@ -4246,6 +4400,14 @@ private const LANGUAGE_FLAGS = [
             $targetLanguages
         );
 
+        // Build 133: Einheiten-/Kompass-Vorschlagszeilen (siehe
+        // MergeBundledManualTranslations) - anders als propertyOwnUiTexts oben
+        // bewusst OHNE FillMissingTranslations()-Durchlauf: die "Eigene
+        // Uebersetzungstabelle" ist strukturell durchgehend admin-gepflegt, kein
+        // Zellwert darin wird jemals automatisch (nach)uebersetzt, das gilt auch
+        // fuer diese vorbefuellten Zeilen selbst.
+        $manualTranslations = $this->MergeBundledManualTranslations($this->DecodeRows(self::propertyManualTranslations));
+
         $this->SetRescanProgress('Ergebnis wird gespeichert…');
 
         IPS_SetProperty($this->InstanceID, self::propertyObjectNames, json_encode(array_values($objectNames)));
@@ -4255,6 +4417,7 @@ private const LANGUAGE_FLAGS = [
         IPS_SetProperty($this->InstanceID, self::propertyObjectCharts, json_encode(array_values($objectCharts)));
         IPS_SetProperty($this->InstanceID, self::propertyObjectGreeting, json_encode(array_values($objectGreeting)));
         IPS_SetProperty($this->InstanceID, self::propertyOwnUiTexts, json_encode(array_values($ownUiTexts)));
+        IPS_SetProperty($this->InstanceID, self::propertyManualTranslations, json_encode(array_values($manualTranslations)));
         IPS_ApplyChanges($this->InstanceID);
         $this->SendDebug('IPSSL_Debug', 'ScanRootTree: persisted, ObjectGreeting now=' . IPS_GetProperty($this->InstanceID, self::propertyObjectGreeting), 0);
 

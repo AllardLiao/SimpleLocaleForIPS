@@ -94,6 +94,27 @@ Beschreibung des Moduls.
   gespeicherten Übersetzungen selbst (die müssen bei Bedarf weiterhin
   einzeln im jeweiligen Feld geleert werden, damit sie beim nächsten
   Rescan/Sprachwechsel neu übersetzt werden).
+* **Ab Standard-Lizenz** enthält die "Eigene Übersetzungstabelle" (siehe
+  weiter unten) von Haus aus rund 30 vorbefüllte Einträge für in der
+  Hausautomatisierung gängige Maßeinheiten (z. B. °C, kg, km/h, hPa) sowie
+  die 16 Kompass-Himmelsrichtungen (inkl. Zwischenrichtungen wie SSW) in 9
+  Sprachen (Englisch, Spanisch, Französisch, Italienisch, Portugiesisch,
+  Niederländisch, Polnisch, Russisch, Türkisch) - erspart unnötige und bei
+  kurzen Zahl-plus-Einheit-Texten ("0.82 m/s") mitunter sogar riskante
+  API-Aufrufe. Riskant deshalb, weil ein allgemeiner Übersetzungsanbieter
+  hier tatsächlich danebengreifen kann: beobachtet wurde z. B. eine
+  fälschliche Übersetzung von "°C" nach "°F", die bei unverändertem
+  Zahlenwert eine falsche Anzeige ergeben hätte. Bei Kompassrichtungen wäre
+  ein reines 1:1-Durchreichen sogar grundsätzlich falsch - dieselbe
+  Buchstabenfolge kann in verschiedenen Sprachen Gegenteiliges bedeuten
+  (deutsch "O" = Ost, spanisch "O" = Oeste/**West**) -, deshalb werden diese
+  Einträge echt sprachspezifisch vorbelegt statt einfach kopiert. Wie jeder
+  Glossar-Eintrag ist auch ein vorbefüllter Eintrag jederzeit vom Admin
+  löschbar (z. B. falls "SSW" in einer Installation zufällig ein
+  Personen-Kürzel statt einer Windrichtung ist) - eine einmal gelöschte
+  Vorbelegung kehrt bei einem späteren Rescan nicht zurück. Die
+  Light-Edition hat wie beim restlichen Glossar keinen Zugriff darauf und
+  ruft für solche Texte weiterhin ganz normal die Übersetzungs-API auf.
 * Übersetzt zusätzlich die Beschriftungen von Variablen mit einer
   Wert-Aufzählung (z. B. Integer-Variablen mit klassischem Profil oder
   moderner Enumeration-Presentation, etwa "Abwesend/Anwesend" oder
@@ -3374,3 +3395,46 @@ der ursprünglichen Fassung übernommen.
   0, die Migration greift garantiert nur einmal und überschreibt keinen
   bereits weitergezählten Wert, Symmetrie-Check gegen die reale
   Umstellung), volle Suite grün.
+
+* **Build 133 (Nutzer-Wunsch, gemeinsam hergeleitet): "Eigene
+  Übersetzungstabelle" wird jetzt ab Standard-Lizenz mit Vorschlagszeilen
+  für gängige Maßeinheiten und Kompassrichtungen vorbefüllt - erspart
+  unnötige (und teils sogar fehleranfällige) API-Aufrufe für Zahl-plus-
+  Einheit-Texte.** Auslöser war ein Dump-Fund: kurze Texte wie "0.82 m/s"
+  gingen bisher immer an den Übersetzungsanbieter, obwohl praktisch jede
+  gängige SI-/Alltagseinheit (°C, kg, km/h, hPa, kWh, ...) in jeder
+  unterstützten Sprache identisch geschrieben wird - reine Verschwendung
+  von Kontingent. Schlimmer: dabei beobachtet wurde eine tatsächlich
+  FALSCHE automatische Übersetzung von "°C" nach "°F" (Zahlenwert blieb
+  gleich, Anzeige wäre dadurch falsch gewesen).
+  Kompassrichtungen sind dagegen das Gegenteil von universell -
+  dieselbe Buchstabenfolge kann in verschiedenen Sprachen Gegenteiliges
+  bedeuten: deutsch "O" = Ost/East, spanisch "O" = Oeste/**West** -,
+  Russisch und Türkisch verwenden zusätzlich völlig andere Buchstaben statt
+  N/O/S/W. Ein reines 1:1-Durchreichen (wie bei den Einheiten) wäre hier
+  also grundsätzlich falsch.
+  Bewusst NICHT als unsichtbare interne Tabelle umgesetzt (erste Idee),
+  sondern als vorbefüllte Zeilen der bereits vorhandenen, sichtbaren
+  "Eigenen Übersetzungstabelle" (`MergeBundledManualTranslations()`,
+  analog zu `MergeOwnUiTextRows()` aus Build 78/85) - der Admin sieht die
+  Vorschläge direkt im Formular und kann jeden einzelnen jederzeit löschen
+  (Beispiel: "SSW" kollidiert in einer Installation zufällig mit einem
+  Personen-Kürzel statt einer Windrichtung). Eine einmal gelöschte
+  Vorbelegung kehrt dank eines neuen Merkzettel-Attributs
+  (`attributeSeededManualTranslationKeys`) bei einem späteren Rescan nicht
+  zurück - anders als bei `propertyOwnUiTexts` gibt es hier also KEINE
+  Zwangs-Neuerzeugung.
+  9 Zielsprachen (Englisch, Spanisch, Französisch, Italienisch,
+  Portugiesisch, Niederländisch, Polnisch, Russisch, Türkisch) - bewusst
+  nicht weiter ausgebaut: jede zusätzliche Sprache müsste die
+  Kompass-Kürzel und ihre sprachspezifische Bedeutung einzeln verifizieren,
+  sonst droht genau die Art Fehler, die diese Tabelle eigentlich vermeiden
+  soll. Wie beim restlichen Glossar naturgemäß nur ab Standard-Lizenz
+  (`manual_translations`) - die Light-Edition ruft für diese Fälle
+  weiterhin ganz normal die API auf.
+  Neuer Regressionstest (universelle Einheiten identisch über alle
+  Sprachen, Kompassrichtungen genuin sprachspezifisch übersetzt statt naiv
+  durchgereicht inkl. des deutsch/spanisch-"O"-Bedeutungswechsels,
+  gelöschte Vorschläge bleiben dauerhaft gelöscht, bestehende Zeilen werden
+  nie dupliziert/überschrieben, Light-Edition bekommt nichts,
+  Symmetrie-Check gegen die reale Umsetzung), volle Suite grün.
