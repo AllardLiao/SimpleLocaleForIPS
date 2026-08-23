@@ -3346,3 +3346,31 @@ der ursprünglichen Fassung übernommen.
   Neuer Regressionstest (locale.json-Vollständigkeit für das gesamte
   Formular, DeepL-Erklärung vorhanden und korrekt platziert, schmale
   Info-Buttons), volle Suite grün.
+
+* **Build 132 (Nutzer-Frage, gemeinsam hergeleitet): die vier
+  Übersetzungs-Statistik-Zähler liefen als klassische 32-Bit-Integer-
+  Attribute, ganz ohne Überlaufschutz.** IP-Symcons `Integer`-Attributtyp
+  ist laut SDK ein 32-Bit-Integer (Bereich bis 2.147.483.647) - unabhängig
+  davon, dass PHP selbst auf jedem 64-Bit-System einen 64-Bit-Integer
+  verwendet. Bei sehr langer Laufzeit (mehrere Jahre) hätte das
+  theoretisch zu einem stillen Überlauf/Wraparound beim Schreiben in
+  Symcons 32-Bit-Speicher führen können, obwohl PHPs eigene
+  Rechenoperation (`+1`/`+N`) selbst nie überläuft - eine Instanz, die
+  jahrelang unbeaufsichtigt läuft, ist genau das erwartete
+  Einsatzszenario dieses Moduls.
+  `attributeStatsRequestCount`/`CharacterCount`/`CacheSavedRequestCount`/
+  `CacheSavedCharacterCount` sind jetzt `RegisterAttributeString` (praktisch
+  unbegrenzt, Rechnen weiterhin über normale PHP-Ints, nur die
+  Persistierung ändert sich) statt `RegisterAttributeInteger`, unter neuen
+  Attributnamen ("V2"-Suffix) statt denselben Namen mit geändertem Typ
+  wiederzuverwenden (unklares/riskantes Symcon-Verhalten). `Create()`
+  migriert dabei einmalig die bereits real angesammelten alten
+  Integer-Zählerstände einer laufenden Installation in die neuen
+  String-Attribute, bevor die alten Namen als reine, fortan nie mehr
+  aktualisierte Altlast liegen bleiben (harmlos, da Attribute nicht im
+  sichtbaren Objektbaum stehen).
+  Neuer Regressionstest (reale historische Zählerstände werden korrekt
+  migriert statt verloren zu gehen, eine frische Installation bleibt bei
+  0, die Migration greift garantiert nur einmal und überschreibt keinen
+  bereits weitergezählten Wert, Symmetrie-Check gegen die reale
+  Umstellung), volle Suite grün.
