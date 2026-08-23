@@ -444,6 +444,17 @@ trait SimpleLocaleConstants
     // attributeActivationLog.
     private const attributeTranslationCache = 'TranslationCache';
 
+    // Build 133 (Nutzer-Wunsch): JSON-Map der deutschen Quelltexte (Einheiten-
+    // Kuerzel + Kompass-Punkte), die MergeBundledManualTranslations() dem Admin
+    // bereits einmal als Vorschlagszeile in propertyManualTranslations
+    // angeboten hat (Wert ist immer nur `true`, reine Existenzpruefung). Anders
+    // als propertyOwnUiTexts (siehe MergeOwnUiTextRows) sind diese Zeilen fuer
+    // den Admin frei loeschbar - ohne dieses Merkzettel-Attribut wuerde ein
+    // geloeschter Vorschlag (Nutzer-Beispiel: "SSW" kollidiert mit einem
+    // Personen-Kuerzel in seiner Installation) beim naechsten Rescan sofort
+    // wieder auftauchen, statt geloescht zu bleiben.
+    private const attributeSeededManualTranslationKeys = 'SeededManualTranslationKeys';
+
     // Idents (RequestAction) - kein zugehöriges Variablen-/Profilobjekt mehr, siehe
     // propertyCurrentLanguage oben. "Language" bleibt nur noch als reiner Aktions-Ident.
     private const identLanguage = 'Language';
