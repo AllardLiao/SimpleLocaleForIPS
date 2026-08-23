@@ -2987,6 +2987,96 @@ private const LANGUAGE_FLAGS = [
         'rpm', 'UV',
     ];
 
+    // Build 134 (Nutzer-Wunsch, gemeinsam geprueft): nicht JEDE Einheit aus
+    // UNIT_BUNDLED_TRANSLATIONS ist tatsaechlich in JEDER der 9 Sprachen
+    // identisch - explizite Ausnahmen je Einheit+Sprache, angewendet NACH dem
+    // universellen Durchreichen oben. Drei Faelle bestaetigt:
+    // (1) "Stunde" wird nicht ueberall mit dem lateinischen SI-Kuerzel "h"
+    // abgekuerzt - Spanisch verwendet fuer km/h umgangssprachlich "kph" (vom
+    // Nutzer explizit bestaetigt), Niederlaendisch schreibt Geschwindigkeit
+    // ueblich als "km/u" (uur = Stunde), Tuerkisch als "km/sa" (saat = Stunde).
+    // Rein energiebezogene "h"-Einheiten (Wh/kWh/Ah/mAh) sind davon NICHT
+    // betroffen - Stromrechnungen/Batteriepackungen verwenden dort auch in
+    // diesen drei Sprachen weiterhin unveraendert "kWh"/"Ah" als international
+    // uebernommenes SI-Kuerzel, nur die GESCHWINDIGKEITS-Angabe weicht ab.
+    // (2) Russisch verwendet in der Praxis (Konsumgeraete, Windows-Lokalisierung,
+    // GOST-Normschreibweise) fast durchgehend KYRILLISCHE Kuerzel statt
+    // lateinischer SI-Symbole (z.B. "кг" statt "kg", "км/ч" statt "km/h") -
+    // eine reine 1:1-Uebernahme waere hier fuer die allermeisten Eintraege
+    // schlicht falsch, siehe die einzelnen Eintraege unten. Bewusst NICHT
+    // uebersetzt (siehe jeweilige Zeile): "%"/"‰" (universelle Symbole),
+    // "°F"/"psi" (in Russland praktisch nie genutzte nicht-metrische Einheiten,
+    // kein etabliertes russisches Kuerzel), "ppm"/"ppb" (auch im Russischen
+    // ueberwiegend als lateinisches Fachkuerzel uebernommen).
+    private const UNIT_BUNDLED_LANGUAGE_OVERRIDES = [
+        'km/h' => ['es' => 'kph', 'nl' => 'km/u', 'tr' => 'km/sa', 'ru' => 'км/ч'],
+        'V'    => ['ru' => 'В'],
+        'mV'   => ['ru' => 'мВ'],
+        'kV'   => ['ru' => 'кВ'],
+        'A'    => ['ru' => 'А'],
+        'mA'   => ['ru' => 'мА'],
+        'W'    => ['ru' => 'Вт'],
+        'kW'   => ['ru' => 'кВт'],
+        'MW'   => ['ru' => 'МВт'],
+        'Wh'   => ['ru' => 'Вт·ч'],
+        'kWh'  => ['ru' => 'кВт·ч'],
+        'MWh'  => ['ru' => 'МВт·ч'],
+        'Hz'   => ['ru' => 'Гц'],
+        'kHz'  => ['ru' => 'кГц'],
+        'MHz'  => ['ru' => 'МГц'],
+        'Ω'    => ['ru' => 'Ом'],
+        'VA'   => ['ru' => 'В·А'],
+        'kVA'  => ['ru' => 'кВ·А'],
+        'Ah'   => ['ru' => 'А·ч'],
+        'mAh'  => ['ru' => 'мА·ч'],
+        'K'    => ['ru' => 'К'],
+        'Pa'   => ['ru' => 'Па'],
+        'hPa'  => ['ru' => 'гПа'],
+        'kPa'  => ['ru' => 'кПа'],
+        'bar'  => ['ru' => 'бар'],
+        'mbar' => ['ru' => 'мбар'],
+        'm/s'  => ['ru' => 'м/с'],
+        'kn'   => ['ru' => 'уз'],
+        'mm'   => ['ru' => 'мм'],
+        'cm'   => ['ru' => 'см'],
+        'm'    => ['ru' => 'м'],
+        'km'   => ['ru' => 'км'],
+        'm²'   => ['ru' => 'м²'],
+        'cm²'  => ['ru' => 'см²'],
+        'km²'  => ['ru' => 'км²'],
+        'ha'   => ['ru' => 'га'],
+        'ml'   => ['ru' => 'мл'],
+        'l'    => ['ru' => 'л'],
+        'm³'   => ['ru' => 'м³'],
+        'cm³'  => ['ru' => 'см³'],
+        'mg'   => ['ru' => 'мг'],
+        'g'    => ['ru' => 'г'],
+        'kg'   => ['ru' => 'кг'],
+        't'    => ['ru' => 'т'],
+        'mg/l' => ['ru' => 'мг/л'],
+        'µg/m³' => ['ru' => 'мкг/м³'],
+        'g/m³' => ['ru' => 'г/м³'],
+        'lx'   => ['ru' => 'лк'],
+        'lm'   => ['ru' => 'лм'],
+        'cd'   => ['ru' => 'кд'],
+        'dB'   => ['ru' => 'дБ'],
+        'ms'   => ['ru' => 'мс'],
+        'kB'   => ['ru' => 'КБ'],
+        'MB'   => ['ru' => 'МБ'],
+        'GB'   => ['ru' => 'ГБ'],
+        'TB'   => ['ru' => 'ТБ'],
+        'kbps' => ['ru' => 'Кбит/с'],
+        'Mbps' => ['ru' => 'Мбит/с'],
+        'rad'  => ['ru' => 'рад'],
+        'N'    => ['ru' => 'Н'],
+        'kN'   => ['ru' => 'кН'],
+        'J'    => ['ru' => 'Дж'],
+        'kJ'   => ['ru' => 'кДж'],
+        'kcal' => ['ru' => 'ккал'],
+        'rpm'  => ['ru' => 'об/мин'],
+        'UV'   => ['ru' => 'УФ'],
+    ];
+
     // Build 133: Kompassrichtungen sind das GEGENTEIL von sprachunabhängig -
     // dasselbe Kürzel kann in verschiedenen Sprachen komplett Gegensätzliches
     // bedeuten (Nutzer-Beispiel: deutsch "O" = Ost, spanisch "O" = Oeste/WEST).
@@ -3061,9 +3151,10 @@ private const LANGUAGE_FLAGS = [
             }
             $row = [self::fieldRowSourceLanguage => 'de', self::langOriginalImport => $unit];
             foreach (self::UNIT_COMPASS_BUNDLED_LANGUAGES as $language) {
-                // Universelle Einheit: fuer JEDE unterstuetzte Sprache identisch
-                // durchgereicht (siehe Klassen-Kommentar oben).
-                $row[$language] = $unit;
+                // Standardmaessig universell durchgereicht, aber siehe
+                // UNIT_BUNDLED_LANGUAGE_OVERRIDES fuer bestaetigte Ausnahmen
+                // (z.B. Russisch verwendet fast durchgehend kyrillische Kuerzel).
+                $row[$language] = self::UNIT_BUNDLED_LANGUAGE_OVERRIDES[$unit][$language] ?? $unit;
                 $this->MarkRowLanguageTranslated($row, $language);
             }
             $result[] = $row;

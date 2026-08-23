@@ -108,8 +108,15 @@ Beschreibung des Moduls.
   ein reines 1:1-Durchreichen sogar grundsätzlich falsch - dieselbe
   Buchstabenfolge kann in verschiedenen Sprachen Gegenteiliges bedeuten
   (deutsch "O" = Ost, spanisch "O" = Oeste/**West**) -, deshalb werden diese
-  Einträge echt sprachspezifisch vorbelegt statt einfach kopiert. Wie jeder
-  Glossar-Eintrag ist auch ein vorbefüllter Eintrag jederzeit vom Admin
+  Einträge echt sprachspezifisch vorbelegt statt einfach kopiert. Auch bei den
+  Einheiten selbst ist nicht jedes Kürzel wirklich universell: "Stunde" wird
+  nicht überall mit dem lateinischen SI-Kürzel "h" abgekürzt - km/h heißt
+  umgangssprachlich Spanisch "kph", Niederländisch "km/u" (uur), Türkisch
+  "km/sa" (saat). Am deutlichsten weicht Russisch ab - dort werden fast alle
+  Einheiten-Kürzel in der Praxis grundsätzlich kyrillisch geschrieben (z. B.
+  "кг" statt "kg", "км/ч" statt "km/h", "кВт·ч" statt "kWh"), entsprechend
+  sind auch diese Einträge sprachspezifisch statt einfach durchgereicht. Wie
+  jeder Glossar-Eintrag ist auch ein vorbefüllter Eintrag jederzeit vom Admin
   löschbar (z. B. falls "SSW" in einer Installation zufällig ein
   Personen-Kürzel statt einer Windrichtung ist) - eine einmal gelöschte
   Vorbelegung kehrt bei einem späteren Rescan nicht zurück. Die
@@ -3438,3 +3445,48 @@ der ursprünglichen Fassung übernommen.
   gelöschte Vorschläge bleiben dauerhaft gelöscht, bestehende Zeilen werden
   nie dupliziert/überschrieben, Light-Edition bekommt nichts,
   Symmetrie-Check gegen die reale Umsetzung), volle Suite grün.
+
+* **Build 134 (direkter Nachbericht zu Build 133, Nutzer-Wunsch: "prüfe alle
+  Übersetzungen der Abkürzungen mal explizit auf Korrektheit"): nicht jede
+  Einheit aus Build 133 ist tatsächlich in jeder der 9 Sprachen identisch.**
+  Konkreter Auslöser: "km/h" wird im Spanischen umgangssprachlich als "kph"
+  abgekürzt, nicht mit dem lateinischen SI-Kürzel "h" für Stunde. Bei der
+  daraufhin angeforderten vollständigen Prüfung aller ~68 Einheiten- und
+  aller 16×9 Kompass-Kürzel gegen die jeweilige Sprachlogik (Wortmuster,
+  Zwischenrichtungs-Systematik) bestätigten sich zwei weitere,
+  strukturell identische Fälle: Niederländisch schreibt Geschwindigkeit
+  ("uur" = Stunde) als "km/u", Türkisch ("saat" = Stunde) als "km/sa". Neue
+  Konstante `UNIT_BUNDLED_LANGUAGE_OVERRIDES` (Einheit => Sprache =>
+  abweichendes Kürzel), angewendet NACH dem universellen Durchreichen aus
+  Build 133 - reine Energie-Einheiten mit "h" (Wh/kWh/Ah/mAh) sind davon
+  bewusst NICHT betroffen, da Stromrechnungen/Batteriepackungen dort auch in
+  diesen drei Sprachen weiterhin unverändert das international übernommene
+  SI-Kürzel verwenden, nur die Geschwindigkeitsangabe weicht ab.
+  Größerer Fund bei derselben Prüfung: Russisch schreibt in der Praxis
+  (Konsumgeräte, Windows-Lokalisierung, GOST-Normschreibweise) fast
+  durchgehend KYRILLISCHE Kürzel statt lateinischer SI-Symbole - "kg" wäre
+  dort als reines Durchreichen schlicht falsch, korrekt ist "кг". Rund 60
+  der 68 Einheiten-Einträge bekommen daher jetzt eine eigene russische
+  Übersetzung (u. a. "км/ч", "кВт·ч", "Гц", "Дж", "об/мин") - bewusst
+  ausgenommen bleiben "%"/"‰" (universelle Symbole), "°F"/"psi" (in Russland
+  praktisch nie genutzte nicht-metrische Einheiten) sowie "ppm"/"ppb" (auch
+  im Russischen überwiegend als lateinisches Fachkürzel übernommen).
+  Bei der gleichen Gelegenheit wurde die komplette Kompass-Tabelle aus Build
+  133 nochmal Zeile für Zeile gegen die jeweilige Richtungs-Systematik
+  durchgerechnet (Niederländisch: Z für Zuid statt S, O für Oost statt E;
+  Polnisch: bewusst identisch zu Englisch, da "Północ"/"Południe" beide mit
+  P beginnen und eigene Initialen dort unbrauchbar wären; Russisch und
+  Türkisch: vollständig gegen die systematische
+  "nähere-Haupt-plus-Zwischenrichtung"-Logik verifiziert) - keine weiteren
+  Fehler gefunden. Eine echte Unsicherheit blieb: europäisches Portugiesisch
+  nutzt "E" (Este) für Ost, brasilianisches Portugiesisch dagegen häufig "L"
+  (Leste) - da das Modul nur ein einziges "pt" ohne BR/PT-Unterscheidung
+  kennt und beide Varianten sprachlich korrekt sind, wurde dies dem Nutzer
+  explizit zur Entscheidung vorgelegt statt einseitig geraten; Ergebnis:
+  bleibt beim bisherigen "E" (europäisch).
+  Neuer Regressionstest (km/h bekommt die bestätigten es/nl/tr/ru-Ausnahmen
+  statt naivem Durchreichen des deutschen Kürzels, Einheiten ohne eigene
+  Ausnahme fallen weiterhin auf das universelle Kürzel zurück, Russisch
+  bekommt für "kg" & Co. tatsächlich die kyrillische Form, Symmetrie-Check
+  gegen die reale Konstante inkl. mehrerer Stichproben-Einträge), volle
+  Suite grün.
