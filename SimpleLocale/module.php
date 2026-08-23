@@ -6214,10 +6214,28 @@ private const LANGUAGE_FLAGS = [
     // (z.B. den festen HTML-Titel "Echo Info") zuverlaessig, sobald sie
     // mindestens einen zweiten Treffer verzeichnet haben - 1000 Eintraege boten
     // dafuer bei mehreren gleichzeitig aktiven, staendig wechselnden Quellen zu
-    // wenig Puffer, um dieses kurze Zeitfenster zuverlaessig zu ueberstehen. Auf
-    // 3000 erhoeht, gemeinsam mit dem Build-128-Fix gegen Selbst-Verdraengung
-    // innerhalb eines einzelnen Uebersetzungs-Batches.
-    private const TRANSLATION_CACHE_MAX_ENTRIES = 3000;
+    // wenig Puffer, um dieses kurze Zeitfenster zuverlaessig zu ueberstehen.
+    // Build 129 (Nutzer-Wunsch, gemeinsam hergeleitet): der "harte Kern"
+    // tatsaechlich dauerhaft wertvoller Cache-Eintraege ist klein (nur Zeilen,
+    // deren Rohtext sich bei JEDER Aktualisierung aendert - z.B. Wetter-/
+    // Medienplayer-Widgets - durchlaufen ueberhaupt TranslateBatch(); bereits
+    // gefuellte statische Zeilen wie Objektnamen/Automations werden ueber
+    // ResolveRowValue() DIREKT aus der Property gelesen, nie ueber den Cache -
+    // siehe dort, kein einziger GetCachedTranslation()-Aufruf). Grob geschaetzt
+    // 50-150 wirklich wiederkehrende Rohtexte (Wochentags-Kuerzel, gaengige
+    // Wetterbeschreibungen, feste Widget-Label) x 2-3 Zielsprachen ergeben
+    // etwa 100-450 Eintraege "harten Kern". Da der Cache (ein einzelner JSON-
+    // Attribut-Lese-/Schreibvorgang, keine Netzwerklatenz) selbst bei
+    // deutlich groesseren Werten um Groessenordnungen schneller bleibt als
+    // jeder Anbieter-Aufruf (spuerbare Verlangsamung realistisch erst im
+    // Bereich mehrerer Zehntausend Eintraege/mehrerer MB JSON), gibt es keinen
+    // Nachteil darin, die Kapazitaet auf einen komfortablen Wert weit über dem
+    // harten Kern zu setzen - schuetzt insbesondere deutlich groessere
+    // Installationen als diese vor genau dem hier behobenen Verdraengungs-
+    // Effekt und spart dem Nutzer wertvolles Uebersetzungskontingent. Auf
+    // 10.000 gesetzt: komfortabler Puffer, weit unterhalb der Zone, in der
+    // die JSON-En-/Dekodierung selbst spuerbar würde.
+    private const TRANSLATION_CACHE_MAX_ENTRIES = 10000;
 
     // Build 72: "Treffer der letzten 24 Stunden" wird ueber einen Decay-Zaehler
     // angenaehert statt ueber eine vollstaendige Historie einzelner Zeitstempel
@@ -6348,6 +6366,18 @@ private const LANGUAGE_FLAGS = [
         // echten Batch-Aufruf (MyMemory: ein HTTP-Request pro Text, siehe
         // TranslateChunkFree) bedeutete das einen komplett unnoetigen,
         // wiederholten API-Aufruf fuer jedes weitere Vorkommen desselben Texts.
+        // Build 129 (Nutzer-Wunsch, live per Debug-Log bestaetigt): bei
+        // $IsHtml=true ist $text der KOMPLETTE Zeilen-Rohtext (ein ganzes
+        // HTML-Dokument) - seit Build 127 wird so ein Text nie mehr im Cache
+        // gespeichert (nur noch seine einzelnen Knoten, siehe
+        // TranslateBatchUncached/StoreCachedTranslationsBatch). Ein
+        // GetCachedTranslation()-Aufruf dafuer ist also strukturell IMMER ein
+        // Fehlschlag - kostet aber trotzdem Semaphor-Erwerb, das Lesen/
+        // Dekodieren des gesamten (jetzt bis zu 10.000 Eintraege grossen)
+        // Caches und eine Hash-Berechnung ueber das komplette Dokument, live
+        // bestaetigt per Debug-Log als wiederholter garantierter Leerlauf fuer
+        // ganze <!doctype html>/<style>/<table>-Bloecke. Wird bei $IsHtml
+        // komplett uebersprungen.
         $textToFreshPosition = [];
         $duplicateFreshPositions = [];
         foreach ($Texts as $i => $text) {
@@ -6356,11 +6386,13 @@ private const LANGUAGE_FLAGS = [
                 $results[$i] = $manual;
                 continue;
             }
-            $cached = $this->GetCachedTranslation($Source, $Target, $text, $DebugContext);
-            if ($cached !== null) {
-                $results[$i] = $cached;
-                $this->RecordCacheSavingsStats(mb_strlen($text, 'UTF-8'));
-                continue;
+            if (!$IsHtml) {
+                $cached = $this->GetCachedTranslation($Source, $Target, $text, $DebugContext);
+                if ($cached !== null) {
+                    $results[$i] = $cached;
+                    $this->RecordCacheSavingsStats(mb_strlen($text, 'UTF-8'));
+                    continue;
+                }
             }
             if (isset($textToFreshPosition[$text])) {
                 $duplicateFreshPositions[$i] = $textToFreshPosition[$text];
