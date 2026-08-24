@@ -4051,6 +4051,30 @@ private const LANGUAGE_FLAGS = [
         return $Row;
     }
 
+    // Build 137 (Nutzer-Wunsch): JSON-Rohtext (siehe LooksLikeJson, Build 84) wird
+    // in FillLanguageColumn() ohnehin UNBEDINGT von jeder Übersetzung ausgenommen,
+    // unabhängig vom Stand der "Übersetzung aktiv"-Checkbox - für so eine Zeile
+    // hat die Checkbox also faktisch nie eine Wirkung. Damit die Konsole das nicht
+    // fälschlich als "wird übersetzt" anzeigt, wird sie bei jedem Rescan aktiv auf
+    // "inaktiv" gesetzt, sobald der aktuelle Rohtext gültiges JSON ist - bewusst
+    // NUR in dieser einen Richtung (niemals umgekehrt automatisch wieder auf
+    // "aktiv" zurückgesetzt): hört ein Rohtext auf, JSON zu sein, bleibt eine
+    // zwischenzeitlich vom Admin eventuell aus einem GANZ ANDEREN Grund manuell
+    // deaktivierte Zeile (z. B. ein Eigenname) unangetastet deaktiviert, statt
+    // stillschweigend wieder aktiviert zu werden. Läuft NACH
+    // BackfillTranslationActiveFlag() an denselben Stellen in ScanRootTree() -
+    // $RawField ist der Rohtext-Feldname der jeweiligen Zeilenform
+    // (langOriginalImport überall außer bei "Eigene Texte", dort
+    // langOriginalImportText).
+    private function AutoDeactivateTranslationForJsonContent(array $Row, string $RawField): array
+    {
+        if ($this->LooksLikeJson((string) ($Row[$RawField] ?? ''))) {
+            $Row[self::fieldTranslationActive] = false;
+        }
+
+        return $Row;
+    }
+
     // Build 135: liefert die tatsaechlich fuer ResolveRowValue() zu verwendende
     // "ausgewaehlte" Sprache - fuer eine per Checkbox deaktivierte Zeile IMMER die
     // Pseudo-Sprache ORIGINAL_IMPORT (liefert dort garantiert den Rohtext, siehe
@@ -4414,14 +4438,20 @@ private const LANGUAGE_FLAGS = [
         $this->SendDebug('IPSSL_Debug', 'ScanRootTree: no unnamed objects, continuing to merges', 0);
 
         $objectNames = array_map(
-            [$this, 'BackfillTranslationActiveFlag'],
-            $this->MergeRows($this->DecodeRows(self::propertyObjectNames), $scannedNames)
+            fn ($row) => $this->AutoDeactivateTranslationForJsonContent($row, self::langOriginalImport),
+            array_map(
+                [$this, 'BackfillTranslationActiveFlag'],
+                $this->MergeRows($this->DecodeRows(self::propertyObjectNames), $scannedNames)
+            )
         );
         $objectTexts = array_map(
-            [$this, 'BackfillTranslationActiveFlag'],
-            $this->ExcludeGreetingVariableFromTextRows(
-                $this->DeduplicateTextRowsByValueObjectID(
-                    $this->MergeRows($this->DecodeRows(self::propertyObjectTexts), $scannedTexts)
+            fn ($row) => $this->AutoDeactivateTranslationForJsonContent($row, self::langOriginalImportText),
+            array_map(
+                [$this, 'BackfillTranslationActiveFlag'],
+                $this->ExcludeGreetingVariableFromTextRows(
+                    $this->DeduplicateTextRowsByValueObjectID(
+                        $this->MergeRows($this->DecodeRows(self::propertyObjectTexts), $scannedTexts)
+                    )
                 )
             )
         );
@@ -4431,8 +4461,11 @@ private const LANGUAGE_FLAGS = [
             $existingOptions[] = $row;
         }
         $objectOptions = array_map(
-            [$this, 'BackfillTranslationActiveFlag'],
-            $this->MergeEnumerationOptions($existingOptions, $scannedOptions)
+            fn ($row) => $this->AutoDeactivateTranslationForJsonContent($row, self::langOriginalImport),
+            array_map(
+                [$this, 'BackfillTranslationActiveFlag'],
+                $this->MergeEnumerationOptions($existingOptions, $scannedOptions)
+            )
         );
 
         // Automations leben nicht im Root-Baum, sondern als eigene Liste in einer
@@ -4440,10 +4473,13 @@ private const LANGUAGE_FLAGS = [
         // eigener Scan, eigener Merge (Schlüssel AutomationID statt ObjectID/Ident),
         // aber derselbe Rescan-Button/Übersetzungslauf wie alles andere.
         $objectAutomations = array_map(
-            [$this, 'BackfillTranslationActiveFlag'],
-            $this->MergeAutomationRows(
-                $this->DecodeRows(self::propertyObjectAutomations),
-                $this->ScanAutomationsByID()
+            fn ($row) => $this->AutoDeactivateTranslationForJsonContent($row, self::langOriginalImport),
+            array_map(
+                [$this, 'BackfillTranslationActiveFlag'],
+                $this->MergeAutomationRows(
+                    $this->DecodeRows(self::propertyObjectAutomations),
+                    $this->ScanAutomationsByID()
+                )
             )
         );
 
@@ -4453,10 +4489,13 @@ private const LANGUAGE_FLAGS = [
         // $scannedNames ist vollständig) Zeilen für eigenständig im Baum stehende
         // Variablen herausfiltern - siehe ExcludeChartRowsForIndependentlyNamedVariables.
         $objectCharts = array_map(
-            [$this, 'BackfillTranslationActiveFlag'],
-            $this->MergeChartRows(
-                $this->DecodeRows(self::propertyObjectCharts),
-                $this->ExcludeChartRowsForIndependentlyNamedVariables($scannedCharts, $scannedNames)
+            fn ($row) => $this->AutoDeactivateTranslationForJsonContent($row, self::langOriginalImport),
+            array_map(
+                [$this, 'BackfillTranslationActiveFlag'],
+                $this->MergeChartRows(
+                    $this->DecodeRows(self::propertyObjectCharts),
+                    $this->ExcludeChartRowsForIndependentlyNamedVariables($scannedCharts, $scannedNames)
+                )
             )
         );
 
@@ -4477,8 +4516,11 @@ private const LANGUAGE_FLAGS = [
         $isSourceLanguageActiveForGreeting = $currentLanguageForGreetingMerge === $sourceLanguageForGreetingMerge
             || $currentLanguageForGreetingMerge === self::langOriginalImport;
         $objectGreeting = array_map(
-            [$this, 'BackfillTranslationActiveFlag'],
-            $this->MergeGreetingRows($existingGreeting, $scannedGreeting, $isSourceLanguageActiveForGreeting)
+            fn ($row) => $this->AutoDeactivateTranslationForJsonContent($row, self::langOriginalImport),
+            array_map(
+                [$this, 'BackfillTranslationActiveFlag'],
+                $this->MergeGreetingRows($existingGreeting, $scannedGreeting, $isSourceLanguageActiveForGreeting)
+            )
         );
         $this->SendDebug('IPSSL_Debug', 'ScanRootTree: mergedGreeting=' . json_encode($objectGreeting), 0);
 
