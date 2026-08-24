@@ -2450,7 +2450,7 @@ private const LANGUAGE_FLAGS = [
             // @ wie bei WriteTrackedValueString: gesperrte Objekte lehnen auch das
             // Umbenennen ab (live gefunden), soll aber nicht die ganze
             // Sprachumschaltung abbrechen.
-            @IPS_SetName($objectID, $this->ResolveRowValue($row, $Language, $Language, $this->GetRowSourceLanguage($row, $sourceLanguage), self::langOriginalImport));
+            @IPS_SetName($objectID, $this->ResolveRowValue($row, $this->GetEffectiveSelectedLanguage($row, $Language), $Language, $this->GetRowSourceLanguage($row, $sourceLanguage), self::langOriginalImport));
         }
 
         // Schutz gegen zwei Zeilen, die (z.B. durch zwei unterschiedliche
@@ -3292,7 +3292,7 @@ private const LANGUAGE_FLAGS = [
             if ($row === null) {
                 continue;
             }
-            $resolvedName = $this->ResolveRowValue($row, $Language, $Language, $this->GetRowSourceLanguage($row, $SourceLanguage), self::langOriginalImport);
+            $resolvedName = $this->ResolveRowValue($row, $this->GetEffectiveSelectedLanguage($row, $Language), $Language, $this->GetRowSourceLanguage($row, $SourceLanguage), self::langOriginalImport);
             if (($entry['Name'] ?? null) !== $resolvedName) {
                 $entry['Name'] = $resolvedName;
                 $changed = true;
@@ -3384,7 +3384,7 @@ private const LANGUAGE_FLAGS = [
             return;
         }
 
-        $resolvedName = $this->ResolveRowValue($rows[0], $Language, $Language, $this->GetRowSourceLanguage($rows[0], $SourceLanguage), self::langOriginalImport);
+        $resolvedName = $this->ResolveRowValue($rows[0], $this->GetEffectiveSelectedLanguage($rows[0], $Language), $Language, $this->GetRowSourceLanguage($rows[0], $SourceLanguage), self::langOriginalImport);
 
         $valueObjectID = (int) ($rows[0]['ValueObjectID'] ?? 0);
         if ($valueObjectID !== 0 && @IPS_ObjectExists($valueObjectID)) {
@@ -4027,6 +4027,34 @@ private const LANGUAGE_FLAGS = [
         return $Row;
     }
 
+    // Build 135: analoger Vervollständigungs-Helfer fuer fieldTranslationActive -
+    // siehe Kommentar bei der Konstante fuer den Grund, warum eine fehlende
+    // Checkbox-Vorbelegung mehr als nur kosmetisch waere. array_key_exists() statt
+    // eines simplen "leer?"-Checks (wie bei BackfillRowSourceLanguage oben), weil
+    // hier explizit zwischen "Feld fehlt komplett" (alte Zeile, Build < 135) und
+    // "Feld ist bewusst auf false gesetzt" (Admin hat die Checkbox abgehakt)
+    // unterschieden werden muss - Letzteres darf hier NICHT ueberschrieben werden.
+    private function BackfillTranslationActiveFlag(array $Row): array
+    {
+        if (!array_key_exists(self::fieldTranslationActive, $Row)) {
+            $Row[self::fieldTranslationActive] = true;
+        }
+
+        return $Row;
+    }
+
+    // Build 135: liefert die tatsaechlich fuer ResolveRowValue() zu verwendende
+    // "ausgewaehlte" Sprache - fuer eine per Checkbox deaktivierte Zeile IMMER die
+    // Pseudo-Sprache ORIGINAL_IMPORT (liefert dort garantiert den Rohtext, siehe
+    // ResolveRowValue), unabhaengig von der tatsaechlich aktiven Gast-Sprache.
+    // Zentral an einer Stelle gehalten, damit ApplyLanguage()/
+    // ApplyAutomationsLanguage()/ApplyGreetingLanguage() diese Weiche identisch
+    // anwenden, statt sie an drei Stellen einzeln nachzubilden.
+    private function GetEffectiveSelectedLanguage(array $Row, string $Language): string
+    {
+        return ($Row[self::fieldTranslationActive] ?? true) ? $Language : self::langOriginalImport;
+    }
+
     // Build 70: entscheidet, ob eine EINZELNE Zielsprachen-Zelle einer Zeile noch
     // aktuell ist, oder ob sie (leer ODER durch eine zwischenzeitliche Änderung des
     // Rohtexts/der Quellsprache veraltet) neu übersetzt werden muss - Kern der
@@ -4377,7 +4405,10 @@ private const LANGUAGE_FLAGS = [
         }
         $this->SendDebug('IPSSL_Debug', 'ScanRootTree: no unnamed objects, continuing to merges', 0);
 
-        $objectNames = $this->MergeRows($this->DecodeRows(self::propertyObjectNames), $scannedNames);
+        $objectNames = array_map(
+            [$this, 'BackfillTranslationActiveFlag'],
+            $this->MergeRows($this->DecodeRows(self::propertyObjectNames), $scannedNames)
+        );
         $objectTexts = $this->ExcludeGreetingVariableFromTextRows(
             $this->DeduplicateTextRowsByValueObjectID(
                 $this->MergeRows($this->DecodeRows(self::propertyObjectTexts), $scannedTexts)
@@ -4394,9 +4425,12 @@ private const LANGUAGE_FLAGS = [
         // separaten Kachel-Visualisierungs-Instanz (siehe propertyWebFrontVisuInstanceID) -
         // eigener Scan, eigener Merge (Schlüssel AutomationID statt ObjectID/Ident),
         // aber derselbe Rescan-Button/Übersetzungslauf wie alles andere.
-        $objectAutomations = $this->MergeAutomationRows(
-            $this->DecodeRows(self::propertyObjectAutomations),
-            $this->ScanAutomationsByID()
+        $objectAutomations = array_map(
+            [$this, 'BackfillTranslationActiveFlag'],
+            $this->MergeAutomationRows(
+                $this->DecodeRows(self::propertyObjectAutomations),
+                $this->ScanAutomationsByID()
+            )
         );
 
         // Charts (Build 108): anders als Automations kein separater Scan - $scannedCharts
@@ -4425,7 +4459,10 @@ private const LANGUAGE_FLAGS = [
         $sourceLanguageForGreetingMerge = $this->ReadPropertyString(self::propertySourceLanguage);
         $isSourceLanguageActiveForGreeting = $currentLanguageForGreetingMerge === $sourceLanguageForGreetingMerge
             || $currentLanguageForGreetingMerge === self::langOriginalImport;
-        $objectGreeting = $this->MergeGreetingRows($existingGreeting, $scannedGreeting, $isSourceLanguageActiveForGreeting);
+        $objectGreeting = array_map(
+            [$this, 'BackfillTranslationActiveFlag'],
+            $this->MergeGreetingRows($existingGreeting, $scannedGreeting, $isSourceLanguageActiveForGreeting)
+        );
         $this->SendDebug('IPSSL_Debug', 'ScanRootTree: mergedGreeting=' . json_encode($objectGreeting), 0);
 
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
@@ -5776,7 +5813,13 @@ private const LANGUAGE_FLAGS = [
                 }
                 continue;
             }
-            if (!$this->LooksLikeJson($fromText) && !$this->IsRowLanguageTranslationCurrent($row, $ToField, $TargetLanguageCode)) {
+            // Build 135 (Nutzer-Wunsch): dieselbe "niemals uebersetzen"-Weiche wie beim
+            // JSON-Rohtext oben, jetzt admin-gesteuert ueber die "Uebersetzung aktiv"-
+            // Checkbox (siehe fieldTranslationActive) statt automatisch erkannt - spart
+            // API-Kontingent fuer Zeilen, die ResolveRowValue()/GetEffectiveSelectedLanguage()
+            // beim Schreiben ohnehin immer auf den Rohtext zurueckfallen laesst.
+            $translationActive = $row[self::fieldTranslationActive] ?? true;
+            if ($translationActive && !$this->LooksLikeJson($fromText) && !$this->IsRowLanguageTranslationCurrent($row, $ToField, $TargetLanguageCode)) {
                 $pending[$index] = $fromText;
             }
         }
@@ -8878,6 +8921,7 @@ HTML;
                 'save'    => true,
             ];
             $columns[] = $this->BuildRowSourceLanguageColumn($SourceLanguage, $TargetLanguages);
+            $columns[] = $this->BuildTranslationActiveColumn();
 
             return array_merge($columns, $this->BuildLanguageColumnSet('', '', $SourceLanguage, $TargetLanguages));
         }
@@ -8926,6 +8970,7 @@ HTML;
                 ],
             ];
             $columns[] = $this->BuildRowSourceLanguageColumn($SourceLanguage, $TargetLanguages);
+            $columns[] = $this->BuildTranslationActiveColumn();
 
             return array_merge($columns, $this->BuildLanguageColumnSet('', '', $SourceLanguage, $TargetLanguages));
         }
@@ -8985,16 +9030,40 @@ HTML;
             ];
             $columns = array_merge($columns, $this->BuildLanguageColumnSet('', '', $SourceLanguage, $TargetLanguages));
         } else {
+            // "names" (Objektnamen) - einziger verbleibender Fall, der hier ankommt.
             $columns[] = [
                 'caption' => $this->Translate('Original-Import'),
                 'name'    => self::langOriginalImport,
                 'width'   => '200px',
                 'save'    => true,
             ];
+            $columns[] = $this->BuildTranslationActiveColumn();
             $columns = array_merge($columns, $this->BuildLanguageColumnSet('', '', $SourceLanguage, $TargetLanguages));
         }
 
         return $columns;
+    }
+
+    // Build 135 (Nutzer-Wunsch): Checkbox-Spalte fuer "Objektnamen"/"Automations"/
+    // "Begrüßung" - deaktiviert fuer genau diese eine Zeile jede Uebersetzung
+    // dauerhaft (siehe GetEffectiveSelectedLanguage/fieldTranslationActive),
+    // gedacht fuer Eintraege, die bewusst nie uebersetzt werden sollen
+    // (Eigennamen, Marken, technische Kuerzel). Vorbelegt mit "true" ("add"), da
+    // die weit ueberwiegende Mehrheit der Zeilen normal uebersetzt werden soll -
+    // der Admin schaltet gezielt EINZELNE Ausnahmen ab, nicht umgekehrt. Immer
+    // editierbar (kein Lizenz-Feature-Gate wie bei BuildRowSourceLanguageColumn) -
+    // eine reine Ja/Nein-Entscheidung ohne API-Bezug, anders als eine echte
+    // manuelle Uebersetzungskorrektur.
+    private function BuildTranslationActiveColumn(): array
+    {
+        return [
+            'caption' => $this->Translate('Übersetzung aktiv'),
+            'name'    => self::fieldTranslationActive,
+            'width'   => '130px',
+            'add'     => true,
+            'save'    => true,
+            'edit'    => ['type' => 'CheckBox'],
+        ];
     }
 
     // Die editierbare "Quellsprache" jeder einzelnen Zeile (siehe

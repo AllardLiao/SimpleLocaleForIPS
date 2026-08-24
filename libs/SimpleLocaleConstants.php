@@ -503,6 +503,23 @@ trait SimpleLocaleConstants
     private const fieldRowSourceLanguage = 'Quellsprache';
     private const fieldTranslatedAgainstSourceLanguage = 'UebersetztGegen';
 
+    // Build 135 (Nutzer-Wunsch): pro-Zeile abschaltbare Uebersetzung fuer
+    // Objektnamen/Automations/Begruessung - eine deaktivierte Zeile zeigt IMMER
+    // ihren Rohtext (die Zeilen-Quellsprache), unabhaengig von der aktuell
+    // aktiven Gast-Sprache. Gedacht fuer Eintraege, die bewusst nie uebersetzt
+    // werden sollen (Eigennamen, Marken, technische Kuerzel). Checkbox im
+    // Formular, vorbelegt mit "true" (Uebersetzung aktiv) - sowohl fuer neu
+    // gescannte Zeilen als auch rueckwirkend fuer alle VOR Build 135 bereits
+    // gespeicherten Zeilen (siehe BackfillTranslationActiveFlag): eine fehlende
+    // Checkbox-Vorbelegung wuerde in der Konsole sonst als "abgehakt=false"
+    // (unuebersetzt) angezeigt, obwohl die Zeile tatsaechlich weiterhin normal
+    // uebersetzt wird - ein rein kosmetischer Unterschied wuerde durch ein
+    // versehentliches Speichern der Zeile (z.B. beim Bearbeiten eines ANDEREN
+    // Feldes) sofort zu echtem, unbeabsichtigtem Uebersetzungsausfall werden.
+    // Bewusst NICHT fuer "Eigene Texte"/Aufzaehlungen/Charts/die "Eigene
+    // Uebersetzungstabelle" - dort explizit nicht angefragt.
+    private const fieldTranslationActive = 'TranslationActive';
+
     // NICHT im Formular sichtbar - reines internes Bookkeeping fuer die
     // aktiv-Sprache-only-Uebersetzung + Nachhol-beim-Sprachwechsel-Mechanik (Build 70,
     // siehe IsRowLanguageTranslationCurrent): fieldSourceChangedAt ist ein Unix-Timestamp,

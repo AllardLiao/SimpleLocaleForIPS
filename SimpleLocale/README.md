@@ -27,6 +27,15 @@ Beschreibung des Moduls.
 * Automatische Übersetzung über die Google Cloud Translate API, inkl.
   persistentem Cache – Google wird nur für neue oder noch unübersetzte Einträge
   aufgerufen, nie für bereits vorhandene (auch manuell korrigierte) Werte.
+* In "Objektnamen", "Automations" und "Begrüßung" lässt sich pro Zeile per
+  Checkbox "Übersetzung aktiv" (standardmäßig angehakt) gezielt festlegen, dass
+  ein einzelner Eintrag NIE übersetzt wird, sondern immer seinen Rohtext zeigt -
+  unabhängig davon, welche Gast-Sprache gerade aktiv ist. Gedacht für
+  Eigennamen, Marken oder technische Kürzel, die in jeder Sprache gleich
+  bleiben sollen (z. B. ein Personenname in einer Präsenz-Anzeige). Eine
+  deaktivierte Zeile wird beim Rescan zusätzlich gar nicht erst zur
+  Übersetzung angefragt - spart unnötige API-Aufrufe für Inhalte, die ohnehin
+  nie in übersetzter Form angezeigt würden.
 * Übersetzungen sind direkt im Modul-Formular überprüf- und korrigierbar.
 * Der Objektbaum wird manuell (Button) oder automatisch (Timer-Intervall)
   erneut eingelesen; dabei werden nur neue Objekte/Sprachen ergänzt, nichts
@@ -3490,3 +3499,41 @@ der ursprünglichen Fassung übernommen.
   bekommt für "kg" & Co. tatsächlich die kyrillische Form, Symmetrie-Check
   gegen die reale Konstante inkl. mehrerer Stichproben-Einträge), volle
   Suite grün.
+
+* **Build 135 (Nutzer-Wunsch): neue Checkbox "Übersetzung aktiv" in
+  "Objektnamen", "Automations" und "Begrüßung" - deaktiviert für genau eine
+  Zeile dauerhaft jede Übersetzung.** Gedacht für Einträge, die bewusst NIE
+  übersetzt werden sollen (Eigennamen, Marken, technische Kürzel) - z. B. ein
+  Mitbewohner-Name in einer Präsenz-Anzeige, der sonst je nach Zielsprache
+  unerwünscht "übersetzt" würde. Eine deaktivierte Zeile zeigt ab sofort immer
+  ihren Rohtext, unabhängig von der aktuell aktiven Gast-Sprache - technisch
+  über eine neue, zentrale Weiche `GetEffectiveSelectedLanguage()`, die für
+  eine deaktivierte Zeile an allen drei Schreibstellen
+  (`ApplyLanguage`/`ApplyAutomationsLanguage`/`ApplyGreetingLanguage`)
+  konsequent die Pseudo-Sprache `ORIGINAL_IMPORT` statt der echten Zielsprache
+  an `ResolveRowValue()` übergibt.
+  Bewusst mit "true" (Übersetzung aktiv) vorbelegt - der Admin schaltet
+  gezielt einzelne Ausnahmen ab, nicht umgekehrt. Ein Rescan fragt für eine
+  deaktivierte Zeile erst gar keine Übersetzung mehr an (spart API-Kontingent
+  für Inhalte, die ohnehin nie in übersetzter Form gezeigt würden).
+  Sorgfältig gegen bereits VOR Build 135 gespeicherte Installationen
+  abgesichert: eine alte Zeile ohne das neue Feld wird beim nächsten Rescan
+  aktiv mit `true` nachgetragen (neue Funktion
+  `BackfillTranslationActiveFlag()`, analog zu `BackfillRowSourceLanguage()`
+  aus Build 70) - ohne diesen Schritt hätte die Checkbox in der Konsole für
+  JEDEN bestehenden Eintrag fälschlich "nicht abgehakt" angezeigt (Symcons
+  List-Element zeigt eine fehlende Checkbox-Vorbelegung als unchecked an),
+  obwohl die Zeile weiterhin ganz normal übersetzt worden wäre - ein rein
+  kosmetischer Unterschied hätte bei einer versehentlichen Bearbeitung eines
+  ANDEREN Felds derselben Zeile sofort zu echtem, unbeabsichtigtem
+  Übersetzungsausfall geführt. Der Backfill überschreibt dabei nie eine
+  bereits bewusst deaktivierte Zeile (`array_key_exists()`-Prüfung, nicht nur
+  "ist das Feld leer").
+  Bewusst NICHT für "Eigene Texte", Aufzählungen, Charts oder die "Eigene
+  Übersetzungstabelle" - dafür nicht angefragt.
+  Neuer Regressionstest (eine deaktivierte Zeile löst immer zum Rohtext auf,
+  unabhängig von der aktiven Sprache; eine aktive Zeile übersetzt weiterhin
+  ganz normal; eine Zeile ohne das Feld gilt als aktiv UND wird korrekt mit
+  `true` nachgetragen; eine bewusst deaktivierte Zeile wird vom Backfill nie
+  zurückgesetzt; Symmetrie-Check, dass die Checkbox exakt in den drei
+  angefragten Listen verdrahtet ist, in keiner weiteren), volle Suite grün.
