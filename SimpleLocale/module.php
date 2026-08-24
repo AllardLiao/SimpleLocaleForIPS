@@ -1412,10 +1412,6 @@ private const LANGUAGE_FLAGS = [
     // 2026-08-19).
     public function AutoRescan(): void
     {
-        // Build 122, temporaer (Diagnose): einzige Stelle, die den Auto-Timer von
-        // einem manuellen Rescan-Klick unterscheidbar macht - wird nach Abschluss
-        // der Untersuchung wieder entfernt.
-        $this->SendDebug('IPSSL_Debug', 'AutoRescan: Timer-ausgeloester Rescan startet jetzt', 0);
         $this->ScanRootTree();
     }
 
@@ -2202,7 +2198,6 @@ private const LANGUAGE_FLAGS = [
     {
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
         if ($sourceLanguage === '') {
-            $this->SendDebug('IPSSL_Debug', 'EnsureSourceLanguageIsTarget: propertySourceLanguage is empty, nothing to do', 0);
             return;
         }
 
@@ -2213,16 +2208,13 @@ private const LANGUAGE_FLAGS = [
 
         foreach ($rows as $row) {
             if (($row['code'] ?? '') === $sourceLanguage) {
-                $this->SendDebug('IPSSL_Debug', "EnsureSourceLanguageIsTarget: '$sourceLanguage' already present in TargetLanguages, no-op", 0);
                 return;
             }
         }
 
         $rows[] = ['code' => $sourceLanguage];
-        $this->SendDebug('IPSSL_Debug', "EnsureSourceLanguageIsTarget: adding '$sourceLanguage' to TargetLanguages -> " . json_encode($rows), 0);
         IPS_SetProperty($this->InstanceID, self::propertyTargetLanguages, json_encode($rows));
         IPS_ApplyChanges($this->InstanceID);
-        $this->SendDebug('IPSSL_Debug', 'EnsureSourceLanguageIsTarget: after ApplyChanges, TargetLanguages now=' . $this->ReadPropertyString(self::propertyTargetLanguages), 0);
     }
 
     // Defensive Absicherung gegen ein Downgrade (z.B. eine zeitlich befristete
@@ -4251,22 +4243,6 @@ private const LANGUAGE_FLAGS = [
 
             $propertyChanged = false;
             foreach ($rows as $index => $row) {
-                // Build 121, temporaer (Diagnose fuer den Automations/ObjectNames/
-                // Captions-Korruptionsverdacht): loggt VOR der Mutation, WELCHE Zeile
-                // ReconcileRowFields() fuer "Quellsprache geaendert" haelt und mit
-                // welchen alten Werten - wird nach Abschluss der Untersuchung wieder
-                // entfernt.
-                $beforeSource = (string) ($row[self::fieldRowSourceLanguage] ?? '');
-                $beforeReconciledAgainst = (string) ($row[self::fieldTranslatedAgainstSourceLanguage] ?? '');
-                if ($beforeSource !== '' && $beforeSource !== $beforeReconciledAgainst) {
-                    $rowKey = $row['ObjectID'] ?? $row['AutomationID'] ?? $row['SourceKey'] ?? $row['ValueObjectID'] ?? '?';
-                    $this->SendDebug(
-                        'IPSSL_Debug',
-                        "ReconcileRowFields WIRD AUSLOESEN: property=$property rowKey=$rowKey "
-                            . "Quellsprache(vorher)='$beforeSource' UebersetztGegen(vorher)='$beforeReconciledAgainst'",
-                        0
-                    );
-                }
                 $rows[$index] = $this->ReconcileRowFields($row, $propertyChanged);
             }
 
@@ -4429,13 +4405,11 @@ private const LANGUAGE_FLAGS = [
         $this->WriteAttributeString(self::attributeUnnamedObjects, json_encode($unnamedObjects));
 
         if ($unnamedObjects !== []) {
-            $this->SendDebug('IPSSL_Debug', 'ScanRootTree: abort - unnamed objects found: ' . json_encode($unnamedObjects), 0);
             $this->SetStatus(self::STATUS_UNNAMED_OBJECTS);
             $this->SetRescanProgress('');
 
             return;
         }
-        $this->SendDebug('IPSSL_Debug', 'ScanRootTree: no unnamed objects, continuing to merges', 0);
 
         $objectNames = array_map(
             fn ($row) => $this->AutoDeactivateTranslationForJsonContent($row, self::langOriginalImport),
@@ -4506,7 +4480,6 @@ private const LANGUAGE_FLAGS = [
         // wird oben bereits per ExcludeGreetingVariableFromTextRows() entfernt.
         $existingGreeting = $this->DecodeRows(self::propertyObjectGreeting);
         $scannedGreeting = $this->ScanGreetingText();
-        $this->SendDebug('IPSSL_Debug', 'ScanRootTree: existingGreeting=' . json_encode($existingGreeting) . ' scannedGreeting=' . json_encode($scannedGreeting), 0);
         // Nur auffrischen, wenn gerade zuverlaessig die Basissprache aktiv ist -
         // siehe MergeGreetingRows fuer den Grund (sonst wuerde die gerade live
         // angezeigte UEBERSETZUNG faelschlich als frischer deutscher Rohtext
@@ -4522,7 +4495,6 @@ private const LANGUAGE_FLAGS = [
                 $this->MergeGreetingRows($existingGreeting, $scannedGreeting, $isSourceLanguageActiveForGreeting)
             )
         );
-        $this->SendDebug('IPSSL_Debug', 'ScanRootTree: mergedGreeting=' . json_encode($objectGreeting), 0);
 
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
         // Build 73: Rescan (manuell UND Auto-Rescan) übersetzt bewusst wieder ALLE
@@ -4575,7 +4547,6 @@ private const LANGUAGE_FLAGS = [
         $objectGreeting = $this->FillMissingTranslations($objectGreeting, [
             ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],
         ], $sourceLanguage, $targetLanguages);
-        $this->SendDebug('IPSSL_Debug', 'ScanRootTree: filledGreeting=' . json_encode($objectGreeting) . ' -> persisting now', 0);
 
         // Build 78: feste Gast-Oberflächentexte (siehe GetOwnUiTextDefinitions) -
         // IMMER Deutsch als Quellsprache (diese Texte stehen fest im PHP-Code,
@@ -4606,7 +4577,6 @@ private const LANGUAGE_FLAGS = [
         IPS_SetProperty($this->InstanceID, self::propertyOwnUiTexts, json_encode(array_values($ownUiTexts)));
         IPS_SetProperty($this->InstanceID, self::propertyManualTranslations, json_encode(array_values($manualTranslations)));
         IPS_ApplyChanges($this->InstanceID);
-        $this->SendDebug('IPSSL_Debug', 'ScanRootTree: persisted, ObjectGreeting now=' . IPS_GetProperty($this->InstanceID, self::propertyObjectGreeting), 0);
 
         // Build 88: unabhaengig davon geleert, ob ein Reload folgt - ein Hintergrund-
         // Rescan (AutoRescan(), kein RequestAction, daher kein automatischer
@@ -6772,7 +6742,7 @@ private const LANGUAGE_FLAGS = [
                 continue;
             }
             if (!$IsHtml) {
-                $cached = $this->GetCachedTranslation($Source, $Target, $text, $DebugContext);
+                $cached = $this->GetCachedTranslation($Source, $Target, $text);
                 if ($cached !== null) {
                     $results[$i] = $cached;
                     $this->RecordCacheSavingsStats(mb_strlen($text, 'UTF-8'));
@@ -6829,7 +6799,7 @@ private const LANGUAGE_FLAGS = [
                 // vorhandene) Knoten-Cache - die ganze Zeile wird nicht mehr
                 // zusaetzlich gecacht.
                 if ($translated !== '' && !$IsHtml) {
-                    $this->StoreCachedTranslation($Source, $Target, $freshTexts[$position], $translated, $DebugContext);
+                    $this->StoreCachedTranslation($Source, $Target, $freshTexts[$position], $translated);
                 }
             }
 
@@ -6884,7 +6854,7 @@ private const LANGUAGE_FLAGS = [
         return 'IPSSL_TranslationCache_' . $this->InstanceID;
     }
 
-    private function GetCachedTranslation(string $SourceLanguage, string $TargetLanguage, string $SourceText, string $DebugContext = ''): ?string
+    private function GetCachedTranslation(string $SourceLanguage, string $TargetLanguage, string $SourceText): ?string
     {
         $ident = $this->GetTranslationCacheSemaphoreIdent();
         $locked = IPS_SemaphoreEnter($ident, 1000);
@@ -6892,21 +6862,11 @@ private const LANGUAGE_FLAGS = [
         try {
             $cache = json_decode($this->ReadAttributeString(self::attributeTranslationCache), true);
             if (!is_array($cache)) {
-                // Build 126/127, temporaer (Diagnose eines gemeldeten, wiederholten
-                // Cache-Miss-Falls): zeigt, ob der Cache zum Zeitpunkt eines Miss
-                // ueberhaupt existiert/befuellt ist, sowie (Build 127, Nutzer-
-                // Wunsch) den mitgegebenen Kontext (z.B. "ValueObjectID=46091") zur
-                // eindeutigen Zuordnung im Konfigurationsformular - wird nach
-                // Abschluss der Untersuchung wieder entfernt.
-                $this->SendDebug('IPSSL_Debug', "GetCachedTranslation MISS (kein Cache vorhanden) [$DebugContext] fuer '" . mb_substr($SourceText, 0, 60, 'UTF-8') . "' ($SourceLanguage->$TargetLanguage)", 0);
-
                 return null;
             }
 
             $key = $this->BuildTranslationCacheKey($SourceLanguage, $TargetLanguage, $SourceText);
             if (!isset($cache[$key]) || !is_array($cache[$key])) {
-                $this->SendDebug('IPSSL_Debug', "GetCachedTranslation MISS (Cache hat " . count($cache) . " Eintraege, aber nicht diesen) [$DebugContext] fuer '" . mb_substr($SourceText, 0, 60, 'UTF-8') . "' ($SourceLanguage->$TargetLanguage) key=$key", 0);
-
                 return null;
             }
 
@@ -6935,7 +6895,7 @@ private const LANGUAGE_FLAGS = [
         }
     }
 
-    private function StoreCachedTranslation(string $SourceLanguage, string $TargetLanguage, string $SourceText, string $TranslatedText, string $DebugContext = ''): void
+    private function StoreCachedTranslation(string $SourceLanguage, string $TargetLanguage, string $SourceText, string $TranslatedText): void
     {
         $ident = $this->GetTranslationCacheSemaphoreIdent();
         $locked = IPS_SemaphoreEnter($ident, 1000);
@@ -6952,13 +6912,6 @@ private const LANGUAGE_FLAGS = [
                 'h' => 1,
                 't' => time(),
             ];
-
-            // Build 126/127, temporaer (Diagnose): zeigt Cache-Groesse und
-            // Schluessel bei jedem Schreibvorgang, sowie (Build 127, Nutzer-
-            // Wunsch) den mitgegebenen Kontext (z.B. "ValueObjectID=46091") zur
-            // eindeutigen Zuordnung im Konfigurationsformular - wird nach
-            // Abschluss der Untersuchung wieder entfernt.
-            $this->SendDebug('IPSSL_Debug', 'StoreCachedTranslation: key=' . $storeKey . ' cacheSizeBeforeEviction=' . count($cache) . " [$DebugContext] fuer '" . mb_substr($SourceText, 0, 60, 'UTF-8') . "'", 0);
 
             if (count($cache) > self::TRANSLATION_CACHE_MAX_ENTRIES) {
                 // Build 72: statt bisher der aeltesten (reine Einfuegereihenfolge,
@@ -7007,7 +6960,7 @@ private const LANGUAGE_FLAGS = [
     // einem einzigen Lese-Einfuege-Verdraengungs-Schreib-Zyklus - Verdraengung
     // trifft dadurch nur noch ECHT AELTERE Eintraege aus FRUEHEREN Aufrufen,
     // nie mehr ein Geschwister aus demselben Batch.
-    private function StoreCachedTranslationsBatch(string $SourceLanguage, string $TargetLanguage, array $Entries, string $DebugContext = ''): void
+    private function StoreCachedTranslationsBatch(string $SourceLanguage, string $TargetLanguage, array $Entries): void
     {
         if ($Entries === []) {
             return;
@@ -7023,7 +6976,6 @@ private const LANGUAGE_FLAGS = [
             }
 
             $now = time();
-            $storedKeys = [];
             foreach ($Entries as $entry) {
                 $key = $this->BuildTranslationCacheKey($SourceLanguage, $TargetLanguage, $entry['text']);
                 $cache[$key] = [
@@ -7031,13 +6983,7 @@ private const LANGUAGE_FLAGS = [
                     'h' => 1,
                     't' => $now,
                 ];
-                $storedKeys[] = $key;
             }
-
-            // Build 128, temporaer (Diagnose, siehe StoreCachedTranslation): zeigt
-            // Batch-Groesse und Cache-Groesse VOR einer evtl. Verdraengung - wird
-            // nach Abschluss der Untersuchung wieder entfernt.
-            $this->SendDebug('IPSSL_Debug', 'StoreCachedTranslationsBatch: ' . count($Entries) . ' Knoten, cacheSizeBeforeEviction=' . count($cache) . " [$DebugContext] keys=" . implode(',', $storedKeys), 0);
 
             if (count($cache) > self::TRANSLATION_CACHE_MAX_ENTRIES) {
                 // Dieselbe Verdraengungslogik wie StoreCachedTranslation - siehe
@@ -7373,7 +7319,7 @@ private const LANGUAGE_FLAGS = [
                 $translatedByText[$node] = $manual;
                 continue;
             }
-            $cached = $this->GetCachedTranslation($Source, $Target, $node, $DebugContext);
+            $cached = $this->GetCachedTranslation($Source, $Target, $node);
             if ($cached !== null) {
                 $translatedByText[$node] = $cached;
                 $this->RecordCacheSavingsStats(mb_strlen($node, 'UTF-8'));
@@ -7399,7 +7345,7 @@ private const LANGUAGE_FLAGS = [
                 $freshEntriesForCache[] = ['text' => $node, 'translated' => $translated];
             }
         }
-        $this->StoreCachedTranslationsBatch($Source, $Target, $freshEntriesForCache, $DebugContext);
+        $this->StoreCachedTranslationsBatch($Source, $Target, $freshEntriesForCache);
 
         $translatedFlat = array_map(static fn (string $text): string => $translatedByText[$text] ?? '', $translatable);
 
