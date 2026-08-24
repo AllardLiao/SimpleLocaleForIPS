@@ -3,6 +3,7 @@
         "en": {
             "Aktiv": "Active",
             "Übersetzung aktiv": "Translation active",
+            "Information": "Information",
             "Notaus-Schalter: deaktiviert sofort jeden Rescan (manuell/automatisch), jede Live-Nachübersetzung und jeden Quellsprachen-Abgleich - z.B. um ein aufgebrauchtes Tageskontingent oder ein Rate-Limit sofort zu stoppen. Bereits vorhandene Übersetzungen bleiben nutzbar, die Sprachumschaltung in der Kachel funktioniert weiter.": "Emergency stop: immediately disables every rescan (manual/automatic), every live retranslation, and every source-language reconciliation - e.g. to instantly stop a spent daily quota or a rate limit. Existing translations remain usable, language switching in the tile keeps working.",
             "Deaktiviert (siehe Haken \"Aktiv\") - kein Rescan, keine Live-Nachübersetzung, kein Quellsprachen-Abgleich": "Disabled (see \"Active\" checkbox) - no rescan, no live retranslation, no source-language reconciliation",
             "Aktiv, aber pausiert - alle Übersetzungsanbieter melden ein Rate-Limit/Tageskontingent, siehe Panel \"Übersetzungsanbieter\"": "Active, but paused - all translation providers are reporting a rate limit/daily quota, see the \"Translation providers\" panel",
@@ -189,6 +190,7 @@
         "es": {
             "Aktiv": "Activo",
             "Übersetzung aktiv": "Traducción activa",
+            "Information": "Información",
             "Notaus-Schalter: deaktiviert sofort jeden Rescan (manuell/automatisch), jede Live-Nachübersetzung und jeden Quellsprachen-Abgleich - z.B. um ein aufgebrauchtes Tageskontingent oder ein Rate-Limit sofort zu stoppen. Bereits vorhandene Übersetzungen bleiben nutzbar, die Sprachumschaltung in der Kachel funktioniert weiter.": "Interruptor de emergencia: desactiva inmediatamente cada nuevo escaneo (manual/automático), cada retraducción en vivo y cada reconciliación de idioma de origen - por ejemplo, para detener al instante una cuota diaria agotada o un límite de frecuencia. Las traducciones existentes siguen siendo utilizables, el cambio de idioma en el mosaico sigue funcionando.",
             "Deaktiviert (siehe Haken \"Aktiv\") - kein Rescan, keine Live-Nachübersetzung, kein Quellsprachen-Abgleich": "Desactivado (ver casilla \"Activo\") - sin nuevo escaneo, sin retraducción en vivo, sin reconciliación de idioma de origen",
             "Aktiv, aber pausiert - alle Übersetzungsanbieter melden ein Rate-Limit/Tageskontingent, siehe Panel \"Übersetzungsanbieter\"": "Activo, pero en pausa - todos los proveedores de traducción están reportando un límite de frecuencia/cuota diaria, ver el panel \"Proveedores de traducción\"",
@@ -375,6 +377,7 @@
         "it": {
             "Aktiv": "Attivo",
             "Übersetzung aktiv": "Traduzione attiva",
+            "Information": "Informazioni",
             "Notaus-Schalter: deaktiviert sofort jeden Rescan (manuell/automatisch), jede Live-Nachübersetzung und jeden Quellsprachen-Abgleich - z.B. um ein aufgebrauchtes Tageskontingent oder ein Rate-Limit sofort zu stoppen. Bereits vorhandene Übersetzungen bleiben nutzbar, die Sprachumschaltung in der Kachel funktioniert weiter.": "Interruttore di emergenza: disattiva immediatamente ogni nuova scansione (manuale/automatica), ogni ritraduzione live e ogni riconciliazione della lingua di origine - ad es. per fermare subito una quota giornaliera esaurita o un limite di frequenza. Le traduzioni esistenti restano utilizzabili, il cambio lingua nel tile continua a funzionare.",
             "Deaktiviert (siehe Haken \"Aktiv\") - kein Rescan, keine Live-Nachübersetzung, kein Quellsprachen-Abgleich": "Disattivato (vedi casella \"Attivo\") - nessuna nuova scansione, nessuna ritraduzione live, nessuna riconciliazione della lingua di origine",
             "Aktiv, aber pausiert - alle Übersetzungsanbieter melden ein Rate-Limit/Tageskontingent, siehe Panel \"Übersetzungsanbieter\"": "Attivo, ma in pausa - tutti i fornitori di traduzione stanno segnalando un limite di frequenza/quota giornaliera, vedi il pannello \"Fornitori di traduzione\"",
@@ -561,6 +564,7 @@
         "fr": {
             "Aktiv": "Actif",
             "Übersetzung aktiv": "Traduction active",
+            "Information": "Information",
             "Notaus-Schalter: deaktiviert sofort jeden Rescan (manuell/automatisch), jede Live-Nachübersetzung und jeden Quellsprachen-Abgleich - z.B. um ein aufgebrauchtes Tageskontingent oder ein Rate-Limit sofort zu stoppen. Bereits vorhandene Übersetzungen bleiben nutzbar, die Sprachumschaltung in der Kachel funktioniert weiter.": "Interrupteur d'urgence : désactive immédiatement chaque nouvelle analyse (manuelle/automatique), chaque retraduction en direct et chaque réconciliation de langue source - par ex. pour arrêter instantanément un quota quotidien épuisé ou une limite de débit. Les traductions existantes restent utilisables, le changement de langue dans la tuile continue de fonctionner.",
             "Deaktiviert (siehe Haken \"Aktiv\") - kein Rescan, keine Live-Nachübersetzung, kein Quellsprachen-Abgleich": "Désactivé (voir la case \"Actif\") - pas de nouvelle analyse, pas de retraduction en direct, pas de réconciliation de langue source",
             "Aktiv, aber pausiert - alle Übersetzungsanbieter melden ein Rate-Limit/Tageskontingent, siehe Panel \"Übersetzungsanbieter\"": "Actif, mais en pause - tous les fournisseurs de traduction signalent une limite de débit/un quota quotidien, voir le panneau \"Fournisseurs de traduction\"",
