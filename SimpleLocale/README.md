@@ -3680,3 +3680,40 @@ der ursprünglichen Fassung übernommen.
   Bestehender Regressionstest angepasst (Buttons zeigen jetzt "Information"
   statt eines Icon-Zeichens, entsprechend breiter statt Icon-schmal), volle
   Suite grün.
+
+* **Build 140 (Nutzer-Wunsch, im Vorfeld der IPS-Store-Einreichung): alle
+  während der Live-Fehlersuche dieser Session eingebauten, als "temporaer"
+  markierten Diagnose-Ausgaben sowie weitere inzwischen überflüssige
+  Debug-Zeilen entfernt.** Betroffen: der einmalige Marker in `AutoRescan()`
+  (Build 122, unterschied den Auto-Timer vom manuellen Rescan-Klick), der
+  komplette Vorher-Zustand-Mitschnitt in `ReconcileRowSourceLanguageChanges()`
+  (Build 121, ursprünglich für den Automations/ObjectNames/Begrüßung-
+  Korruptionsverdacht gedacht), die beiden "Cache-Miss"-Zeilen in
+  `GetCachedTranslation()` sowie die Cache-Größen-Mitschnitte in
+  `StoreCachedTranslation()`/`StoreCachedTranslationsBatch()` (Build 126-128,
+  Cache-Selbstverdrängungs-Untersuchung). Der dadurch nutzlos gewordene
+  `$DebugContext`-Parameter dieser drei Cache-Funktionen wurde ebenfalls
+  entfernt (inkl. aller Aufrufstellen) statt als toter Parameter stehen zu
+  bleiben.
+  Zusätzlich (Nutzer: "ggf. auch nun überflüssige Debugs") eigenständig
+  identifiziert und entfernt: die vier Zeilen-für-Zeilen-Mitschnitte der
+  kompletten Begrüßungs-Zeile bei jedem einzelnen Rescan-Durchlauf in
+  `ScanRootTree()` (existingGreeting/scannedGreeting, mergedGreeting,
+  filledGreeting, persisted - allesamt Teil derselben, inzwischen
+  abgeschlossenen Untersuchung, aber nie explizit als "temporaer" markiert),
+  die beiden reinen Ablauf-Meldungen zu unbenannten Objekten (der eigentliche
+  Zustand steht ohnehin bereits in `attributeUnnamedObjects`/`SetStatus`),
+  sowie alle vier Zeilen in `EnsureSourceLanguageIsTarget()` (Build 79,
+  reine Ablaufverfolgung einer inzwischen längst stabilen, einfachen
+  Funktion, keine erkennbare weitere Diagnose nötig).
+  Bewusst NICHT angetastet: die permanenten Diagnose-Kategorien
+  `GoogleTranslate_Request`/`_Response`, `DeepLTranslate_Request`/`_Response`,
+  `FreeTranslate_Request`/`_Response`, `GoogleTranslate_Mapping` sowie deren
+  Fehler-Gegenstücke - das sind die eigentlichen, dauerhaft nützlichen
+  Diagnose-Werkzeuge dieses Moduls (in dieser Session wiederholt zur echten
+  Fehlersuche anhand von Nutzer-Dumps verwendet), ebenso `ClearTranslationCache`
+  (seltene, admin-ausgelöste Aktion) und die Meldung in
+  `DeduplicateTextRowsByValueObjectID()` (seltenes, potenziell
+  datenverlust-relevantes Ereignis).
+  `php -l` sauber, volle Test-Suite grün, keine funktionale Änderung -
+  reines Aufräumen vor der Einreichung im IP-Symcon Module Store.
