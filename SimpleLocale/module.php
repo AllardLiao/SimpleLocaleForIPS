@@ -2475,7 +2475,7 @@ private const LANGUAGE_FLAGS = [
 
             $this->WriteTrackedValueString($valueObjectID, $this->ResolveRowValue(
                 $row,
-                $Language,
+                $this->GetEffectiveSelectedLanguage($row, $Language),
                 self::fieldTextPrefix . $Language,
                 $rowSourceLanguage,
                 self::langOriginalImportText
@@ -3346,7 +3346,7 @@ private const LANGUAGE_FLAGS = [
 
                 $resolvedTitle = $this->ResolveRowValue(
                     $row,
-                    $Language,
+                    $this->GetEffectiveSelectedLanguage($row, $Language),
                     $Language,
                     $this->GetRowSourceLanguage($row, $SourceLanguage),
                     self::langOriginalImport
@@ -3523,7 +3523,7 @@ private const LANGUAGE_FLAGS = [
         // dient nur noch als Fallback.
         $replacements = [];
         foreach ($RowsByFieldPath as $fieldPath => $row) {
-            $resolved = $this->ResolveRowValue($row, $Language, $Language, $this->GetRowSourceLanguage($row, $SourceLanguage), self::langOriginalImport);
+            $resolved = $this->ResolveRowValue($row, $this->GetEffectiveSelectedLanguage($row, $Language), $Language, $this->GetRowSourceLanguage($row, $SourceLanguage), self::langOriginalImport);
             if ($resolved !== '') {
                 $replacements[$fieldPath] = $resolved;
             }
@@ -3788,7 +3788,15 @@ private const LANGUAGE_FLAGS = [
         // History): Sprachwechsel auf eine bis dahin nicht live nachgezogene Sprache
         // liefert jetzt aktiv eine frische Übersetzung statt des rohen Quelltexts,
         // eben über den neuen Nachhol-Mechanismus statt hier vorab für alle Sprachen.
-        if ($rowSourceLanguage !== $currentLanguage && $currentLanguage !== self::langOriginalImport) {
+        // Build 135 (Nutzer-Wunsch): eine per Checkbox deaktivierte Zeile (siehe
+        // fieldTranslationActive) wird auch bei einem live ankommenden externen
+        // Wert NIE uebersetzt - $displayText bleibt dann $NewValue (der bereits
+        // live auf der Variable stehende Rohtext), es findet also gar kein
+        // zusaetzlicher Schreibvorgang mehr statt (siehe "if ($displayText !==
+        // $NewValue)" weiter unten).
+        if ($rowSourceLanguage !== $currentLanguage
+            && $currentLanguage !== self::langOriginalImport
+            && ($Rows[$RowIndex][self::fieldTranslationActive] ?? true)) {
             // Build 127 (Nutzer-Wunsch): ValueObjectID statt eines leeren
             // DebugContext mitgeben - macht die GoogleTranslate_Request/
             // Get-/StoreCachedTranslation-Debug-Zeilen eindeutig einem
@@ -4409,9 +4417,12 @@ private const LANGUAGE_FLAGS = [
             [$this, 'BackfillTranslationActiveFlag'],
             $this->MergeRows($this->DecodeRows(self::propertyObjectNames), $scannedNames)
         );
-        $objectTexts = $this->ExcludeGreetingVariableFromTextRows(
-            $this->DeduplicateTextRowsByValueObjectID(
-                $this->MergeRows($this->DecodeRows(self::propertyObjectTexts), $scannedTexts)
+        $objectTexts = array_map(
+            [$this, 'BackfillTranslationActiveFlag'],
+            $this->ExcludeGreetingVariableFromTextRows(
+                $this->DeduplicateTextRowsByValueObjectID(
+                    $this->MergeRows($this->DecodeRows(self::propertyObjectTexts), $scannedTexts)
+                )
             )
         );
 
@@ -4419,7 +4430,10 @@ private const LANGUAGE_FLAGS = [
         foreach ($this->DecodeRows(self::propertyEnumerationOptions) as $row) {
             $existingOptions[] = $row;
         }
-        $objectOptions = $this->MergeEnumerationOptions($existingOptions, $scannedOptions);
+        $objectOptions = array_map(
+            [$this, 'BackfillTranslationActiveFlag'],
+            $this->MergeEnumerationOptions($existingOptions, $scannedOptions)
+        );
 
         // Automations leben nicht im Root-Baum, sondern als eigene Liste in einer
         // separaten Kachel-Visualisierungs-Instanz (siehe propertyWebFrontVisuInstanceID) -
@@ -4438,9 +4452,12 @@ private const LANGUAGE_FLAGS = [
         // Build 109: erst jetzt (nach Abschluss des kompletten WalkTree()-Durchlaufs,
         // $scannedNames ist vollständig) Zeilen für eigenständig im Baum stehende
         // Variablen herausfiltern - siehe ExcludeChartRowsForIndependentlyNamedVariables.
-        $objectCharts = $this->MergeChartRows(
-            $this->DecodeRows(self::propertyObjectCharts),
-            $this->ExcludeChartRowsForIndependentlyNamedVariables($scannedCharts, $scannedNames)
+        $objectCharts = array_map(
+            [$this, 'BackfillTranslationActiveFlag'],
+            $this->MergeChartRows(
+                $this->DecodeRows(self::propertyObjectCharts),
+                $this->ExcludeChartRowsForIndependentlyNamedVariables($scannedCharts, $scannedNames)
+            )
         );
 
         // Begrüßungstext, alle drei Modi (siehe ScanGreetingText) - ebenfalls
@@ -8943,6 +8960,7 @@ HTML;
                 'width'   => '200px',
                 'save'    => true,
             ];
+            $columns[] = $this->BuildTranslationActiveColumn();
 
             return array_merge($columns, $this->BuildLanguageColumnSet('', '', $SourceLanguage, $TargetLanguages));
         }
@@ -9005,6 +9023,7 @@ HTML;
                 'width'   => '200px',
                 'save'    => true,
             ];
+            $columns[] = $this->BuildTranslationActiveColumn();
             $columns = array_merge(
                 $columns,
                 $this->BuildLanguageColumnSet(self::fieldTextPrefix, $this->Translate('Text'), $SourceLanguage, $TargetLanguages)
@@ -9028,6 +9047,7 @@ HTML;
                 'width'   => '200px',
                 'save'    => true,
             ];
+            $columns[] = $this->BuildTranslationActiveColumn();
             $columns = array_merge($columns, $this->BuildLanguageColumnSet('', '', $SourceLanguage, $TargetLanguages));
         } else {
             // "names" (Objektnamen) - einziger verbleibender Fall, der hier ankommt.
@@ -9044,16 +9064,28 @@ HTML;
         return $columns;
     }
 
-    // Build 135 (Nutzer-Wunsch): Checkbox-Spalte fuer "Objektnamen"/"Automations"/
-    // "Begrüßung" - deaktiviert fuer genau diese eine Zeile jede Uebersetzung
-    // dauerhaft (siehe GetEffectiveSelectedLanguage/fieldTranslationActive),
-    // gedacht fuer Eintraege, die bewusst nie uebersetzt werden sollen
-    // (Eigennamen, Marken, technische Kuerzel). Vorbelegt mit "true" ("add"), da
-    // die weit ueberwiegende Mehrheit der Zeilen normal uebersetzt werden soll -
-    // der Admin schaltet gezielt EINZELNE Ausnahmen ab, nicht umgekehrt. Immer
-    // editierbar (kein Lizenz-Feature-Gate wie bei BuildRowSourceLanguageColumn) -
-    // eine reine Ja/Nein-Entscheidung ohne API-Bezug, anders als eine echte
-    // manuelle Uebersetzungskorrektur.
+    // Build 135 (Nutzer-Wunsch, nach Rueckfrage auf ALLE sechs gescannten
+    // Zeilen-Tabellen ausgeweitet - "Objektnamen", "Eigene Texte",
+    // "Aufzaehlungen", "Charts", "Automations", "Begrüßung"): Checkbox-Spalte,
+    // die fuer genau diese eine Zeile jede Uebersetzung dauerhaft deaktiviert
+    // (siehe GetEffectiveSelectedLanguage/fieldTranslationActive) - wirkt wie
+    // ein permanentes Leeren aller Zielsprachen-Zellen dieser Zeile, ohne sie
+    // tatsaechlich zu loeschen. Gedacht fuer Eintraege, die bewusst nie
+    // uebersetzt werden sollen (Eigennamen, Marken, technische Kuerzel) - z.B.
+    // eine "Eigene Texte"-Stringvariable, die eine JSON-Konfiguration fuer ein
+    // anderes Modul haelt (die bereits automatisch erkannte Ausnahme, siehe
+    // LooksLikeJson, bleibt DAVON unberuehrt - die Checkbox ist ein
+    // zusaetzlicher, admin-gesteuerter Mechanismus, kein Ersatz dafuer; bei
+    // echtem JSON-Inhalt bleibt die Checkbox typischerweise angehakt/aktiv,
+    // die automatische Erkennung greift unabhaengig davon). Bewusst NICHT fuer
+    // die "Eigene Uebersetzungstabelle" - dort wird strukturell nie etwas
+    // automatisch uebersetzt, ein "nie uebersetzen"-Schalter waere dort
+    // wirkungslos. Vorbelegt mit "true" ("add"), da die weit ueberwiegende
+    // Mehrheit der Zeilen normal uebersetzt werden soll - der Admin schaltet
+    // gezielt EINZELNE Ausnahmen ab, nicht umgekehrt. Immer editierbar (kein
+    // Lizenz-Feature-Gate wie bei BuildRowSourceLanguageColumn) - eine reine
+    // Ja/Nein-Entscheidung ohne API-Bezug, anders als eine echte manuelle
+    // Uebersetzungskorrektur.
     private function BuildTranslationActiveColumn(): array
     {
         return [
