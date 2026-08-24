@@ -39,8 +39,16 @@ Beschreibung des Moduls.
   Steuerdaten für ein anderes Modul statt echten Anzeigetext enthalten. Eine
   deaktivierte Zeile wird beim Rescan zusätzlich gar nicht erst zur
   Übersetzung angefragt - spart unnötige API-Aufrufe für Inhalte, die ohnehin
-  nie in übersetzter Form angezeigt würden. Nicht Teil der "Eigenen
-  Übersetzungstabelle" - dort wird ohnehin nie automatisch übersetzt.
+  nie in übersetzter Form angezeigt würden. Erkennt ein Rescan bei "Eigene
+  Texte" automatisch gültiges JSON im Rohtext (z. B. Konfigurations-/
+  Steuerdaten für ein anderes Modul statt echten Anzeigetext), wird die
+  Checkbox dafür automatisch auf "inaktiv" gesetzt - so ein Inhalt wird
+  ohnehin nie übersetzt, unabhängig vom Stand der Checkbox, und die
+  Anzeige soll das nicht verschweigen. Diese Automatik wirkt bewusst nur in
+  eine Richtung (nie automatisch wieder "aktiv"), damit eine aus einem
+  anderen Grund manuell deaktivierte Zeile nicht versehentlich reaktiviert
+  wird. Nicht Teil der "Eigenen Übersetzungstabelle" - dort wird ohnehin nie
+  automatisch übersetzt.
 * Übersetzungen sind direkt im Modul-Formular überprüf- und korrigierbar.
 * Der Objektbaum wird manuell (Button) oder automatisch (Timer-Intervall)
   erneut eingelesen; dabei werden nur neue Objekte/Sprachen ergänzt, nichts
@@ -3586,3 +3594,30 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Check, dass Checkbox und Auflösungslogik jetzt tatsächlich in
   allen sechs Tabellen verdrahtet sind, weiterhin NICHT in der Eigenen
   Übersetzungstabelle), volle Suite grün.
+
+* **Build 137 (direkter Nachbericht zu Build 135/136, Nutzer-Wunsch): die
+  "Übersetzung aktiv"-Checkbox wird jetzt automatisch auf "inaktiv" gesetzt,
+  sobald der Rohtext einer Zeile gültiges JSON ist.** Hintergrund: JSON-
+  Rohtext (siehe `LooksLikeJson()`, Build 84 - erkennt Konfigurations-/
+  Steuerdaten für ein anderes Modul statt echten Anzeigetext) wurde in
+  `FillLanguageColumn()` schon immer UNBEDINGT von jeder Übersetzung
+  ausgenommen, komplett unabhängig vom Stand der Checkbox - für so eine Zeile
+  hatte die Checkbox also faktisch nie eine Wirkung, konnte der Konsole aber
+  trotzdem fälschlich "wird übersetzt" (angehakt) anzeigen. Ein Rescan setzt
+  die Checkbox jetzt aktiv auf "inaktiv", sobald das zutrifft - neue Funktion
+  `AutoDeactivateTranslationForJsonContent()`, läuft direkt nach
+  `BackfillTranslationActiveFlag()` an denselben sechs Stellen in
+  `ScanRootTree()`, mit dem jeweils passenden Rohtext-Feld je Zeilenform
+  (`ORIGINAL_IMPORT_Text` bei "Eigene Texte", sonst überall `ORIGINAL_IMPORT`).
+  Bewusst nur EINSEITIG wirksam (niemals automatisch wieder auf "aktiv"
+  zurückgesetzt): hört ein Rohtext auf, JSON zu sein, bleibt eine
+  zwischenzeitlich vom Admin aus einem völlig anderen Grund manuell
+  deaktivierte Zeile (z. B. ein Eigenname) unangetastet deaktiviert, statt
+  stillschweigend reaktiviert zu werden.
+  Neuer Regressionstest (eine Zeile mit JSON-Rohtext und noch aktivem
+  Standardwert wird beim nächsten Rescan automatisch deaktiviert; eine Zeile
+  mit normalem Text bleibt von der Automatik komplett unberührt; eine bereits
+  aus anderem Grund deaktivierte, nicht-JSON-Zeile wird NIE automatisch
+  wieder aktiviert; Symmetrie-Check, dass die neue Funktion tatsächlich mit
+  dem jeweils korrekten Rohtext-Feld je Tabelle in alle sechs Stellen
+  verdrahtet ist), volle Suite grün.
