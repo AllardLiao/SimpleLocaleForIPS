@@ -27,15 +27,20 @@ Beschreibung des Moduls.
 * Automatische Übersetzung über die Google Cloud Translate API, inkl.
   persistentem Cache – Google wird nur für neue oder noch unübersetzte Einträge
   aufgerufen, nie für bereits vorhandene (auch manuell korrigierte) Werte.
-* In "Objektnamen", "Automations" und "Begrüßung" lässt sich pro Zeile per
-  Checkbox "Übersetzung aktiv" (standardmäßig angehakt) gezielt festlegen, dass
-  ein einzelner Eintrag NIE übersetzt wird, sondern immer seinen Rohtext zeigt -
-  unabhängig davon, welche Gast-Sprache gerade aktiv ist. Gedacht für
-  Eigennamen, Marken oder technische Kürzel, die in jeder Sprache gleich
-  bleiben sollen (z. B. ein Personenname in einer Präsenz-Anzeige). Eine
+* In "Objektnamen", "Eigene Texte", "Aufzählungen", "Charts", "Automations" und
+  "Begrüßung" lässt sich pro Zeile per Checkbox "Übersetzung aktiv"
+  (standardmäßig angehakt) gezielt festlegen, dass ein einzelner Eintrag NIE
+  übersetzt wird, sondern immer seinen Rohtext zeigt - unabhängig davon,
+  welche Gast-Sprache gerade aktiv ist. Wirkt wie ein dauerhaftes Leeren aller
+  Zielsprachen-Zellen dieser einen Zeile, ohne sie tatsächlich zu löschen.
+  Gedacht für Eigennamen, Marken oder technische Kürzel, die in jeder Sprache
+  gleich bleiben sollen (z. B. ein Personenname in einer Präsenz-Anzeige),
+  sowie für einzelne "Eigene Texte"-Variablen, die eigentlich Konfigurations-/
+  Steuerdaten für ein anderes Modul statt echten Anzeigetext enthalten. Eine
   deaktivierte Zeile wird beim Rescan zusätzlich gar nicht erst zur
   Übersetzung angefragt - spart unnötige API-Aufrufe für Inhalte, die ohnehin
-  nie in übersetzter Form angezeigt würden.
+  nie in übersetzter Form angezeigt würden. Nicht Teil der "Eigenen
+  Übersetzungstabelle" - dort wird ohnehin nie automatisch übersetzt.
 * Übersetzungen sind direkt im Modul-Formular überprüf- und korrigierbar.
 * Der Objektbaum wird manuell (Button) oder automatisch (Timer-Intervall)
   erneut eingelesen; dabei werden nur neue Objekte/Sprachen ergänzt, nichts
@@ -3529,11 +3534,55 @@ der ursprünglichen Fassung übernommen.
   Übersetzungsausfall geführt. Der Backfill überschreibt dabei nie eine
   bereits bewusst deaktivierte Zeile (`array_key_exists()`-Prüfung, nicht nur
   "ist das Feld leer").
-  Bewusst NICHT für "Eigene Texte", Aufzählungen, Charts oder die "Eigene
-  Übersetzungstabelle" - dafür nicht angefragt.
+  Zunächst nur für "Objektnamen", "Automations" und "Begrüßung" umgesetzt -
+  siehe Build 136 für die direkt im Anschluss erfolgte Ausweitung auf alle
+  übrigen gescannten Zeilen-Tabellen.
   Neuer Regressionstest (eine deaktivierte Zeile löst immer zum Rohtext auf,
   unabhängig von der aktiven Sprache; eine aktive Zeile übersetzt weiterhin
   ganz normal; eine Zeile ohne das Feld gilt als aktiv UND wird korrekt mit
   `true` nachgetragen; eine bewusst deaktivierte Zeile wird vom Backfill nie
   zurückgesetzt; Symmetrie-Check, dass die Checkbox exakt in den drei
   angefragten Listen verdrahtet ist, in keiner weiteren), volle Suite grün.
+
+* **Build 136 (direkter Nachbericht zu Build 135, Nutzer-Korrektur): die
+  "Übersetzung aktiv"-Checkbox war als "jede einzelne Zeile in DEN
+  Übersetzungstabellen" gemeint, nicht nur für Objektnamen/Automations/
+  Begrüßung.** Konkret gewünscht: bei "Eigene Texte" soll sich damit z. B.
+  gezielt eine einzelne Stringvariable von der Übersetzung ausschließen
+  lassen, deren Inhalt in Wahrheit JSON-Steuerdaten für ein anderes Modul ist
+  - "implizit, als ob die Übersetzungszellen gelöscht wurden, nur mit einer
+  Checkbox". Die Checkbox ist jetzt zusätzlich in "Eigene Texte",
+  "Aufzählungen" und "Charts" verfügbar - zusammen mit den bereits
+  vorhandenen drei Tabellen aus Build 135 damit in allen sechs gescannten
+  Zeilen-Tabellen. Bewusst weiterhin NICHT in der "Eigenen
+  Übersetzungstabelle" (ManualTranslations) - dort wird strukturell nie
+  automatisch übersetzt, ein "nie übersetzen"-Schalter wäre dort wirkungslos.
+  Wichtig zur Abgrenzung (vom Nutzer selbst angesprochen): die bereits
+  bestehende automatische JSON-Erkennung (`LooksLikeJson`, Build 84) bleibt
+  von dieser Checkbox unberührt - sie ist ein zusätzlicher, admin-
+  gesteuerter Mechanismus, kein Ersatz dafür. Bei echtem JSON-Inhalt bleibt
+  die Checkbox typischerweise angehakt/aktiv, die automatische Erkennung
+  verhindert eine Übersetzung unabhängig davon bereits von selbst.
+  Technisch etwas anspruchsvoller als die ursprünglichen drei Tabellen, da
+  zwei Fälle eine echte Zeilen-für-Zeilen-Granularität statt einer einzigen
+  Sprachweiche pro Aufruf brauchen: `ApplyEnumerationOptionsToVariable()`
+  baut eine EINZIGE Variablen-Präsentation aus MEHREREN Zeilen zusammen (ein
+  Feld je Caption/Prefix/Suffix) - hier wird die Weiche pro Feld einzeln
+  angewendet, sodass ein deaktiviertes Feld seinen Rohtext zeigt, während ein
+  anderes, weiterhin aktives Feld DERSELBEN Variable normal übersetzt wird
+  (kein Alles-oder-nichts-Schalter für die ganze Variable). `ApplyChartsLanguage()`
+  bekam dieselbe Behandlung pro Datenreihen-Titel. Zusätzlich musste die
+  LIVE-Nachübersetzung bei externen Schreibvorgängen
+  (`ApplyTrackedVariableUpdate`, gemeinsam genutzt von "Eigene Texte" und
+  "Begrüßung" im Modus "Variable") um dieselbe Prüfung ergänzt werden - sonst
+  hätte ein deaktiviertes "Eigene Texte"-Feld bei jedem externen
+  Schreibvorgang trotzdem unnötig API-Kontingent verbraucht, auch wenn das
+  Ergebnis nie geschrieben worden wäre.
+  Neuer Regressionstest (eine deaktivierte "Eigene Texte"-Zeile löst exakt
+  wie vom Nutzer gefordert zum Rohtext auf; innerhalb einer geteilten
+  Variablen-Präsentation bleibt ein deaktiviertes Feld roh, während ein
+  aktives Geschwisterfeld weiterhin übersetzt; eine deaktivierte Zeile wird
+  bei einem live ankommenden externen Wert nicht mehr an die API geschickt;
+  Symmetrie-Check, dass Checkbox und Auflösungslogik jetzt tatsächlich in
+  allen sechs Tabellen verdrahtet sind, weiterhin NICHT in der Eigenen
+  Übersetzungstabelle), volle Suite grün.
