@@ -797,8 +797,8 @@
                 },
                 {
                     "type": "PopupButton",
-                    "caption": "ⓘ",
-                    "width": "40px",
+                    "caption": "Information",
+                    "width": "110px",
                     "popup": {
                         "caption": "Visualisierung neu einlesen und fehlende Übersetzungen ergänzen",
                         "items": [
@@ -828,8 +828,8 @@
                 },
                 {
                     "type": "PopupButton",
-                    "caption": "ⓘ",
-                    "width": "40px",
+                    "caption": "Information",
+                    "width": "110px",
                     "popup": {
                         "caption": "Übersetzungen gelöschter Elemente in der Visualisierung entfernen",
                         "items": [
@@ -859,8 +859,8 @@
                 },
                 {
                     "type": "PopupButton",
-                    "caption": "ⓘ",
-                    "width": "40px",
+                    "caption": "Information",
+                    "width": "110px",
                     "popup": {
                         "caption": "Übersetzungs-Cache leeren",
                         "items": [
@@ -883,8 +883,8 @@
                 },
                 {
                     "type": "PopupButton",
-                    "caption": "ⓘ",
-                    "width": "40px",
+                    "caption": "Information",
+                    "width": "110px",
                     "popup": {
                         "caption": "Übersetzungsanbieter prüfen",
                         "items": [

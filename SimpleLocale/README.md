@@ -3659,3 +3659,24 @@ der ursprünglichen Fassung übernommen.
   Spalte fehlt komplett ohne die Pro-Lizenz statt nur schreibgeschützt zu
   sein; die Auflösungslogik bleibt nachweislich frei von jedem eigenen
   Lizenz-Check), volle Suite grün.
+
+* **Build 139 (direkter Nachbericht zu Build 138, Nutzer-Feedback per
+  Screenshot): das gerade erst auf "ⓘ" umgestellte Info-Zeichen sah in der
+  echten Konsole aus wie ein "Aus"-/Standby-Symbol, nicht wie ein
+  Info-Zeichen.** Ursache: die Kachel selbst rendert "ⓘ" über ihr eigenes,
+  freies HTML/CSS (siehe `module.html`), während die vier Info-`PopupButton`s
+  im Konfigformular von der nativen Symcon-Konsole mit deren eigener
+  Systemschrift dargestellt werden - dort erschien exakt dasselbe
+  Unicode-Zeichen missverständlich. Auf Vorschlag des Nutzers ("das ist am
+  sichersten") auf reinen, eindeutigen Klartext "Information" umgestellt
+  statt eines erneuten Icon-Versuchs - Breite von 40px (Icon-Größe) auf 110px
+  (Textbreite) angepasst, neue Übersetzung in allen vier Sprachen ergänzt.
+  Der vom Nutzer eigentlich bevorzugte Ansatz - ein rahmenloses Icon wie in
+  der Kachel, das dennoch beim Klick das Popup öffnet - ist über form.json
+  technisch nicht erreichbar: jeder Button-/PopupButton-Typ der Symcon-
+  Konsole rendert zwingend mit eigenem Rahmen/Chrome; nur die Kachel selbst
+  kann als freies HTML/CSS komplett ohne Button-Optik auskommen. Klartext
+  bleibt damit die zuverlässigste Lösung innerhalb der Konsole.
+  Bestehender Regressionstest angepasst (Buttons zeigen jetzt "Information"
+  statt eines Icon-Zeichens, entsprechend breiter statt Icon-schmal), volle
+  Suite grün.
