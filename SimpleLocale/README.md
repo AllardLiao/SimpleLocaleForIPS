@@ -27,9 +27,10 @@ Beschreibung des Moduls.
 * Automatische Übersetzung über die Google Cloud Translate API, inkl.
   persistentem Cache – Google wird nur für neue oder noch unübersetzte Einträge
   aufgerufen, nie für bereits vorhandene (auch manuell korrigierte) Werte.
-* In "Objektnamen", "Eigene Texte", "Aufzählungen", "Charts", "Automations" und
-  "Begrüßung" lässt sich pro Zeile per Checkbox "Übersetzung aktiv"
-  (standardmäßig angehakt) gezielt festlegen, dass ein einzelner Eintrag NIE
+* **Pro-Feature:** In "Objektnamen", "Eigene Texte", "Aufzählungen", "Charts",
+  "Automations" und "Begrüßung" lässt sich pro Zeile per Checkbox "Übersetzung
+  aktiv" (standardmäßig angehakt, nur mit Pro-Lizenz überhaupt sichtbar)
+  gezielt festlegen, dass ein einzelner Eintrag NIE
   übersetzt wird, sondern immer seinen Rohtext zeigt - unabhängig davon,
   welche Gast-Sprache gerade aktiv ist. Wirkt wie ein dauerhaftes Leeren aller
   Zielsprachen-Zellen dieser einen Zeile, ohne sie tatsächlich zu löschen.
@@ -3621,3 +3622,40 @@ der ursprünglichen Fassung übernommen.
   wieder aktiviert; Symmetrie-Check, dass die neue Funktion tatsächlich mit
   dem jeweils korrekten Rohtext-Feld je Tabelle in alle sechs Stellen
   verdrahtet ist), volle Suite grün.
+
+* **Build 138 (zwei Nutzer-Wünsche): die vier Info-Buttons unten im
+  Konfigformular sehen jetzt aus wie das Info-Symbol der Kachel, UND die
+  "Übersetzung aktiv"-Checkbox aus Build 135-137 ist ab sofort ein
+  Pro-Feature.** Erster Punkt, direkter Nachbericht zu Build 130/131: die vier
+  Info-`PopupButton`s trugen bisher WIDERSPRÜCHLICH gleichzeitig ein
+  Symcon-eigenes Icon (`"icon": "information"`) UND das Emoji "ℹ️" als
+  Caption - vermutlich der eigentliche Grund für den schon damals gemeldeten
+  "sieht komisch aus"-Eindruck. Die Kachel selbst verwendet für ihr eigenes
+  Info-Symbol gar kein Symcon-Icon, sondern schlicht das Zeichen "ⓘ" als
+  reinen Text-Span (siehe `$infoIconHtml` in `GetVisualizationTile()`) - die
+  vier Buttons wurden exakt darauf angeglichen (Caption jetzt "ⓘ", das
+  zusätzliche Symcon-Icon entfernt). Nicht änderbar bleibt dagegen das
+  "Zahnradsymbol" im Kopf des sich öffnenden Popup-Dialogs selbst - das ist
+  Teil von Symcons eigener Konsolen-Darstellung für `PopupButton`-Popups und
+  wird nicht über form.json konfiguriert.
+  Zweiter Punkt: die "Übersetzung aktiv"-Checkbox ist jetzt ein Pro-Feature
+  (`edit_translations`, dasselbe bereits bestehende Feature, das auch die
+  manuelle Korrektur einzelner Übersetzungszellen freischaltet) - ohne Pro
+  wird die Spalte komplett WEGGELASSEN, nicht nur schreibgeschützt (anders als
+  z. B. bei der "Quellsprache"-Spalte). Bewusst NUR die Formular-Spalte
+  selbst ist lizenzabhängig - `GetEffectiveSelectedLanguage()`,
+  `BackfillTranslationActiveFlag()` und die neue automatische
+  JSON-Erkennung aus Build 137 laufen unverändert für JEDE Lizenz: eine
+  bereits gespeicherte Deaktivierung bleibt so auch nach einem Downgrade von
+  Pro konsistent wirksam, und die schon lange vor dieser Checkbox bestehende
+  automatische JSON-Ausnahme (Build 84) funktioniert unabhängig von der
+  Lizenz weiterhin in jeder Edition. Wie vom Nutzer selbst angemerkt: dieselbe
+  Wirkung ließe sich in jeder Edition ohnehin schon manuell nachbilden (die
+  jeweilige Zielsprachen-Zelle einzeln leeren) - Pro schaltet also nur den
+  Komfort ("einmal ankreuzen, gilt für alle Sprachen gleichzeitig") frei,
+  keine grundsätzlich neue technische Möglichkeit.
+  Neuer Regressionstest (die Info-Buttons verwenden jetzt exakt dasselbe
+  "ⓘ"-Zeichen wie die Kachel, ohne redundantes Symcon-Icon; die Checkbox-
+  Spalte fehlt komplett ohne die Pro-Lizenz statt nur schreibgeschützt zu
+  sein; die Auflösungslogik bleibt nachweislich frei von jedem eigenen
+  Lizenz-Check), volle Suite grün.

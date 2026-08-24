@@ -8980,7 +8980,7 @@ HTML;
                 'save'    => true,
             ];
             $columns[] = $this->BuildRowSourceLanguageColumn($SourceLanguage, $TargetLanguages);
-            $columns[] = $this->BuildTranslationActiveColumn();
+            $columns = $this->AppendTranslationActiveColumn($columns);
 
             return array_merge($columns, $this->BuildLanguageColumnSet('', '', $SourceLanguage, $TargetLanguages));
         }
@@ -9002,7 +9002,7 @@ HTML;
                 'width'   => '200px',
                 'save'    => true,
             ];
-            $columns[] = $this->BuildTranslationActiveColumn();
+            $columns = $this->AppendTranslationActiveColumn($columns);
 
             return array_merge($columns, $this->BuildLanguageColumnSet('', '', $SourceLanguage, $TargetLanguages));
         }
@@ -9030,7 +9030,7 @@ HTML;
                 ],
             ];
             $columns[] = $this->BuildRowSourceLanguageColumn($SourceLanguage, $TargetLanguages);
-            $columns[] = $this->BuildTranslationActiveColumn();
+            $columns = $this->AppendTranslationActiveColumn($columns);
 
             return array_merge($columns, $this->BuildLanguageColumnSet('', '', $SourceLanguage, $TargetLanguages));
         }
@@ -9065,7 +9065,7 @@ HTML;
                 'width'   => '200px',
                 'save'    => true,
             ];
-            $columns[] = $this->BuildTranslationActiveColumn();
+            $columns = $this->AppendTranslationActiveColumn($columns);
             $columns = array_merge(
                 $columns,
                 $this->BuildLanguageColumnSet(self::fieldTextPrefix, $this->Translate('Text'), $SourceLanguage, $TargetLanguages)
@@ -9089,7 +9089,7 @@ HTML;
                 'width'   => '200px',
                 'save'    => true,
             ];
-            $columns[] = $this->BuildTranslationActiveColumn();
+            $columns = $this->AppendTranslationActiveColumn($columns);
             $columns = array_merge($columns, $this->BuildLanguageColumnSet('', '', $SourceLanguage, $TargetLanguages));
         } else {
             // "names" (Objektnamen) - einziger verbleibender Fall, der hier ankommt.
@@ -9099,7 +9099,7 @@ HTML;
                 'width'   => '200px',
                 'save'    => true,
             ];
-            $columns[] = $this->BuildTranslationActiveColumn();
+            $columns = $this->AppendTranslationActiveColumn($columns);
             $columns = array_merge($columns, $this->BuildLanguageColumnSet('', '', $SourceLanguage, $TargetLanguages));
         }
 
@@ -9124,12 +9124,30 @@ HTML;
     // automatisch uebersetzt, ein "nie uebersetzen"-Schalter waere dort
     // wirkungslos. Vorbelegt mit "true" ("add"), da die weit ueberwiegende
     // Mehrheit der Zeilen normal uebersetzt werden soll - der Admin schaltet
-    // gezielt EINZELNE Ausnahmen ab, nicht umgekehrt. Immer editierbar (kein
-    // Lizenz-Feature-Gate wie bei BuildRowSourceLanguageColumn) - eine reine
-    // Ja/Nein-Entscheidung ohne API-Bezug, anders als eine echte manuelle
-    // Uebersetzungskorrektur.
-    private function BuildTranslationActiveColumn(): array
+    // gezielt EINZELNE Ausnahmen ab, nicht umgekehrt.
+    //
+    // Build 138 (Nutzer-Wunsch): NUR ab Pro-Lizenz ("edit_translations", siehe
+    // HasLicenseFeature) überhaupt eingeblendet - anders als
+    // BuildRowSourceLanguageColumn/BuildLanguageColumnSet (dort bleibt eine
+    // Spalte OHNE das Feature sichtbar, nur nicht editierbar) wird die Spalte
+    // hier bei fehlendem Feature komplett WEGGELASSEN, nicht nur schreibgeschützt
+    // - ausdruecklicher Nutzer-Wunsch. Ein Standard-/Light-Nutzer könnte dieselbe
+    // Wirkung ohnehin schon manuell nachbilden (Zielsprachen-Zelle je Sprache
+    // einzeln leeren), das bleibt technisch unveraendert moeglich - nur der
+    // bequeme "einmal ankreuzen, gilt fuer alle Sprachen"-Komfort ist Pro
+    // vorbehalten. Absichtlich KEIN Lizenz-Gate an anderer Stelle
+    // (GetEffectiveSelectedLanguage/BackfillTranslationActiveFlag/
+    // AutoDeactivateTranslationForJsonContent laufen weiterhin fuer JEDE
+    // Lizenz) - eine bereits gespeicherte Deaktivierung (z.B. nach einem
+    // Downgrade von Pro) bleibt dadurch wirksam/konsistent, und die bereits
+    // VOR dieser Checkbox bestehende automatische JSON-Ausnahme (Build 84)
+    // bleibt unabhaengig von der Lizenz weiterhin fuer alle Editionen aktiv.
+    private function BuildTranslationActiveColumn(): ?array
     {
+        if (!$this->HasLicenseFeature('edit_translations')) {
+            return null;
+        }
+
         return [
             'caption' => $this->Translate('Übersetzung aktiv'),
             'name'    => self::fieldTranslationActive,
@@ -9138,6 +9156,20 @@ HTML;
             'save'    => true,
             'edit'    => ['type' => 'CheckBox'],
         ];
+    }
+
+    // Build 138: gemeinsamer Anhänge-Helfer für alle sechs Aufrufstellen in
+    // BuildListColumns() - haengt die Spalte nur an, wenn
+    // BuildTranslationActiveColumn() (Lizenz-Gate siehe dort) ueberhaupt etwas
+    // liefert.
+    private function AppendTranslationActiveColumn(array $Columns): array
+    {
+        $column = $this->BuildTranslationActiveColumn();
+        if ($column !== null) {
+            $Columns[] = $column;
+        }
+
+        return $Columns;
     }
 
     // Die editierbare "Quellsprache" jeder einzelnen Zeile (siehe
