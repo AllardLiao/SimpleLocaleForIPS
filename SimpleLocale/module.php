@@ -3346,7 +3346,7 @@ private const LANGUAGE_FLAGS = [
             return;
         }
 
-        $liveAutomations = json_decode((string) @IPS_GetProperty($webFrontID, 'Automations'), true);
+        $liveAutomations = json_decode((string) $this->GetVisuInstanceProperty($webFrontID, 'Automations', ''), true);
         if (!is_array($liveAutomations)) {
             return;
         }
@@ -3377,7 +3377,11 @@ private const LANGUAGE_FLAGS = [
         }
         unset($entry);
 
-        if ($changed) {
+        // Build 144: dieselbe Absicherung wie bei "GreetingName" (siehe
+        // VisuInstanceHasProperty) - hierher kommt man zwar nur, wenn oben
+        // ueberhaupt Automations gelesen werden konnten, aber der Schreibzugriff
+        // soll nicht darauf angewiesen sein, dass diese Kette nie umgebaut wird.
+        if ($changed && $this->VisuInstanceHasProperty($webFrontID, 'Automations')) {
             @IPS_SetProperty($webFrontID, 'Automations', json_encode($liveAutomations));
             @IPS_ApplyChanges($webFrontID);
         }
@@ -3487,7 +3491,16 @@ private const LANGUAGE_FLAGS = [
             return;
         }
 
-        $currentName = (string) @IPS_GetProperty($webFrontID, 'GreetingName');
+        // Build 144: kennt die gewaehlte Visualisierung gar keine
+        // "GreetingName"-Property (z.B. die alte WebFront-Visualisierung), gibt
+        // es hier schlicht nichts zurueckzuschreiben - siehe
+        // VisuInstanceHasProperty() fuer den Grund, warum das VOR dem
+        // IPS_SetProperty() geprueft werden muss.
+        if (!$this->VisuInstanceHasProperty($webFrontID, 'GreetingName')) {
+            return;
+        }
+
+        $currentName = (string) $this->GetVisuInstanceProperty($webFrontID, 'GreetingName', '');
         if ($currentName === $resolvedName) {
             return;
         }
@@ -4357,16 +4370,112 @@ private const LANGUAGE_FLAGS = [
     // informativ in attributeEffectiveRootCategoryID gespiegelt (kein Formularfeld,
     // nur zur Fehlersuche im "Attribute"-Reiter). Ohne gewählte Instanz oder ohne
     // deren BaseID liefert diese Funktion 0 (siehe STATUS_ROOT_CATEGORY_MISSING).
-    private function GetEffectiveRootCategoryID(): int
+    // Build 144: liest ALLE Properties der gewaehlten Visualisierungs-Instanz auf
+    // einen Schlag als Array - die einzige Art, fremde Instanzen gefahrlos
+    // auszulesen.
+    //
+    // WICHTIG (Ursache mehrerer Abstuerze bei der alten WebFront-
+    // Visualisierung): IPS_GetProperty() wirft bei einem unbekannten
+    // Property-Namen eine EXCEPTION, und "@" unterdrueckt in PHP nur Warnungen,
+    // NIEMALS Exceptions. Jeder direkte @IPS_GetProperty($visu, 'Automations')
+    // & Co. riss deshalb den kompletten Rescan ab, sobald die gewaehlte Instanz
+    // diese Property nicht kennt - genau der Fall bei der alten
+    // WebFront-Visualisierung, die weder "Automations" noch "GreetingName" noch
+    // "ShowGreeting" besitzt. IPS_GetConfiguration() liefert dagegen schlicht
+    // das JSON aller vorhandenen Properties; ein fehlender Schluessel ist dann
+    // ein ganz normaler Array-Miss statt eines Abbruchs.
+    private function GetVisuInstanceProperties(int $VisuInstanceID): array
     {
-        $rootID = 0;
-        $webFrontID = $this->ReadPropertyInteger(self::propertyWebFrontVisuInstanceID);
-        if ($webFrontID !== 0 && @IPS_ObjectExists($webFrontID)) {
-            $baseID = (int) @IPS_GetProperty($webFrontID, 'BaseID');
-            if ($baseID !== 0 && @IPS_ObjectExists($baseID)) {
-                $rootID = $baseID;
+        if ($VisuInstanceID === 0 || !@IPS_ObjectExists($VisuInstanceID)) {
+            return [];
+        }
+
+        $configuration = json_decode((string) @IPS_GetConfiguration($VisuInstanceID), true);
+
+        return is_array($configuration) ? $configuration : [];
+    }
+
+    // Bequemer Einzelzugriff auf GetVisuInstanceProperties() - fuer Aufrufer, die
+    // nur EINE Property brauchen. Wer mehrere liest, holt sich besser einmal das
+    // ganze Array (spart wiederholte IPS_GetConfiguration()-Aufrufe).
+    private function GetVisuInstanceProperty(int $VisuInstanceID, string $Name, mixed $Default = null): mixed
+    {
+        return $this->GetVisuInstanceProperties($VisuInstanceID)[$Name] ?? $Default;
+    }
+
+    // Build 144: Gegenstueck fuer die SCHREIBENDEN Zugriffe auf die fremde
+    // Instanz. IPS_SetProperty() wirft bei unbekanntem Namen genauso eine
+    // Exception wie IPS_GetProperty() (und "@" faengt sie genauso wenig ab) -
+    // deshalb vorher pruefen, ob die Property dort ueberhaupt existiert.
+    //
+    // Nicht nur theoretisch: wer seine Instanz zuerst mit der
+    // Kachel-Visualisierung betreibt (dabei entstehen Begruessungs-/
+    // Automations-Zeilen) und sie danach auf die alte WebFront-Visualisierung
+    // umstellt, behaelt diese Zeilen - der naechste Sprachwechsel liefe dann
+    // ungeschuetzt in ein IPS_SetProperty() auf eine Property, die es dort gar
+    // nicht gibt.
+    private function VisuInstanceHasProperty(int $VisuInstanceID, string $Name): bool
+    {
+        return array_key_exists($Name, $this->GetVisuInstanceProperties($VisuInstanceID));
+    }
+
+    // Build 144 (Nutzer-Wunsch: auch die alte WebFront-Visualisierung
+    // unterstuetzen): unterschiedliche Visualisierungs-Module benennen ihre
+    // Startkategorie unterschiedlich. Die Kachel-Visualisierung nutzt "BaseID"
+    // (im Formular "Startkategorie"), aeltere/andere Visualisierungen andere
+    // Namen. Statt auf einen einzigen Namen festgenagelt zu sein, werden der
+    // Reihe nach bekannte Kandidaten geprueft und der erste genommen, der
+    // tatsaechlich auf ein existierendes Objekt zeigt.
+    //
+    // Bewusst eine feste Reihenfolge statt "irgendeine ID-Property nehmen": eine
+    // blinde Suche koennte sonst z.B. eine Verweis-Property auf eine ganz andere
+    // Kategorie erwischen und wuerde stillschweigend den falschen Baum
+    // uebersetzen - deutlich schlimmer als ein sauberes
+    // STATUS_ROOT_CATEGORY_MISSING.
+    private const VISU_ROOT_CATEGORY_PROPERTY_CANDIDATES = [
+        'BaseID',        // Kachel-Visualisierung ("Startkategorie")
+        'BaseCategory',
+        'BaseCategoryID',
+        'RootID',
+        'RootCategoryID',
+        'CategoryID',
+        'StartCategoryID',
+    ];
+
+    private function ResolveVisuRootCategoryID(int $VisuInstanceID): int
+    {
+        $properties = $this->GetVisuInstanceProperties($VisuInstanceID);
+
+        foreach (self::VISU_ROOT_CATEGORY_PROPERTY_CANDIDATES as $candidate) {
+            $id = (int) ($properties[$candidate] ?? 0);
+            if ($id !== 0 && @IPS_ObjectExists($id)) {
+                return $id;
             }
         }
+
+        // Nichts gefunden: die vorhandenen Property-Namen einmal ins Debug-Log
+        // schreiben, damit sich ein bislang unbekanntes Visualisierungs-Modul
+        // ohne Raterei nachtragen laesst (Kandidatenliste oben ergaenzen).
+        if ($properties !== []) {
+            $this->SendDebug(
+                'IPSSL_Visu',
+                sprintf(
+                    'Keine bekannte Startkategorie-Property in Instanz %d gefunden. Vorhandene Properties: %s',
+                    $VisuInstanceID,
+                    implode(', ', array_keys($properties))
+                ),
+                0
+            );
+        }
+
+        return 0;
+    }
+
+    private function GetEffectiveRootCategoryID(): int
+    {
+        $rootID = $this->ResolveVisuRootCategoryID(
+            $this->ReadPropertyInteger(self::propertyWebFrontVisuInstanceID)
+        );
 
         $this->WriteAttributeInteger(self::attributeEffectiveRootCategoryID, $rootID);
 
@@ -5246,7 +5355,7 @@ private const LANGUAGE_FLAGS = [
             return [];
         }
 
-        $favorites = json_decode((string) @IPS_GetProperty($webFrontID, 'Favorites'), true);
+        $favorites = json_decode((string) $this->GetVisuInstanceProperty($webFrontID, 'Favorites', ''), true);
         if (!is_array($favorites)) {
             return [];
         }
@@ -5282,7 +5391,7 @@ private const LANGUAGE_FLAGS = [
             return $this->Translate('Begrüßung: keine Kachel-Visualisierungs-Instanz ausgewählt (siehe Feld "Kachel-Visualisierung" oben).');
         }
 
-        $showGreeting = (int) @IPS_GetProperty($webFrontID, 'ShowGreeting');
+        $showGreeting = (int) $this->GetVisuInstanceProperty($webFrontID, 'ShowGreeting', 0);
 
         switch ($showGreeting) {
             case 1:
@@ -5329,11 +5438,11 @@ private const LANGUAGE_FLAGS = [
             return [];
         }
 
-        $showGreeting = (int) @IPS_GetProperty($webFrontID, 'ShowGreeting');
+        $showGreeting = (int) $this->GetVisuInstanceProperty($webFrontID, 'ShowGreeting', 0);
         $currentScanSourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
 
         if ($showGreeting === 1 || $showGreeting === 3) {
-            $name = (string) @IPS_GetProperty($webFrontID, 'GreetingName');
+            $name = (string) $this->GetVisuInstanceProperty($webFrontID, 'GreetingName', '');
             if ($name === '') {
                 return [];
             }
@@ -5375,11 +5484,11 @@ private const LANGUAGE_FLAGS = [
             return 0;
         }
 
-        if ((int) @IPS_GetProperty($webFrontID, 'ShowGreeting') !== 2) {
+        if ((int) $this->GetVisuInstanceProperty($webFrontID, 'ShowGreeting', 0) !== 2) {
             return 0;
         }
 
-        $variableID = (int) @IPS_GetProperty($webFrontID, 'GreetingVariableID');
+        $variableID = (int) $this->GetVisuInstanceProperty($webFrontID, 'GreetingVariableID', 0);
         if ($variableID === 0 || !@IPS_VariableExists($variableID)) {
             return 0;
         }
@@ -5505,7 +5614,7 @@ private const LANGUAGE_FLAGS = [
             return [];
         }
 
-        $automations = json_decode((string) @IPS_GetProperty($webFrontID, 'Automations'), true);
+        $automations = json_decode((string) $this->GetVisuInstanceProperty($webFrontID, 'Automations', ''), true);
         if (!is_array($automations)) {
             return [];
         }

@@ -3837,3 +3837,49 @@ der ursprünglichen Fassung übernommen.
   hängen; die Hinweise werden nur noch an einer Stelle gebaut, damit sie nicht
   doppelt gerendert werden; die CSS-Regel wirkt nachweislich ausschließlich nach
   unten, nie in den Titelbereich).
+
+* **Build 144 (Nutzer-Wunsch: auch die alte WebFront-Visualisierung
+  unterstützen): die Startkategorie wird jetzt über mehrere bekannte
+  Property-Namen erkannt - und, deutlich wichtiger, der Zugriff auf die fremde
+  Visualisierungs-Instanz stürzt nicht mehr ab.**
+  Gemeldet war zunächst nur, dass die Root-Kategorie einer WebFront-Instanz
+  nicht erkannt wird ("vermutlich nutzt Symcon einen anderen Namen"). Die
+  Ursachensuche förderte aber ein zweites, ernsteres Problem zutage:
+  `IPS_GetProperty()` wirft bei einem **unbekannten** Property-Namen eine
+  Exception - und `@` unterdrückt in PHP nur Warnungen, **niemals** Exceptions.
+  Der Code las die fremde Instanz an zehn Stellen direkt per
+  `@IPS_GetProperty($visu, 'Automations'/'GreetingName'/'ShowGreeting'/…)` aus.
+  Bei einer Instanz, die diese Properties nicht kennt - genau der Fall bei der
+  alten WebFront-Visualisierung - riss damit nicht nur die Root-Erkennung ab,
+  sondern der komplette Rescan mit einer unbehandelten Exception.
+  Alle zehn Lesezugriffe laufen jetzt über `IPS_GetConfiguration()` (liefert das
+  JSON **aller** vorhandenen Properties; ein fehlender Schlüssel ist damit ein
+  ganz normaler Array-Miss statt eines Abbruchs), gekapselt in
+  `GetVisuInstanceProperties()`/`GetVisuInstanceProperty()`. Die beiden
+  **schreibenden** Zugriffe (`GreetingName`, `Automations`) prüfen über
+  `VisuInstanceHasProperty()` vorher, ob es die Property dort überhaupt gibt -
+  `IPS_SetProperty()` wirft bei unbekanntem Namen genauso. Das ist nicht
+  theoretisch: wer seine Instanz zuerst mit der Kachel-Visualisierung betreibt
+  (dabei entstehen Begrüßungs-/Automations-Zeilen) und sie danach auf die alte
+  WebFront-Visualisierung umstellt, behält diese Zeilen.
+  Die Startkategorie löst `ResolveVisuRootCategoryID()` über eine feste
+  Kandidatenliste auf (`BaseID` zuerst, damit die Kachel-Visualisierung immer
+  Vorrang behält). Bewusst **keine** blinde Suche nach "irgendeiner
+  ID-Property": die könnte eine Verweis-Property auf eine ganz andere Kategorie
+  erwischen und stillschweigend den falschen Baum übersetzen - deutlich
+  schlimmer als ein sauberes `STATUS_ROOT_CATEGORY_MISSING`. Passt kein
+  Kandidat, werden die tatsächlich vorhandenen Property-Namen einmal in die neue
+  Debug-Kategorie `IPSSL_Visu` geschrieben, damit sich ein bislang unbekanntes
+  Visualisierungs-Modul ohne Raterei nachtragen lässt.
+  Funktionsumfang bei der alten WebFront-Visualisierung: Objektnamen, Eigene
+  Texte, Aufzählungen und Charts werden normal übersetzt. Automations,
+  Begrüßung und Favoriten sind Eigenschaften der Kachel-Visualisierung und
+  bleiben dort naturgemäß leer - jetzt aber sauber leer statt mit einem
+  Abbruch.
+  Neuer Regressionstest (9 Prüfungen: `BaseID` funktioniert unverändert;
+  abweichende Namen werden erkannt; die Reihenfolge entscheidet; ein Kandidat
+  mit gelöschtem Objekt wird übersprungen; eine unbekannte Visualisierung
+  liefert sauber 0 statt blind irgendeiner ID; fehlende Properties ergeben leere
+  Werte statt einer Exception; kaputtes JSON/unerreichbare Instanz ebenso;
+  Symmetrie-Check, dass kein ungeschützter Zugriff auf die fremde Instanz mehr
+  existiert).
