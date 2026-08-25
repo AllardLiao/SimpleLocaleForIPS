@@ -4635,6 +4635,10 @@ private const LANGUAGE_FLAGS = [
         // Formular-Neuaufbau (inkl. aktualisiertem "Übernehmen"-Puffer, siehe
         // Build 60) bereits automatisch von Symcons Konsole nach dem RequestAction;
         // ein Hintergrund-Rescan (AutoRescan()) wollte ohnehin nie einen Reload.
+        // Gilt weiterhin genau fuer DIESEN, normalen Weg - er erreicht das
+        // IPS_ApplyChanges() oben, das den Reload ausloest. Der einzige
+        // Sonderfall ist der Abbruch-Zweig "unbenannte Objekte" weiter oben, der
+        // vorher zurueckkehrt und deshalb seit Build 141 selbst neu laedt.
     }
 
     // Symcon lässt einen wirklich leeren Namen nicht zu - IPS_SetName('') (bzw. ein
