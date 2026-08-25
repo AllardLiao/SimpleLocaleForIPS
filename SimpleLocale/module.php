@@ -8729,16 +8729,27 @@ HTML;
                 . ' onclick="alert(' . $this->BuildInfoAlertJs($ownUiTextRows, $currentLanguage) . ');">ⓘ</span>'
             : '';
 
-        return '<div class="ipssl-select-row">'
+        // Build 143 (Nutzer-Wunsch): die drei optionalen Hinweiszeilen zuerst
+        // bauen - steht KEINE davon an, bekommt die Zeile die Zusatzklasse
+        // "ipssl-compact" und holt sich per negativem Rand den ungenutzten Platz
+        // unter dem Dropdown zurueck (siehe module.html). Grund: bei
+        // Visualisierungs-Hoehe "1" war die Kachel nur wenige Pixel zu hoch und
+        // zeigte deshalb einen Scrollbalken. Sind Hinweise sichtbar, braucht die
+        // Kachel diese Hoehe ohnehin - dann bleibt alles wie bisher.
+        $noticesHtml = $this->BuildTrialNoticeHtml($ownUiTextRows, $currentLanguage)
+            . $this->BuildPausedNoticeHtml($ownUiTextRows, $currentLanguage)
+            . $this->BuildTranslationStatsNoticeHtml($ownUiTextRows, $currentLanguage);
+
+        $rowClass = $noticesHtml === '' ? 'ipssl-select-row ipssl-compact' : 'ipssl-select-row';
+
+        return '<div class="' . $rowClass . '">'
             . $globeIconHtml
             . '<select onchange="requestAction(\'' . self::identLanguage . '\', this.value);">'
             . $optionsHtml
             . '</select>'
             . $infoIconHtml
             . '</div>'
-            . $this->BuildTrialNoticeHtml($ownUiTextRows, $currentLanguage)
-            . $this->BuildPausedNoticeHtml($ownUiTextRows, $currentLanguage)
-            . $this->BuildTranslationStatsNoticeHtml($ownUiTextRows, $currentLanguage);
+            . $noticesHtml;
     }
 
     // Kleiner roter Hinweis unter dem Dropdown, solange diese Instanz auf einer
