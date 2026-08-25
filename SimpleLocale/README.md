@@ -3912,3 +3912,58 @@ der ursprünglichen Fassung übernommen.
   Bekannte Grenze, damit sie dokumentiert ist: die alte
   WebFront-Visualisierung wird nicht unterstützt. Sie lässt sich zwar auswählen,
   liefert dann aber `STATUS_ROOT_CATEGORY_MISSING` - bewusst, statt zu raten.
+
+* **Build 146 (Nutzer-Wunsch): auswählbares Kachel-Symbol und auswählbare
+  Kachel-Vorlage, als Wiedererkennungswert für Sonder-Editionen.** Ein
+  Xmas-Special kann damit eine eigene Optik mitbringen, ohne dass jemand HTML
+  anfassen muss.
+  Zwei Kataloge im Code (`TILE_ICON_CATALOG`, `TILE_TEMPLATE_CATALOG`) führen die
+  auslieferbaren Symbole bzw. Vorlagen. Jeder Eintrag trägt einen Anzeigenamen
+  und optional ein benötigtes Lizenz-Feature; die Auswahlfelder im Formular
+  werden daraus dynamisch gefüllt und dabei nach Berechtigung gefiltert - ein
+  Saison-Design taucht also nur bei den Editionen überhaupt auf, die es erworben
+  haben (Xmas 2026 sieht kein Nikolaus-Design und umgekehrt).
+  **Die Berechtigung hängt an `features[]` im Lizenzschlüssel** - derselben
+  Spalte, die es in `slips_orders` und `slips_promo_licenses` bereits gibt. Ein
+  neues Saison-Design braucht damit keinerlei Schema-Änderung, sondern nur einen
+  weiteren Eintrag in der Feature-Liste des Produkts (z. B. `theme_xmas2026`).
+  Bewusst **nicht** am `edition`-Feld: das ist laut Schema ausdrücklich ein
+  Werbename mit Fallback, ein Marketing-Umbenennen würde sonst still eine
+  Berechtigung entziehen.
+  **Zwei Entwurfsentscheidungen, die den Anforderungen "zurücksetzbar" und
+  "geht bei Updates nicht verloren" zugrunde liegen:**
+  1. Gespeichert wird **nur die ID**, nie der Inhalt. Der Inhalt kommt bei jedem
+     Rendern frisch aus dem Code bzw. der Vorlagendatei. `propertyCustomTileHtml`
+     zeigt das Gegenbeispiel: dort steht der Inhalt in der Instanz, und weil
+     Properties bei einem Update zu Recht nicht überschrieben werden, erreichen
+     spätere Korrekturen sie nie - real passiert, der Scrollbalken-Fix aus Build
+     143 kam bei keiner Instanz an, die die eigene Kachel bereits aktiviert
+     hatte. Mit einer ID bleibt die Auswahl stabil **und** die Vorlage
+     wartbar. Zurücksetzen heißt schlicht: ID wieder auf `default`.
+  2. Die Berechtigung läuft **nicht** über `HasLicenseFeature()`. Das gibt
+     während der Testphase absichtlich alles frei, damit sich der Mechanismus
+     vor dem Kauf ausprobieren lässt - für Saison-Designs würde genau das den
+     Wiedererkennungswert aushebeln. Eigene Prüfung `HasThemeEntitlement()`:
+     Einträge ohne Feature-Anforderung sind immer wählbar (die reinen
+     Auslieferungszustände), alles Weitere ausschließlich mit einer **gültigen**
+     Lizenz, die das Feature auch führt.
+  Bei Downgrade/Ablauf greift die Auswahl nicht mehr, der gespeicherte Wert
+  bleibt aber erhalten und lebt nach erneuter Lizenzierung sofort wieder auf -
+  dasselbe Muster wie `custom_tile`/`auto_rescan`, kein Datenverlust.
+  Ausgeliefert werden zunächst die beiden Auslieferungszustände: das
+  Simple-Locale-Symbol (Standard) und die Weltkugel, die damit von einem reinen
+  Notbehelf zu einer echten Auswahl wird. Der Katalog unterstützt sowohl
+  Bilddateien als auch reine Zeichen - ein Saison-Symbol lässt sich dadurch auch
+  ganz ohne neue Grafik ausliefern (z. B. 🎄), was den Modul-Download nicht
+  vergrößert. Wer echte Grafik einsetzt, legt bewusst nur eine 48px-Variante
+  dazu, nicht die 1024px-Datei (`module_icon.png` ist allein 1,1 MB).
+  Der Haken heißt jetzt neutral "Symbol in der Kachel anzeigen" statt fest
+  "Simple-Locale-Symbol …" - der Property-Name (`ShowGlobeIcon`) bleibt
+  unverändert, damit bestehendes, an die CSS-Klasse gebundenes Kachel-HTML nicht
+  ohne Not bricht.
+  Neuer Regressionstest (jede Sonder-Edition sieht ausschließlich ihr eigenes
+  Design; Auslieferungszustände sind überall wählbar; die Testphase bekommt
+  trotz "alle Features frei" kein Saison-Design; Zurücksetzen und unbekannte IDs
+  fallen sauber auf den Standard; Downgrade deaktiviert ohne zu verwerfen;
+  Symmetrie-Checks, dass die Berechtigung `HasLicenseFeature()` umgeht und die
+  Vorlage beim Rendern aus der Datei statt aus der Property kommt).

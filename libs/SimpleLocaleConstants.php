@@ -144,6 +144,25 @@ trait SimpleLocaleConstants
     private const propertyShowGlobeIcon = 'ShowGlobeIcon';
     private const propertyShowInfoIcon = 'ShowInfoIcon';
 
+    // Build 146 (Nutzer-Wunsch "Wiedererkennungswert fuer Spezial-Editionen"):
+    // WELCHES Symbol bzw. WELCHE mitgelieferte Kachel-Vorlage verwendet wird -
+    // die vorhandenen Schalter oben bleiben unveraendert fuer "ueberhaupt
+    // anzeigen" zustaendig.
+    //
+    // Gespeichert wird bewusst NUR die ID aus dem jeweiligen Katalog (siehe
+    // TILE_ICON_CATALOG/TILE_TEMPLATE_CATALOG in module.php), NICHT der Inhalt.
+    // Grund: propertyCustomTileHtml speichert den Inhalt und zeigt damit genau
+    // das Problem, das hier vermieden wird - eine Instanz friert die Vorlage in
+    // dem Zustand ein, in dem sie sie zufaellig erwischt hat, und bekommt spaetere
+    // Korrekturen nie (real passiert: der Scrollbalken-Fix aus Build 143
+    // erreichte keine Instanz, die die eigene Kachel bereits aktiviert hatte).
+    // Mit einer ID bleibt die Auswahl stabil ueber Updates hinweg, der Inhalt
+    // kommt aber bei jedem Rendern frisch aus dem Code - beides gleichzeitig.
+    // Die eigenen Anpassungen des Nutzers liegen davon unberuehrt weiterhin in
+    // propertyCustomTileHtml.
+    private const propertyTileIconId = 'TileIconId';
+    private const propertyTileTemplateId = 'TileTemplateId';
+
     // Blendet den kleinen Statistik-Hinweis ("X Übersetzungen/h, Y Zeichen/h", siehe
     // BuildTranslationStatsNoticeHtml) unter dem Dropdown in der Kachel ein/aus -
     // rein informativ, standardmäßig aus (die meisten Gäste interessiert das nicht).

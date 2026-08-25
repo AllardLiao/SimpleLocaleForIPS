@@ -340,6 +340,9 @@ private const LANGUAGE_FLAGS = [
         // werden sollen (z.B. falls er ein eigenes, schlankeres Design möchte).
         $this->RegisterPropertyBoolean(self::propertyShowGlobeIcon, true);
         $this->RegisterPropertyBoolean(self::propertyShowInfoIcon, true);
+        // Build 146: nur die ID, nicht der Inhalt - siehe Konstanten-Kommentar.
+        $this->RegisterPropertyString(self::propertyTileIconId, self::TILE_ICON_DEFAULT_ID);
+        $this->RegisterPropertyString(self::propertyTileTemplateId, self::TILE_TEMPLATE_DEFAULT_ID);
         // Statistik-Hinweis in der Kachel (siehe BuildTranslationStatsNoticeHtml) -
         // standardmäßig aus, rein informativ.
         $this->RegisterPropertyBoolean(self::propertyShowTranslationStats, false);
@@ -1179,6 +1182,20 @@ private const LANGUAGE_FLAGS = [
                         $element['enabled'] = false;
                         $element['caption'] = 'Eigenen Kachel-HTML-Code bearbeiten (Pro Edition erforderlich)';
                     }
+                    break;
+
+                // Build 146: Auswahl der mitgelieferten Symbole/Kachel-Vorlagen -
+                // Optionen kommen dynamisch aus dem jeweiligen Katalog, gefiltert
+                // nach Lizenz-Berechtigung (siehe HasThemeEntitlement). Ein
+                // Saison-Design taucht dadurch ueberhaupt nur bei den Editionen
+                // auf, die es auch erworben haben. Dasselbe Muster wie bei den
+                // Zielsprachen (siehe BuildTargetLanguageOptions).
+                case self::propertyTileIconId:
+                    $element['options'] = $this->BuildCatalogOptions(self::TILE_ICON_CATALOG);
+                    break;
+
+                case self::propertyTileTemplateId:
+                    $element['options'] = $this->BuildCatalogOptions(self::TILE_TEMPLATE_CATALOG);
                     break;
 
                 case 'UnnamedObjectsLabel':
@@ -8572,11 +8589,36 @@ private const LANGUAGE_FLAGS = [
 
         if (trim($html) === '') {
             // Kein Custom-Tile-Modus aktiv, oder Feld vom Nutzer versehentlich
-            // geleert - sicherer Fallback statt einer leeren Kachel.
-            $html = $this->GetDefaultCustomTileHtml();
+            // geleert - dann die AUSGEWAEHLTE mitgelieferte Vorlage (Build 146,
+            // siehe TILE_TEMPLATE_CATALOG). Deren Inhalt kommt bei jedem Rendern
+            // frisch aus der Datei, gespeichert ist nur die ID - dadurch
+            // erreichen spaetere Korrekturen an einer Vorlage auch Instanzen,
+            // die sie laengst ausgewaehlt haben.
+            $html = $this->GetSelectedTileTemplateHtml();
         }
 
         return $this->ApplyTilePlaceholders($html);
+    }
+
+    // Build 146: Inhalt der aktuell ausgewaehlten mitgelieferten Kachel-Vorlage.
+    // Faellt ueber ResolveCatalogId() auf den Standard zurueck, wenn die ID
+    // unbekannt ist oder die Berechtigung fehlt.
+    private function GetSelectedTileTemplateHtml(): string
+    {
+        $templateId = $this->ResolveCatalogId(
+            self::TILE_TEMPLATE_CATALOG,
+            $this->ReadPropertyString(self::propertyTileTemplateId),
+            self::TILE_TEMPLATE_DEFAULT_ID
+        );
+
+        $html = (string) @file_get_contents(__DIR__ . '/' . self::TILE_TEMPLATE_CATALOG[$templateId]['file']);
+        if (trim($html) === '') {
+            // Vorlagendatei fehlt/ist leer (unvollstaendige Installation) -
+            // lieber die Standardvorlage als eine leere Kachel.
+            $html = $this->GetDefaultCustomTileHtml();
+        }
+
+        return $html;
     }
 
     // Ersetzt die dynamischen Platzhalter in einer Kachel-HTML-Vorlage (eingebaut
@@ -8781,10 +8823,134 @@ HTML;
     // Kontext identisch. Fällt auf die alte 🌐-Glyphe zurück, falls die Datei aus
     // irgendeinem Grund (z.B. bei einer beschädigten Installation) nicht lesbar
     // ist - nie einfach leer bleiben.
+    // Build 146 (Nutzer-Wunsch "Wiedererkennungswert fuer Spezial-Editionen"):
+    // Katalog der auswaehlbaren Kachel-Symbole. Jeder Eintrag traegt:
+    //   'label'   - Anzeigename im Konfigurationsformular
+    //   'feature' - benoetigtes Lizenz-Feature, oder null fuer "immer verfuegbar"
+    //   'file'    - Dateiname unter libs/assets/, ODER
+    //   'emoji'   - ein Zeichen, falls kein Bild noetig ist
+    //
+    // Bewusst zwei Darstellungsarten: ein Saison-Symbol laesst sich damit auch
+    // ganz ohne neue Bilddatei ausliefern (z.B. '🎄'), was den Modul-Download
+    // nicht vergroessert. Wer echte Grafik will, legt eine 48px-PNG dazu -
+    // NICHT die 1024px-Variante (module_icon.png ist allein 1,1 MB, das
+    // vervielfacht sich sonst pro Theme).
+    //
+    // Neue Saison-Symbole werden hier eingetragen, z.B.:
+    //   'xmas2026' => ['label' => 'Weihnachten 2026', 'feature' => 'theme_xmas2026', 'emoji' => '🎄'],
+    // Das Feature-Flag kommt dabei aus dem Lizenzschluessel (features[], siehe
+    // HasThemeEntitlement) - im Shop einfach der features-Spalte des Produkts
+    // bzw. der Promo-Lizenz hinzufuegen, kein Schema-Umbau noetig.
+    private const TILE_ICON_CATALOG = [
+        'ipssl' => ['label' => 'Simple-Locale-Symbol', 'feature' => null, 'file' => 'module_icon_48.png'],
+        'globe' => ['label' => 'Weltkugel', 'feature' => null, 'emoji' => '🌐'],
+    ];
+
+    private const TILE_ICON_DEFAULT_ID = 'ipssl';
+
+    // Build 146: Katalog der mitgelieferten Kachel-Vorlagen. Gleiche Struktur
+    // wie beim Symbol-Katalog, nur dass der Inhalt aus einer HTML-Datei neben
+    // module.html kommt ('file') - dadurch bleibt jede Vorlage eine normale,
+    // im Repo versionierte Datei statt eines Strings im Code.
+    //
+    // Neue Saison-Vorlage: Datei danebenlegen und hier eintragen, z.B.:
+    //   'xmas2026' => ['label' => 'Weihnachten 2026', 'feature' => 'theme_xmas2026', 'file' => 'tile_xmas2026.html'],
+    // Einmal ausgelieferte Vorlagen bleiben dauerhaft im Katalog - eine Instanz,
+    // die sie ausgewaehlt hat, soll sie nach einem Update ja weiterhin bekommen.
+    private const TILE_TEMPLATE_CATALOG = [
+        'default' => ['label' => 'Standard', 'feature' => null, 'file' => 'module.html'],
+    ];
+
+    private const TILE_TEMPLATE_DEFAULT_ID = 'default';
+
+    // Build 146: Berechtigung fuer Symbol-/Vorlagen-Kataloge. Bewusst NICHT
+    // ueber HasLicenseFeature(): das gibt waehrend der Testphase absichtlich
+    // ALLES frei, damit sich der komplette Mechanismus vor dem Kauf
+    // ausprobieren laesst. Fuer Saison-Themes wuerde genau das aber den
+    // Wiedererkennungswert aushebeln, um den es hier geht - eine Testinstanz
+    // haette Zugriff auf jedes jemals ausgelieferte Sonder-Design.
+    //
+    // Regel daher (Nutzer-Vorgabe): Eintraege ohne Feature-Anforderung sind
+    // IMMER waehlbar (die reinen Auslieferungszustaende), alles Weitere
+    // ausschliesslich mit einer GUELTIGEN Lizenz, die das Feature auch
+    // tatsaechlich auffuehrt. Der editierbare eigene Kachel-Code bleibt davon
+    // unberuehrt - der haengt weiterhin am normalen "custom_tile"-Feature.
+    private function HasThemeEntitlement(?string $Feature): bool
+    {
+        if ($Feature === null) {
+            return true;
+        }
+
+        $info = $this->GetLicenseInfo();
+        if (!($info['valid'] ?? false)) {
+            return false;
+        }
+
+        return in_array($Feature, $info['features'] ?? [], true);
+    }
+
+    // Liefert die tatsaechlich waehlbaren Eintraege eines Katalogs.
+    // Baut die Select-Optionen fuer einen Katalog - nur berechtigte Eintraege.
+    // Die Beschriftungen laufen durch Translate(), damit sie der Konsolensprache
+    // folgen (siehe locale.json).
+    private function BuildCatalogOptions(array $Catalog): array
+    {
+        $options = [];
+        foreach ($this->FilterCatalogByEntitlement($Catalog) as $id => $entry) {
+            $options[] = [
+                'caption' => $this->Translate($entry['label']),
+                'value'   => $id,
+            ];
+        }
+
+        return $options;
+    }
+
+    private function FilterCatalogByEntitlement(array $Catalog): array
+    {
+        $available = [];
+        foreach ($Catalog as $id => $entry) {
+            if ($this->HasThemeEntitlement($entry['feature'] ?? null)) {
+                $available[$id] = $entry;
+            }
+        }
+
+        return $available;
+    }
+
+    // Loest die gespeicherte ID gegen den Katalog auf. Faellt auf den Standard
+    // zurueck, wenn die ID unbekannt ist (Vorlage aus einer neueren Version, die
+    // es hier noch nicht gibt) ODER die Berechtigung fehlt (Lizenz abgelaufen/
+    // heruntergestuft). Der gespeicherte Wert bleibt dabei bewusst erhalten -
+    // exakt dasselbe Muster wie bei "custom_tile"/"auto_rescan": kein
+    // Datenverlust beim Downgrade, die Auswahl greift nur einfach nicht mehr
+    // und lebt nach erneuter Lizenzierung sofort wieder auf.
+    private function ResolveCatalogId(array $Catalog, string $StoredId, string $DefaultId): string
+    {
+        if (isset($Catalog[$StoredId]) && $this->HasThemeEntitlement($Catalog[$StoredId]['feature'] ?? null)) {
+            return $StoredId;
+        }
+
+        return $DefaultId;
+    }
+
     private function BuildAppIconImgHtml(): string
     {
-        $iconData = @file_get_contents(__DIR__ . '/../libs/assets/module_icon_48.png');
+        $iconId = $this->ResolveCatalogId(
+            self::TILE_ICON_CATALOG,
+            $this->ReadPropertyString(self::propertyTileIconId),
+            self::TILE_ICON_DEFAULT_ID
+        );
+        $entry = self::TILE_ICON_CATALOG[$iconId];
+
+        if (isset($entry['emoji'])) {
+            return $entry['emoji'];
+        }
+
+        $iconData = @file_get_contents(__DIR__ . '/../libs/assets/' . $entry['file']);
         if ($iconData === false) {
+            // Datei fehlt (unvollstaendige Installation) - dasselbe Zeichen wie
+            // seit jeher als letzter Rueckfall, damit die Kachel nie leer bleibt.
             return '🌐';
         }
 
