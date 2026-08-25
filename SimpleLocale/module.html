@@ -24,6 +24,24 @@
             gap: 10px;
         }
 
+        /* Build 143 (Nutzer-Wunsch): bei Visualisierungs-Hoehe "1" war die Kachel
+           nur wenige Pixel zu hoch und zeigte dadurch einen Scrollbalken rechts.
+           Diese Klasse setzt module.php genau dann zusaetzlich, wenn KEINE der
+           drei optionalen Hinweiszeilen (Testphase/Pause/Statistik) angezeigt
+           wird - dann ist der Platz unter dem Dropdown schlicht ungenutzt und
+           wird per negativem Rand zurueckgeholt. Mit sichtbaren Hinweisen
+           braucht die Kachel die Hoehe ohnehin, dort greift die Klasse nicht.
+
+           Bewusst NUR unten: oben reserviert Symcon den Platz fuer Titel und
+           Vergroessern-Symbol der Kachel (siehe Kommentar ganz oben) - ein
+           negativer Rand dort wuerde das Dropdown unter die Titelzeile
+           schieben. Reicht der zurueckgewonnene Platz nicht, ist -8px hier der
+           Stellwert (nicht die Hoehe der Bedienelemente, die soll gleich
+           bleiben). */
+        .ipssl-select-row.ipssl-compact {
+            margin-bottom: -8px;
+        }
+
         .ipssl-select-row .ipssl-globe {
             flex: none;
             height: var(--ipssl-control-height);

@@ -3805,3 +3805,35 @@ der ursprünglichen Fassung übernommen.
   Sprachen werden von der Heilung nie angefasst; das Entfernen der aktiven
   Zielsprache führt sauber zurück; Symmetrie-Check inkl. der Reihenfolge der
   Prüfung).
+
+* **Build 143 (Nutzer-Wunsch mit Screenshot): die eingebaute Kachel zeigte bei
+  Visualisierungs-Höhe "1" einen Scrollbalken, weil sie nur wenige Pixel zu hoch
+  war.** Höhe "1" ist für eine reine Sprachauswahl die naheliegende Einstellung,
+  entsprechend viele Nutzer werden sie wählen - ein Scrollbalken für ein paar
+  ungenutzte Pixel sieht dort schlicht unfertig aus.
+  Der Platz unter dem Dropdown ist genau dann ungenutzt, wenn keine der drei
+  optionalen Hinweiszeilen (Testphase / Anbieter-Pause / Statistik) angezeigt
+  wird. Nur in diesem Fall bekommt die Zeile jetzt die zusätzliche CSS-Klasse
+  `ipssl-compact` und holt sich den Platz per negativem unteren Rand zurück.
+  Sind Hinweise sichtbar, braucht die Kachel die Höhe ohnehin - dann bleibt
+  alles unverändert (genau der vom Nutzer benannte Kompromiss: "wenn der User
+  die Statistiken sehen will, lässt sich das nicht ändern").
+  Bewusst **nur nach unten**: oben reserviert Symcon den Platz für Titel und
+  Vergrößern-Symbol der Kachel (siehe den langjährigen Kommentar am Anfang von
+  `module.html`) - ein negativer Rand dort würde das Dropdown unter die
+  Titelzeile schieben. Die Höhe der Bedienelemente selbst (`--ipssl-control-height`,
+  38px) bleibt ebenfalls unangetastet; verkleinert wird ausschließlich
+  ungenutzter Leerraum. Reicht der zurückgewonnene Platz auf einer bestimmten
+  Installation nicht ganz, ist der `margin-bottom`-Wert in dieser einen
+  CSS-Regel der vorgesehene Stellwert.
+  Hinweis für bestehende Instanzen mit **eigener** Kachel (Pro-Feature
+  `custom_tile`): deren HTML ist eine zum Anlegezeitpunkt gezogene Kopie von
+  `module.html` und enthält die neue Regel daher nicht. Die Klasse wird dort
+  gesetzt, bleibt aber wirkungslos - kein Fehler, und die Regel lässt sich bei
+  Bedarf von Hand nachtragen.
+  Neuer Regressionstest (kompakt genau dann, wenn keine Hinweiszeile vorliegt;
+  jede der drei Hinweisarten verhindert den Kompaktmodus einzeln; die
+  Basisklasse bleibt immer erhalten, da Layout und ggf. eigenes Nutzer-CSS daran
+  hängen; die Hinweise werden nur noch an einer Stelle gebaut, damit sie nicht
+  doppelt gerendert werden; die CSS-Regel wirkt nachweislich ausschließlich nach
+  unten, nie in den Titelbereich).
