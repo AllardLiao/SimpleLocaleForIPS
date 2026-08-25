@@ -488,6 +488,13 @@ trait SimpleLocaleConstants
     private const identCheckProviders = 'CheckProviders';
     private const identCleanupOrphanedRows = 'CleanupOrphanedRows';
 
+    // Build 149 (Nutzer-Wunsch beim Testen): benennt unbenannte VERKNUEPFUNGEN
+    // automatisch nach ihrem Ziel-Objekt - siehe NameUnnamedLinks(). Spart beim
+    // Einrichten viel Handarbeit, weil Symcon fuer eine namenlose Verknuepfung
+    // ohnehin den Namen des Ziels anzeigt und der Rescan sie trotzdem als
+    // "unbenannt" anmahnt.
+    private const identNameUnnamedLinks = 'NameUnnamedLinks';
+
     // Reservierter Pseudo-Sprachcode für den unangetasteten Rohtext beim ersten Scan
     // (Tippfehler inklusive). Nicht vom Gast über die Sprachauswahl erreichbar.
     // Objektnamen: ein Feld (Name des Objekts). Eigene Texte: der eigentliche

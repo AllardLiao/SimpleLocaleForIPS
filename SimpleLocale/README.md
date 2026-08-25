@@ -4050,3 +4050,40 @@ der ursprünglichen Fassung übernommen.
   verschwinden; serverseitige Kulanz wirkt ohne Grace-Logik; `interval` streng
   normalisiert; alte Schlüssel ohne das Feld funktionieren weiter;
   Symmetrie-Checks inkl. Sackgassen-Schutz fürs Lizenzfeld).
+
+* **Build 149 (Nutzer-Wunsch beim Testen): neuer Knopf "Verknüpfungen
+  automatisch nach ihrem Ziel benennen" - spart beim Einrichten viel
+  Handarbeit.**
+  Ein Rescan bricht ab, solange irgendein Objekt im Baum keinen Namen hat (ein
+  leerer Name lässt sich nicht übersetzen und würde als leere Beschriftung in
+  der Gäste-Visualisierung landen). Beim Einrichten eines größeren Baums sind
+  das schnell Dutzende Objekte - und der Großteil davon sind **Verknüpfungen**:
+  Symcon zeigt für eine namenlose Verknüpfung automatisch den Namen ihres Ziels
+  an. In der Visualisierung sieht also alles richtig aus, während `IPS_GetName()`
+  leer bleibt. Der Admin müsste von Hand exakt den Namen abtippen, den Symcon
+  ohnehin schon anzeigt.
+  Der Knopf erscheint direkt unter der Liste der unbenannten Objekte (und nur
+  dann, wenn es welche gibt) und übernimmt für jede betroffene Verknüpfung den
+  Namen ihres Ziels. **Optisch ändert sich dadurch nichts** - der vergebene Name
+  ist genau der, den Symcon vorher automatisch eingeblendet hat. Deshalb bewusst
+  ohne Rückfrage: es gibt nichts zu überschreiben.
+  Bewusst **nur** Verknüpfungen: eine unbenannte Kategorie oder Variable hat kein
+  Ziel, aus dem sich ein sinnvoller Name ableiten ließe. Solche Objekte bleiben
+  stehen und werden in der Rückmeldung getrennt ausgewiesen.
+  Drei Fälle, die bewusst abgefangen werden:
+  - Zeigt die Verknüpfung auf ein **selbst unbenanntes** Ziel, wäre der
+    übernommene Name genauso wertlos - dann bleibt sie stehen, damit der Admin
+    die eigentliche Ursache sieht statt einer Platzhalter-Kette.
+  - Fehlendes/gelöschtes Ziel oder ein inzwischen entferntes Objekt brechen den
+    Durchlauf nicht ab.
+  - Ein **gesperrtes** Objekt lehnt das Umbenennen ab. Nach dem Schreiben wird
+    der Name deshalb noch einmal gelesen und nur gezählt, was nachweislich
+    angekommen ist - sonst würde Erfolg gemeldet und der nächste Rescan meckerte
+    trotzdem weiter.
+  Die Rückmeldung nennt die Zahl der benannten Verknüpfungen, weist übrige
+  Objekte getrennt aus und bittet um einen erneuten Rescan.
+  Neuer Regressionstest (Hauptfall; Platzhalter-Name "(ID: n)" wird ersetzt;
+  Nicht-Verknüpfungen bleiben unangetastet; selbst unbenanntes Ziel erzeugt keine
+  Platzhalter-Kette; fehlendes Ziel/gelöschtes Objekt brechen nicht ab;
+  fehlgeschlagene Umbenennung wird ehrlich als übersprungen gezählt; gemischter
+  Bestand; Symmetrie-Check der Verdrahtung).

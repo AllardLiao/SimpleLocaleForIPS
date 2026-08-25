@@ -195,7 +195,14 @@
             "Abozeitraum": "Billing period",
             "monatlich": "monthly",
             "jährlich": "yearly",
-            "Zielsprachen (Lizenz abgelaufen - bitte oben einen gültigen Lizenzschlüssel eintragen)": "Target languages (licence expired - please enter a valid licence key above)"
+            "Zielsprachen (Lizenz abgelaufen - bitte oben einen gültigen Lizenzschlüssel eintragen)": "Target languages (licence expired - please enter a valid licence key above)",
+            "Verknüpfungen automatisch nach ihrem Ziel benennen": "Name links automatically after their target",
+            "Betrifft nur Verknüpfungen: sie übernehmen den Namen, den Symcon ohnehin schon anzeigt - in der Visualisierung ändert sich dadurch nichts. Andere Objekte müssen weiterhin selbst benannt werden.": "Applies to links only: they take on the name Symcon already displays for them - nothing changes in the visualization. Other objects still have to be named yourself.",
+            "Verknüpfungen benannt": "Links named",
+            "Erledigt,": "Done,",
+            "Verknüpfung(en) wurden automatisch benannt.": "link(s) were named automatically.",
+            "Objekt(e) konnten nicht automatisch benannt werden (keine Verknüpfung, Ziel fehlt oder selbst unbenannt) - diese bitte weiterhin von Hand benennen.": "object(s) could not be named automatically (not a link, target missing, or target itself unnamed) - please keep naming those by hand.",
+            "Bitte führe anschließend einen Rescan durch.": "Please run a rescan afterwards."
         },
         "es": {
             "Aktiv": "Activo",
@@ -392,7 +399,14 @@
             "Abozeitraum": "Periodo de facturación",
             "monatlich": "mensual",
             "jährlich": "anual",
-            "Zielsprachen (Lizenz abgelaufen - bitte oben einen gültigen Lizenzschlüssel eintragen)": "Idiomas de destino (licencia caducada: introduce arriba una clave de licencia válida)"
+            "Zielsprachen (Lizenz abgelaufen - bitte oben einen gültigen Lizenzschlüssel eintragen)": "Idiomas de destino (licencia caducada: introduce arriba una clave de licencia válida)",
+            "Verknüpfungen automatisch nach ihrem Ziel benennen": "Nombrar enlaces automáticamente según su destino",
+            "Betrifft nur Verknüpfungen: sie übernehmen den Namen, den Symcon ohnehin schon anzeigt - in der Visualisierung ändert sich dadurch nichts. Andere Objekte müssen weiterhin selbst benannt werden.": "Solo afecta a los enlaces: adoptan el nombre que Symcon ya muestra para ellos; en la visualización no cambia nada. Los demás objetos deben seguir nombrándose manualmente.",
+            "Verknüpfungen benannt": "Enlaces nombrados",
+            "Erledigt,": "Listo,",
+            "Verknüpfung(en) wurden automatisch benannt.": "enlace(s) se nombraron automáticamente.",
+            "Objekt(e) konnten nicht automatisch benannt werden (keine Verknüpfung, Ziel fehlt oder selbst unbenannt) - diese bitte weiterhin von Hand benennen.": "objeto(s) no pudieron nombrarse automáticamente (no es un enlace, falta el destino o el destino no tiene nombre): nómbralos manualmente.",
+            "Bitte führe anschließend einen Rescan durch.": "Ejecuta después un nuevo escaneo."
         },
         "it": {
             "Aktiv": "Attivo",
@@ -589,7 +603,14 @@
             "Abozeitraum": "Periodo di fatturazione",
             "monatlich": "mensile",
             "jährlich": "annuale",
-            "Zielsprachen (Lizenz abgelaufen - bitte oben einen gültigen Lizenzschlüssel eintragen)": "Lingue di destinazione (licenza scaduta: inserisci sopra una chiave di licenza valida)"
+            "Zielsprachen (Lizenz abgelaufen - bitte oben einen gültigen Lizenzschlüssel eintragen)": "Lingue di destinazione (licenza scaduta: inserisci sopra una chiave di licenza valida)",
+            "Verknüpfungen automatisch nach ihrem Ziel benennen": "Rinomina i collegamenti automaticamente in base alla destinazione",
+            "Betrifft nur Verknüpfungen: sie übernehmen den Namen, den Symcon ohnehin schon anzeigt - in der Visualisierung ändert sich dadurch nichts. Andere Objekte müssen weiterhin selbst benannt werden.": "Riguarda solo i collegamenti: assumono il nome che Symcon mostra già per essi; nella visualizzazione non cambia nulla. Gli altri oggetti vanno ancora nominati manualmente.",
+            "Verknüpfungen benannt": "Collegamenti nominati",
+            "Erledigt,": "Fatto,",
+            "Verknüpfung(en) wurden automatisch benannt.": "collegamento/i sono stati nominati automaticamente.",
+            "Objekt(e) konnten nicht automatisch benannt werden (keine Verknüpfung, Ziel fehlt oder selbst unbenannt) - diese bitte weiterhin von Hand benennen.": "oggetto/i non hanno potuto essere nominati automaticamente (non è un collegamento, destinazione mancante o essa stessa senza nome): nominali manualmente.",
+            "Bitte führe anschließend einen Rescan durch.": "Esegui successivamente una nuova scansione."
         },
         "fr": {
             "Aktiv": "Actif",
@@ -786,7 +807,14 @@
             "Abozeitraum": "Période de facturation",
             "monatlich": "mensuel",
             "jährlich": "annuel",
-            "Zielsprachen (Lizenz abgelaufen - bitte oben einen gültigen Lizenzschlüssel eintragen)": "Langues cibles (licence expirée - veuillez saisir une clé de licence valide ci-dessus)"
+            "Zielsprachen (Lizenz abgelaufen - bitte oben einen gültigen Lizenzschlüssel eintragen)": "Langues cibles (licence expirée - veuillez saisir une clé de licence valide ci-dessus)",
+            "Verknüpfungen automatisch nach ihrem Ziel benennen": "Nommer les liens automatiquement d'après leur cible",
+            "Betrifft nur Verknüpfungen: sie übernehmen den Namen, den Symcon ohnehin schon anzeigt - in der Visualisierung ändert sich dadurch nichts. Andere Objekte müssen weiterhin selbst benannt werden.": "Ne concerne que les liens : ils reprennent le nom que Symcon affiche déjà pour eux ; rien ne change dans la visualisation. Les autres objets restent à nommer vous-même.",
+            "Verknüpfungen benannt": "Liens nommés",
+            "Erledigt,": "Terminé,",
+            "Verknüpfung(en) wurden automatisch benannt.": "lien(s) ont été nommés automatiquement.",
+            "Objekt(e) konnten nicht automatisch benannt werden (keine Verknüpfung, Ziel fehlt oder selbst unbenannt) - diese bitte weiterhin von Hand benennen.": "objet(s) n'ont pas pu être nommés automatiquement (pas un lien, cible manquante ou cible elle-même sans nom) - merci de les nommer à la main.",
+            "Bitte führe anschließend einen Rescan durch.": "Merci de lancer ensuite une nouvelle analyse."
         }
     }
 }
