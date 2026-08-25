@@ -3763,3 +3763,45 @@ der ursprünglichen Fassung übernommen.
   übersetzt", obwohl die Begrüßungstabelle im umgebauten Formular (siehe Build
   130) nicht mehr zwingend direkt darunter steht - das "unten" ist jetzt in
   allen vier Sprachen entfernt.
+
+* **Build 142 (live gemeldeter Bug): ein Klick in der eigenen
+  Sprachauswahl-Kachel konnte die Instanz dauerhaft unspeicherbar machen.**
+  Szenario: frische Instanz, Testversion, eigene Sprachauswahl-Kachel
+  (Pro-Feature `custom_tile`) aktiviert. Deren mitgeliefertes **Beispiel** zeigt
+  zwei feste Flaggen mit fest eingetragenen Sprachcodes - ein Klick auf die
+  englische Flagge schickte `en`, obwohl `en` auf dieser Instanz gar keine
+  konfigurierte Zielsprache war. Der Code landete ungeprüft in
+  `propertyCurrentLanguage`; Symcons Konfigurationsformular baut daraus ein
+  Select, das nur die tatsächlich konfigurierten Sprachen kennt, und verweigerte
+  daraufhin **jedes weitere Speichern der Instanz** ("Invalid configuration /
+  Current value "en" is not available"). Da praktisch jeder Nutzer das
+  mitgelieferte Beispiel einmal ausprobiert - das ist ja sein Zweck -, hätte das
+  potenziell sehr viele Neuinstallationen getroffen, jeweils mit einem Modul,
+  das sich plötzlich "nicht mehr bedienen lässt". Zusätzlich kann ein Nutzer in
+  seiner eigenen Kachel jederzeit beliebige weitere ungültige Codes eintragen.
+  Zwei Ebenen dagegen:
+  1. **Vorbeugend:** `RequestAction()` prüft den gewünschten Sprachcode jetzt
+     zuerst gegen die tatsächlich wählbaren Sprachen (neuer Helfer
+     `IsSelectableGuestLanguage()` - dieselben Codes, die auch das Formular-Select
+     anbietet, zusätzlich die Quellsprache und der interne Rückfall
+     `ORIGINAL_IMPORT`). Ein unbekannter Code wird abgelehnt, die aktive Sprache
+     bleibt unverändert stehen, und die Ablehnung landet mit Angabe der
+     konfigurierten Sprachen in der neuen Debug-Kategorie `IPSSL_Language`. Die
+     Prüfung läuft bewusst **vor** der Testphasen- und Rate-Limit-Behandlung,
+     sonst könnte ein ungültiger Code an ihr vorbei in die Property gelangen.
+  2. **Heilend:** eine Instanz, die bereits in diesem Zustand feststeckt, wäre
+     davon allein nicht gerettet - ihr Formular lässt sich ja gerade nicht mehr
+     übernehmen, um den Wert von Hand zu korrigieren. `ApplyChanges()` prüft die
+     gespeicherte aktive Sprache daher ebenfalls und setzt sie bei Bedarf auf die
+     Quellsprache zurück. Das greift auch in einem Fall ganz ohne eigene Kachel:
+     wenn der Admin die gerade aktive Zielsprache aus der Liste entfernt.
+  Das mitgelieferte Kachel-Beispiel trägt jetzt außerdem die Überschrift
+  "Custom tile example:" sowie einen deutlichen Kommentar, dass die Sprachcodes
+  darin fest eingetragen sind und zu den eigenen Zielsprachen passen müssen.
+  Neuer Regressionstest (9 Prüfungen: nicht konfigurierter Code wird abgelehnt
+  ohne die aktive Sprache anzutasten; konfigurierte Codes funktionieren normal
+  weiter; Quellsprache und `ORIGINAL_IMPORT` bleiben immer zulässig; leerer Code
+  wird abgelehnt; eine bereits blockierte Instanz heilt sich selbst; gültige
+  Sprachen werden von der Heilung nie angefasst; das Entfernen der aktiven
+  Zielsprache führt sauber zurück; Symmetrie-Check inkl. der Reihenfolge der
+  Prüfung).
