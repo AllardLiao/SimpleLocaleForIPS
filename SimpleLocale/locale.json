@@ -190,7 +190,8 @@
             "Simple-Locale-Symbol": "Simple Locale icon",
             "Weltkugel": "Globe",
             "Standard": "Standard",
-            "Symbol in der Kachel anzeigen": "Show icon in the tile"
+            "Symbol in der Kachel anzeigen": "Show icon in the tile",
+            "Automatisch": "Automatic"
         },
         "es": {
             "Aktiv": "Activo",
@@ -382,7 +383,8 @@
             "Simple-Locale-Symbol": "Icono de Simple Locale",
             "Weltkugel": "Globo terráqueo",
             "Standard": "Estándar",
-            "Symbol in der Kachel anzeigen": "Mostrar icono en el mosaico"
+            "Symbol in der Kachel anzeigen": "Mostrar icono en el mosaico",
+            "Automatisch": "Automático"
         },
         "it": {
             "Aktiv": "Attivo",
@@ -574,7 +576,8 @@
             "Simple-Locale-Symbol": "Icona di Simple Locale",
             "Weltkugel": "Globo",
             "Standard": "Standard",
-            "Symbol in der Kachel anzeigen": "Mostra icona nel riquadro"
+            "Symbol in der Kachel anzeigen": "Mostra icona nel riquadro",
+            "Automatisch": "Automatico"
         },
         "fr": {
             "Aktiv": "Actif",
@@ -766,7 +769,8 @@
             "Simple-Locale-Symbol": "Icône Simple Locale",
             "Weltkugel": "Globe",
             "Standard": "Standard",
-            "Symbol in der Kachel anzeigen": "Afficher l'icône dans la tuile"
+            "Symbol in der Kachel anzeigen": "Afficher l'icône dans la tuile",
+            "Automatisch": "Automatique"
         }
     }
 }

@@ -3967,3 +3967,39 @@ der ursprünglichen Fassung übernommen.
   fallen sauber auf den Standard; Downgrade deaktiviert ohne zu verwerfen;
   Symmetrie-Checks, dass die Berechtigung `HasLicenseFeature()` umgeht und die
   Vorlage beim Rendern aus der Datei statt aus der Property kommt).
+
+* **Build 147 (Nutzer-Vorgabe zur offenen Frage aus Build 146): eine
+  Sonder-Edition mit eigenem Design zeigt dieses jetzt von sich aus, statt es
+  erst auswählen zu lassen.** Genau darum geht es beim Wiedererkennungswert -
+  der Käufer soll sein Design nicht suchen müssen.
+  Beide Auswahlfelder stehen im Auslieferungszustand auf **"Automatisch"** (ein
+  reservierter Wert, bewusst keine Katalog-ID, damit er nie mit einem echten
+  Design kollidiert). Automatisch bedeutet: das neueste Saison-Design, für das
+  eine Berechtigung vorliegt - sonst der neutrale Auslieferungszustand. Die
+  Auswahlliste zeigt dabei an, was das gerade konkret heißt
+  ("Automatisch (Weihnachten 2026)"), damit die Einstellung nicht undurchsichtig
+  wirkt.
+  Ein statischer Property-Default hätte das **nicht** leisten können: die Lizenz
+  wird typischerweise erst nach dem Anlegen der Instanz eingetragen, der Default
+  steht zu diesem Zeitpunkt längst fest. Die Auswertung passiert deshalb bei
+  jedem Auflösen, nicht einmalig beim Registrieren.
+  Drei Feinheiten, die den Unterschied zwischen "funktioniert" und "nervt"
+  ausmachen:
+  1. Eine **ausdrückliche** Wahl schlägt die Automatik und bleibt bestehen. Wer
+     trotz Saison-Lizenz bewusst das neutrale Symbol will, behält es - sonst
+     wäre die Auswahl wertlos. Nur der Wert "Automatisch" wird neu bewertet.
+  2. Besitzt jemand **mehrere** Sonder-Editionen, gewinnt deterministisch die
+     zuletzt erschienene (der letzte passende Katalogeintrag; neue Designs
+     werden angehängt).
+  3. Verliert eine ausdrückliche Wahl ihre Berechtigung, fällt sie auf den
+     **neutralen** Standard zurück - nicht auf ein anderes Saison-Design, das
+     zufällig ebenfalls vorliegt. Sonst spränge die Optik beim Ablaufen einer
+     Lizenz überraschend auf etwas völlig anderes.
+  Bewusst **keine** Datumslogik ("nur im Dezember"): die Berechtigung selbst ist
+  der Punkt, und ein erworbenes Design soll nicht ungefragt wieder verschwinden.
+  Wer den neutralen Zustand will, wählt ihn ausdrücklich.
+  Regressionstest um fünf Prüfungen erweitert (Sonder-Edition zeigt ihr Design
+  ohne Zutun; ausdrückliche Wahl schlägt die Automatik; bei mehreren
+  Berechtigungen gewinnt deterministisch die neueste; eine ungültig gewordene
+  Wahl fällt neutral zurück statt auf ein fremdes Design; Symmetrie-Check des
+  Auslieferungszustands).
