@@ -4003,3 +4003,50 @@ der ursprünglichen Fassung übernommen.
   Berechtigungen gewinnt deterministisch die neueste; eine ungültig gewordene
   Wahl fällt neutral zurück statt auf ein fremdes Design; Symmetrie-Check des
   Auslieferungszustands).
+
+* **Build 148 (Nutzer-Vorgaben zum Abo-Modell): App-Seite für Abos
+  fertiggestellt - die Abo-Verwaltung ist damit reine Website-Arbeit.**
+  Ausgangspunkt war die Frage, welche Informationen die App künftig braucht,
+  damit später *nichts* mehr am Modul geändert werden muss. Die Bestandsaufnahme
+  ergab, dass der **Verlängerungsmechanismus app-seitig bereits fertig war**:
+  die tägliche Statusprüfung übernimmt ein vom Server geliefertes `expiresAt`
+  als Override über das im Schlüssel signierte Datum (siehe Build 120). Eine
+  Abo-Verlängerung ist damit ein reiner Schreibvorgang auf
+  `slips_licenses.expires_at_override` - kein neuer Schlüssel, kein Versand,
+  keine App-Änderung. Eine Kündigung ebenso: der Server hört einfach auf zu
+  verlängern.
+  Ergänzt wurden daher nur die fehlenden Anzeige- und Schutzteile:
+  - **`interval` im signierten Schlüssel** (`month`/`year`), angezeigt als neue
+    Zeile "Abozeitraum: monatlich/jährlich" im Lizenz-Panel. Gehört bewusst in
+    den Schlüssel und nicht in die tägliche Prüfung: der Wert ist statisch und
+    lässt sich nicht aus `expiresAt` ableiten (ein Jahresabo kurz vor Ablauf
+    sieht aus wie ein Monatsabo). Streng normalisiert - alles Unerwartete wird
+    zu `''` und blendet die Zeile aus. Ältere Schlüssel ohne das Feld
+    funktionieren unverändert weiter.
+  - **Ablaufhinweis in der Kachel**, im selben roten Stil wie der Pause-Hinweis:
+    ab 7 Tagen vor Ablauf "Deine Lizenz läuft ab am TT.MM.JJJJ. Verlängern:
+    <Link>", danach "Deine Lizenz ist abgelaufen. Verlängern: <Link>". Als
+    Gast-Oberflächentexte umgesetzt, erscheinen also in der Gastsprache. Ein
+    unbefristeter Einmalkauf (`expiresAt` = 0) bekommt nie einen solchen
+    Hinweis.
+  - **Zielsprachen gesperrt bei abgelaufener Lizenz.** Eine neue Zielsprache
+    würde eine Übersetzung auslösen, die nicht mehr erworben ist. Das übrige
+    Formular bleibt ausdrücklich bedienbar - insbesondere das Lizenzfeld selbst,
+    denn ein neuer Schlüssel ist der einzige Weg zurück. Ein Regressionstest
+    sichert genau das ab (Sackgassen-Schutz).
+  Das Zurückfallen der Übersetzungen auf die Quellsprache bei Ablauf war bereits
+  vorhanden (`IsTrialLocked()`/`ResetToOriginalLanguageIfNeeded()`) - eine
+  abgelaufene Lizenz landet automatisch in derselben Mechanik, ebenso der
+  blockierte Rescan.
+  **Zwei bewusste Nicht-Entscheidungen:** Kulanzfristen rechnet der **Server**
+  in `expiresAt` ein, die App kennt gar keine Grace-Logik - dadurch bleibt die
+  Kulanzpolitik jederzeit serverseitig änderbar, ohne je ein Modul-Update. Und
+  es gibt **kein** frei belegbares Hinweisfeld vom Server: die beiden festen
+  Zustände decken den Bedarf ab, und ein Servertext hätte Sprach- und
+  Escaping-Fragen aufgeworfen, die er nicht wert ist.
+  Neuer Regressionstest (Vorwarnung exakt ab 7 Tagen und nicht früher;
+  Abgelaufen-Zustand; ein unbefristeter Einmalkauf wird nie zur Verlängerung
+  aufgefordert; eine serverseitige Verlängerung lässt den Hinweis von selbst
+  verschwinden; serverseitige Kulanz wirkt ohne Grace-Logik; `interval` streng
+  normalisiert; alte Schlüssel ohne das Feld funktionieren weiter;
+  Symmetrie-Checks inkl. Sackgassen-Schutz fürs Lizenzfeld).

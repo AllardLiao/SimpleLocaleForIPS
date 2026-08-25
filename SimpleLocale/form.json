@@ -695,6 +695,23 @@
                 },
                 {
                     "type": "RowLayout",
+                    "name": "LicenseInfoIntervalRow",
+                    "visible": false,
+                    "items": [
+                        {
+                            "type": "Label",
+                            "caption": "Abozeitraum",
+                            "width": "140px"
+                        },
+                        {
+                            "type": "Label",
+                            "name": "LicenseInfoIntervalValueLabel",
+                            "caption": ""
+                        }
+                    ]
+                },
+                {
+                    "type": "RowLayout",
                     "name": "LicenseInfoExpiryRow",
                     "visible": false,
                     "items": [

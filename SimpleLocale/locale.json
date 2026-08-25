@@ -191,7 +191,11 @@
             "Weltkugel": "Globe",
             "Standard": "Standard",
             "Symbol in der Kachel anzeigen": "Show icon in the tile",
-            "Automatisch": "Automatic"
+            "Automatisch": "Automatic",
+            "Abozeitraum": "Billing period",
+            "monatlich": "monthly",
+            "jährlich": "yearly",
+            "Zielsprachen (Lizenz abgelaufen - bitte oben einen gültigen Lizenzschlüssel eintragen)": "Target languages (licence expired - please enter a valid licence key above)"
         },
         "es": {
             "Aktiv": "Activo",
@@ -384,7 +388,11 @@
             "Weltkugel": "Globo terráqueo",
             "Standard": "Estándar",
             "Symbol in der Kachel anzeigen": "Mostrar icono en el mosaico",
-            "Automatisch": "Automático"
+            "Automatisch": "Automático",
+            "Abozeitraum": "Periodo de facturación",
+            "monatlich": "mensual",
+            "jährlich": "anual",
+            "Zielsprachen (Lizenz abgelaufen - bitte oben einen gültigen Lizenzschlüssel eintragen)": "Idiomas de destino (licencia caducada: introduce arriba una clave de licencia válida)"
         },
         "it": {
             "Aktiv": "Attivo",
@@ -577,7 +585,11 @@
             "Weltkugel": "Globo",
             "Standard": "Standard",
             "Symbol in der Kachel anzeigen": "Mostra icona nel riquadro",
-            "Automatisch": "Automatico"
+            "Automatisch": "Automatico",
+            "Abozeitraum": "Periodo di fatturazione",
+            "monatlich": "mensile",
+            "jährlich": "annuale",
+            "Zielsprachen (Lizenz abgelaufen - bitte oben einen gültigen Lizenzschlüssel eintragen)": "Lingue di destinazione (licenza scaduta: inserisci sopra una chiave di licenza valida)"
         },
         "fr": {
             "Aktiv": "Actif",
@@ -770,7 +782,11 @@
             "Weltkugel": "Globe",
             "Standard": "Standard",
             "Symbol in der Kachel anzeigen": "Afficher l'icône dans la tuile",
-            "Automatisch": "Automatique"
+            "Automatisch": "Automatique",
+            "Abozeitraum": "Période de facturation",
+            "monatlich": "mensuel",
+            "jährlich": "annuel",
+            "Zielsprachen (Lizenz abgelaufen - bitte oben einen gültigen Lizenzschlüssel eintragen)": "Langues cibles (licence expirée - veuillez saisir une clé de licence valide ci-dessus)"
         }
     }
 }

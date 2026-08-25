@@ -65,6 +65,20 @@ class SimpleLocale extends IPSModuleStrict
     private const PAUSED_POPUP_REASON_TEXT = 'Grund: Alle konfigurierten Übersetzungsanbieter melden aktuell ihr Limit erreicht.';
     private const PAUSED_POPUP_REASSURANCE_TEXT = 'Bereits vorhandene Übersetzungen bleiben nutzbar.';
 
+    // Build 148 (Nutzer-Vorgabe zum Abo-Modell): Hinweise rund um den
+    // Lizenzablauf, in der Kachel im selben roten Stil wie der Pause-Hinweis
+    // darueber. Bewusst ebenfalls Gast-Oberflaechentexte (siehe
+    // GetOwnUiTextDefinitions), damit sie in der Gast-Sprache erscheinen statt
+    // fest auf Deutsch - der Hinweis richtet sich an denselben Personenkreis.
+    //
+    // Vorwarnung ab LICENSE_EXPIRY_WARNING_DAYS Tagen vor Ablauf: frueh genug
+    // zum Verlaengern, aber nicht so frueh, dass der Hinweis zum Dauerzustand
+    // wird und ignoriert zu werden beginnt.
+    private const LICENSE_EXPIRY_WARNING_PREFIX_TEXT = 'Deine Lizenz läuft ab am';
+    private const LICENSE_EXPIRY_RENEW_TEXT = 'Verlängern:';
+    private const LICENSE_EXPIRED_TEXT = 'Deine Lizenz ist abgelaufen.';
+    private const LICENSE_EXPIRY_WARNING_DAYS = 7;
+
     // Guest-facing Label-Texte fuer die Uebersetzungs-Statistik in der Kachel (siehe
     // BuildTranslationStatsNoticeHtml) - live in die aktive Gast-Sprache uebersetzt,
     // wie TRIAL_NOTICE_PREFIX_TEXT/PAUSED_NOTICE_PREFIX_TEXT.
@@ -957,7 +971,21 @@ private const LANGUAGE_FLAGS = [
                     $limitReached = $languageLimit > 0 && count($targetLanguages) >= $languageLimit;
                     $hasUsableLanguageList = $this->GetProviderChain() === ['free'] || $this->HasCachedLanguages();
 
-                    if (!$hasUsableLanguageList) {
+                    // Build 148 (Nutzer-Vorgabe zum Abo-Modell): bei abgelaufener
+                    // Lizenz/Testphase duerfen die ZIELSPRACHEN nicht mehr
+                    // geaendert werden - eine neue Zielsprache wuerde eine
+                    // Uebersetzung ausloesen, und die ist nicht mehr erworben.
+                    // Das restliche Formular bleibt ausdruecklich bedienbar,
+                    // damit sich ein neuer Schluessel eintragen laesst; das ist
+                    // der einzige Weg zurueck.
+                    //
+                    // Bewusst als ERSTE Bedingung: sie schlaegt jeden anderen
+                    // Grund fuers Ausgrauen, und ihre Erklaerung ist die
+                    // hilfreichste (sie nennt den Ausweg).
+                    if ($this->IsTrialLocked()) {
+                        $element['enabled'] = false;
+                        $element['caption'] = 'Zielsprachen (Lizenz abgelaufen - bitte oben einen gültigen Lizenzschlüssel eintragen)';
+                    } elseif (!$hasUsableLanguageList) {
                         $element['enabled'] = false;
                         // Statischer, fest formulierter String statt Laufzeit-Konkatenation:
                         // die Konsole übersetzt Beschriftungen aus GetConfigurationForm() per
@@ -1310,6 +1338,21 @@ private const LANGUAGE_FLAGS = [
 
                 case 'LicenseInfoTypeValueLabel':
                     $element['caption'] = ($licenseInfo['type'] ?? '') === 'subscription' ? 'Abo' : 'Einmalkauf';
+                    break;
+
+                // Build 148: nur bei einem Abo MIT hinterlegtem Zeitraum
+                // sichtbar - ein Einmalkauf hat keinen, und jeder vor
+                // Einfuehrung des Feldes ausgestellte Abo-Schluessel ebenso
+                // wenig (dort bleibt die Zeile schlicht weg, statt eine leere
+                // Beschriftung zu zeigen).
+                case 'LicenseInfoIntervalRow':
+                    $element['visible'] = $licenseValid
+                        && ($licenseInfo['type'] ?? '') === 'subscription'
+                        && ($licenseInfo['interval'] ?? '') !== '';
+                    break;
+
+                case 'LicenseInfoIntervalValueLabel':
+                    $element['caption'] = ($licenseInfo['interval'] ?? '') === 'year' ? 'jährlich' : 'monatlich';
                     break;
 
                 case 'LicenseInfoExpiryConnectorLabel':
@@ -2128,6 +2171,18 @@ private const LANGUAGE_FLAGS = [
         // slips_guess_edition_label() auf der Website-Seite.
         $payload['edition'] = is_string($payload['edition'] ?? null) ? $payload['edition'] : '';
 
+        // Build 148 (Nutzer-Vorgabe zum Abo-Modell): Abrechnungszeitraum eines
+        // Abos, rein informativ fuers Lizenz-Panel ("Abozeitraum: monatlich").
+        // Laesst sich nicht aus expiresAt ableiten (ein Jahresabo kurz vor
+        // Ablauf sieht aus wie ein Monatsabo) und aendert sich nie - gehoert
+        // damit genau in den signierten Schluessel und nicht in die taegliche
+        // Statuspruefung, in der ausschliesslich VERAENDERLICHES steht.
+        // '' = nicht angegeben (jeder vor Einfuehrung ausgestellte Schluessel,
+        // und jeder Einmalkauf) - das Feld bleibt dann im Panel unsichtbar.
+        $payload['interval'] = in_array($payload['interval'] ?? null, ['month', 'year'], true)
+            ? $payload['interval']
+            : '';
+
         return $payload;
     }
 
@@ -2167,6 +2222,7 @@ private const LANGUAGE_FLAGS = [
             'allowedLanguages' => $payload['allowedLanguages'],
             'features'         => $payload['features'],
             'edition'          => $payload['edition'],
+            'interval'         => $payload['interval'],
         ];
         if ($expiresAt !== 0 && $expiresAt < time()) {
             return ['valid' => false, 'expired' => true] + $common;
@@ -2963,6 +3019,9 @@ private const LANGUAGE_FLAGS = [
 
         return $definitions + [
             'trialNoticePrefix'    => self::TRIAL_NOTICE_PREFIX_TEXT,
+            'licenseExpiryPrefix'  => self::LICENSE_EXPIRY_WARNING_PREFIX_TEXT,
+            'licenseExpiryRenew'   => self::LICENSE_EXPIRY_RENEW_TEXT,
+            'licenseExpired'       => self::LICENSE_EXPIRED_TEXT,
             'pausedNoticePrefix'   => self::PAUSED_NOTICE_PREFIX_TEXT,
             'pausedReason'         => self::PAUSED_POPUP_REASON_TEXT,
             'pausedReassurance'    => self::PAUSED_POPUP_REASSURANCE_TEXT,
@@ -9063,6 +9122,7 @@ HTML;
         // zeigte deshalb einen Scrollbalken. Sind Hinweise sichtbar, braucht die
         // Kachel diese Hoehe ohnehin - dann bleibt alles wie bisher.
         $noticesHtml = $this->BuildTrialNoticeHtml($ownUiTextRows, $currentLanguage)
+            . $this->BuildLicenseExpiryNoticeHtml($ownUiTextRows, $currentLanguage)
             . $this->BuildPausedNoticeHtml($ownUiTextRows, $currentLanguage)
             . $this->BuildTranslationStatsNoticeHtml($ownUiTextRows, $currentLanguage);
 
@@ -9110,6 +9170,57 @@ HTML;
     // nur eine leere/unübersetzte Kachel ohne Erklärung sehen. Aufbau bewusst
     // identisch zu BuildTrialNoticeHtml. Leerer String, solange mindestens ein
     // Anbieter noch verfügbar ist.
+    // Build 148 (Nutzer-Vorgabe zum Abo-Modell): Hinweis zum Lizenzablauf, im
+    // selben roten Stil wie der Pause-Hinweis darunter. Zwei Zustaende:
+    //
+    //   abgelaufen  -> "Deine Lizenz ist abgelaufen. Verlängern: <Link>"
+    //   laeuft bald -> "Deine Lizenz läuft ab am TT.MM.JJJJ. Verlängern: <Link>"
+    //
+    // Der Ablauf-Zeitpunkt kommt aus GetLicenseInfo() und ist dort bereits der
+    // EFFEKTIVE (ein serverseitiger Override aus der taeglichen Pruefung ist
+    // eingerechnet) - eine Abo-Verlaengerung laesst den Hinweis dadurch von
+    // selbst wieder verschwinden, ohne dass hier irgendetwas nachgezogen werden
+    // muss.
+    //
+    // Bewusst NICHT an IsTrialLocked() gehaengt: das deckt die abgelaufene
+    // TESTPHASE ab (dafuer gibt es den eigenen Trial-Hinweis). Hier geht es um
+    // eine gekaufte Lizenz, die ablaeuft - typischerweise ein Abo.
+    private function BuildLicenseExpiryNoticeHtml(array $OwnUiTextRows, string $Language): string
+    {
+        if (!self::IS_TRIAL_BUILD) {
+            return '';
+        }
+
+        $info = $this->GetLicenseInfo();
+        $expiresAt = (int) ($info['expiresAt'] ?? 0);
+
+        // 0 = laeuft nie ab (Einmalkauf). Kein Schluessel eingetragen: dann
+        // greift der Testphasen-Hinweis, nicht dieser hier.
+        if ($expiresAt === 0) {
+            return '';
+        }
+
+        $renew = $this->GetOwnUiText($OwnUiTextRows, 'licenseExpiryRenew', $Language, self::LICENSE_EXPIRY_RENEW_TEXT);
+
+        if (($info['expired'] ?? false) === true) {
+            $text = $this->GetOwnUiText($OwnUiTextRows, 'licenseExpired', $Language, self::LICENSE_EXPIRED_TEXT);
+        } elseif (($info['valid'] ?? false) === true && $expiresAt - time() <= self::LICENSE_EXPIRY_WARNING_DAYS * 86400) {
+            $prefix = $this->GetOwnUiText($OwnUiTextRows, 'licenseExpiryPrefix', $Language, self::LICENSE_EXPIRY_WARNING_PREFIX_TEXT);
+            $text = $prefix . ' ' . date('d.m.Y', $expiresAt) . '.';
+        } else {
+            // Gueltig und noch weit vom Ablauf entfernt - oder gesperrt/
+            // widerrufen, was eigene Wege hat (siehe GetLicenseInfo).
+            return '';
+        }
+
+        return '<div class="ipssl-license-notice" style="font-size:11px; color:#c0392b; text-align:center;">'
+            . htmlspecialchars($text . ' ' . $renew, ENT_QUOTES, 'UTF-8')
+            . ' <a href="' . htmlspecialchars(self::LICENSE_PURCHASE_URL, ENT_QUOTES, 'UTF-8') . '"'
+            . ' target="_blank" rel="noopener" style="color:inherit;">'
+            . htmlspecialchars(self::LICENSE_PURCHASE_URL, ENT_QUOTES, 'UTF-8')
+            . '</a></div>';
+    }
+
     private function BuildPausedNoticeHtml(array $OwnUiTextRows, string $Language): string
     {
         $pausedUntil = $this->GetGlobalPauseUntil();
