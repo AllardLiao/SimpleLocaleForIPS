@@ -871,6 +871,10 @@ private const LANGUAGE_FLAGS = [
                 $this->CleanupOrphanedRows();
                 break;
 
+            case self::identNameUnnamedLinks:
+                $this->NameUnnamedLinks();
+                break;
+
             case self::identShowApiKeyWarning:
                 // Prüft die tatsächliche Ursache serverseitig nach, statt sich allein
                 // auf den (nur indirekten) Hinweis "hinzugefügte Zeile hat leeren Code"
@@ -1228,6 +1232,9 @@ private const LANGUAGE_FLAGS = [
 
                 case 'UnnamedObjectsLabel':
                 case 'UnnamedObjects':
+                // Build 149: der Button teilt die Sichtbarkeit der Liste - er
+                // ergibt nur Sinn, solange es ueberhaupt unbenannte Objekte gibt.
+                case 'NameUnnamedLinksRow':
                     $element['visible'] = $unnamedObjects !== [];
                     if (($element['name'] ?? '') === 'UnnamedObjects') {
                         $element['values'] = $unnamedObjects;
@@ -4916,6 +4923,78 @@ private const LANGUAGE_FLAGS = [
     // wird also erst beim naechsten Rescan wirksam - exakt der Ablauf, den die
     // Statusmeldung ohnehin verlangt, und deutlich guenstiger als ein kompletter
     // Baum-Durchlauf bei JEDEM ApplyChanges().
+    // Build 149 (Nutzer-Wunsch beim Testen): benennt alle beim letzten Rescan
+    // als unbenannt gemeldeten VERKNUEPFUNGEN automatisch nach dem Namen ihres
+    // Ziel-Objekts.
+    //
+    // Hintergrund: Symcon zeigt fuer eine Verknuepfung ohne eigenen Namen
+    // automatisch den Namen des Ziels an - in der Visualisierung sieht also
+    // alles richtig aus, waehrend IPS_GetName() leer bleibt und der Rescan die
+    // Verknuepfung zu Recht als unbenannt anmahnt (ein leerer Name laesst sich
+    // nicht uebersetzen). Beim Einrichten eines groesseren Baums sind das schnell
+    // Dutzende Objekte, bei denen der Admin von Hand exakt den Namen abtippen
+    // muesste, den Symcon ohnehin schon anzeigt.
+    //
+    // Optisch aendert sich dadurch NICHTS: der Name, den die Verknuepfung
+    // bekommt, ist genau der, den Symcon vorher automatisch eingeblendet hat.
+    // Deshalb bewusst ohne Rueckfrage - es gibt nichts zu ueberschreiben.
+    //
+    // Bewusst NUR Verknuepfungen: eine unbenannte Kategorie oder Variable hat
+    // kein Ziel, aus dem sich ein sinnvoller Name ableiten liesse - die muss der
+    // Admin weiterhin selbst benennen. Sie bleiben deshalb in der Liste stehen
+    // und werden in der Rueckmeldung getrennt ausgewiesen.
+    private function NameUnnamedLinks(): void
+    {
+        $renamed = 0;
+        $skipped = 0;
+
+        foreach ($this->GetPendingUnnamedObjects() as $entry) {
+            $objectID = (int) ($entry['ObjectID'] ?? 0);
+            if ($objectID === 0 || !@IPS_ObjectExists($objectID)) {
+                continue;
+            }
+
+            $object = @IPS_GetObject($objectID);
+            if (!is_array($object) || ($object['ObjectType'] ?? -1) !== OBJECTTYPE_LINK) {
+                // Keine Verknuepfung - muss der Admin selbst benennen.
+                $skipped++;
+                continue;
+            }
+
+            $targetID = (int) (@IPS_GetLink($objectID)['TargetID'] ?? 0);
+            if ($targetID === 0 || !@IPS_ObjectExists($targetID)) {
+                $skipped++;
+                continue;
+            }
+
+            // Ist das ZIEL selbst unbenannt, waere der uebernommene Name
+            // genauso wertlos - dann lieber stehen lassen, damit der Admin die
+            // eigentliche Ursache sieht, statt eine Platzhalter-Kette zu bauen.
+            $targetName = (string) @IPS_GetName($targetID);
+            if ($this->IsUnnamedObject($targetID, $targetName)) {
+                $skipped++;
+                continue;
+            }
+
+            // @ wie bei ApplyLanguage: ein gesperrtes Objekt lehnt das Umbenennen
+            // ab, das soll aber nicht den ganzen Durchlauf abbrechen.
+            @IPS_SetName($objectID, $targetName);
+
+            // Nur zaehlen, was tatsaechlich angekommen ist - eine stillschweigend
+            // fehlgeschlagene Umbenennung darf nicht als Erfolg gemeldet werden.
+            if ((string) @IPS_GetName($objectID) === $targetName) {
+                $renamed++;
+            } else {
+                $skipped++;
+            }
+        }
+
+        $this->UpdateFormField('LinksNamedCountLabel', 'caption', (string) $renamed);
+        $this->UpdateFormField('LinksNamedRemainingRow', 'visible', $skipped > 0);
+        $this->UpdateFormField('LinksNamedRemainingCountLabel', 'caption', (string) $skipped);
+        $this->UpdateFormField('LinksNamedPopup', 'visible', true);
+    }
+
     private function GetPendingUnnamedObjects(): array
     {
         $unnamedObjects = json_decode($this->ReadAttributeString(self::attributeUnnamedObjects), true);
