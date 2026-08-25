@@ -58,9 +58,28 @@ function waehlbareIds(array $lizenz): array
     return $ids;
 }
 
+const AUTO_ID = 'auto';
+
+// Repliziert ResolveAutomaticCatalogId(): neuestes berechtigtes Saison-Design
+// (= letzter passender Katalogeintrag), sonst der neutrale Standard.
+function automatisch(array $lizenz): string
+{
+    $id = STANDARD_ID;
+    foreach (KATALOG as $katalogId => $eintrag) {
+        if ($eintrag['feature'] !== null && hatBerechtigung($eintrag['feature'], $lizenz)) {
+            $id = $katalogId;
+        }
+    }
+
+    return $id;
+}
+
 // Repliziert ResolveCatalogId().
 function aufloesen(string $gespeichert, array $lizenz): string
 {
+    if ($gespeichert === AUTO_ID) {
+        return automatisch($lizenz);
+    }
     if (isset(KATALOG[$gespeichert]) && hatBerechtigung(KATALOG[$gespeichert]['feature'], $lizenz)) {
         return $gespeichert;
     }
@@ -146,5 +165,46 @@ assert(strpos($tplFnBody, 'file_get_contents') !== false, 'DER ENTWURFSKERN: der
 assert(strpos($tplFnBody, 'ReadPropertyString(self::propertyTileTemplateId)') !== false, 'gelesen wird aus der Property nur die ID');
 assert(strpos($tplFnBody, 'propertyCustomTileHtml') === false, 'die Vorlagen-Aufloesung darf nichts mit dem eigenen Kachel-Code des Nutzers zu tun haben - das sind bewusst getrennte Wege');
 echo "Test 8 (gespeichert wird nur die ID, der Inhalt kommt beim Rendern frisch aus der Datei) OK\n";
+
+// --- Build 147: "Automatisch" als Auslieferungszustand -----------------------
+// Nutzer-Vorgabe: eine Sonder-Edition mit eigenem Design soll dieses "als
+// Standard anzeigen" - der Kaeufer soll es nicht erst suchen muessen.
+
+// Test 9: DIE KERNANFORDERUNG - ohne jedes Zutun zeigt die Xmas-Edition ihr
+// Design, die Standard-Edition dagegen den neutralen Auslieferungszustand.
+assert(aufloesen(AUTO_ID, $xmas) === 'xmas2026', 'DIE KERNANFORDERUNG: eine Sonder-Edition muss ihr Design ohne manuelle Auswahl zeigen');
+assert(aufloesen(AUTO_ID, $nikolaus) === 'nik2026', 'dasselbe fuer jede andere Sonder-Edition');
+assert(aufloesen(AUTO_ID, $standard) === STANDARD_ID, 'eine Edition ohne Saison-Design muss den neutralen Auslieferungszustand zeigen');
+assert(aufloesen(AUTO_ID, $testphase) === STANDARD_ID, 'die Testphase ebenso - sie hat kein Saison-Design');
+echo "Test 9 (eine Sonder-Edition zeigt ihr Design von sich aus, ohne manuelle Auswahl) OK\n";
+
+// Test 10: eine AUSDRUECKLICHE Wahl schlaegt die Automatik. Wer trotz
+// Xmas-Lizenz bewusst das neutrale Symbol will, muss es behalten duerfen -
+// sonst waere die Auswahl wertlos.
+assert(aufloesen('ipssl', $xmas) === 'ipssl', 'DER FALLSTRICK: eine ausdrueckliche Wahl des neutralen Zustands darf nicht von der Automatik ueberschrieben werden');
+assert(aufloesen('globe', $xmas) === 'globe', 'dasselbe fuer jede andere ausdrueckliche Wahl');
+echo "Test 10 (eine ausdrückliche Wahl schlägt die Automatik und bleibt bestehen) OK\n";
+
+// Test 11: besitzt jemand MEHRERE Sonder-Editionen, gewinnt die zuletzt
+// erschienene (= letzter Katalogeintrag). Deterministisch statt zufaellig.
+$beide = ['valid' => true, 'features' => ['theme_xmas2026', 'theme_nikolaus2026']];
+assert(aufloesen(AUTO_ID, $beide) === 'nik2026', 'bei mehreren Berechtigungen muss deterministisch das neueste Design gewinnen (letzter Katalogeintrag)');
+echo "Test 11 (bei mehreren Sonder-Editionen gewinnt deterministisch die neueste) OK\n";
+
+// Test 12: WICHTIGE ABGRENZUNG - verliert eine ausdrueckliche Wahl ihre
+// Berechtigung, faellt sie auf den NEUTRALEN Standard zurueck, nicht auf ein
+// anderes Saison-Design, das zufaellig auch vorliegt. Sonst spraenge die Optik
+// beim Ablaufen einer Lizenz ueberraschend auf ein voellig anderes Design.
+$nurNikolaus = ['valid' => true, 'features' => ['theme_nikolaus2026']];
+assert(aufloesen('xmas2026', $nurNikolaus) === STANDARD_ID, 'DIE UEBERRASCHUNG: eine ungueltig gewordene ausdrueckliche Wahl muss auf den neutralen Standard fallen, nicht auf ein anderes vorhandenes Saison-Design');
+echo "Test 12 (eine ungültig gewordene Wahl fällt neutral zurück, nicht auf ein fremdes Design) OK\n";
+
+// Test 13: Symmetrie-Check gegen die reale module.php.
+assert(strpos($moduleSource, "private const CATALOG_AUTOMATIC_ID = 'auto';") !== false, 'der reservierte Automatik-Wert muss existieren');
+assert(!array_key_exists('auto', KATALOG), 'der Automatik-Wert darf keine echte Katalog-ID sein, sonst kollidiert er mit einem Design');
+assert(strpos($moduleSource, 'RegisterPropertyString(self::propertyTileIconId, self::CATALOG_AUTOMATIC_ID)') !== false, 'das Symbol-Feld muss im Auslieferungszustand auf "automatisch" stehen');
+assert(strpos($moduleSource, 'RegisterPropertyString(self::propertyTileTemplateId, self::CATALOG_AUTOMATIC_ID)') !== false, 'das Vorlagen-Feld ebenso');
+assert(strpos($moduleSource, 'private function ResolveAutomaticCatalogId(array $Catalog, string $DefaultId): string') !== false, 'die Automatik-Aufloesung muss existieren');
+echo "Test 13 (die reale module.php liefert beide Felder im Automatik-Zustand aus) OK\n";
 
 echo "\nAll tests passed.\n";

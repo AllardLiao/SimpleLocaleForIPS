@@ -341,8 +341,8 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterPropertyBoolean(self::propertyShowGlobeIcon, true);
         $this->RegisterPropertyBoolean(self::propertyShowInfoIcon, true);
         // Build 146: nur die ID, nicht der Inhalt - siehe Konstanten-Kommentar.
-        $this->RegisterPropertyString(self::propertyTileIconId, self::TILE_ICON_DEFAULT_ID);
-        $this->RegisterPropertyString(self::propertyTileTemplateId, self::TILE_TEMPLATE_DEFAULT_ID);
+        $this->RegisterPropertyString(self::propertyTileIconId, self::CATALOG_AUTOMATIC_ID);
+        $this->RegisterPropertyString(self::propertyTileTemplateId, self::CATALOG_AUTOMATIC_ID);
         // Statistik-Hinweis in der Kachel (siehe BuildTranslationStatsNoticeHtml) -
         // standardmäßig aus, rein informativ.
         $this->RegisterPropertyBoolean(self::propertyShowTranslationStats, false);
@@ -1191,11 +1191,11 @@ private const LANGUAGE_FLAGS = [
                 // auf, die es auch erworben haben. Dasselbe Muster wie bei den
                 // Zielsprachen (siehe BuildTargetLanguageOptions).
                 case self::propertyTileIconId:
-                    $element['options'] = $this->BuildCatalogOptions(self::TILE_ICON_CATALOG);
+                    $element['options'] = $this->BuildCatalogOptions(self::TILE_ICON_CATALOG, self::TILE_ICON_DEFAULT_ID);
                     break;
 
                 case self::propertyTileTemplateId:
-                    $element['options'] = $this->BuildCatalogOptions(self::TILE_TEMPLATE_CATALOG);
+                    $element['options'] = $this->BuildCatalogOptions(self::TILE_TEMPLATE_CATALOG, self::TILE_TEMPLATE_DEFAULT_ID);
                     break;
 
                 case 'UnnamedObjectsLabel':
@@ -8848,6 +8848,14 @@ HTML;
 
     private const TILE_ICON_DEFAULT_ID = 'ipssl';
 
+    // Build 147: reservierter Wert fuer "automatisch waehlen" - bewusst KEINE
+    // Katalog-ID, damit er sich nie mit einem echten Design ueberschneiden kann.
+    // Ist der Auslieferungszustand beider Auswahlfelder (siehe Create), wodurch
+    // eine Sonder-Edition ihr Design von sich aus zeigt. Wer den neutralen
+    // Zustand will, waehlt ihn ausdruecklich - diese Wahl bleibt dann bestehen
+    // (siehe ResolveCatalogId: nur "automatisch" wird neu bewertet).
+    private const CATALOG_AUTOMATIC_ID = 'auto';
+
     // Build 146: Katalog der mitgelieferten Kachel-Vorlagen. Gleiche Struktur
     // wie beim Symbol-Katalog, nur dass der Inhalt aus einer HTML-Datei neben
     // module.html kommt ('file') - dadurch bleibt jede Vorlage eine normale,
@@ -8893,9 +8901,17 @@ HTML;
     // Baut die Select-Optionen fuer einen Katalog - nur berechtigte Eintraege.
     // Die Beschriftungen laufen durch Translate(), damit sie der Konsolensprache
     // folgen (siehe locale.json).
-    private function BuildCatalogOptions(array $Catalog): array
+    private function BuildCatalogOptions(array $Catalog, string $DefaultId): array
     {
-        $options = [];
+        // Build 147: "Automatisch" immer zuoberst - der Auslieferungszustand.
+        // Der Klammerzusatz zeigt, was das gerade konkret bedeutet, damit die
+        // Auswahl nicht undurchsichtig wirkt ("Automatisch (Weihnachten 2026)").
+        $automaticId = $this->ResolveAutomaticCatalogId($Catalog, $DefaultId);
+        $options = [[
+            'caption' => $this->Translate('Automatisch') . ' (' . $this->Translate($Catalog[$automaticId]['label']) . ')',
+            'value'   => self::CATALOG_AUTOMATIC_ID,
+        ]];
+
         foreach ($this->FilterCatalogByEntitlement($Catalog) as $id => $entry) {
             $options[] = [
                 'caption' => $this->Translate($entry['label']),
@@ -8927,11 +8943,46 @@ HTML;
     // und lebt nach erneuter Lizenzierung sofort wieder auf.
     private function ResolveCatalogId(array $Catalog, string $StoredId, string $DefaultId): string
     {
+        // Build 147 (Nutzer-Vorgabe): "Automatisch" ist der Auslieferungszustand -
+        // eine Sonder-Edition zeigt ihr eigenes Design dadurch von sich aus,
+        // ohne dass der Kaeufer es erst suchen muss. Genau darum geht es beim
+        // Wiedererkennungswert.
+        if ($StoredId === self::CATALOG_AUTOMATIC_ID) {
+            return $this->ResolveAutomaticCatalogId($Catalog, $DefaultId);
+        }
+
         if (isset($Catalog[$StoredId]) && $this->HasThemeEntitlement($Catalog[$StoredId]['feature'] ?? null)) {
             return $StoredId;
         }
 
+        // Bewusst der neutrale Standard, NICHT die automatische Wahl: wer sich
+        // einmal ausdruecklich fuer ein bestimmtes Design entschieden hat und
+        // dessen Berechtigung verliert, soll auf den Auslieferungszustand
+        // zurueckfallen - und nicht ueberraschend auf einem ANDEREN Saison-
+        // Design landen, das er zufaellig ebenfalls besitzt.
         return $DefaultId;
+    }
+
+    // Build 147: die automatische Wahl - das neueste Saison-Design, fuer das
+    // eine Berechtigung vorliegt; sonst der neutrale Auslieferungszustand.
+    //
+    // "Neuestes" = der letzte passende Katalogeintrag. Neue Designs werden unten
+    // angehaengt, dadurch gewinnt bei jemandem, der mehrere Sonder-Editionen
+    // besitzt, automatisch die zuletzt erschienene. Bewusst KEINE Datumslogik
+    // (etwa "nur im Dezember"): die Berechtigung selbst ist der Punkt, und ein
+    // Design, das der Kaeufer erworben hat, soll nicht ungefragt wieder
+    // verschwinden. Wer den neutralen Zustand will, waehlt ihn ausdruecklich.
+    private function ResolveAutomaticCatalogId(array $Catalog, string $DefaultId): string
+    {
+        $automatic = $DefaultId;
+        foreach ($Catalog as $id => $entry) {
+            $feature = $entry['feature'] ?? null;
+            if ($feature !== null && $this->HasThemeEntitlement($feature)) {
+                $automatic = $id;
+            }
+        }
+
+        return $automatic;
     }
 
     private function BuildAppIconImgHtml(): string
