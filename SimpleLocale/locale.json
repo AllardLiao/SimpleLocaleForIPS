@@ -106,7 +106,6 @@
             "Löscht nur den internen Zwischenspeicher für wiederkehrende Übersetzungen (spart normalerweise API-Aufrufe für Texte, die schon einmal übersetzt wurden) - nützlich, falls ein Text weiterhin eine veraltete/falsche Übersetzung zeigt. Bereits gespeicherte Übersetzungen in Objektnamen, Eigenen Texten und Beschriftungen bleiben davon unberührt und müssen bei Bedarf weiterhin einzeln im jeweiligen Feld geleert werden, damit sie beim nächsten Rescan/Sprachwechsel neu übersetzt werden.": "Only clears the internal cache for recurring translations (normally saves API calls for text that's already been translated once) - useful if a text keeps showing an outdated/incorrect translation. Translations already stored in Object names, Custom texts and Captions are unaffected and still need to be cleared individually in their field if needed, so they get retranslated on the next rescan/language switch.",
             "Wert-Objekt-ID": "Value object ID",
             "Aktuell aktive Sprache": "Currently active language",
-            "Simple-Locale-Symbol in der Kachel anzeigen": "Show Simple Locale Icon in the tile",
             "Info-Symbol in der Kachel anzeigen": "Show info icon in the tile",
             "Eigene Sprachauswahl-Kachel verwenden": "Use a custom language-selection tile",
             "Eigene Sprachauswahl-Kachel verwenden (Pro Edition erforderlich)": "Use a custom language-selection tile (Pro Edition required)",
@@ -185,7 +184,13 @@
             "Achtung: DeepL verwendet eigene, großgeschriebene Sprachcodes und verlangt für Englisch/Portugiesisch zwingend eine Regionsvariante (EN-GB/EN-US, PT-PT/PT-BR) statt eines einfachen \"EN\"/\"PT\" wie bei Google. Ein Wechsel des bevorzugten Anbieters kann daher bereits gewählte Zielsprachen ungültig machen - betroffene Zeilen in \"Zielsprachen\" unten müssen dann neu ausgewählt werden. Siehe Abschnitt 7 der Dokumentation.": "Note: DeepL uses its own, uppercase language codes and requires a regional variant for English/Portuguese (EN-GB/EN-US, PT-PT/PT-BR) instead of a plain \"EN\"/\"PT\" like Google. Switching the preferred provider can therefore invalidate already-chosen target languages - affected rows in \"Target languages\" below then need to be re-selected. See section 7 of the documentation.",
             "- Google Cloud Translate:": "- Google Cloud Translate:",
             "- DeepL:": "- DeepL:",
-            "Quelltext": "Source text"
+            "Quelltext": "Source text",
+            "Symbol in der Kachel": "Icon in the tile",
+            "Kachel-Vorlage": "Tile template",
+            "Simple-Locale-Symbol": "Simple Locale icon",
+            "Weltkugel": "Globe",
+            "Standard": "Standard",
+            "Symbol in der Kachel anzeigen": "Show icon in the tile"
         },
         "es": {
             "Aktiv": "Activo",
@@ -293,7 +298,6 @@
             "Löscht nur den internen Zwischenspeicher für wiederkehrende Übersetzungen (spart normalerweise API-Aufrufe für Texte, die schon einmal übersetzt wurden) - nützlich, falls ein Text weiterhin eine veraltete/falsche Übersetzung zeigt. Bereits gespeicherte Übersetzungen in Objektnamen, Eigenen Texten und Beschriftungen bleiben davon unberührt und müssen bei Bedarf weiterhin einzeln im jeweiligen Feld geleert werden, damit sie beim nächsten Rescan/Sprachwechsel neu übersetzt werden.": "Solo borra la caché interna de traducciones recurrentes (normalmente ahorra llamadas a la API para textos ya traducidos antes) - útil si un texto sigue mostrando una traducción obsoleta o incorrecta. Las traducciones ya guardadas en nombres de objetos, textos personalizados y etiquetas no se ven afectadas y, si es necesario, deben seguir borrándose individualmente en su campo correspondiente para que se vuelvan a traducir en el próximo reescaneo o cambio de idioma.",
             "Wert-Objekt-ID": "ID del objeto de valor",
             "Aktuell aktive Sprache": "Idioma actualmente activo",
-            "Simple-Locale-Symbol in der Kachel anzeigen": "Mostrar el icono de Simple Locale en el mosaico",
             "Info-Symbol in der Kachel anzeigen": "Mostrar icono de información en el mosaico",
             "Eigene Sprachauswahl-Kachel verwenden": "Usar un mosaico de selección de idioma propio",
             "Eigene Sprachauswahl-Kachel verwenden (Pro Edition erforderlich)": "Usar un mosaico de selección de idioma propio (Se requiere la edición Pro)",
@@ -372,7 +376,13 @@
             "Achtung: DeepL verwendet eigene, großgeschriebene Sprachcodes und verlangt für Englisch/Portugiesisch zwingend eine Regionsvariante (EN-GB/EN-US, PT-PT/PT-BR) statt eines einfachen \"EN\"/\"PT\" wie bei Google. Ein Wechsel des bevorzugten Anbieters kann daher bereits gewählte Zielsprachen ungültig machen - betroffene Zeilen in \"Zielsprachen\" unten müssen dann neu ausgewählt werden. Siehe Abschnitt 7 der Dokumentation.": "Atención: DeepL utiliza sus propios códigos de idioma en mayúsculas y exige para inglés/portugués obligatoriamente una variante regional (EN-GB/EN-US, PT-PT/PT-BR) en lugar de un simple \"EN\"/\"PT\" como en Google. Cambiar el proveedor preferido puede por tanto invalidar idiomas de destino ya elegidos - las filas afectadas en \"Idiomas de destino\" más abajo deben entonces volver a seleccionarse. Ver sección 7 de la documentación.",
             "- Google Cloud Translate:": "- Google Cloud Translate:",
             "- DeepL:": "- DeepL:",
-            "Quelltext": "Texto de origen"
+            "Quelltext": "Texto de origen",
+            "Symbol in der Kachel": "Icono en el mosaico",
+            "Kachel-Vorlage": "Plantilla de mosaico",
+            "Simple-Locale-Symbol": "Icono de Simple Locale",
+            "Weltkugel": "Globo terráqueo",
+            "Standard": "Estándar",
+            "Symbol in der Kachel anzeigen": "Mostrar icono en el mosaico"
         },
         "it": {
             "Aktiv": "Attivo",
@@ -480,7 +490,6 @@
             "Löscht nur den internen Zwischenspeicher für wiederkehrende Übersetzungen (spart normalerweise API-Aufrufe für Texte, die schon einmal übersetzt wurden) - nützlich, falls ein Text weiterhin eine veraltete/falsche Übersetzung zeigt. Bereits gespeicherte Übersetzungen in Objektnamen, Eigenen Texten und Beschriftungen bleiben davon unberührt und müssen bei Bedarf weiterhin einzeln im jeweiligen Feld geleert werden, damit sie beim nächsten Rescan/Sprachwechsel neu übersetzt werden.": "Svuota solo la cache interna per le traduzioni ricorrenti (di norma risparmia chiamate API per testi già tradotti in precedenza) - utile se un testo continua a mostrare una traduzione obsoleta o errata. Le traduzioni già salvate in Nomi degli oggetti, Testi personalizzati e Etichette non vengono toccate e, se necessario, vanno ancora svuotate singolarmente nel rispettivo campo, cosi da essere ritradotte al prossimo rescan/cambio lingua.",
             "Wert-Objekt-ID": "ID oggetto valore",
             "Aktuell aktive Sprache": "Lingua attualmente attiva",
-            "Simple-Locale-Symbol in der Kachel anzeigen": "Mostra l'icona di Simple Locale nel riquadro",
             "Info-Symbol in der Kachel anzeigen": "Mostra l'icona informativa nel riquadro",
             "Eigene Sprachauswahl-Kachel verwenden": "Usa un riquadro di selezione lingua personalizzato",
             "Eigene Sprachauswahl-Kachel verwenden (Pro Edition erforderlich)": "Usa un riquadro di selezione lingua personalizzato (Edizione Pro richiesta)",
@@ -559,7 +568,13 @@
             "Achtung: DeepL verwendet eigene, großgeschriebene Sprachcodes und verlangt für Englisch/Portugiesisch zwingend eine Regionsvariante (EN-GB/EN-US, PT-PT/PT-BR) statt eines einfachen \"EN\"/\"PT\" wie bei Google. Ein Wechsel des bevorzugten Anbieters kann daher bereits gewählte Zielsprachen ungültig machen - betroffene Zeilen in \"Zielsprachen\" unten müssen dann neu ausgewählt werden. Siehe Abschnitt 7 der Dokumentation.": "Attenzione: DeepL utilizza propri codici lingua in maiuscolo e richiede per inglese/portoghese obbligatoriamente una variante regionale (EN-GB/EN-US, PT-PT/PT-BR) invece di un semplice \"EN\"/\"PT\" come Google. Un cambio del provider preferito può quindi invalidare lingue di destinazione già scelte - le righe interessate in \"Lingue di destinazione\" più sotto devono poi essere riselezionate. Vedi la sezione 7 della documentazione.",
             "- Google Cloud Translate:": "- Google Cloud Translate:",
             "- DeepL:": "- DeepL:",
-            "Quelltext": "Testo di origine"
+            "Quelltext": "Testo di origine",
+            "Symbol in der Kachel": "Icona nel riquadro",
+            "Kachel-Vorlage": "Modello di riquadro",
+            "Simple-Locale-Symbol": "Icona di Simple Locale",
+            "Weltkugel": "Globo",
+            "Standard": "Standard",
+            "Symbol in der Kachel anzeigen": "Mostra icona nel riquadro"
         },
         "fr": {
             "Aktiv": "Actif",
@@ -667,7 +682,6 @@
             "Löscht nur den internen Zwischenspeicher für wiederkehrende Übersetzungen (spart normalerweise API-Aufrufe für Texte, die schon einmal übersetzt wurden) - nützlich, falls ein Text weiterhin eine veraltete/falsche Übersetzung zeigt. Bereits gespeicherte Übersetzungen in Objektnamen, Eigenen Texten und Beschriftungen bleiben davon unberührt und müssen bei Bedarf weiterhin einzeln im jeweiligen Feld geleert werden, damit sie beim nächsten Rescan/Sprachwechsel neu übersetzt werden.": "Vide uniquement le cache interne des traductions récurrentes (économise normalement des appels API pour un texte déjà traduit une fois) - utile si un texte continue d'afficher une traduction obsolète/incorrecte. Les traductions déjà enregistrées dans Noms des objets, Textes personnalisés et Étiquettes ne sont pas concernées et doivent encore être vidées individuellement dans leur champ si nécessaire, afin d'être retraduites lors du prochain réanalyse/changement de langue.",
             "Wert-Objekt-ID": "ID objet valeur",
             "Aktuell aktive Sprache": "Langue actuellement active",
-            "Simple-Locale-Symbol in der Kachel anzeigen": "Afficher l'icône de Simple Locale dans la tuile",
             "Info-Symbol in der Kachel anzeigen": "Afficher l'icône d'information dans la tuile",
             "Eigene Sprachauswahl-Kachel verwenden": "Utiliser une tuile de sélection de langue personnalisée",
             "Eigene Sprachauswahl-Kachel verwenden (Pro Edition erforderlich)": "Utiliser une tuile de sélection de langue personnalisée (Édition Pro requise)",
@@ -746,7 +760,13 @@
             "Achtung: DeepL verwendet eigene, großgeschriebene Sprachcodes und verlangt für Englisch/Portugiesisch zwingend eine Regionsvariante (EN-GB/EN-US, PT-PT/PT-BR) statt eines einfachen \"EN\"/\"PT\" wie bei Google. Ein Wechsel des bevorzugten Anbieters kann daher bereits gewählte Zielsprachen ungültig machen - betroffene Zeilen in \"Zielsprachen\" unten müssen dann neu ausgewählt werden. Siehe Abschnitt 7 der Dokumentation.": "Attention : DeepL utilise ses propres codes de langue en majuscules et exige pour l'anglais/le portugais obligatoirement une variante régionale (EN-GB/EN-US, PT-PT/PT-BR) au lieu d'un simple \"EN\"/\"PT\" comme chez Google. Changer le fournisseur préféré peut donc invalider des langues cibles déjà choisies - les lignes concernées dans \"Langues cibles\" ci-dessous doivent alors être resélectionnées. Voir la section 7 de la documentation.",
             "- Google Cloud Translate:": "- Google Cloud Translate :",
             "- DeepL:": "- DeepL :",
-            "Quelltext": "Texte source"
+            "Quelltext": "Texte source",
+            "Symbol in der Kachel": "Icône dans la tuile",
+            "Kachel-Vorlage": "Modèle de tuile",
+            "Simple-Locale-Symbol": "Icône Simple Locale",
+            "Weltkugel": "Globe",
+            "Standard": "Standard",
+            "Symbol in der Kachel anzeigen": "Afficher l'icône dans la tuile"
         }
     }
 }

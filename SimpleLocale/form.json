@@ -154,7 +154,13 @@
                         {
                             "type": "CheckBox",
                             "name": "ShowGlobeIcon",
-                            "caption": "Simple-Locale-Symbol in der Kachel anzeigen"
+                            "caption": "Symbol in der Kachel anzeigen"
+                        },
+                        {
+                            "type": "Select",
+                            "name": "TileIconId",
+                            "caption": "Symbol in der Kachel",
+                            "options": []
                         },
                         {
                             "type": "CheckBox",
@@ -169,6 +175,12 @@
                         {
                             "type": "Label",
                             "caption": "Kleiner Hinweis unter dem Dropdown (\"30 Übersetzungen/h, 500 Zeichen/h\") - rein informativ, aktualisiert sich in bereits offenen Kacheln alle 10 Minuten. Für eigene Kacheln stehen unabhängig von diesem Haken die Platzhalter <!--COUNT_TRANSLATIONS--> und <!--COUNT_SIGNES--> zur Verfügung (liefern nur die Zahl, siehe Abschnitt 7 der Dokumentation)."
+                        },
+                        {
+                            "type": "Select",
+                            "name": "TileTemplateId",
+                            "caption": "Kachel-Vorlage",
+                            "options": []
                         },
                         {
                             "type": "CheckBox",
