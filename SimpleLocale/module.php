@@ -580,6 +580,20 @@ private const LANGUAGE_FLAGS = [
         } elseif ($this->IsTrialLocked()) {
             $this->SetStatus(self::STATUS_TRIAL_EXPIRED);
             $this->ResetToOriginalLanguageIfNeeded();
+        } elseif ($this->HasPendingUnnamedObjects()) {
+            // Build 141 (live gemeldeter Bug): ein vorangegangener Rescan-Abbruch
+            // wegen unbenannter Objekte (siehe ScanRootTree) wurde hier bisher
+            // kommentarlos ueberschrieben - JEDES beliebige spaetere
+            // "Uebernehmen" (z.B. nur eine Zielsprache hinzugefuegt) setzte den
+            // Status zurueck auf "Aktiv", obwohl die Liste der unbenannten
+            // Objekte im selben Formular unveraendert sichtbar darunter stand und
+            // weiterhin JEDEN Rescan blockiert. Formular und Statuszeile
+            // widersprachen sich damit offen. Beide speisen sich jetzt aus
+            // derselben Quelle (attributeUnnamedObjects) und bleiben dadurch
+            // zwangslaeufig konsistent - inklusive des gemeinsamen Zuruecksetzens
+            // beim naechsten erfolgreichen Rescan, dem in der Statusmeldung
+            // ohnehin geforderten naechsten Schritt.
+            $this->SetStatus(self::STATUS_UNNAMED_OBJECTS);
         } else {
             // Live beobachtet (2026-08-18): STATUS_TRANSLATE_PAUSED wurde bisher NUR
             // reaktiv innerhalb TranslateChunk() gesetzt, wenn GERADE ein
@@ -838,10 +852,9 @@ private const LANGUAGE_FLAGS = [
     {
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
         $targetLanguages = $this->GetSelectedTargetLanguages();
-        $unnamedObjects = json_decode($this->ReadAttributeString(self::attributeUnnamedObjects), true);
-        if (!is_array($unnamedObjects)) {
-            $unnamedObjects = [];
-        }
+        // Build 141: dieselbe Quelle wie die Statuszeile in ApplyChanges() - siehe
+        // GetPendingUnnamedObjects().
+        $unnamedObjects = $this->GetPendingUnnamedObjects();
         $licenseInfo = $this->GetLicenseInfo();
         $licenseValid = $licenseInfo['valid'] ?? false;
 
@@ -1397,9 +1410,12 @@ private const LANGUAGE_FLAGS = [
     // Rescan selbst angestoßen und sieht die aktualisierte Liste bereits über
     // Symcons automatischen Konsolen-Reload nach dem RequestAction (siehe Build
     // 116/ScanRootTree - kein eigener ReloadForm()-Aufruf mehr nötig).
+    // Build 141: true = "interaktiv" (siehe ScanRootTree) - nur fuer den EINEN
+    // Sonderfall relevant, in dem der Rescan vorzeitig abbricht und daher NICHT
+    // bei IPS_ApplyChanges() ankommt, das den Konsolen-Reload sonst ausloest.
     public function Rescan(): void
     {
-        $this->ScanRootTree();
+        $this->ScanRootTree(true);
     }
 
     // Wird AUSSCHLIESSLICH vom Auto-Rescan-Timer aufgerufen (siehe RegisterTimer in
@@ -1409,7 +1425,8 @@ private const LANGUAGE_FLAGS = [
     // Hintergrund-Rescan soll ein GERADE OFFENES Konfigurationsformular nicht
     // mitten in der Bearbeitung neu laden und dabei unsavte Änderungen (z. B. eine
     // manuell korrigierte Übersetzung) verwerfen (live gemeldeter Bug,
-    // 2026-08-19).
+    // 2026-08-19). Bleibt daher bewusst beim Standard "nicht interaktiv" (siehe
+    // ScanRootTree/Rescan) - auch der Abbruch-Fall loest hier keinen Reload aus.
     public function AutoRescan(): void
     {
         $this->ScanRootTree();
@@ -4328,7 +4345,20 @@ private const LANGUAGE_FLAGS = [
     // weiterhin gewollt (siehe Build 60/AutoRescan()-Kommentar: ein gerade
     // offenes Formular soll dadurch nicht mitten in der Bearbeitung neu geladen
     // werden).
-    private function ScanRootTree(): void
+    //
+    // Build 141 (live gemeldeter Bug): $IsInteractive unterscheidet den manuellen
+    // Rescan-Button/IPSSL_Rescan() vom Hintergrund-Timer - gebraucht wird das NUR
+    // im Abbruch-Fall "unbenannte Objekte" weiter unten. Grund: die oben
+    // beschriebene Build-116-Annahme ("die Konsole laedt nach jedem RequestAction
+    // ohnehin selbst neu") stimmt nur, WEIL der normale Durchlauf am Ende
+    // IPS_ApplyChanges() aufruft - DAS loest den Reload aus, nicht die
+    // RequestAction an sich. Der Abbruch-Fall kehrt aber VOR diesem
+    // IPS_ApplyChanges() zurueck, bekam dadurch nie einen Reload, und die gerade
+    // frisch geschriebene Liste der unbenannten Objekte blieb im Formular
+    // unsichtbar (der Admin sah nur die Statusmeldung "see list in form" ohne
+    // jede Liste - live gemeldet 2026-08-24, die Liste tauchte erst beim
+    // naechsten regulaeren "Uebernehmen" auf).
+    private function ScanRootTree(bool $IsInteractive = false): void
     {
         // Notaus-Schalter (siehe propertyActive/ApplyChanges) - deckt sowohl den
         // manuellen Rescan-Button als auch den Auto-Rescan-Timer ab (beide laufen
@@ -4407,6 +4437,20 @@ private const LANGUAGE_FLAGS = [
         if ($unnamedObjects !== []) {
             $this->SetStatus(self::STATUS_UNNAMED_OBJECTS);
             $this->SetRescanProgress('');
+
+            // Build 141: siehe Funktionskommentar - dieser Zweig kehrt VOR dem
+            // IPS_ApplyChanges() am Ende zurueck, das sonst den Konsolen-Reload
+            // ausloest. Ohne diesen expliziten Aufruf bliebe die soeben
+            // geschriebene Liste unsichtbar, obwohl die Statusmeldung genau auf
+            // sie verweist. Unbedenklich bezueglich des Build-116-Problems
+            // (doppelter Reload): in DIESEM Zweig findet garantiert kein zweiter
+            // statt, da hier nichts persistiert wird. Und unbedenklich bezueglich
+            // des Build-60-Problems (Hintergrund-Rescan reisst dem Admin das
+            // offene Formular unter den Haenden weg): der Timer-Pfad laeuft
+            // bewusst mit $IsInteractive = false hier vorbei.
+            if ($IsInteractive) {
+                $this->ReloadForm();
+            }
 
             return;
         }
@@ -4604,6 +4648,27 @@ private const LANGUAGE_FLAGS = [
     private function IsUnnamedObject(int $ObjectID, string $Name): bool
     {
         return $Name === '' || preg_match('/\(ID:\s*' . $ObjectID . '\)\s*$/', $Name) === 1;
+    }
+
+    // Build 141: gemeinsame Quelle fuer "der letzte Rescan ist an unbenannten
+    // Objekten gescheitert" - genutzt von ApplyChanges() (Statuszeile) UND
+    // PopulateFormElements() (Sichtbarkeit der Liste im Formular), damit beide
+    // nie wieder auseinanderlaufen koennen. Bewusst NICHT live gegen den
+    // aktuellen Objektbaum geprueft, sondern rein aus dem beim letzten Rescan
+    // geschriebenen Attribut: ein zwischenzeitlich vom Admin vergebener Name
+    // wird also erst beim naechsten Rescan wirksam - exakt der Ablauf, den die
+    // Statusmeldung ohnehin verlangt, und deutlich guenstiger als ein kompletter
+    // Baum-Durchlauf bei JEDEM ApplyChanges().
+    private function GetPendingUnnamedObjects(): array
+    {
+        $unnamedObjects = json_decode($this->ReadAttributeString(self::attributeUnnamedObjects), true);
+
+        return is_array($unnamedObjects) ? $unnamedObjects : [];
+    }
+
+    private function HasPendingUnnamedObjects(): bool
+    {
+        return $this->GetPendingUnnamedObjects() !== [];
     }
 
     // $ParentPath enthält die Namen der Vorfahren ab dem Root der Visualisierung
@@ -5150,10 +5215,10 @@ private const LANGUAGE_FLAGS = [
         switch ($showGreeting) {
             case 1:
             case 3:
-                return $this->Translate('Modus "Automatic"/"Static" aktiv - der Begrüßungstext (Feld "Name") wird unten übersetzt.');
+                return $this->Translate('Modus "Automatic"/"Static" aktiv - der Begrüßungstext (Feld "Name") wird übersetzt.');
 
             case 2:
-                return $this->Translate('Modus "Variable" aktiv - der aktuelle Wert der verknüpften Variable wird unten übersetzt und bei jeder Änderung der Variable automatisch neu übernommen.');
+                return $this->Translate('Modus "Variable" aktiv - der aktuelle Wert der verknüpften Variable wird übersetzt und bei jeder Änderung der Variable automatisch neu übernommen.');
 
             default:
                 return $this->Translate('Begrüßung ist deaktiviert ("Show Greeting" = "None" in der Kachel-Visualisierung).');
