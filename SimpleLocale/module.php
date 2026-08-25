@@ -4422,24 +4422,24 @@ private const LANGUAGE_FLAGS = [
     // Build 144 (Nutzer-Wunsch: auch die alte WebFront-Visualisierung
     // unterstuetzen): unterschiedliche Visualisierungs-Module benennen ihre
     // Startkategorie unterschiedlich. Die Kachel-Visualisierung nutzt "BaseID"
-    // (im Formular "Startkategorie"), aeltere/andere Visualisierungen andere
-    // Namen. Statt auf einen einzigen Namen festgenagelt zu sein, werden der
-    // Reihe nach bekannte Kandidaten geprueft und der erste genommen, der
-    // tatsaechlich auf ein existierendes Objekt zeigt.
+    // (im Formular "Startkategorie"). Als Liste angelegt, damit ein weiteres
+    // Visualisierungs-Modul spaeter ohne Umbau ergaenzt werden kann - aber
+    // bewusst NUR mit tatsaechlich VERIFIZIERTEN Namen.
     //
-    // Bewusst eine feste Reihenfolge statt "irgendeine ID-Property nehmen": eine
-    // blinde Suche koennte sonst z.B. eine Verweis-Property auf eine ganz andere
-    // Kategorie erwischen und wuerde stillschweigend den falschen Baum
-    // uebersetzen - deutlich schlimmer als ein sauberes
-    // STATUS_ROOT_CATEGORY_MISSING.
+    // Build 145: hier standen kurzzeitig zusaetzlich geratene Namen
+    // ('RootID', 'BaseCategory', ...), um die alte WebFront-Visualisierung
+    // mitzunehmen. Die Pruefung an einer echten WebFront-Instanz hat dann
+    // gezeigt: sie hat ueberhaupt keine Startkategorie-Property auf oberster
+    // Ebene, sondern legt ihren Aufbau in "Items" ab (JSON-String mit Widgets,
+    // die Kategorie-Verweise erst in einem zweiten verschachtelten JSON
+    // tragen) - und kann dabei mehrere gleichrangige Wurzeln haben. Die
+    // Unterstuetzung dafuer wurde bewusst verworfen (siehe README Change-Log).
+    // Die geratenen Namen sind damit nicht nur nutzlos, sondern ein Risiko:
+    // trifft so ein Name zufaellig auf eine gleichnamige Property eines
+    // fremden Moduls, wuerde stillschweigend der FALSCHE Baum uebersetzt.
+    // Deshalb wieder auf den einen belegten Namen zurueckgestutzt.
     private const VISU_ROOT_CATEGORY_PROPERTY_CANDIDATES = [
         'BaseID',        // Kachel-Visualisierung ("Startkategorie")
-        'BaseCategory',
-        'BaseCategoryID',
-        'RootID',
-        'RootCategoryID',
-        'CategoryID',
-        'StartCategoryID',
     ];
 
     private function ResolveVisuRootCategoryID(int $VisuInstanceID): int

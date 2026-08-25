@@ -3883,3 +3883,32 @@ der ursprünglichen Fassung übernommen.
   Werte statt einer Exception; kaputtes JSON/unerreichbare Instanz ebenso;
   Symmetrie-Check, dass kein ungeschützter Zugriff auf die fremde Instanz mehr
   existiert).
+
+* **Build 145 (Nachtrag zu Build 144): Unterstützung der alten
+  WebFront-Visualisierung nach Prüfung einer echten Instanz bewusst verworfen -
+  die dabei geratenen Property-Namen wieder entfernt.**
+  Build 144 hatte die Startkategorie über eine Liste möglicher Property-Namen
+  gesucht, weil unklar war, wie die alte WebFront ihre Wurzel benennt. Die
+  Konfiguration einer laufenden WebFront-Instanz zeigte dann: sie hat
+  **überhaupt keine** Startkategorie-Property auf oberster Ebene. Ihr Aufbau
+  steckt in `Items` - einem JSON-String mit Widgets, deren Kategorie-Verweise
+  erst in einem **zweiten**, darin verschachtelten JSON liegen
+  (`ClassName: "Category"` → `Configuration` → `baseID`). Zusätzlich kann eine
+  WebFront **mehrere gleichrangige Wurzeln** haben (mehrere Category-Widgets),
+  während das Modul strukturell von genau einer ausgeht.
+  Nach Abwägung des Aufwands gegen den erwarteten Nutzen wurde die
+  Unterstützung verworfen. Damit sind die in Build 144 aufgenommenen, nur
+  geratenen Namen (`RootID`, `BaseCategory`, …) nicht bloß nutzlos, sondern ein
+  Risiko: träfe so ein Name zufällig eine gleichnamige Property eines fremden
+  Moduls, würde stillschweigend der **falsche** Baum übersetzt - deutlich
+  schlimmer als ein sauberes `STATUS_ROOT_CATEGORY_MISSING`. Die Liste ist
+  daher wieder auf den einzigen verifizierten Namen (`BaseID`,
+  Kachel-Visualisierung) zurückgestutzt; ein Regressionstest hält sie dort.
+  **Ausdrücklich erhalten bleibt der eigentliche Fund aus Build 144**: der
+  Absturzschutz beim Zugriff auf die fremde Visualisierungs-Instanz. Der ist
+  vom WebFront-Thema unabhängig und greift für **jede** dort ausgewählte
+  Instanz, die eine erwartete Property nicht kennt - statt eines abgebrochenen
+  Rescans gibt es jetzt eine saubere Statusmeldung.
+  Bekannte Grenze, damit sie dokumentiert ist: die alte
+  WebFront-Visualisierung wird nicht unterstützt. Sie lässt sich zwar auswählen,
+  liefert dann aber `STATUS_ROOT_CATEGORY_MISSING` - bewusst, statt zu raten.
