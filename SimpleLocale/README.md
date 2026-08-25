@@ -3717,3 +3717,49 @@ der ursprünglichen Fassung übernommen.
   datenverlust-relevantes Ereignis).
   `php -l` sauber, volle Test-Suite grün, keine funktionale Änderung -
   reines Aufräumen vor der Einreichung im IP-Symcon Module Store.
+
+* **Build 141 (zwei live gemeldete Bugs auf einer frischen Instanz, beide rund
+  um "unbenannte Objekte"): die Liste der unbenannten Objekte blieb nach einem
+  Rescan-Abbruch unsichtbar, und ein späteres "Übernehmen" setzte den Status
+  fälschlich zurück auf "Aktiv".**
+  Bug 1: Der erste Klick auf "Rescan" meldete korrekt "Unnamed objects found -
+  see list in form." - die Liste war im Formular aber nirgends zu sehen. Sie
+  tauchte erst später auf, als der Nutzer aus einem völlig anderen Grund (eine
+  Zielsprache hinzugefügt) auf "Übernehmen" klickte. Ursache: der
+  Abbruch-Zweig in `ScanRootTree()` kehrt VOR dem abschließenden
+  `IPS_ApplyChanges()` zurück. Die Annahme aus Build 116 ("die Konsole lädt das
+  Formular nach jedem RequestAction ohnehin selbst neu") stimmt aber nur, WEIL
+  der normale Durchlauf dieses `IPS_ApplyChanges()` erreicht - DAS löst den
+  Reload aus, nicht die RequestAction an sich. Der Abbruch-Zweig bekam dadurch
+  nie einen Reload, und das gerade frisch geschriebene Attribut wurde nie
+  gerendert. `ScanRootTree()` bekommt dafür einen neuen Parameter
+  `$IsInteractive`, den ausschließlich der manuelle Weg (`Rescan()`/
+  `IPSSL_Rescan()`) setzt - der Auto-Rescan-Timer läuft bewusst weiterhin ohne,
+  damit der bereits in Build 60 behobene Bug (ein Hintergrund-Rescan reißt dem
+  Admin das offene Formular mitten in der Bearbeitung weg und verwirft unsavte
+  Änderungen) nicht wieder eingeschleppt wird.
+  Bug 2: Nach jenem "Übernehmen" zeigte die Statuszeile "Aktiv" (102), obwohl
+  die Liste der unbenannten Objekte im selben Formular unverändert sichtbar
+  darunter stand und weiterhin jeden Rescan blockiert - Formular und
+  Statuszeile widersprachen sich offen. Ursache: `ApplyChanges()` hat den von
+  `ScanRootTree()` gesetzten `STATUS_UNNAMED_OBJECTS` kommentarlos
+  überschrieben, da es die anstehenden unbenannten Objekte gar nicht kannte.
+  Die Status-Kaskade berücksichtigt sie jetzt - eingeordnet nach den
+  fundamentaleren Blockern (fehlender Visualisierungs-Root, abgelaufene
+  Testphase), aber vor der sich selbst auflösenden Anbieter-Pause.
+  Strukturelle Absicherung gegen ein erneutes Auseinanderlaufen: das Attribut
+  `attributeUnnamedObjects` wird jetzt nur noch an EINER einzigen Stelle
+  gelesen (neuer gemeinsamer Helfer `GetPendingUnnamedObjects()`/
+  `HasPendingUnnamedObjects()`), aus der sich sowohl die Statuszeile als auch
+  die Sichtbarkeit der Liste im Formular speisen.
+  Neuer Regressionstest (manueller Rescan-Abbruch lädt das Formular selbst
+  neu; der Hintergrund-Rescan tut das weiterhin NIE; der normale Durchlauf
+  bleibt unberührt; ein späteres "Übernehmen" meldet weiterhin
+  STATUS_UNNAMED_OBJECTS statt "Aktiv"; nach behobenen Benennungen meldet der
+  Status wieder normal "Aktiv"; die Status-Rangfolge stimmt; Symmetrie-Check
+  inkl. der einzigen verbliebenen Lesestelle des Attributs).
+  Enthält außerdem eine bereits zuvor vorbereitete, noch nicht eingecheckte
+  Textkorrektur: die beiden Begrüßungs-Modushinweise sagten "wird unten
+  übersetzt", obwohl die Begrüßungstabelle im umgebauten Formular (siehe Build
+  130) nicht mehr zwingend direkt darunter steht - das "unten" ist jetzt in
+  allen vier Sprachen entfernt.
