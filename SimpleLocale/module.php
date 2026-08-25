@@ -562,6 +562,38 @@ private const LANGUAGE_FLAGS = [
         // Zielsprachen an einer lizenzierten Sprachobergrenze vorbei ergaenzt.
         $this->EnsureSourceLanguageIsTarget();
 
+        // Build 142: Selbstheilung fuer eine Instanz, die bereits in dem in
+        // RequestAction beschriebenen Zustand feststeckt - propertyCurrentLanguage
+        // haelt einen Code, den das Formular-Select gar nicht (mehr) anbietet, und
+        // Symcon verweigert daraufhin JEDES Speichern der Instanz ("Current value
+        // "xx" is not available"). Die neue Pruefung in RequestAction verhindert
+        // das kuenftig, hilft einer schon betroffenen Instanz aber nicht mehr -
+        // deren Formular laesst sich ja gerade nicht mehr uebernehmen, um es von
+        // Hand zu korrigieren.
+        //
+        // Bewusst ERST NACH EnsureSourceLanguageIsTarget() geprueft: das traegt
+        // die Quellsprache ggf. gerade erst als echten Zielsprachen-Eintrag nach,
+        // vorher waere sie hier faelschlich als ungueltig eingestuft worden.
+        // Greift ausserdem, wenn der Admin eine Zielsprache entfernt, die gerade
+        // noch die aktive war.
+        $currentLanguageForValidation = $this->ReadPropertyString(self::propertyCurrentLanguage);
+        if (!$this->IsSelectableGuestLanguage($currentLanguageForValidation)) {
+            $fallbackLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
+            $this->SendDebug(
+                'IPSSL_Language',
+                sprintf(
+                    'Aktive Sprache "%s" ist nicht (mehr) unter den konfigurierten Zielsprachen (%s) - '
+                        . 'auf die Quellsprache "%s" zurueckgesetzt, damit sich die Instanz wieder speichern laesst.',
+                    $currentLanguageForValidation,
+                    implode(', ', $this->GetSelectableLanguageCodes()) ?: '(keine)',
+                    $fallbackLanguage
+                ),
+                0
+            );
+            IPS_SetProperty($this->InstanceID, self::propertyCurrentLanguage, $fallbackLanguage);
+            IPS_ApplyChanges($this->InstanceID);
+        }
+
         // Testphase startet mit der allerersten Einrichtung der Instanz, nicht erst
         // beim ersten Rescan - sonst könnte man den Ablauf durch einfaches Nichtstun
         // beliebig hinauszögern.
@@ -741,6 +773,42 @@ private const LANGUAGE_FLAGS = [
         switch ($Ident) {
             case self::identLanguage:
                 $language = (string) $Value;
+                // Build 142 (live gemeldeter Bug): ein Sprachcode, der gar nicht
+                // konfiguriert ist, darf NIE in propertyCurrentLanguage landen -
+                // sonst weigert sich Symcons Konfigurationsformular danach
+                // dauerhaft zu speichern ("Current value "xx" is not available",
+                // das Select kennt den Wert nicht), und der Admin sitzt auf einer
+                // Instanz, die sich nicht mehr uebernehmen laesst.
+                //
+                // Praktisch garantiert passiert das mit der eigenen
+                // Sprachauswahl-Kachel (Pro-Feature "custom_tile"): deren
+                // mitgeliefertes BEISPIEL zeigt zwei feste Flaggen (siehe
+                // GetDefaultCustomLanguageSelectHtml) - klickt jemand die, ohne
+                // die Codes vorher an seine eigenen Zielsprachen anzupassen,
+                // schickt die Kachel genau so einen unbekannten Code. Der Nutzer
+                // kann darin ausserdem jederzeit beliebige eigene Codes
+                // eintragen. Beides wird hier abgefangen, statt es in die
+                // Property zu lassen.
+                if (!$this->IsSelectableGuestLanguage($language)) {
+                    $this->SendDebug(
+                        'IPSSL_Language',
+                        sprintf(
+                            'Sprachwechsel auf "%s" abgelehnt - nicht in den konfigurierten Zielsprachen (%s). '
+                                . 'Typische Ursache: eigene Sprachauswahl-Kachel mit fest eingetragenen Sprachcodes.',
+                            $language,
+                            implode(', ', $this->GetSelectableLanguageCodes()) ?: '(keine)'
+                        ),
+                        0
+                    );
+                    // Die aktuell aktive Sprache bleibt unveraendert stehen (wie
+                    // beim Rate-Limit-Fall) - nur der ungueltige Wechsel selbst
+                    // wird verweigert. Die Kachel wird trotzdem neu gezeichnet,
+                    // damit eine eingebaute Auswahl nicht faelschlich auf der
+                    // abgelehnten Sprache stehen bleibt.
+                    $this->PushVisualizationUpdate();
+
+                    return;
+                }
                 if ($this->IsLanguageBlockedByTrial($language)) {
                     // Statt der gewünschten Sprache zurück auf die Original-Importe
                     // (verhindert dauerhaft eingefrorene/unvollständige Übersetzungen)
@@ -8343,6 +8411,35 @@ private const LANGUAGE_FLAGS = [
         return $this->GetSelectedTargetLanguages();
     }
 
+    // Build 142: darf dieser Sprachcode ueberhaupt als aktive Gast-Sprache
+    // gesetzt werden? Maszstab sind exakt die Codes, die auch das
+    // Konfigurationsformular in seinem "Aktuell aktive Sprache"-Select anbietet -
+    // nur die akzeptiert Symcon dort spaeter beim Speichern wieder (siehe
+    // RequestAction fuer den Bug, den das verhindert).
+    //
+    // Zwei Codes sind zusaetzlich erlaubt, obwohl sie nicht zwingend in
+    // propertyTargetLanguages stehen:
+    //  - die Quellsprache selbst: EnsureSourceLanguageIsTarget() traegt sie zwar
+    //    normalerweise als echten Eintrag nach, das passiert aber erst beim
+    //    naechsten ApplyChanges() - in der Zwischenzeit waere sie sonst
+    //    faelschlich ungueltig.
+    //  - ORIGINAL_IMPORT: seit Build 79 keine waehlbare Gast-Sprache mehr, wird
+    //    aber intern weiterhin als Rueckfall gesetzt (siehe
+    //    ResetToOriginalLanguageIfNeeded/IsLanguageBlockedByTrial) und muss
+    //    daher passieren duerfen.
+    private function IsSelectableGuestLanguage(string $Language): bool
+    {
+        if ($Language === '') {
+            return false;
+        }
+        if ($Language === self::langOriginalImport
+            || $Language === $this->ReadPropertyString(self::propertySourceLanguage)) {
+            return true;
+        }
+
+        return in_array($Language, $this->GetSelectableLanguageCodes(), true);
+    }
+
     // Symcon ruft diese Methode auf, sobald die Instanz selbst als Kachel in die
     // Visualisierung gezogen wird (aktiviert per SetVisualizationType in Create()).
     // Wird nur einmal beim Laden der Kachel aufgerufen - Aktualisierungen (z.B. nach
@@ -8473,8 +8570,14 @@ private const LANGUAGE_FLAGS = [
         return <<<'HTML'
 <!-- Beispiel: zwei Flaggen statt Dropdown, fest eingetragene Sprachcodes.
      Bei Bedarf (weitere/andere Zielsprachen) hier direkt anpassen - siehe
-     README Abschnitt 7 für die Erklärung des Mechanismus. -->
+     README Abschnitt 7 für die Erklärung des Mechanismus.
+
+     WICHTIG: Die Sprachcodes unten ('en') sind fest eingetragen und muessen zu
+     den eigenen Zielsprachen passen. Ein Klick auf eine Flagge, deren Code
+     nicht als Zielsprache konfiguriert ist, wird ignoriert (siehe
+     Debug-Kategorie "IPSSL_Language"). -->
 <div style="display:flex; align-items:center; gap:10px;">
+    <span style="opacity:0.6; font-size:13px;">Custom tile example:</span>
     <span onclick="requestAction('Language', 'ORIGINAL_IMPORT');" style="cursor:pointer; font-size:24px;" title="Deutsch">🇩🇪</span>
     <span onclick="requestAction('Language', 'en');" style="cursor:pointer; font-size:24px;" title="English">🇬🇧</span>
 </div>
