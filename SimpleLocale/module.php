@@ -1740,11 +1740,16 @@ private const LANGUAGE_FLAGS = [
         $this->WriteAttributeInteger(self::attributeLastCleanupRemovedCount, $removedCount);
         $this->SetButtonProgress('CleanupProgressBar', '');
 
-        // Build 98 (live gemeldeter Bug): das Ergebnis-Popup SOFORT auf dem noch
-        // offenen Formular live einblenden (derselbe erwiesenermaßen funktionierende
-        // Mechanismus wie bei CacheClearedPopup/ProviderCheckResultPopup).
-        $this->UpdateFormField('CleanupResultCountLabel', 'caption', (string) $removedCount);
-        $this->UpdateFormField('CleanupResultPopup', 'visible', true);
+        // Build 155 (Nutzer-Wunsch): KEIN Live-Einblenden per UpdateFormField mehr.
+        // Bis Build 154 wurde das Popup hier sofort auf dem noch offenen Formular
+        // gezeigt (Build 98) UND danach von PopulateFormElements auf dem automatisch
+        // neu geladenen Formular ein zweites Mal - es ging also sichtbar zweimal
+        // hintereinander auf. Der Neuaufbau ist der verlässlichere der beiden Wege
+        // (er überlebt den Reload, der Live-Push nicht), deshalb bleibt nur er:
+        // das Attribut oben genügt, PopulateFormElements setzt Sichtbarkeit UND Zahl.
+        // Voraussetzung ist der automatische Konsolen-Reload nach jedem
+        // RequestAction - dieselbe Annahme, auf der bereits Build 116 den eigenen
+        // ReloadForm()-Aufruf gestrichen hat (siehe unten).
 
         // Build 116 (Nutzer-Wunsch): KEIN eigener ReloadForm()-Aufruf mehr hier -
         // Symcons Konsole lädt das Konfigurationsformular nach jedem RequestAction

@@ -4309,6 +4309,17 @@ der ursprünglichen Fassung übernommen.
   einen Zweig in `PopulateFormElements()` - der Eingriff ändert also an keinem
   anderen Popup etwas.
 
+  Im selben Build auf Nutzerwunsch die **doppelte Anzeige** abgestellt: das
+  Popup ging sichtbar zweimal auf, weil es zwei unabhängige Wege gab - das
+  sofortige Live-Einblenden per `UpdateFormField()` (Build 98) und das Attribut
+  `attributeLastCleanupRemovedCount`, das `PopulateFormElements()` beim
+  automatischen Neuaufbau liest. Der Neuaufbau ist der verlässlichere Weg (er
+  überlebt den Reload, der Live-Push nicht), deshalb entfällt das
+  Live-Einblenden ersatzlos. `test_cleanup_deferred_reload.php` wurde dabei
+  durch `test_cleanup_result_popup_shown_once.php` ersetzt: der alte Test
+  beschrieb noch den Build-98-Stand samt verzögertem `CleanupReloadTimer`, den
+  Build 116 längst entfernt hatte, und prüfte nur noch seine eigene Replik.
+
   Regressionstest `test_popup_items_populated.php` (6 Fälle: der gemeldete Fall
   mit der lückenhaften Rekursion; der Fix; kein Popup ohne vorangegangenes
   Aufräumen; ein Ergebnis von 0 erscheint als "0" statt als Leerfeld; beliebig
