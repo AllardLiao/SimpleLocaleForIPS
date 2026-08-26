@@ -721,9 +721,11 @@ trait SimpleLocaleConstants
     // "gebraucht" mehrfach weiterverkauft) - siehe TrackLicenseActivationIfNew.
     // Nimmt {licenseKeyHash, licensee, activatedAt} entgegen, siehe
     // Synergetix-Website/shop/license-activation-report.php.
-    // WICHTIG: IPS_GetLicensee() liefert eine echte, personenbezogene E-Mail-Adresse -
-    // muss vor dem produktiven Release in den eigenen Lizenzbedingungen/
-    // Datenschutzhinweisen offengelegt sein.
+    // Datenschutz: IPS_GetLicensee() liefert eine echte, personenbezogene
+    // E-Mail-Adresse - diese Uebertragung ist in den Lizenzbedingungen und
+    // Datenschutzhinweisen auf synergetix.de offengelegt (geprueft vor dem
+    // Release). Wird der Umfang der uebertragenen Daten hier jemals erweitert,
+    // muss das dort nachgezogen werden.
     private const LICENSE_ACTIVATION_REPORT_URL = 'https://www.synergetix.de/shop/license-activation-report.php';
 }
 

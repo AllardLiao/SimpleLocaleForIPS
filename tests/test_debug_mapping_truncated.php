@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
-// Build 126 (Nutzer-Report, live per Debug-Log gefunden): die "GoogleTranslate_Mapping"-
+// Build 126 (Nutzer-Report, live per Debug-Log gefunden): die "Translate_Mapping"-
+// (bis Build 153 irrefuehrend "GoogleTranslate_Mapping" - sie wird anbieter-
+// unabhaengig geschrieben und liess den Nutzer zweimal glauben, es gehe ein
+// Aufruf an Google, obwohl gar kein Google-Key konfiguriert war)
 // Debug-Zeile loggte den vollen, ungekuerzten Rohtext JEDER anstehenden Zeile -
 // bei einem umfangreichen HTML-Widget (Wetter-Skript mit <style>-Block ueber
 // mehrere Vorhersage-Tage) ergab das eine einzelne Debug-Zeile von ueber 60.000
@@ -49,13 +52,13 @@ assert($shortResult === "[0] ObjectID=111: \"Leicht bewölkt\"\n[1] ObjectID=222
 echo "Test 3 (kurze Texte bleiben exakt unverändert, keine Regression) OK\n";
 
 // Test 4: Symmetrie-Check - die reale module.php muss die Kuerzung tatsaechlich
-// in der GoogleTranslate_Mapping-Erzeugung verdrahtet haben.
+// in der Translate_Mapping-Erzeugung verdrahtet haben.
 $moduleSource = file_get_contents(dirname(__DIR__) . '/SimpleLocale/module.php');
-$mappingCallPos = strpos($moduleSource, "SendDebug('GoogleTranslate_Mapping'");
+$mappingCallPos = strpos($moduleSource, "SendDebug('Translate_Mapping'");
 $funcBodyStart = strrpos(substr($moduleSource, 0, $mappingCallPos), '$debugMapping = [];');
 $funcBody = substr($moduleSource, $funcBodyStart, $mappingCallPos - $funcBodyStart);
-assert(strpos($funcBody, 'gekürzt') !== false, 'die reale GoogleTranslate_Mapping-Erzeugung muss lange Zeilen tatsächlich kürzen');
+assert(strpos($funcBody, 'gekürzt') !== false, 'die reale Translate_Mapping-Erzeugung muss lange Zeilen tatsächlich kürzen');
 assert(strpos($funcBody, '> 200') !== false, 'die 200-Zeichen-Grenze muss tatsächlich in der realen Funktion stehen');
-echo "Test 4 (die Kürzung ist tatsächlich in der realen GoogleTranslate_Mapping-Erzeugung verdrahtet) OK\n";
+echo "Test 4 (die Kürzung ist tatsächlich in der realen Translate_Mapping-Erzeugung verdrahtet) OK\n";
 
 echo "\nAll tests passed.\n";
