@@ -92,7 +92,6 @@
             "Variablen-IDs": "Variable IDs",
             "Sprachliste von Google aktualisieren": "Refresh language list from Google",
             "Root der Visualisierung nicht gesetzt": "Root of the visualization not set",
-            "Google Translate Fehler - bitte API-Key prüfen": "Google Translate error - please check the API key",
             "Bitte zuerst Google Cloud Translate API-Key eintragen und übernehmen": "Please enter and save a Google Cloud Translate API key first",
             "Sprachliste konnte nicht geladen werden - bitte API-Key prüfen": "Language list could not be loaded - please check the API key",
             "API-Key fehlt": "API key missing",
@@ -212,7 +211,8 @@
             "Automatisch (Weltkugel)": "Automatic (Globe)",
             "Die eigene Übersetzungstabelle steht in dieser Edition nicht zur Verfügung.": "The custom translation table is not available in this edition.",
             "Ohne jede Eingabe unten funktioniert die Übersetzung sofort über den kostenfreien Anbieter (kein Konto nötig). Google oder DeepL sind optional und greifen in dieser Edition als einzelner Rückfall hinter dem kostenfreien Anbieter. Beide bezahlten Anbieter kombiniert und VOR dem kostenfreien versucht - also mehrere Kontingente nacheinander - gibt es ab der Standard Edition.": "Without entering anything below, translation works right away through the free provider (no account needed). Google or DeepL are optional and act as a single fallback behind the free provider in this edition. Combining both paid providers and trying them BEFORE the free one - several quotas one after another - is available from the Standard edition.",
-            "Bevorzugter Anbieter (nur relevant, wenn beide oben eingetragen sind - in dieser Edition wird genau einer davon als Rückfall genutzt)": "Preferred provider (only relevant if both are entered above - in this edition exactly one of them is used as the fallback)"
+            "Bevorzugter Anbieter (nur relevant, wenn beide oben eingetragen sind - in dieser Edition wird genau einer davon als Rückfall genutzt)": "Preferred provider (only relevant if both are entered above - in this edition exactly one of them is used as the fallback)",
+            "Übersetzung fehlgeschlagen - kein Anbieter war erreichbar (Details siehe Konfigurationsformular)": "Translation failed - no provider could be reached (see the configuration form for details)"
         },
         "es": {
             "Aktiv": "Activo",
@@ -306,7 +306,6 @@
             "Variablen-IDs": "IDs de variables",
             "Sprachliste von Google aktualisieren": "Actualizar lista de idiomas de Google",
             "Root der Visualisierung nicht gesetzt": "Raíz de la visualización no establecida",
-            "Google Translate Fehler - bitte API-Key prüfen": "Error de Google Translate: compruebe la clave de API",
             "Bitte zuerst Google Cloud Translate API-Key eintragen und übernehmen": "Introduzca y guarde primero una clave de API de Google Cloud Translate",
             "Sprachliste konnte nicht geladen werden - bitte API-Key prüfen": "No se pudo cargar la lista de idiomas - compruebe la clave de API",
             "API-Key fehlt": "Falta la clave de API",
@@ -426,7 +425,8 @@
             "Automatisch (Weltkugel)": "Automático (Globo terráqueo)",
             "Die eigene Übersetzungstabelle steht in dieser Edition nicht zur Verfügung.": "La tabla de traducción propia no está disponible en esta edición.",
             "Ohne jede Eingabe unten funktioniert die Übersetzung sofort über den kostenfreien Anbieter (kein Konto nötig). Google oder DeepL sind optional und greifen in dieser Edition als einzelner Rückfall hinter dem kostenfreien Anbieter. Beide bezahlten Anbieter kombiniert und VOR dem kostenfreien versucht - also mehrere Kontingente nacheinander - gibt es ab der Standard Edition.": "Sin introducir nada abajo, la traducción funciona de inmediato a través del proveedor gratuito (no hace falta cuenta). Google o DeepL son opcionales y actúan en esta edición como único recurso de reserva detrás del proveedor gratuito. Combinar ambos proveedores de pago e intentarlos ANTES del gratuito - varias cuotas una tras otra - está disponible a partir de la edición Standard.",
-            "Bevorzugter Anbieter (nur relevant, wenn beide oben eingetragen sind - in dieser Edition wird genau einer davon als Rückfall genutzt)": "Proveedor preferido (solo relevante si ambos están introducidos arriba: en esta edición se utiliza exactamente uno de ellos como reserva)"
+            "Bevorzugter Anbieter (nur relevant, wenn beide oben eingetragen sind - in dieser Edition wird genau einer davon als Rückfall genutzt)": "Proveedor preferido (solo relevante si ambos están introducidos arriba: en esta edición se utiliza exactamente uno de ellos como reserva)",
+            "Übersetzung fehlgeschlagen - kein Anbieter war erreichbar (Details siehe Konfigurationsformular)": "La traducción falló: no se pudo contactar con ningún proveedor (más detalles en el formulario de configuración)"
         },
         "it": {
             "Aktiv": "Attivo",
@@ -520,7 +520,6 @@
             "Variablen-IDs": "ID variabili",
             "Sprachliste von Google aktualisieren": "Aggiorna elenco lingue da Google",
             "Root der Visualisierung nicht gesetzt": "Radice della visualizzazione non impostata",
-            "Google Translate Fehler - bitte API-Key prüfen": "Errore di Google Translate - controllare la chiave API",
             "Bitte zuerst Google Cloud Translate API-Key eintragen und übernehmen": "Inserire e salvare prima una chiave API di Google Cloud Translate",
             "Sprachliste konnte nicht geladen werden - bitte API-Key prüfen": "Impossibile caricare l'elenco delle lingue - controllare la chiave API",
             "API-Key fehlt": "Chiave API mancante",
@@ -640,7 +639,8 @@
             "Automatisch (Weltkugel)": "Automatico (Globo)",
             "Die eigene Übersetzungstabelle steht in dieser Edition nicht zur Verfügung.": "La tabella di traduzione personalizzata non è disponibile in questa edizione.",
             "Ohne jede Eingabe unten funktioniert die Übersetzung sofort über den kostenfreien Anbieter (kein Konto nötig). Google oder DeepL sind optional und greifen in dieser Edition als einzelner Rückfall hinter dem kostenfreien Anbieter. Beide bezahlten Anbieter kombiniert und VOR dem kostenfreien versucht - also mehrere Kontingente nacheinander - gibt es ab der Standard Edition.": "Senza inserire nulla qui sotto, la traduzione funziona subito tramite il provider gratuito (nessun account necessario). Google o DeepL sono facoltativi e in questa edizione intervengono come unico ripiego dopo il provider gratuito. Combinare entrambi i provider a pagamento e provarli PRIMA di quello gratuito - più quote una dopo l'altra - è disponibile dall'edizione Standard.",
-            "Bevorzugter Anbieter (nur relevant, wenn beide oben eingetragen sind - in dieser Edition wird genau einer davon als Rückfall genutzt)": "Provider preferito (rilevante solo se entrambi sono inseriti sopra: in questa edizione ne viene usato esattamente uno come ripiego)"
+            "Bevorzugter Anbieter (nur relevant, wenn beide oben eingetragen sind - in dieser Edition wird genau einer davon als Rückfall genutzt)": "Provider preferito (rilevante solo se entrambi sono inseriti sopra: in questa edizione ne viene usato esattamente uno come ripiego)",
+            "Übersetzung fehlgeschlagen - kein Anbieter war erreichbar (Details siehe Konfigurationsformular)": "Traduzione non riuscita: nessun provider raggiungibile (dettagli nel modulo di configurazione)"
         },
         "fr": {
             "Aktiv": "Actif",
@@ -734,7 +734,6 @@
             "Variablen-IDs": "ID des variables",
             "Sprachliste von Google aktualisieren": "Actualiser la liste des langues depuis Google",
             "Root der Visualisierung nicht gesetzt": "Racine de la visualisation non définie",
-            "Google Translate Fehler - bitte API-Key prüfen": "Erreur Google Translate - veuillez vérifier la clé API",
             "Bitte zuerst Google Cloud Translate API-Key eintragen und übernehmen": "Veuillez d'abord saisir et enregistrer une clé API Google Cloud Translate",
             "Sprachliste konnte nicht geladen werden - bitte API-Key prüfen": "Impossible de charger la liste des langues - veuillez vérifier la clé API",
             "API-Key fehlt": "Clé API manquante",
@@ -854,7 +853,8 @@
             "Automatisch (Weltkugel)": "Automatique (Globe)",
             "Die eigene Übersetzungstabelle steht in dieser Edition nicht zur Verfügung.": "Le tableau de traduction personnalisé n'est pas disponible dans cette édition.",
             "Ohne jede Eingabe unten funktioniert die Übersetzung sofort über den kostenfreien Anbieter (kein Konto nötig). Google oder DeepL sind optional und greifen in dieser Edition als einzelner Rückfall hinter dem kostenfreien Anbieter. Beide bezahlten Anbieter kombiniert und VOR dem kostenfreien versucht - also mehrere Kontingente nacheinander - gibt es ab der Standard Edition.": "Sans rien saisir ci-dessous, la traduction fonctionne immédiatement via le fournisseur gratuit (aucun compte nécessaire). Google ou DeepL sont facultatifs et interviennent dans cette édition comme unique solution de repli derrière le fournisseur gratuit. Combiner les deux fournisseurs payants et les essayer AVANT le gratuit - plusieurs quotas l'un après l'autre - est disponible à partir de l'édition Standard.",
-            "Bevorzugter Anbieter (nur relevant, wenn beide oben eingetragen sind - in dieser Edition wird genau einer davon als Rückfall genutzt)": "Fournisseur préféré (pertinent uniquement si les deux sont saisis ci-dessus : dans cette édition, exactement l'un d'eux sert de solution de repli)"
+            "Bevorzugter Anbieter (nur relevant, wenn beide oben eingetragen sind - in dieser Edition wird genau einer davon als Rückfall genutzt)": "Fournisseur préféré (pertinent uniquement si les deux sont saisis ci-dessus : dans cette édition, exactement l'un d'eux sert de solution de repli)",
+            "Übersetzung fehlgeschlagen - kein Anbieter war erreichbar (Details siehe Konfigurationsformular)": "Échec de la traduction - aucun fournisseur n'a pu être contacté (détails dans le formulaire de configuration)"
         }
     }
 }
