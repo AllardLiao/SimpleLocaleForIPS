@@ -206,7 +206,10 @@
             "Geprüfte Sprachrichtung:": "Language direction tested:",
             "Hinweis: Es ist noch keine von der Scan-Sprache abweichende Zielsprache konfiguriert - geprüft wurde deshalb eine Ersatz-Sprachrichtung. Ein Erfolg hier sagt nichts über deine späteren Zielsprachen aus.": "Note: no target language differing from the scan language is configured yet, so a substitute language direction was tested. A success here says nothing about your later target languages.",
             "Text(e) konnten beim letzten Durchlauf nicht übersetzt werden, weil der Übersetzungsanbieter vorübergehend nicht erreichbar war. Bereits übersetzte Inhalte sind gespeichert. Bitte führe einen erneuten Scan durch - ggf. nach ein paar Minuten Wartezeit.": "text(s) could not be translated in the last run because the translation provider was temporarily unreachable. Already translated content has been saved. Please run another scan - if necessary after waiting a few minutes.",
-            "Text(e) sind für den kostenfreien Anbieter zu lang (Grenze: 500 Byte, Umlaute zählen doppelt). Ein erneuter Scan ändert daran nichts - diese Texte lassen sich nur mit einem Google- oder DeepL-Schlüssel übersetzen.": "text(s) are too long for the free provider (limit: 500 bytes, umlauts count double). Another scan will not change this - these texts can only be translated with a Google or DeepL key."
+            "Text(e) sind für den kostenfreien Anbieter zu lang (Grenze: 500 Byte, Umlaute zählen doppelt). Ein erneuter Scan ändert daran nichts - diese Texte lassen sich nur mit einem Google- oder DeepL-Schlüssel übersetzen.": "text(s) are too long for the free provider (limit: 500 bytes, umlauts count double). Another scan will not change this - these texts can only be translated with a Google or DeepL key.",
+            "Automatisch (Standard)": "Automatic (Standard)",
+            "Automatisch (Simple-Locale-Symbol)": "Automatic (Simple Locale icon)",
+            "Automatisch (Weltkugel)": "Automatic (Globe)"
         },
         "es": {
             "Aktiv": "Activo",
@@ -414,7 +417,10 @@
             "Geprüfte Sprachrichtung:": "Dirección de idioma comprobada:",
             "Hinweis: Es ist noch keine von der Scan-Sprache abweichende Zielsprache konfiguriert - geprüft wurde deshalb eine Ersatz-Sprachrichtung. Ein Erfolg hier sagt nichts über deine späteren Zielsprachen aus.": "Nota: aún no hay configurado ningún idioma de destino distinto del idioma de escaneo, por lo que se comprobó una dirección de idioma sustituta. Un éxito aquí no dice nada sobre tus futuros idiomas de destino.",
             "Text(e) konnten beim letzten Durchlauf nicht übersetzt werden, weil der Übersetzungsanbieter vorübergehend nicht erreichbar war. Bereits übersetzte Inhalte sind gespeichert. Bitte führe einen erneuten Scan durch - ggf. nach ein paar Minuten Wartezeit.": "texto(s) no se pudieron traducir en la última ejecución porque el proveedor de traducción no estaba disponible temporalmente. El contenido ya traducido se ha guardado. Ejecuta otro escaneo, si es necesario tras esperar unos minutos.",
-            "Text(e) sind für den kostenfreien Anbieter zu lang (Grenze: 500 Byte, Umlaute zählen doppelt). Ein erneuter Scan ändert daran nichts - diese Texte lassen sich nur mit einem Google- oder DeepL-Schlüssel übersetzen.": "texto(s) son demasiado largos para el proveedor gratuito (límite: 500 bytes, las diéresis cuentan doble). Otro escaneo no cambiará nada: estos textos solo pueden traducirse con una clave de Google o DeepL."
+            "Text(e) sind für den kostenfreien Anbieter zu lang (Grenze: 500 Byte, Umlaute zählen doppelt). Ein erneuter Scan ändert daran nichts - diese Texte lassen sich nur mit einem Google- oder DeepL-Schlüssel übersetzen.": "texto(s) son demasiado largos para el proveedor gratuito (límite: 500 bytes, las diéresis cuentan doble). Otro escaneo no cambiará nada: estos textos solo pueden traducirse con una clave de Google o DeepL.",
+            "Automatisch (Standard)": "Automático (Estándar)",
+            "Automatisch (Simple-Locale-Symbol)": "Automático (Símbolo de Simple Locale)",
+            "Automatisch (Weltkugel)": "Automático (Globo terráqueo)"
         },
         "it": {
             "Aktiv": "Attivo",
@@ -622,7 +628,10 @@
             "Geprüfte Sprachrichtung:": "Direzione linguistica verificata:",
             "Hinweis: Es ist noch keine von der Scan-Sprache abweichende Zielsprache konfiguriert - geprüft wurde deshalb eine Ersatz-Sprachrichtung. Ein Erfolg hier sagt nichts über deine späteren Zielsprachen aus.": "Nota: non è ancora configurata alcuna lingua di destinazione diversa dalla lingua di scansione, quindi è stata verificata una direzione linguistica sostitutiva. Un esito positivo qui non dice nulla sulle tue future lingue di destinazione.",
             "Text(e) konnten beim letzten Durchlauf nicht übersetzt werden, weil der Übersetzungsanbieter vorübergehend nicht erreichbar war. Bereits übersetzte Inhalte sind gespeichert. Bitte führe einen erneuten Scan durch - ggf. nach ein paar Minuten Wartezeit.": "testo/i non hanno potuto essere tradotti nell'ultima esecuzione perché il servizio di traduzione era temporaneamente irraggiungibile. I contenuti già tradotti sono stati salvati. Esegui una nuova scansione, se necessario dopo qualche minuto di attesa.",
-            "Text(e) sind für den kostenfreien Anbieter zu lang (Grenze: 500 Byte, Umlaute zählen doppelt). Ein erneuter Scan ändert daran nichts - diese Texte lassen sich nur mit einem Google- oder DeepL-Schlüssel übersetzen.": "testo/i sono troppo lunghi per il servizio gratuito (limite: 500 byte, le dieresi contano doppio). Una nuova scansione non cambierà nulla: questi testi si possono tradurre solo con una chiave Google o DeepL."
+            "Text(e) sind für den kostenfreien Anbieter zu lang (Grenze: 500 Byte, Umlaute zählen doppelt). Ein erneuter Scan ändert daran nichts - diese Texte lassen sich nur mit einem Google- oder DeepL-Schlüssel übersetzen.": "testo/i sono troppo lunghi per il servizio gratuito (limite: 500 byte, le dieresi contano doppio). Una nuova scansione non cambierà nulla: questi testi si possono tradurre solo con una chiave Google o DeepL.",
+            "Automatisch (Standard)": "Automatico (Standard)",
+            "Automatisch (Simple-Locale-Symbol)": "Automatico (Icona Simple Locale)",
+            "Automatisch (Weltkugel)": "Automatico (Globo)"
         },
         "fr": {
             "Aktiv": "Actif",
@@ -830,7 +839,10 @@
             "Geprüfte Sprachrichtung:": "Direction linguistique testée :",
             "Hinweis: Es ist noch keine von der Scan-Sprache abweichende Zielsprache konfiguriert - geprüft wurde deshalb eine Ersatz-Sprachrichtung. Ein Erfolg hier sagt nichts über deine späteren Zielsprachen aus.": "Remarque : aucune langue cible différente de la langue d'analyse n'est encore configurée ; une direction linguistique de substitution a donc été testée. Un succès ici ne dit rien de vos futures langues cibles.",
             "Text(e) konnten beim letzten Durchlauf nicht übersetzt werden, weil der Übersetzungsanbieter vorübergehend nicht erreichbar war. Bereits übersetzte Inhalte sind gespeichert. Bitte führe einen erneuten Scan durch - ggf. nach ein paar Minuten Wartezeit.": "texte(s) n'ont pas pu être traduits lors de la dernière exécution car le service de traduction était temporairement injoignable. Les contenus déjà traduits ont été enregistrés. Merci de lancer une nouvelle analyse - si nécessaire après quelques minutes d'attente.",
-            "Text(e) sind für den kostenfreien Anbieter zu lang (Grenze: 500 Byte, Umlaute zählen doppelt). Ein erneuter Scan ändert daran nichts - diese Texte lassen sich nur mit einem Google- oder DeepL-Schlüssel übersetzen.": "texte(s) sont trop longs pour le service gratuit (limite : 500 octets, les trémas comptent double). Une nouvelle analyse n'y changera rien - ces textes ne peuvent être traduits qu'avec une clé Google ou DeepL."
+            "Text(e) sind für den kostenfreien Anbieter zu lang (Grenze: 500 Byte, Umlaute zählen doppelt). Ein erneuter Scan ändert daran nichts - diese Texte lassen sich nur mit einem Google- oder DeepL-Schlüssel übersetzen.": "texte(s) sont trop longs pour le service gratuit (limite : 500 octets, les trémas comptent double). Une nouvelle analyse n'y changera rien - ces textes ne peuvent être traduits qu'avec une clé Google ou DeepL.",
+            "Automatisch (Standard)": "Automatique (Standard)",
+            "Automatisch (Simple-Locale-Symbol)": "Automatique (Icône Simple Locale)",
+            "Automatisch (Weltkugel)": "Automatique (Globe)"
         }
     }
 }

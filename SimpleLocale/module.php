@@ -9400,15 +9400,32 @@ HTML;
         // Build 147: "Automatisch" immer zuoberst - der Auslieferungszustand.
         // Der Klammerzusatz zeigt, was das gerade konkret bedeutet, damit die
         // Auswahl nicht undurchsichtig wirkt ("Automatisch (Weihnachten 2026)").
+        // Build 156 (live gemeldet, per Screenshot belegt): die Beschriftungen hier
+        // gehen BEWUSST roh und deutsch raus, ohne Translate(). Bis Build 155 stand
+        // hier eine zur Laufzeit zusammengesetzte Kette
+        // ($this->Translate('Automatisch') . ' (' . $this->Translate($label) . ')') -
+        // und eine so zusammengebaute Zeichenkette matcht NIE einen
+        // locale.json-Eintrag. Sie blieb dadurch an die Symcon-SYSTEMSPRACHE
+        // gebunden statt an die Konsolensprache des Betrachters: bei englischer
+        // Konsole und deutscher Systemsprache standen die Feldbeschriftungen
+        // ("Tile template") korrekt auf Englisch, die Optionen daneben aber weiter
+        // auf "Automatisch (Standard)". Derselbe Effekt wie seinerzeit bei den
+        // Anbieter-Pausen-Zeilen und bei propertyAutoRescanInterval (siehe dort).
+        //
+        // Mit einem festen, vollstaendig vorregistrierten deutschen Gesamttext kann
+        // die Konsole wieder exakt matchen und selbst uebersetzen. Preis dafuer:
+        // jeder neue Katalogeintrag braucht ZWEI locale.json-Zeilen - sein Label und
+        // die "Automatisch (Label)"-Kombination. test_tile_catalog_captions_localized
+        // prueft beides und schlaegt fehl, wenn eine fehlt.
         $automaticId = $this->ResolveAutomaticCatalogId($Catalog, $DefaultId);
         $options = [[
-            'caption' => $this->Translate('Automatisch') . ' (' . $this->Translate($Catalog[$automaticId]['label']) . ')',
+            'caption' => 'Automatisch (' . $Catalog[$automaticId]['label'] . ')',
             'value'   => self::CATALOG_AUTOMATIC_ID,
         ]];
 
         foreach ($this->FilterCatalogByEntitlement($Catalog) as $id => $entry) {
             $options[] = [
-                'caption' => $this->Translate($entry['label']),
+                'caption' => $entry['label'],
                 'value'   => $id,
             ];
         }

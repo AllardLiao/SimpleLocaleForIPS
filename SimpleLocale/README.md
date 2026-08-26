@@ -4294,6 +4294,31 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 156 (live gemeldet, per Screenshot belegt): die Auswahltexte der
+  Kachel-Kataloge folgten der Symcon-Systemsprache statt der Konsolensprache.**
+  Bei englischer Konsole standen die Feldbeschriftungen korrekt auf Englisch
+  ("Tile template", "Icon in the tile"), die Auswahleinträge daneben aber weiter
+  auf "Automatisch (Standard)".
+
+  `BuildCatalogOptions()` setzte die Beschriftung zur Laufzeit aus mehreren
+  `Translate()`-Fragmenten zusammen. Eine so zusammengebaute Zeichenkette matcht
+  nie einen `locale.json`-Eintrag und bleibt dadurch an die Systemsprache
+  gebunden - derselbe Fehler wie zuvor bei den Anbieter-Pausen-Zeilen und bei
+  `propertyAutoRescanInterval`, und dort genauso behoben: fester,
+  vollständig vorregistrierter deutscher Gesamttext ohne `Translate()`, damit
+  die Konsole exakt matchen und selbst übersetzen kann.
+
+  Preis dafür: jeder neue Katalogeintrag braucht zwei `locale.json`-Zeilen je
+  Sprache - sein Label und die "Automatisch (Label)"-Kombination. Damit das bei
+  künftigen Editions-Symbolen und -Vorlagen nicht vergessen wird, prüft
+  `test_tile_catalog_captions_localized.php` beides und nennt fehlende Strings
+  einzeln pro Sprache (5 Fälle, inklusive einer Kontrollprobe, dass die Prüfung
+  bei einem neuen Eintrag tatsächlich anschlägt).
+
+  Ebenfalls in diesem Build (Nutzerwunsch): im Kachel-Panel steht die
+  Kachel-Vorlage jetzt an erster Stelle, und das Symbol-Dropdown sitzt in einem
+  `RowLayout` direkt neben seiner "Symbol anzeigen"-Checkbox.
+
 * **Build 155 (live gemeldet): das Ergebnis-Popup von "Aufräumen" ging nach dem
   automatischen Neuladen des Formulars ein zweites Mal auf - diesmal ohne Zahl.**
   `PopulateFormElements()` stieg nur in `$element['items']` ab. Die Inhalte
