@@ -429,30 +429,37 @@ trait SimpleLocaleConstants
     // (Jahre) haette das die reinen Zaehl-Attribute unten irgendwann zum
     // Ueberlaufen/Wraparound bringen koennen, ganz ohne dass PHPs eigene
     // Rechenoperation je ueberlaeuft - der Fehler waere ausschliesslich beim
-    // Schreiben in Symcons 32-Bit-Speicher entstanden. Auf String umgestellt
-    // (praktisch unbegrenzt, Rechnen weiterhin ueber normale PHP-Ints, nur die
-    // Persistierung aendert sich) - "V2"-Suffix im Attributnamen, damit
-    // Symcon nicht denselben Attributnamen mit geaendertem Typ wiederverwendet
-    // (unklares/riskantes Verhalten) - stattdessen ein sauberer, einmaliger
-    // Migrations-Schritt in Create() von den alten Integer-Attributen (siehe
-    // *LegacyInt-Konstanten unten) in die neuen String-Attribute, bevor die
-    // alten Namen als reine, fortan nie mehr aktualisierte Altlast liegen
-    // bleiben (harmlos, da Attribute nicht im sichtbaren Objektbaum stehen).
+    // Schreiben in Symcons 32-Bit-Speicher entstanden. Deshalb als String
+    // gefuehrt (praktisch unbegrenzt; gerechnet wird weiterhin mit normalen
+    // PHP-Ints, nur die Persistierung aendert sich).
+    //
+    // Das "V2"-Suffix stammt aus der damaligen Umstellung: derselbe
+    // Attributname mit geaendertem Typ waere riskant gewesen, also bekamen die
+    // String-Varianten neue Namen. Es bleibt bewusst stehen - ein Umbenennen
+    // auf die alten, kuerzeren Namen wuerde in Symcon auf die dort noch als
+    // INTEGER angelegten Attribute treffen und damit genau den Typkonflikt
+    // ausloesen, den das Suffix vermeiden sollte.
+    //
+    // Build 149: die zugehoerige einmalige Migration (alte Integer-Werte in die
+    // neuen String-Attribute uebernehmen) wurde wieder entfernt. Sie war fuer
+    // jede kuenftige Installation strukturell unerreichbar - die alten
+    // Attribute werden von keinem Codepfad mehr beschrieben, stehen also
+    // dauerhaft auf 0, und die Migration sprang nur bei einem Wert ungleich 0
+    // an. Da das Modul zum Zeitpunkt des Aufraeumens noch unveroeffentlicht
+    // war, konnte es ausser der Entwicklungsinstanz ohnehin keine Installation
+    // mit alten Zaehlerstaenden geben.
     private const attributeStatsRequestCount = 'StatsRequestCountV2';
     private const attributeStatsCharacterCount = 'StatsCharacterCountV2';
-    private const attributeStatsRequestCountLegacyInt = 'StatsRequestCount';
-    private const attributeStatsCharacterCountLegacyInt = 'StatsCharacterCount';
 
     // Zaehlt separat, wie viele Uebersetzungsanfragen/Zeichen NICHT an einen
     // Anbieter geschickt werden mussten, weil ein Cache-Treffer vorlag (siehe
     // TranslateBatch/RecordCacheSavingsStats) - laeuft parallel zu
     // attributeStatsRequestCount/attributeStatsCharacterCount oben (die zaehlen
     // nur TATSAECHLICH gestellte Anfragen), ebenfalls seit attributeStatsSince,
-    // nie zurueckgesetzt. Build 132: dieselbe Integer->String-Migration wie oben.
+    // nie zurueckgesetzt. Build 132: aus demselben Grund wie oben als String
+    // gefuehrt, inklusive des dort erklaerten "V2"-Suffixes.
     private const attributeStatsCacheSavedRequestCount = 'StatsCacheSavedRequestCountV2';
     private const attributeStatsCacheSavedCharacterCount = 'StatsCacheSavedCharacterCountV2';
-    private const attributeStatsCacheSavedRequestCountLegacyInt = 'StatsCacheSavedRequestCount';
-    private const attributeStatsCacheSavedCharacterCountLegacyInt = 'StatsCacheSavedCharacterCount';
 
     // Uebersetzungs-Cache (JSON-Map "Quellsprache|Zielsprache|SHA-256(Text)" =>
     // uebersetzter Text), siehe TranslateBatch/GetCachedTranslation/

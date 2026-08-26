@@ -81,11 +81,27 @@ assert($result3 === ['Hallo', 'Welt', 'Test'], 'A batch with no oversized text m
 echo "Test 3 (a batch with no oversized text is completely unaffected) OK\n";
 
 // Test 4: symmetry check - the real module.php must return '' (not null) for
-// the oversized-text branch inside TranslateSingleFree().
+// the oversized-text branch inside TranslateSingleFree(). A null there would
+// abort the ENTIRE batch (see TranslateChunkFree) - exactly the bug this test
+// was written for.
 $moduleSource = file_get_contents(dirname(__DIR__) . '/SimpleLocale/module.php');
 $functionStart = strpos($moduleSource, 'private function TranslateSingleFree');
-$functionSnippet = substr($moduleSource, $functionStart, 1200);
-assert(preg_match('/strlen\(\$Text\) > 500\)\s*\{\s*return \'\';/s', $functionSnippet) === 1, 'TranslateSingleFree() must return an empty string (not null) when the text exceeds the 500-byte limit');
+$functionSnippet = substr($moduleSource, $functionStart, 2500);
+$branchStart = strpos($functionSnippet, '> 500');
+assert($branchStart !== false, 'die 500-Byte-Grenze muss weiterhin geprueft werden');
+// Zweig-Ende: bis zur naechsten Anweisung nach dem Block (dem $email-Lesen).
+$branchBody = substr($functionSnippet, $branchStart, strpos($functionSnippet, '$email') - $branchStart);
+assert(strpos($branchBody, "return '';") !== false, 'TranslateSingleFree() must return an empty string when the text exceeds the 500-byte limit');
+assert(strpos($branchBody, 'return null') === false, 'DER BUG: ein null in diesem Zweig wuerde den GESAMTEN Batch abbrechen (siehe TranslateChunkFree)');
 echo "Test 4 (the real function returns '' instead of null for an oversized text) OK\n";
+
+// Test 5 (Build 150, live gemeldeter Diagnose-Fehlgriff): das Ueberspringen
+// muss GELOGGT werden. Vorher passierte es wortlos - fuer den Aufrufer sah das
+// aus wie "nichts zu uebersetzen", die Zelle blieb leer, und im Log stand
+// nichts. Die Fehlersuche landete dadurch zwangslaeufig bei den falschen
+// Verdaechtigen (Kontingent, Sprachpaarung, Anbieter).
+assert(strpos($branchBody, 'LogTranslateMessage') !== false, 'DER DIAGNOSE-FEHLGRIFF: ein wegen der Byte-Grenze uebersprungener Text muss im Log auftauchen, sonst sucht der Nutzer die Ursache garantiert an der falschen Stelle');
+assert(strpos($branchBody, '$byteLength') !== false, 'die Meldung muss die tatsaechliche Bytezahl nennen - die sichtbare Textlaenge fuehrt bei Umlauten in die Irre');
+echo "Test 5 (das Überspringen wegen der Byte-Grenze wird geloggt, mit echter Bytezahl) OK\n";
 
 echo "\nAll tests passed.\n";

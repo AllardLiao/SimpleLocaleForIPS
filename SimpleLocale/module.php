@@ -421,32 +421,14 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterAttributeString(self::attributeStatsCharacterCount, '0');
         $this->RegisterAttributeString(self::attributeStatsCacheSavedRequestCount, '0');
         $this->RegisterAttributeString(self::attributeStatsCacheSavedCharacterCount, '0');
-        // Build 132: alte Integer-Attribute bleiben registriert, damit Symcon sie
-        // beim Laden der Instanz nicht als "unbekannt" behandelt - werden hier
-        // ausschliesslich fuer die einmalige Migration unten gelesen, danach nie
-        // wieder beschrieben.
-        $this->RegisterAttributeInteger(self::attributeStatsRequestCountLegacyInt, 0);
-        $this->RegisterAttributeInteger(self::attributeStatsCharacterCountLegacyInt, 0);
-        $this->RegisterAttributeInteger(self::attributeStatsCacheSavedRequestCountLegacyInt, 0);
-        $this->RegisterAttributeInteger(self::attributeStatsCacheSavedCharacterCountLegacyInt, 0);
-        // Einmalige Migration: eine bereits laenger laufende Installation hat evtl.
-        // schon reale Zaehlerstaende unter den alten Integer-Attributen angesammelt -
-        // die duerfen beim Umstieg auf das neue String-Attribut nicht verloren gehen.
-        // Greift nur, solange das neue Attribut noch bei seinem Default ('0') steht
-        // (garantiert einmalig, RecordTranslationRequestStats/RecordCacheSavingsStats
-        // schreiben danach ausschliesslich das neue String-Attribut).
-        foreach ([
-            [self::attributeStatsRequestCountLegacyInt, self::attributeStatsRequestCount],
-            [self::attributeStatsCharacterCountLegacyInt, self::attributeStatsCharacterCount],
-            [self::attributeStatsCacheSavedRequestCountLegacyInt, self::attributeStatsCacheSavedRequestCount],
-            [self::attributeStatsCacheSavedCharacterCountLegacyInt, self::attributeStatsCacheSavedCharacterCount],
-        ] as [$legacyAttribute, $newAttribute]) {
-            $legacyValue = $this->ReadAttributeInteger($legacyAttribute);
-            if ($legacyValue !== 0 && $this->ReadAttributeString($newAttribute) === '0') {
-                $this->WriteAttributeString($newAttribute, (string) $legacyValue);
-            }
-        }
-
+        // Build 149: die hier fruehere einmalige Migration der alten
+        // Integer-Zaehler in die neuen String-Attribute (Build 132) ist
+        // entfallen - siehe Kommentar bei attributeStatsRequestCount. Sie war
+        // fuer jede kuenftige Installation unerreichbar, und ihr Lesevorgang lag
+        // ohnehin an der falschen Stelle: in Create() werden Attribute erst
+        // DEKLARIERT, ein ReadAttribute* liefert dort nicht zuverlaessig den
+        // persistierten Wert. Wertlesende Migrationen gehoeren nach
+        // ApplyChanges().
         $this->SetVisualizationType(1);
 
         // Einmalige Bereinigung: die frühere HTMLBox-Dropdown-Variable sowie die
@@ -1782,8 +1764,32 @@ private const LANGUAGE_FLAGS = [
         $this->SetButtonProgress('ProviderCheckProgressBar', 'Übersetzungsanbieter werden geprüft…');
 
         $testText = 'Testabfrage';
-        $source = 'de';
-        $target = 'en';
+
+        // Build 150 (live gemeldeter Diagnose-Fehlgriff): frueher fest verdrahtet
+        // "de" -> "en". Der Knopf konnte damit "funktioniert" melden, waehrend die
+        // TATSAECHLICH konfigurierte Sprachrichtung scheiterte - ein
+        // Diagnosewerkzeug, das eine andere Frage beantwortet als die gestellte,
+        // ist schlimmer als keins: es lenkt die Fehlersuche aktiv in die Irre.
+        // Geprueft wird jetzt die echte Scan-Sprache gegen die erste konfigurierte
+        // Zielsprache, die davon abweicht.
+        $source = $this->ReadPropertyString(self::propertySourceLanguage);
+        $target = '';
+        foreach ($this->GetSelectedTargetLanguages() as $candidate) {
+            if ($candidate !== $source) {
+                $target = $candidate;
+                break;
+            }
+        }
+        if ($source === '' || $target === '') {
+            // Noch keine (abweichende) Zielsprache konfiguriert - dann bleibt nur
+            // eine generische Probe, damit der Knopf ueberhaupt etwas aussagen
+            // kann. Der Ergebnis-Dialog weist diesen Fall unten aus.
+            $source = $source !== '' ? $source : 'de';
+            $target = $source === 'en' ? 'de' : 'en';
+            $usedFallbackPair = true;
+        } else {
+            $usedFallbackPair = false;
+        }
 
         $providers = ['free'];
         if ($this->ReadPropertyString(self::propertyGoogleTranslateAPIKey) !== '') {
@@ -1807,6 +1813,15 @@ private const LANGUAGE_FLAGS = [
             if ($succeeded) {
                 // Echter, gerade erst bestätigter Erfolg - siehe TranslateChunk fuer
                 // denselben Mechanismus im normalen Uebersetzungspfad.
+                //
+                // Build 150: das bleibt richtig (ein nachweislich antwortender
+                // Anbieter soll nicht kuenstlich gesperrt bleiben), war als
+                // stille Nebenwirkung aber irrefuehrend: wer den Knopf zur
+                // Fehlersuche druckte, loeschte damit genau den Zustand, den er
+                // untersuchen wollte, und sah anschliessend ein sauberes Bild.
+                // Der Ergebnis-Dialog weist die aufgehobene Pause deshalb
+                // ausdruecklich aus (PauseClearedLabel unten), statt sie
+                // wortlos verschwinden zu lassen.
                 $this->ClearProviderPause($provider);
             }
 
@@ -1864,6 +1879,12 @@ private const LANGUAGE_FLAGS = [
             );
             $this->UpdateFormField('ProviderCheck' . $prefix . 'PauseClearedLabel', 'visible', $result['succeeded'] && $result['wasPaused']);
         }
+
+        // Build 150: die gepruefte Sprachrichtung mit ausweisen. Ohne sie bleibt
+        // unklar, WORAUF sich ein "erfolgreich" bezieht - genau daran ist eine
+        // Fehlersuche schon einmal vorbeigelaufen.
+        $this->UpdateFormField('ProviderCheckPairLabel', 'caption', $source . ' → ' . $target);
+        $this->UpdateFormField('ProviderCheckFallbackPairRow', 'visible', $usedFallbackPair);
 
         $this->SetButtonProgress('ProviderCheckProgressBar', '');
         $this->UpdateFormField('ProviderCheckResultPopup', 'visible', true);
@@ -8286,7 +8307,28 @@ private const LANGUAGE_FLAGS = [
         if (trim($Text) === '') {
             return '';
         }
-        if (strlen($Text) > 500) {
+        // MyMemory lehnt Anfragen ueber 500 BYTES ab. Wichtig: Bytes, nicht
+        // Zeichen - jeder Umlaut zaehlt in UTF-8 doppelt, ein "€" dreifach. Ein
+        // deutscher Text kann die Grenze also deutlich frueher reissen, als seine
+        // sichtbare Laenge vermuten laesst.
+        //
+        // Build 150 (live gemeldeter Diagnose-Fehlgriff): frueher wurde hier
+        // wortlos ein Leerstring zurueckgegeben. Fuer den Aufrufer sieht das aus
+        // wie "nichts zu uebersetzen", die Zelle bleibt leer, und im Log steht
+        // NICHTS - der Nutzer sucht die Ursache dann zwangslaeufig an der
+        // falschen Stelle (Kontingent, Sprachpaarung, Anbieter). Jetzt mit
+        // Klartext-Meldung inkl. tatsaechlicher Bytezahl und Textanfang.
+        $byteLength = strlen($Text);
+        if ($byteLength > 500) {
+            $this->LogTranslateMessage(sprintf(
+                'MyMemory: Text uebersprungen - %d Bytes, erlaubt sind max. 500 (Umlaute zaehlen doppelt). '
+                    . 'Kontext: %s. Textanfang: "%s". Dieser Text bleibt unuebersetzt, solange nur der '
+                    . 'kostenfreie Anbieter genutzt wird - Google/DeepL kennen diese Grenze nicht.',
+                $byteLength,
+                $DebugContext !== '' ? $DebugContext : '(kein Kontext)',
+                mb_substr($Text, 0, 80, 'UTF-8')
+            ));
+
             return '';
         }
 
@@ -8338,8 +8380,44 @@ private const LANGUAGE_FLAGS = [
         }
 
         $translated = $decoded['responseData']['translatedText'] ?? null;
+        if (is_string($translated)) {
+            return $translated;
+        }
 
-        return is_string($translated) ? $translated : null;
+        // Build 150 (live gemeldet, per Dump nachgewiesen): MyMemory antwortet
+        // fuer manche Eingaben mit HTTP 200 UND "translatedText": null - live
+        // beobachtet fuer "&nbsp;" aus einem HTML-Widget. Das ist KEIN Fehler
+        // des Anbieters, sondern schlicht "dafuer habe ich nichts".
+        //
+        // Bisher wurde daraus ein null, und TranslateChunkFree() bricht bei einem
+        // null den KOMPLETTEN Chunk ab (bis zu 128 Texte). TranslateChunk() wertet
+        // das als Anbieter-Fehlschlag, findet keinen weiteren Anbieter und fuellt
+        // ALLE Texte des Chunks mit Leerstrings - ein einziges "&nbsp;" liess
+        // dadurch bis zu 127 voellig unbeteiligte Texte unuebersetzt. Genau das
+        // Symptom aus dem Nutzer-Report: "Bernd", "Wohnbereich" & Co. blieben leer,
+        // obwohl ihre eigenen Anfragen sauber durchgingen.
+        //
+        // Exakt dieselbe Fehlerklasse wie beim zu langen Text weiter oben, die
+        // dort bereits behoben ist (siehe Test
+        // test_free_provider_oversized_text_no_longer_blocks_batch) - dieser Pfad
+        // wurde damals uebersehen.
+        //
+        // Zurueckgegeben wird der ORIGINALTEXT, nicht ein Leerstring: bei
+        // HTML-Knoten wuerde ein Leerstring den Knoten beim Zusammensetzen
+        // loeschen (aus "&nbsp;" wuerde nichts) und damit das Dokument
+        // beschaedigen. Der unveraenderte Quelltext ist die ehrliche Antwort -
+        // dieselbe Haltung wie bei ResolveNonTranslatableText().
+        $this->LogTranslateMessage(sprintf(
+            'MyMemory: keine Uebersetzung fuer "%s" (%s->%s) - Antwort war gueltig, enthielt aber keinen Text. '
+                . 'Original bleibt unveraendert stehen; die uebrigen Texte dieses Durchlaufs sind davon NICHT betroffen. '
+                . 'Kontext: %s.',
+            mb_substr($Text, 0, 60, 'UTF-8'),
+            $Source,
+            $Target,
+            $DebugContext !== '' ? $DebugContext : '(kein Kontext)'
+        ));
+
+        return $Text;
     }
 
     // Zerlegt einen Text in abwechselnd übersetzbare und geschützte (<style>/<script>-
