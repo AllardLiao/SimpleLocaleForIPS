@@ -4294,6 +4294,35 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 168 (Nutzer-Auftrag "prüfe auf weiteren toten Code"): drei
+  nur-geschriebene Attribute und vier verwaiste Übersetzungen entfernt.**
+  `attributeEffectiveRootCategoryID`, `attributeLastDailyLicenseCheckAt` und
+  `attributeLicenseInfo` waren registriert und wurden beschrieben, aber **nie
+  gelesen** - jeder Schreibvorgang darauf war Arbeit ohne Wirkung. Die ersten
+  beiden waren als "informativ" gedacht, das dritte als Anzeige-Cache fürs
+  Formular, der nie abgefragt wurde. Dazu vier `locale.json`-Schlüssel, deren
+  Texte es im Formular und im Code längst nicht mehr gibt (in allen vier
+  Sprachen, 16 Zeilen).
+
+  Der Rest ist sauber: 213 private Methoden - alle aufgerufen; 148 Konstanten -
+  alle verwendet.
+
+  `PROMOTIONAL_LANGUAGE_CAMPAIGNS` **bleibt**, obwohl das Array leer ist. Der
+  Mechanismus funktioniert und deckt etwas ab, das die Aktionsverwaltung auf der
+  Website nicht kann: Sprachen ohne jeden Schlüssel freischalten, auch für
+  Instanzen mit abgelaufener Testphase. Ein Promo-Lizenzschlüssel erreicht die
+  nicht.
+
+  Regressionstest `test_no_dead_code.php` ist zugleich ein **Dauerwächter** (6
+  Fälle): kein Attribut darf nur geschrieben werden, keine private Methode ohne
+  Aufrufer bleiben, keine Konstante ungenutzt, kein `locale.json`-Eintrag
+  verwaisen, und alle vier Sprachen müssen denselben Schlüsselsatz tragen - eine
+  Sprache, der ein Schlüssel fehlt, fällt sonst still auf Deutsch zurück.
+
+  Die Prüfung auf verwaiste Übersetzungen vergleicht bewusst gegen die
+  **dekodierten** Formularwerte und kennt die zur Laufzeit zusammengesetzten
+  "Automatisch (…)"-Kombinationen (Build 156) - beides sonst sichere Fehlalarme.
+
 * **Build 167 (Nutzer-Entscheidung): die beiden Bereinigungen für
   Bestandsinstallationen sind entfernt.**
   Das Modul ist bis heute unveröffentlicht - außer der Entwicklungsinstanz gibt

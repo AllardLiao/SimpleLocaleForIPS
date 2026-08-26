@@ -191,120 +191,120 @@ class SimpleLocale extends IPSModuleStrict
 
     // Rein dekorativ fürs Gast-Dropdown (GetVisualizationTile) - nicht erschöpfend,
     // unbekannte Sprachcodes bekommen einfach keine Flagge vorangestellt.
-private const LANGUAGE_FLAGS = [
-    'af' => '🇿🇦', // Afrikaans
-    'am' => '🇪🇹', // Amharisch
-    'ar' => '🇸🇦',
-    'az' => '🇦🇿',
-    'be' => '🇧🇾',
-    'bg' => '🇧🇬',
-    'bn' => '🇧🇩',
-    'bs' => '🇧🇦',
-    'ca' => '🇪🇸',
-    'ceb' => '🇵🇭',
-    'co' => '🇫🇷',
-    'cs' => '🇨🇿',
-    'cy' => '🏴', // Walisisch
-    'da' => '🇩🇰',
-    'de' => '🇩🇪',
-    'el' => '🇬🇷',
-    'en' => '🇬🇧',
-    'eo' => '🌍', // Esperanto
-    'es' => '🇪🇸',
-    'et' => '🇪🇪',
-    'eu' => '🇪🇸',
-    'fa' => '🇮🇷',
-    'fi' => '🇫🇮',
-    'fil' => '🇵🇭',
-    'fr' => '🇫🇷',
-    'fy' => '🇳🇱', // Friesisch
-    'ga' => '🇮🇪',
-    'gd' => '🏴', // Schottisch-Gälisch
-    'gl' => '🇪🇸',
-    'gu' => '🇮🇳',
-    'ha' => '🇳🇬',
-    'haw' => '🇺🇸',
-    'he' => '🇮🇱',
-    'hi' => '🇮🇳',
-    'hmn' => '🇨🇳',
-    'hr' => '🇭🇷',
-    'ht' => '🇭🇹',
-    'hu' => '🇭🇺',
-    'hy' => '🇦🇲',
-    'id' => '🇮🇩',
-    'ig' => '🇳🇬',
-    'is' => '🇮🇸',
-    'it' => '🇮🇹',
-    'iw' => '🇮🇱', // alter Google-Code für Hebräisch
-    'ja' => '🇯🇵',
-    'jw' => '🇮🇩', // Javanisch
-    'ka' => '🇬🇪',
-    'kk' => '🇰🇿',
-    'km' => '🇰🇭',
-    'kn' => '🇮🇳',
-    'ko' => '🇰🇷',
-    'ku' => '🇹🇷', // Kurdisch
-    'ky' => '🇰🇬',
-    'la' => '🇻🇦',
-    'lb' => '🇱🇺',
-    'lo' => '🇱🇦',
-    'lt' => '🇱🇹',
-    'lv' => '🇱🇻',
-    'mg' => '🇲🇬',
-    'mi' => '🇳🇿',
-    'mk' => '🇲🇰',
-    'ml' => '🇮🇳',
-    'mn' => '🇲🇳',
-    'mr' => '🇮🇳',
-    'ms' => '🇲🇾',
-    'mt' => '🇲🇹',
-    'my' => '🇲🇲',
-    'ne' => '🇳🇵',
-    'nl' => '🇳🇱',
-    'no' => '🇳🇴',
-    'nb' => '🇳🇴',
-    'ny' => '🇲🇼',
-    'or' => '🇮🇳',
-    'pa' => '🇮🇳',
-    'pl' => '🇵🇱',
-    'ps' => '🇦🇫',
-    'pt' => '🇵🇹',
-    'ro' => '🇷🇴',
-    'ru' => '🇷🇺',
-    'sd' => '🇵🇰',
-    'si' => '🇱🇰',
-    'sk' => '🇸🇰',
-    'sl' => '🇸🇮',
-    'sm' => '🇼🇸',
-    'sn' => '🇿🇼',
-    'so' => '🇸🇴',
-    'sq' => '🇦🇱',
-    'sr' => '🇷🇸',
-    'st' => '🇱🇸',
-    'su' => '🇮🇩',
-    'sv' => '🇸🇪',
-    'sw' => '🇰🇪',
-    'ta' => '🇮🇳',
-    'te' => '🇮🇳',
-    'tg' => '🇹🇯',
-    'th' => '🇹🇭',
-    'tk' => '🇹🇲',
-    'tl' => '🇵🇭',
-    'tr' => '🇹🇷',
-    'tt' => '🇷🇺',
-    'ug' => '🇨🇳',
-    'uk' => '🇺🇦',
-    'ur' => '🇵🇰',
-    'uz' => '🇺🇿',
-    'vi' => '🇻🇳',
-    'xh' => '🇿🇦',
-    'yi' => '🇮🇱',
-    'yo' => '🇳🇬',
-    'zh' => '🇨🇳',
-    'zh-CN' => '🇨🇳',
-    'zh-TW' => '🇹🇼',
-    'zu' => '🇿🇦',
-];
+    private const LANGUAGE_FLAGS = [
+        'af' => '🇿🇦', // Afrikaans
+        'am' => '🇪🇹', // Amharisch
+        'ar' => '🇸🇦',
+        'az' => '🇦🇿',
+        'be' => '🇧🇾',
+        'bg' => '🇧🇬',
+        'bn' => '🇧🇩',
+        'bs' => '🇧🇦',
+        'ca' => '🇪🇸',
+        'ceb' => '🇵🇭',
+        'co' => '🇫🇷',
+        'cs' => '🇨🇿',
+        'cy' => '🏴', // Walisisch
+        'da' => '🇩🇰',
+        'de' => '🇩🇪',
+        'el' => '🇬🇷',
+        'en' => '🇬🇧',
+        'eo' => '🌍', // Esperanto
+        'es' => '🇪🇸',
+        'et' => '🇪🇪',
+        'eu' => '🇪🇸',
+        'fa' => '🇮🇷',
+        'fi' => '🇫🇮',
+        'fil' => '🇵🇭',
+        'fr' => '🇫🇷',
+        'fy' => '🇳🇱', // Friesisch
+        'ga' => '🇮🇪',
+        'gd' => '🏴', // Schottisch-Gälisch
+        'gl' => '🇪🇸',
+        'gu' => '🇮🇳',
+        'ha' => '🇳🇬',
+        'haw' => '🇺🇸',
+        'he' => '🇮🇱',
+        'hi' => '🇮🇳',
+        'hmn' => '🇨🇳',
+        'hr' => '🇭🇷',
+        'ht' => '🇭🇹',
+        'hu' => '🇭🇺',
+        'hy' => '🇦🇲',
+        'id' => '🇮🇩',
+        'ig' => '🇳🇬',
+        'is' => '🇮🇸',
+        'it' => '🇮🇹',
+        'iw' => '🇮🇱', // alter Google-Code für Hebräisch
+        'ja' => '🇯🇵',
+        'jw' => '🇮🇩', // Javanisch
+        'ka' => '🇬🇪',
+        'kk' => '🇰🇿',
+        'km' => '🇰🇭',
+        'kn' => '🇮🇳',
+        'ko' => '🇰🇷',
+        'ku' => '🇹🇷', // Kurdisch
+        'ky' => '🇰🇬',
+        'la' => '🇻🇦',
+        'lb' => '🇱🇺',
+        'lo' => '🇱🇦',
+        'lt' => '🇱🇹',
+        'lv' => '🇱🇻',
+        'mg' => '🇲🇬',
+        'mi' => '🇳🇿',
+        'mk' => '🇲🇰',
+        'ml' => '🇮🇳',
+        'mn' => '🇲🇳',
+        'mr' => '🇮🇳',
+        'ms' => '🇲🇾',
+        'mt' => '🇲🇹',
+        'my' => '🇲🇲',
+        'ne' => '🇳🇵',
+        'nl' => '🇳🇱',
+        'no' => '🇳🇴',
+        'nb' => '🇳🇴',
+        'ny' => '🇲🇼',
+        'or' => '🇮🇳',
+        'pa' => '🇮🇳',
+        'pl' => '🇵🇱',
+        'ps' => '🇦🇫',
+        'pt' => '🇵🇹',
+        'ro' => '🇷🇴',
+        'ru' => '🇷🇺',
+        'sd' => '🇵🇰',
+        'si' => '🇱🇰',
+        'sk' => '🇸🇰',
+        'sl' => '🇸🇮',
+        'sm' => '🇼🇸',
+        'sn' => '🇿🇼',
+        'so' => '🇸🇴',
+        'sq' => '🇦🇱',
+        'sr' => '🇷🇸',
+        'st' => '🇱🇸',
+        'su' => '🇮🇩',
+        'sv' => '🇸🇪',
+        'sw' => '🇰🇪',
+        'ta' => '🇮🇳',
+        'te' => '🇮🇳',
+        'tg' => '🇹🇯',
+        'th' => '🇹🇭',
+        'tk' => '🇹🇲',
+        'tl' => '🇵🇭',
+        'tr' => '🇹🇷',
+        'tt' => '🇷🇺',
+        'ug' => '🇨🇳',
+        'uk' => '🇺🇦',
+        'ur' => '🇵🇰',
+        'uz' => '🇺🇿',
+        'vi' => '🇻🇳',
+        'xh' => '🇿🇦',
+        'yi' => '🇮🇱',
+        'yo' => '🇳🇬',
+        'zh' => '🇨🇳',
+        'zh-CN' => '🇨🇳',
+        'zh-TW' => '🇹🇼',
+        'zu' => '🇿🇦',
+    ];
 
     public function Create(): void
     {
@@ -386,7 +386,6 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterAttributeString(self::attributeLastRunTranslationFailures, '{}');
         $this->RegisterAttributeString(self::attributeUnnamedObjects, '[]');
         $this->RegisterAttributeInteger(self::attributeLastCleanupRemovedCount, -1);
-        $this->RegisterAttributeString(self::attributeLicenseInfo, '{}');
         $this->RegisterAttributeInteger(self::attributeTrialStartedAt, 0);
         $this->RegisterAttributeString(self::attributeActivationLog, '[]');
         $this->RegisterAttributeString(self::attributeBlockedLicenseKeyHash, '');
@@ -394,7 +393,6 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterAttributeString(self::attributeRevokedLicenseKeyHash, '');
         $this->RegisterAttributeInteger(self::attributeLicenseExpiresAtOverride, 0);
         $this->RegisterAttributeString(self::attributeLicenseExpiresAtOverrideKeyHash, '');
-        $this->RegisterAttributeInteger(self::attributeLastDailyLicenseCheckAt, 0);
         $this->RegisterAttributeInteger(self::attributeLastLanguageSwitchAt, 0);
         // Default = derselbe Wert wie propertyCurrentLanguage's eigener Default, damit
         // ApplyChanges() beim allerersten Aufruf (frisch angelegte Instanz, noch keine
@@ -415,7 +413,6 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterAttributeString(self::attributeEnumerationProfileBackup, '{}');
         $this->RegisterAttributeString(self::attributeLastSelfWrittenGreetingName, '');
         $this->RegisterAttributeInteger(self::attributeRegisteredVisuInstanceID, 0);
-        $this->RegisterAttributeInteger(self::attributeEffectiveRootCategoryID, 0);
         $this->RegisterAttributeString(self::attributeLastRowSourceLanguageFingerprint, '');
         $this->RegisterAttributeString(self::attributeLastActiveLanguageContentFingerprint, '');
         $this->RegisterAttributeString(self::attributeProviderPausedUntil, '{}');
@@ -1994,12 +1991,10 @@ private const LANGUAGE_FLAGS = [
     // Prüft/übernimmt den in propertyLicenseKey eingetragenen Schlüssel per
     // RequestAction (Button "Lizenz aktivieren"). Zeigt nur ein Popup an, die
     // eigentliche Property wurde schon beim "Übernehmen" des Formulars gespeichert -
-    // hier wird nur der bereits gespeicherte Schlüssel geprüft und das Ergebnis
-    // (für die schnelle Anzeige im Formular) in attributeLicenseInfo gecacht.
+    // hier wird nur der bereits gespeicherte Schlüssel geprüft.
     private function ActivateLicense(): void
     {
         $info = $this->GetLicenseInfo();
-        $this->WriteAttributeString(self::attributeLicenseInfo, json_encode($info));
 
         if ($info['valid']) {
             // true: ein expliziter Klick auf "Lizenz aktivieren" darf einen bereits
@@ -2200,7 +2195,6 @@ private const LANGUAGE_FLAGS = [
 
         $response = $this->CallActivationReportAPI(self::LICENSE_ACTIVATION_REPORT_URL, json_encode($entry));
         $this->ApplyActivationReportResponse($keyHash, $response);
-        $this->WriteAttributeInteger(self::attributeLastDailyLicenseCheckAt, time());
     }
 
     // Eigene, überschreibbare Methode fürs HTTP-POST (wie CallGoogleTranslateAPI) - so
@@ -4908,7 +4902,6 @@ private const LANGUAGE_FLAGS = [
     // (propertyWebFrontVisuInstanceID) - kein manuelles Rückfall-Feld mehr, damit
     // nie versehentlich ein anderer Baum konfiguriert werden kann als der, den die
     // Visualisierung tatsächlich anzeigt. Der aufgelöste Wert wird zusätzlich rein
-    // informativ in attributeEffectiveRootCategoryID gespiegelt (kein Formularfeld,
     // nur zur Fehlersuche im "Attribute"-Reiter). Ohne gewählte Instanz oder ohne
     // deren BaseID liefert diese Funktion 0 (siehe STATUS_ROOT_CATEGORY_MISSING).
     // Build 144: liest ALLE Properties der gewaehlten Visualisierungs-Instanz auf
@@ -5017,8 +5010,6 @@ private const LANGUAGE_FLAGS = [
         $rootID = $this->ResolveVisuRootCategoryID(
             $this->ReadPropertyInteger(self::propertyWebFrontVisuInstanceID)
         );
-
-        $this->WriteAttributeInteger(self::attributeEffectiveRootCategoryID, $rootID);
 
         return $rootID;
     }
