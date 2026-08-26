@@ -4841,7 +4841,7 @@ private const LANGUAGE_FLAGS = [
         // Build 88: Objektnamen/Eigene Texte sind erfahrungsgemaess der groesste
         // (und damit am laengsten laufende) Teil eines Rescans - eigene
         // Fortschritts-Meldung dafuer, siehe SetRescanProgress.
-        $this->SetRescanProgress('Objektnamen und Texte werden übersetzt…');
+        $this->SetRescanProgress('Objektnamen und Texte werden übersetzt… (je nach Anzahl der Objekte kann das einige Minuten dauern)');
 
         $objectNames = $this->FillMissingTranslations($objectNames, [
             ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],
@@ -4855,7 +4855,7 @@ private const LANGUAGE_FLAGS = [
             ['raw' => self::langOriginalImportText, 'prefix' => self::fieldTextPrefix, 'capitalizeFirst' => false, 'isHtml' => true],
         ], $sourceLanguage, $targetLanguages);
 
-        $this->SetRescanProgress('Weitere Inhalte werden übersetzt…');
+        $this->SetRescanProgress('Weitere Inhalte werden übersetzt… (je nach Anzahl der Objekte kann das einige Minuten dauern)');
 
         $objectOptions = $this->FillMissingTranslations($objectOptions, [
             ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => false],
@@ -8071,8 +8071,29 @@ private const LANGUAGE_FLAGS = [
             return array_fill(0, count($Texts), '');
         }
 
+        // Build 151: Teilerfolge werden jetzt ueber die Anbieter-Kette hinweg
+        // GESAMMELT statt verworfen. Hintergrund: MyMemory ruft pro Text
+        // einzeln auf (kein Batch-Endpunkt), ein Teilerfolg ist dort der
+        // Normalfall - frueher warf ein einziger Fehlschlag alle bereits
+        // fertigen Uebersetzungen desselben Durchlaufs weg (live: 21 Stueck,
+        // siehe TranslateChunkFree).
+        //
+        // $collected haelt den besten bisher erreichten Stand; an den naechsten
+        // Anbieter gehen nur noch die Texte, die WIRKLICH noch offen sind.
+        // Dadurch verbraucht ein Folgeanbieter auch kein Kontingent fuer bereits
+        // Uebersetztes.
+        $collected = array_fill(0, count($Texts), '');
         $attempts = [];
+
         foreach ($this->GetProviderChain() as $provider) {
+            $pendingIndexes = array_keys(array_filter(
+                $collected,
+                static fn (string $value): bool => $value === ''
+            ));
+            if ($pendingIndexes === []) {
+                break;      // alles uebersetzt - kein weiterer Anbieter noetig
+            }
+
             // Dieser EINE Anbieter ist noch pausiert (aber - siehe oben - nicht
             // ALLE gleichzeitig) - übersprungen, ohne ihn erneut anzufragen, der
             // nächste in der Kette wird stattdessen normal versucht.
@@ -8081,20 +8102,55 @@ private const LANGUAGE_FLAGS = [
                 continue;
             }
 
-            $result = match ($provider) {
-                'google' => $this->TranslateChunkGoogle($Texts, $Source, $Target, $this->GetApiKeyForProvider('google'), $DebugContext, $IsHtml),
-                'deepl'  => $this->TranslateChunkDeepL($Texts, $Source, $Target, $this->GetApiKeyForProvider('deepl'), $DebugContext, $IsHtml),
-                default  => $this->TranslateChunkFree($Texts, $Source, $Target, $DebugContext),
-            };
-            if ($result !== null) {
-                // Echter API-Erfolg (kein Cache-Treffer - der laeuft nie ueber
-                // TranslateChunk, siehe TranslateBatch) - Eskalations-Kette dieses
-                // Anbieters zuruecksetzen, siehe ClearProviderPause.
-                $this->ClearProviderPause($provider);
+            $pendingTexts = array_values(array_map(static fn (int $i) => $Texts[$i], $pendingIndexes));
 
-                return array_map([$this, 'SanitizeTranslatedText'], $result);
+            $result = match ($provider) {
+                'google' => $this->TranslateChunkGoogle($pendingTexts, $Source, $Target, $this->GetApiKeyForProvider('google'), $DebugContext, $IsHtml),
+                'deepl'  => $this->TranslateChunkDeepL($pendingTexts, $Source, $Target, $this->GetApiKeyForProvider('deepl'), $DebugContext, $IsHtml),
+                default  => $this->TranslateChunkFree($pendingTexts, $Source, $Target, $DebugContext),
+            };
+            if ($result === null) {
+                $attempts[] = $provider;
+                continue;
             }
-            $attempts[] = $provider;
+
+            // Echter API-Erfolg (kein Cache-Treffer - der laeuft nie ueber
+            // TranslateChunk, siehe TranslateBatch) - Eskalations-Kette dieses
+            // Anbieters zuruecksetzen, siehe ClearProviderPause.
+            $this->ClearProviderPause($provider);
+
+            foreach ($pendingIndexes as $position => $originalIndex) {
+                $value = $result[$position] ?? '';
+                if ($value !== '') {
+                    $collected[$originalIndex] = $value;
+                }
+            }
+
+            // Teilerfolg: der Anbieter hat geliefert, aber nicht alles - die
+            // Restmenge geht in den naechsten Schleifendurchlauf an den
+            // naechsten Anbieter.
+            if (in_array('', $collected, true)) {
+                $attempts[] = $provider . ' [unvollständig]';
+            }
+        }
+
+        // Mindestens ein Text uebersetzt: Ergebnis zurueckgeben. Noch offene
+        // Texte bleiben leer - der Aufrufer speichert leere Zellen bewusst nicht
+        // (siehe FillLanguageColumn), sie werden beim naechsten Rescan erneut
+        // versucht.
+        //
+        // Bewusst eine explizite Schleife statt array_filter(): letzteres wertet
+        // auch eine Uebersetzung, die woertlich "0" lautet, als leer und wuerde
+        // sie damit verwerfen.
+        $anyTranslated = false;
+        foreach ($collected as $value) {
+            if ($value !== '') {
+                $anyTranslated = true;
+                break;
+            }
+        }
+        if ($anyTranslated) {
+            return array_map([$this, 'SanitizeTranslatedText'], $collected);
         }
 
         // Alle Anbieter der Kette sind fehlgeschlagen - Details zu JEDEM einzelnen
@@ -8259,15 +8315,58 @@ private const LANGUAGE_FLAGS = [
     // Text im Chunk fehl (z.B. Tageskontingent genau in diesem Moment erschoepft),
     // gilt der komplette Chunk als fehlgeschlagen, damit TranslateChunk sauber zur
     // naechsten Kettenstufe wechselt, statt halb-uebersetzte Zeilen zu hinterlassen.
+    // Build 151 (live gemeldet, per dump21 nachgewiesen): MyMemory hat keinen
+    // Batch-Endpunkt, hier faellt also EIN HTTP-Aufruf PRO TEXT an. Anders als
+    // bei Google/DeepL (ein Aufruf fuer den ganzen Chunk, der entweder ganz
+    // klappt oder ganz nicht) ist ein TEILERFOLG damit der Normalfall.
+    //
+    // Bisher brach ein einziger Fehlschlag mit "return null" den kompletten
+    // Durchlauf ab - und warf dabei ALLE bereits erfolgreich uebersetzten Texte
+    // weg. Im gemeldeten Fall: 21 fertige Uebersetzungen, dann ein HTTP 504
+    // (MyMemory-Server ueberlastet), und alle 21 landeten im Muell. Das
+    // Kontingent war dafuer laengst verbraucht, die Zellen blieben trotzdem
+    // leer, und der naechste Rescan begann von vorn - inklusive erneutem
+    // Verbrauch.
+    //
+    // Jetzt wird weitergearbeitet: erfolgreiche Texte behalten ihr Ergebnis,
+    // fehlgeschlagene bekommen einen Leerstring. Der Aufrufer (TranslateChunk)
+    // erkennt daran, welche Texte noch offen sind, und reicht NUR DIESE an den
+    // naechsten Anbieter der Kette weiter.
+    //
+    // null bleibt dem TOTALAUSFALL vorbehalten (kein einziger Text
+    // durchgekommen) - nur dann ist der Anbieter als Ganzes gescheitert, was
+    // Pausen-Eskalation und Kettenwechsel ausloesen soll.
     private function TranslateChunkFree(array $Texts, string $Source, string $Target, string $DebugContext = ''): ?array
     {
         $results = [];
+        $anySucceeded = false;
+        $failedCount = 0;
+
         foreach ($Texts as $text) {
             $translated = $this->TranslateSingleFree($text, $Source, $Target, $DebugContext);
             if ($translated === null) {
-                return null;
+                $results[] = '';
+                $failedCount++;
+                continue;
             }
             $results[] = $translated;
+            $anySucceeded = true;
+        }
+
+        if (!$anySucceeded) {
+            return null;
+        }
+
+        if ($failedCount > 0) {
+            $this->LogTranslateMessage(sprintf(
+                'MyMemory: %d von %d Texten fehlgeschlagen - die %d erfolgreichen bleiben erhalten und werden '
+                    . 'gespeichert (frueher wurden sie mitverworfen). Die fehlgeschlagenen versucht, falls '
+                    . 'konfiguriert, der naechste Anbieter der Kette, sonst der naechste Rescan. Kontext: %s.',
+                $failedCount,
+                count($Texts),
+                count($Texts) - $failedCount,
+                $DebugContext !== '' ? $DebugContext : '(kein Kontext)'
+            ));
         }
 
         return $results;
