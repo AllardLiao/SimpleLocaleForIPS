@@ -227,13 +227,11 @@ trait SimpleLocaleConstants
     // ApplyChanges/Rescan aus deren "BaseID"-Property neu geschrieben. Erlaubt
     // Fehlersuche (sichtbar im "Attribute"-Reiter der Instanz), ohne dass der Nutzer
     // ihn versehentlich manuell auf einen anderen Baum umstellen kann.
-    private const attributeEffectiveRootCategoryID = 'EffectiveRootCategoryID';
 
     // Zuletzt erfolgreich geprüfte Lizenzinformationen (JSON, siehe
     // ValidateLicenseKey) - Cache, damit nicht bei jedem Aufruf neu geprüft werden
     // muss; wird bei jeder Statusabfrage trotzdem gegen den aktuellen Schlüssel neu
     // validiert (siehe GetLicenseInfo), nicht blind übernommen.
-    private const attributeLicenseInfo = 'LicenseInfo';
 
     // Zeitpunkt (Unix-Timestamp) des ersten ApplyChanges dieser Instanz in einem
     // Testversion-Build - Start der Testphase. 0 = noch nicht gestartet.
@@ -292,7 +290,6 @@ trait SimpleLocaleConstants
 
     // Zeitpunkt (Unix-Timestamp) der letzten taeglichen Statuspruefung, rein
     // informativ/fuer Debugging - keine Fachlogik haengt daran.
-    private const attributeLastDailyLicenseCheckAt = 'LastDailyLicenseCheckAt';
 
     // Zeitpunkt (Unix-Timestamp) des letzten TATSAECHLICHEN Sprachwechsels (zu einer
     // anderen als der bis dahin aktiven Sprache) - nur relevant ohne das Feature
