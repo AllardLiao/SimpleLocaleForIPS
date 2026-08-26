@@ -6297,11 +6297,26 @@ private const LANGUAGE_FLAGS = [
     // wird - anzufassen).
     private function ApplyManualTranslationOverrides(array $Rows, array $FieldGroups, string $SourceLanguage, array $TargetLanguages): array
     {
-        if (!$this->HasLicenseFeature('manual_translations')) {
-            return $Rows;
-        }
-        $manualTranslations = $this->DecodeRows(self::propertyManualTranslations);
-        if ($manualTranslations === []) {
+        // Build 159 (live gemeldet): OHNE das Feature laeuft dieser Durchlauf
+        // trotzdem - nur eben gegen den mitgelieferten Katalog statt gegen die
+        // gespeicherte Tabelle (FindManualTranslation() faellt seit Build 158
+        // genau dann darauf zurueck).
+        //
+        // Build 158 hatte nur die halbe Strecke gebaut: der Katalog griff zwar bei
+        // NEUEN Uebersetzungen, eine bereits falsch gespeicherte Zelle wurde aber
+        // nie wieder angefasst - dieser Durchlauf hier ist der Einzige, der das
+        // tut, und er stieg ohne das Feature sofort aus. Live sichtbar daran, dass
+        // ein einmal als "°F" gespeichertes "°C"-Suffix auch nach dem Update
+        // stehenblieb.
+        $hasManualTranslations = $this->HasLicenseFeature('manual_translations');
+        $manualTranslations = $hasManualTranslations
+            ? $this->DecodeRows(self::propertyManualTranslations)
+            : [];
+        // Nur eine Abkuerzung fuer den haeufigen Fall "Feature vorhanden, Tabelle
+        // leer": dann gibt es nichts zu pruefen. Ohne das Feature darf hier NICHT
+        // abgekuerzt werden - die leere Liste ist dort der Normalfall, der Katalog
+        // haengt nicht an ihr.
+        if ($hasManualTranslations && $manualTranslations === []) {
             return $Rows;
         }
 

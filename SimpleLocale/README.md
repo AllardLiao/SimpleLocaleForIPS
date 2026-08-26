@@ -4294,6 +4294,27 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 159 (live gemeldet): Build 158 hatte nur die halbe Strecke gebaut -
+  bereits falsch gespeicherte Zellen wurden nicht korrigiert.**
+  Der mitgelieferte Katalog griff seit Build 158 bei **neuen** Übersetzungen,
+  aber eine einmal falsch gespeicherte Zelle wurde nie wieder angefasst: befüllte
+  Zellen werden nicht neu übersetzt. Der einzige Durchlauf, der gespeicherte
+  Zellen nachträglich korrigiert, ist `ApplyManualTranslationOverrides()` - und
+  der stieg ohne das Feature `manual_translations` sofort aus. Live sichtbar
+  daran, dass ein einmal als `°F` gespeichertes `°C`-Suffix auch nach dem Update
+  stehenblieb.
+
+  *Fix:* der Durchlauf läuft jetzt auch ohne das Feature, nur eben gegen den
+  mitgelieferten Katalog statt gegen die gespeicherte Tabelle. Die Abkürzung
+  "nichts zu prüfen" greift nur noch, wenn das Feature vorhanden **und** die
+  Tabelle leer ist - ohne Feature ist die leere Liste der Normalfall und darf
+  nicht zum Aussteigen führen. Genau diese Abkürzung war der Fehler.
+
+  Regressionstest `test_bundled_glossary_corrects_stored_cells.php` (6 Fälle:
+  der gemeldete Fall; der Fix; die Abkürzung bleibt mit Feature erhalten; ein
+  Symmetrie-Check auf genau diese Bedingung; eine bereits korrekte Zelle bleibt
+  unangetastet; normale Übersetzungen werden nicht überschrieben).
+
 * **Build 158 (Nutzer-Entscheidung nach dem Befund aus Build 157): die
   mitgelieferte Nachschlagetabelle für Einheiten und Kompassrichtungen greift
   jetzt in JEDER Edition.**
