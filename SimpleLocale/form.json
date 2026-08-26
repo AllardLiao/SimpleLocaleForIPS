@@ -1272,7 +1272,7 @@
         {
             "code": 203,
             "icon": "error",
-            "caption": "Google Translate Fehler - bitte API-Key prüfen"
+            "caption": "Übersetzung fehlgeschlagen - kein Anbieter war erreichbar (Details siehe Konfigurationsformular)"
         },
         {
             "code": 204,

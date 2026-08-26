@@ -4294,6 +4294,25 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 163 (live gemeldet, per Screenshot belegt): die Statuszeile meldete
+  "Google Translate Fehler - bitte API-Key prüfen", obwohl gar kein
+  Google-Schlüssel hinterlegt war.**
+  Status 203 wird gesetzt, sobald **alle** Anbieter der Kette gescheitert sind -
+  der Text stammte aber noch aus der Zeit, als Google der einzige Anbieter war.
+  Eine Instanz, die ausschließlich den kostenfreien Anbieter nutzt, bekam damit
+  die Aufforderung, einen API-Key zu prüfen, den es nicht gibt.
+
+  Neu: "Übersetzung fehlgeschlagen - kein Anbieter war erreichbar (Details siehe
+  Konfigurationsformular)" - anbieterneutral und mit Verweis auf die seit Build
+  152 dort stehende Fehlerbilanz. In allen vier Sprachen; der alte Text ist
+  restlos entfernt.
+
+  Regressionstest `test_status_text_provider_neutral.php` (5 Fälle: kein
+  Anbietername und keine API-Key-Aufforderung mehr; der Text bleibt trotzdem
+  aussagekräftig; der Status gilt weiterhin nur für den Totalausfall der Kette;
+  in allen Sprachen registriert und auch dort ohne Google; der alte Text ist
+  überall entfernt).
+
 * **Build 162 (live gemeldet): ein wegen des Tageslimits abgelehnter
   Sprachwechsel ließ die Kachel auf der abgelehnten Sprache stehen.**
   Von "de" auf "en" gewechselt, der Wechsel wurde korrekt verweigert - in der
