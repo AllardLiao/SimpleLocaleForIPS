@@ -377,6 +377,18 @@ trait SimpleLocaleConstants
     // Quellsprache ihn exakt wiederherstellen kann.
     private const attributeEnumerationProfileBackup = 'EnumerationProfileBackup';
 
+    // Build 165: Gegenstueck zu attributeLastSelfWrittenValues, aber fuer die
+    // Begruessung im Modus "Name" - die steckt nicht in einer Variable, sondern in
+    // der Property "GreetingName" der Visualisierungs-Instanz. Haelt den zuletzt
+    // von UNS dort hineingeschriebenen Wert, damit eine Aenderung des Admins auch
+    // dann als extern erkannt wird, wenn gerade eine Zielsprache aktiv ist.
+    private const attributeLastSelfWrittenGreetingName = 'LastSelfWrittenGreetingName';
+
+    // Build 165: welche Visualisierungs-Instanz aktuell auf IM_CHANGESETTINGS
+    // ueberwacht wird (0 = keine) - Gegenstueck zu attributeRegisteredValueObjectIDs,
+    // damit eine Umkonfiguration keine verwaiste Registrierung hinterlaesst.
+    private const attributeRegisteredVisuInstanceID = 'RegisteredVisuInstanceID';
+
     // Objekte ohne Namen, die beim letzten Rescan im Root-Baum gefunden wurden (JSON-
     // Array aus ObjectID+Path) - ein Rescan bricht ab, sobald welche existieren, bevor
     // irgendetwas übersetzt wird (leerer Name lässt sich sonst nicht sinnvoll übersetzen

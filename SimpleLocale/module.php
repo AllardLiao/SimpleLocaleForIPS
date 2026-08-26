@@ -413,6 +413,8 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterAttributeString(self::attributeRescanProgressMessage, '');
         $this->RegisterAttributeString(self::attributeEnumerationPresentationBackup, '{}');
         $this->RegisterAttributeString(self::attributeEnumerationProfileBackup, '{}');
+        $this->RegisterAttributeString(self::attributeLastSelfWrittenGreetingName, '');
+        $this->RegisterAttributeInteger(self::attributeRegisteredVisuInstanceID, 0);
         $this->RegisterAttributeInteger(self::attributeEffectiveRootCategoryID, 0);
         $this->RegisterAttributeString(self::attributeLastRowSourceLanguageFingerprint, '');
         $this->RegisterAttributeString(self::attributeLastActiveLanguageContentFingerprint, '');
@@ -755,6 +757,17 @@ private const LANGUAGE_FLAGS = [
     {
         //Never delete this line!
         parent::MessageSink($TimeStamp, $SenderID, $Message, $Data);
+
+        if ($Message === IM_CHANGESETTINGS) {
+            $this->isInMessageSinkDispatch = true;
+            try {
+                $this->HandleVisuInstanceSettingsChange();
+            } finally {
+                $this->isInMessageSinkDispatch = false;
+            }
+
+            return;
+        }
 
         if ($Message === VM_UPDATE) {
             // siehe isInMessageSinkDispatch/LogTranslateMessage - try/finally
@@ -3747,6 +3760,13 @@ private const LANGUAGE_FLAGS = [
             return;
         }
 
+        // Build 165: Marker VOR dem Schreibvorgang - dieselbe Reihenfolge und
+        // derselbe Grund wie bei WriteTrackedValueString() (siehe Build 154).
+        // Ohne diesen Merker kann ein spaeterer Scan nicht unterscheiden, ob in
+        // "GreetingName" gerade unsere eigene Uebersetzung oder eine frische
+        // Aenderung des Admins steht.
+        $this->WriteAttributeString(self::attributeLastSelfWrittenGreetingName, $resolvedName);
+
         @IPS_SetProperty($webFrontID, 'GreetingName', $resolvedName);
         @IPS_ApplyChanges($webFrontID);
     }
@@ -4123,6 +4143,83 @@ private const LANGUAGE_FLAGS = [
         }
 
         $this->WriteAttributeString(self::attributeRegisteredValueObjectIDs, json_encode($currentIDs));
+
+        // Build 165: die Begruessung im Modus "Name" steckt nicht in einer Variable,
+        // sondern in der Property "GreetingName" der Visualisierungs-Instanz - dafuer
+        // gibt es kein VM_UPDATE. IM_CHANGESETTINGS meldet stattdessen jede Aenderung
+        // an deren Konfiguration, also auch das Speichern einer neuen Begruessung.
+        $registeredVisuID = $this->ReadAttributeInteger(self::attributeRegisteredVisuInstanceID);
+        $visuID = $this->ReadPropertyInteger(self::propertyWebFrontVisuInstanceID);
+        if ($registeredVisuID !== $visuID) {
+            if ($registeredVisuID !== 0 && @IPS_ObjectExists($registeredVisuID)) {
+                $this->UnregisterMessage($registeredVisuID, IM_CHANGESETTINGS);
+            }
+            if ($visuID !== 0 && @IPS_ObjectExists($visuID)) {
+                $this->RegisterMessage($visuID, IM_CHANGESETTINGS);
+            }
+            $this->WriteAttributeInteger(self::attributeRegisteredVisuInstanceID, $visuID);
+        }
+    }
+
+    // Build 165 (live gemeldet): "Update auf das Greeting vorgenommen, gespeichert.
+    // Das Update wird nicht uebernommen ... sonst wird der alte Wert beim
+    // Sprachwechsel wieder zurueckgeschrieben."
+    //
+    // Ursache: der Rohtext der Begruessung wurde nur bei einem Rescan aufgefrischt,
+    // und auch dann nur, wenn zufaellig die Basissprache aktiv war (siehe
+    // MergeGreetingRows). Wer die Begruessung bearbeitet, waehrend eine Zielsprache
+    // laeuft, kam nie durch - und der naechste Sprachwechsel schrieb den alten Stand
+    // zurueck.
+    //
+    // Diese Methode holt das sofort nach. Der Selbst-Schreib-Marker verhindert die
+    // Rueckkopplung: ApplyGreetingLanguage() schreibt selbst per IPS_SetProperty +
+    // IPS_ApplyChanges in dieselbe Instanz und loest damit erneut IM_CHANGESETTINGS
+    // aus - entspricht der gefundene Text dem zuletzt selbst geschriebenen, endet der
+    // Durchlauf hier sofort.
+    private function HandleVisuInstanceSettingsChange(): void
+    {
+        if (!$this->ReadPropertyBoolean(self::propertyActive)) {
+            return;
+        }
+
+        $scanned = $this->ScanGreetingText();
+        if ($scanned === []) {
+            return;
+        }
+
+        $newRawText = (string) ($scanned[0][self::langOriginalImport] ?? '');
+        if ($newRawText === '' || $newRawText === $this->ReadAttributeString(self::attributeLastSelfWrittenGreetingName)) {
+            return;
+        }
+
+        $rows = $this->DecodeRows(self::propertyObjectGreeting);
+        if ($rows === [] || (string) ($rows[0][self::langOriginalImport] ?? '') === $newRawText) {
+            return;
+        }
+
+        // Im Modus "Variable" laeuft die Aktualisierung bereits ueber VM_UPDATE
+        // (HandleTrackedVariableUpdate) - hier waere sie doppelt und wuerde den
+        // dortigen, feiner abgestimmten Pfad umgehen.
+        if ((int) ($rows[0]['ValueObjectID'] ?? 0) !== 0) {
+            return;
+        }
+
+        // Genau wie in MergeGreetingRows: der Rohtext hat sich geaendert, die
+        // bisherigen Uebersetzungen sind damit hinfaellig und werden geleert, statt
+        // veraltet stehenzubleiben.
+        foreach (array_keys($rows[0]) as $field) {
+            if (!in_array($field, [self::langOriginalImport, 'ValueObjectID', self::fieldRowSourceLanguage], true)) {
+                $rows[0][$field] = '';
+            }
+        }
+        $rows[0][self::langOriginalImport] = $newRawText;
+        $rows[0][self::fieldTranslatedAgainstSourceLanguage] = $this->GetRowSourceLanguage(
+            $rows[0],
+            $this->ReadPropertyString(self::propertySourceLanguage)
+        );
+
+        IPS_SetProperty($this->InstanceID, self::propertyObjectGreeting, json_encode($rows));
+        IPS_ApplyChanges($this->InstanceID);
     }
 
     // Reagiert auf eine VM_UPDATE-Nachricht einer verfolgten Variable - "Eigene
@@ -6118,7 +6215,21 @@ private const LANGUAGE_FLAGS = [
         // der ohnehin bereits sichere Live-Pfad (ApplyTrackedVariableUpdate,
         // erkennt eigene Schreibvorgaenge zuverlaessig ueber
         // attributeLastSelfWrittenValues) holt die Aktualisierung nach.
-        if ($IsSourceLanguageActive && $row[self::langOriginalImport] !== $newRawText) {
+        // Build 165 (live gemeldet): Eine Aenderung an der Begruessung wurde nicht
+        // uebernommen und beim naechsten Sprachwechsel wieder ueberschrieben - der
+        // Guard oben laesst eine Auffrischung ja nur zu, wenn zufaellig die
+        // Basissprache aktiv ist. Wer die Begruessung bearbeitet, waehrend eine
+        // Zielsprache laeuft, kam damit nie durch.
+        //
+        // Aufloesung wie beim Live-Pfad fuer "Eigene Texte": wir merken uns, was WIR
+        // zuletzt in "GreetingName" geschrieben haben (siehe
+        // ApplyGreetingLanguage/attributeLastSelfWrittenGreetingName). Weicht der
+        // gefundene Text davon ab, kann er nicht unsere eigene Uebersetzung sein -
+        // also hat ihn jemand von aussen gesetzt, und er gilt als neuer Rohtext,
+        // unabhaengig von der gerade aktiven Sprache.
+        $isExternalGreetingEdit = $newRawText !== $this->ReadAttributeString(self::attributeLastSelfWrittenGreetingName);
+
+        if (($IsSourceLanguageActive || $isExternalGreetingEdit) && $row[self::langOriginalImport] !== $newRawText) {
             // Die eigene Quellsprache der Zeile (fieldRowSourceLanguage) bleibt beim
             // Auffrischen unangetastet - eine vom Admin manuell abweichend gesetzte
             // Quellsprache (siehe ReconcileRowSourceLanguageChanges) soll nicht durch
