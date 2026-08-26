@@ -209,7 +209,8 @@
             "Text(e) sind für den kostenfreien Anbieter zu lang (Grenze: 500 Byte, Umlaute zählen doppelt). Ein erneuter Scan ändert daran nichts - diese Texte lassen sich nur mit einem Google- oder DeepL-Schlüssel übersetzen.": "text(s) are too long for the free provider (limit: 500 bytes, umlauts count double). Another scan will not change this - these texts can only be translated with a Google or DeepL key.",
             "Automatisch (Standard)": "Automatic (Standard)",
             "Automatisch (Simple-Locale-Symbol)": "Automatic (Simple Locale icon)",
-            "Automatisch (Weltkugel)": "Automatic (Globe)"
+            "Automatisch (Weltkugel)": "Automatic (Globe)",
+            "Die eigene Übersetzungstabelle steht in dieser Edition nicht zur Verfügung.": "The custom translation table is not available in this edition."
         },
         "es": {
             "Aktiv": "Activo",
@@ -420,7 +421,8 @@
             "Text(e) sind für den kostenfreien Anbieter zu lang (Grenze: 500 Byte, Umlaute zählen doppelt). Ein erneuter Scan ändert daran nichts - diese Texte lassen sich nur mit einem Google- oder DeepL-Schlüssel übersetzen.": "texto(s) son demasiado largos para el proveedor gratuito (límite: 500 bytes, las diéresis cuentan doble). Otro escaneo no cambiará nada: estos textos solo pueden traducirse con una clave de Google o DeepL.",
             "Automatisch (Standard)": "Automático (Estándar)",
             "Automatisch (Simple-Locale-Symbol)": "Automático (Símbolo de Simple Locale)",
-            "Automatisch (Weltkugel)": "Automático (Globo terráqueo)"
+            "Automatisch (Weltkugel)": "Automático (Globo terráqueo)",
+            "Die eigene Übersetzungstabelle steht in dieser Edition nicht zur Verfügung.": "La tabla de traducción propia no está disponible en esta edición."
         },
         "it": {
             "Aktiv": "Attivo",
@@ -631,7 +633,8 @@
             "Text(e) sind für den kostenfreien Anbieter zu lang (Grenze: 500 Byte, Umlaute zählen doppelt). Ein erneuter Scan ändert daran nichts - diese Texte lassen sich nur mit einem Google- oder DeepL-Schlüssel übersetzen.": "testo/i sono troppo lunghi per il servizio gratuito (limite: 500 byte, le dieresi contano doppio). Una nuova scansione non cambierà nulla: questi testi si possono tradurre solo con una chiave Google o DeepL.",
             "Automatisch (Standard)": "Automatico (Standard)",
             "Automatisch (Simple-Locale-Symbol)": "Automatico (Icona Simple Locale)",
-            "Automatisch (Weltkugel)": "Automatico (Globo)"
+            "Automatisch (Weltkugel)": "Automatico (Globo)",
+            "Die eigene Übersetzungstabelle steht in dieser Edition nicht zur Verfügung.": "La tabella di traduzione personalizzata non è disponibile in questa edizione."
         },
         "fr": {
             "Aktiv": "Actif",
@@ -842,7 +845,8 @@
             "Text(e) sind für den kostenfreien Anbieter zu lang (Grenze: 500 Byte, Umlaute zählen doppelt). Ein erneuter Scan ändert daran nichts - diese Texte lassen sich nur mit einem Google- oder DeepL-Schlüssel übersetzen.": "texte(s) sont trop longs pour le service gratuit (limite : 500 octets, les trémas comptent double). Une nouvelle analyse n'y changera rien - ces textes ne peuvent être traduits qu'avec une clé Google ou DeepL.",
             "Automatisch (Standard)": "Automatique (Standard)",
             "Automatisch (Simple-Locale-Symbol)": "Automatique (Icône Simple Locale)",
-            "Automatisch (Weltkugel)": "Automatique (Globe)"
+            "Automatisch (Weltkugel)": "Automatique (Globe)",
+            "Die eigene Übersetzungstabelle steht in dieser Edition nicht zur Verfügung.": "Le tableau de traduction personnalisé n'est pas disponible dans cette édition."
         }
     }
 }

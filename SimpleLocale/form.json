@@ -603,6 +603,12 @@
                     "caption": "Begrüßung: keine Kachel-Visualisierungs-Instanz ausgewählt (siehe Feld \"Kachel-Visualisierung\" oben)."
                 },
                 {
+                    "type": "Label",
+                    "name": "ManualTranslationsUnavailableHeading",
+                    "caption": "Eigene Übersetzungstabelle",
+                    "visible": false
+                },
+                {
                     "type": "List",
                     "name": "ManualTranslations",
                     "caption": "Eigene Übersetzungstabelle",
@@ -628,6 +634,12 @@
                 {
                     "type": "Label",
                     "caption": "Eigenes Glossar, das jeder automatischen Übersetzung vorgezogen wird - über \"Hinzufügen\" eine Zeile anlegen, Quellsprache wählen, Quelltext eintragen und beliebig viele Zielsprachen-Zellen ausfüllen. Trifft der Quelltext einer Zeile hier exakt (zeichengenau) auf den Rohtext irgendeiner anderen Liste in dieser Instanz zu, wird für jede ausgefüllte Zielsprachen-Zelle diese Übersetzung verwendet statt eines Anbieter-Aufrufs - leere Zellen werden weiterhin normal automatisch übersetzt."
+                },
+                {
+                    "type": "Label",
+                    "name": "ManualTranslationsUnavailableHint",
+                    "caption": "Die eigene Übersetzungstabelle steht in dieser Edition nicht zur Verfügung.",
+                    "visible": false
                 }
             ]
         },
