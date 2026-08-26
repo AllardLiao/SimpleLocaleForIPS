@@ -4087,3 +4087,61 @@ der ursprünglichen Fassung übernommen.
   Platzhalter-Kette; fehlendes Ziel/gelöschtes Objekt brechen nicht ab;
   fehlgeschlagene Umbenennung wird ehrlich als übersprungen gezählt; gemischter
   Bestand; Symmetrie-Check der Verdrahtung).
+
+* **Build 150 (live gemeldet, per Debug-Dump nachgewiesen): ein einzelnes
+  `&nbsp;` konnte bis zu 127 völlig unbeteiligte Texte unübersetzt lassen.**
+  Gemeldetes Symptom: Nach einem Rescan blieben in "Eigene Texte" praktisch alle
+  Zielsprachen-Zellen leer - auch triviale wie "Bernd" oder "Wohnbereich".
+  Gefüllt waren nur Zahlen/Daten, die der lokale Filter ohne API bedient.
+  Gleichzeitig war kein Kontingent erschöpft, keine Pause aktiv, und die
+  Objektnamen-Tabelle übersetzte einwandfrei.
+  Der Dump zeigte die Ursache: MyMemory antwortet für manche Eingaben mit
+  **HTTP 200 und `"translatedText": null`** - live für `&nbsp;` aus einem
+  HTML-Widget. Das ist kein Anbieter-Fehler, sondern schlicht "dafür habe ich
+  nichts". Der Code machte daraus aber ein `null`, und `TranslateChunkFree()`
+  bricht bei einem `null` den **kompletten Chunk** ab. `TranslateChunk()` wertet
+  das als Anbieter-Fehlschlag, findet keinen weiteren Anbieter und füllt **alle**
+  Texte des Chunks mit Leerstrings. Da ein Chunk bis zu 128 Texte fasst, riss ein
+  einziges `&nbsp;` bis zu 127 unbeteiligte Texte mit - deren eigene Anfragen
+  waren im Dump nachweislich erfolgreich.
+  Exakt dieselbe Fehlerklasse wie beim zu langen Text, die dort bereits behoben
+  war (siehe `test_free_provider_oversized_text_no_longer_blocks_batch`) - dieser
+  Pfad wurde damals übersehen.
+  `TranslateSingleFree()` unterscheidet jetzt sauber: ein echter Fehlschlag
+  (Transport, Kontingent) liefert weiterhin `null`, damit die Anbieter-Kette auf
+  den nächsten Anbieter ausweichen kann; eine gültige Antwort ohne Übersetzung
+  liefert den **Originaltext** zurück. Bewusst nicht den Leerstring: bei
+  HTML-Knoten würde der den Knoten beim Zusammensetzen löschen (aus `&nbsp;`
+  würde nichts) und damit das Dokument beschädigen.
+  **Zwei Diagnose-Mängel, die die Fehlersuche aktiv in die Irre geführt hatten,
+  sind mitbehoben:**
+  - Die Anbieter-Prüfung testete fest verdrahtet `de → en` und rief die
+    Anbieter-Funktion direkt auf, also am Notaus-Schalter und an der
+    Pausen-Prüfung vorbei. Sie konnte damit "funktioniert" melden, während die
+    tatsächlich konfigurierte Sprachrichtung scheiterte. Geprüft wird jetzt die
+    echte Scan-Sprache gegen die erste abweichende Zielsprache, und der
+    Ergebnis-Dialog weist die geprüfte Richtung aus. Ist noch keine abweichende
+    Zielsprache konfiguriert, wird das als Ersatz-Paarung gekennzeichnet, mit
+    dem Hinweis, dass ein Erfolg dann nichts über die späteren Zielsprachen
+    aussagt.
+  - Ein Text über der 500-**Byte**-Grenze von MyMemory wurde wortlos
+    übersprungen: leere Zelle, kein Log-Eintrag. Jetzt mit Klartext-Meldung
+    inklusive tatsächlicher Bytezahl (Umlaute zählen doppelt, die sichtbare
+    Textlänge führt in die Irre), Kontext und Textanfang.
+  Außerdem aufgeräumt: die einmalige Zähler-Migration aus Build 132 wurde
+  entfernt. Sie war für jede künftige Installation strukturell unerreichbar (die
+  alten Attribute werden von keinem Codepfad mehr beschrieben, stehen also
+  dauerhaft auf 0, und die Migration sprang nur bei einem Wert ungleich 0 an) -
+  und ihr Lesevorgang lag ohnehin an der falschen Stelle: in `Create()` werden
+  Attribute erst **deklariert**, ein `ReadAttribute*` liefert dort nicht
+  zuverlässig den persistierten Wert. Das erklärt rückblickend den beim Testen
+  beobachteten Zähler-Reset. Die Lehre steht jetzt als Kommentar genau an der
+  Stelle, an der man sie wieder falsch machen würde: wertlesende Migrationen
+  gehören nach `ApplyChanges()`.
+  Neuer Regressionstest (ein einzelnes `&nbsp;` reißt die übrigen Texte nicht
+  mehr mit; der untranslatierbare Knoten bleibt unverändert erhalten statt
+  geleert zu werden; ein echter Fehlschlag liefert weiterhin `null`, damit die
+  Kette greift; alle 128 Texte eines Durchlaufs überleben einen einzelnen
+  untranslatierbaren; mehrere gleichzeitig sind ebenso unschädlich;
+  Symmetrie-Check der Unterscheidung). Bestehende Tests um die Log-Pflicht bei
+  der Byte-Grenze erweitert.

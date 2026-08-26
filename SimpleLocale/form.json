@@ -959,6 +959,21 @@
                 "items": [
                     {
                         "type": "RowLayout",
+                        "items": [
+                            {"type": "Label", "caption": "Geprüfte Sprachrichtung:"},
+                            {"type": "Label", "name": "ProviderCheckPairLabel", "caption": ""}
+                        ]
+                    },
+                    {
+                        "type": "RowLayout",
+                        "name": "ProviderCheckFallbackPairRow",
+                        "visible": false,
+                        "items": [
+                            {"type": "Label", "caption": "Hinweis: Es ist noch keine von der Scan-Sprache abweichende Zielsprache konfiguriert - geprüft wurde deshalb eine Ersatz-Sprachrichtung. Ein Erfolg hier sagt nichts über deine späteren Zielsprachen aus."}
+                        ]
+                    },
+                    {
+                        "type": "RowLayout",
                         "name": "ProviderCheckGoogleRow",
                         "visible": false,
                         "items": [

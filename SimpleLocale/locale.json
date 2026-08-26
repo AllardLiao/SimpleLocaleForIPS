@@ -202,7 +202,9 @@
             "Erledigt,": "Done,",
             "Verknüpfung(en) wurden automatisch benannt.": "link(s) were named automatically.",
             "Objekt(e) konnten nicht automatisch benannt werden (keine Verknüpfung, Ziel fehlt oder selbst unbenannt) - diese bitte weiterhin von Hand benennen.": "object(s) could not be named automatically (not a link, target missing, or target itself unnamed) - please keep naming those by hand.",
-            "Bitte führe anschließend einen Rescan durch.": "Please run a rescan afterwards."
+            "Bitte führe anschließend einen Rescan durch.": "Please run a rescan afterwards.",
+            "Geprüfte Sprachrichtung:": "Language direction tested:",
+            "Hinweis: Es ist noch keine von der Scan-Sprache abweichende Zielsprache konfiguriert - geprüft wurde deshalb eine Ersatz-Sprachrichtung. Ein Erfolg hier sagt nichts über deine späteren Zielsprachen aus.": "Note: no target language differing from the scan language is configured yet, so a substitute language direction was tested. A success here says nothing about your later target languages."
         },
         "es": {
             "Aktiv": "Activo",
@@ -406,7 +408,9 @@
             "Erledigt,": "Listo,",
             "Verknüpfung(en) wurden automatisch benannt.": "enlace(s) se nombraron automáticamente.",
             "Objekt(e) konnten nicht automatisch benannt werden (keine Verknüpfung, Ziel fehlt oder selbst unbenannt) - diese bitte weiterhin von Hand benennen.": "objeto(s) no pudieron nombrarse automáticamente (no es un enlace, falta el destino o el destino no tiene nombre): nómbralos manualmente.",
-            "Bitte führe anschließend einen Rescan durch.": "Ejecuta después un nuevo escaneo."
+            "Bitte führe anschließend einen Rescan durch.": "Ejecuta después un nuevo escaneo.",
+            "Geprüfte Sprachrichtung:": "Dirección de idioma comprobada:",
+            "Hinweis: Es ist noch keine von der Scan-Sprache abweichende Zielsprache konfiguriert - geprüft wurde deshalb eine Ersatz-Sprachrichtung. Ein Erfolg hier sagt nichts über deine späteren Zielsprachen aus.": "Nota: aún no hay configurado ningún idioma de destino distinto del idioma de escaneo, por lo que se comprobó una dirección de idioma sustituta. Un éxito aquí no dice nada sobre tus futuros idiomas de destino."
         },
         "it": {
             "Aktiv": "Attivo",
@@ -610,7 +614,9 @@
             "Erledigt,": "Fatto,",
             "Verknüpfung(en) wurden automatisch benannt.": "collegamento/i sono stati nominati automaticamente.",
             "Objekt(e) konnten nicht automatisch benannt werden (keine Verknüpfung, Ziel fehlt oder selbst unbenannt) - diese bitte weiterhin von Hand benennen.": "oggetto/i non hanno potuto essere nominati automaticamente (non è un collegamento, destinazione mancante o essa stessa senza nome): nominali manualmente.",
-            "Bitte führe anschließend einen Rescan durch.": "Esegui successivamente una nuova scansione."
+            "Bitte führe anschließend einen Rescan durch.": "Esegui successivamente una nuova scansione.",
+            "Geprüfte Sprachrichtung:": "Direzione linguistica verificata:",
+            "Hinweis: Es ist noch keine von der Scan-Sprache abweichende Zielsprache konfiguriert - geprüft wurde deshalb eine Ersatz-Sprachrichtung. Ein Erfolg hier sagt nichts über deine späteren Zielsprachen aus.": "Nota: non è ancora configurata alcuna lingua di destinazione diversa dalla lingua di scansione, quindi è stata verificata una direzione linguistica sostitutiva. Un esito positivo qui non dice nulla sulle tue future lingue di destinazione."
         },
         "fr": {
             "Aktiv": "Actif",
@@ -814,7 +820,9 @@
             "Erledigt,": "Terminé,",
             "Verknüpfung(en) wurden automatisch benannt.": "lien(s) ont été nommés automatiquement.",
             "Objekt(e) konnten nicht automatisch benannt werden (keine Verknüpfung, Ziel fehlt oder selbst unbenannt) - diese bitte weiterhin von Hand benennen.": "objet(s) n'ont pas pu être nommés automatiquement (pas un lien, cible manquante ou cible elle-même sans nom) - merci de les nommer à la main.",
-            "Bitte führe anschließend einen Rescan durch.": "Merci de lancer ensuite une nouvelle analyse."
+            "Bitte führe anschließend einen Rescan durch.": "Merci de lancer ensuite une nouvelle analyse.",
+            "Geprüfte Sprachrichtung:": "Direction linguistique testée :",
+            "Hinweis: Es ist noch keine von der Scan-Sprache abweichende Zielsprache konfiguriert - geprüft wurde deshalb eine Ersatz-Sprachrichtung. Ein Erfolg hier sagt nichts über deine späteren Zielsprachen aus.": "Remarque : aucune langue cible différente de la langue d'analyse n'est encore configurée ; une direction linguistique de substitution a donc été testée. Un succès ici ne dit rien de vos futures langues cibles."
         }
     }
 }
