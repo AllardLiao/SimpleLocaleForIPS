@@ -4245,3 +4245,44 @@ der ursprünglichen Fassung übernommen.
   Durchlauf; die Zahl sinkt von Lauf zu Lauf und verschwindet am Ende;
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
+
+* **Build 153 (live gemeldet, per `dump22` nachgewiesen): zwei Regressionen aus
+  Build 151 behoben - Weiterfragen trotz erschöpftem Kontingent, und eine
+  Anbieter-Sperre, die sich selbst sofort wieder aufhob.**
+  Der Nutzer fuhr bewusst gegen MyMemorys Tageslimit, um das Verhalten zu sehen,
+  und meldete zwei Auffälligkeiten. Beide gehen auf denselben Umbau zurück: Seit
+  Build 151 kann ein Anbieter **teilweise** liefern - und an dieser neuen
+  Möglichkeit hingen zwei Stellen, die ich damals nicht mitgedacht hatte.
+  - **Weiterfragen nach dem Rate-Limit.** Bis Build 151 stoppte der erste
+    Fehlschlag den Durchlauf (mit dem Nebeneffekt, alle Teilerfolge zu
+    verwerfen - deshalb der Umbau). Seitdem lief die Schleife stur weiter:
+    laut Dump 90 Texte erfolgreich, dann HTTP 429 mit
+    "YOU USED ALL AVAILABLE FREE TRANSLATIONS FOR TODAY" - und danach **35
+    weitere, völlig aussichtslose Aufrufe**, die nur Zeit kosteten und einen
+    ohnehin überlasteten Fremdserver zusätzlich belasteten.
+    `TranslateChunkFree()` prüft jetzt vor jedem Aufruf, ob der Anbieter
+    inzwischen gesperrt wurde. Die restlichen Texte bleiben offen und werden
+    beim nächsten Rescan erneut versucht - genau wie ein einzelner Fehlschlag.
+  - **Die Sperre hob sich selbst auf.** MyMemorys 429 enthält das Wort "TODAY",
+    die Erkennung greift also korrekt und setzt die volle Tagessperre mit exakt
+    geparstem Reset (im Dump: 7 h 15 min). Unmittelbar danach lief aber
+    `ClearProviderPause()` - denn ein Teilerfolg galt als Anbieter-Erfolg. Die
+    gerade gesetzte Sperre war damit sofort wieder weg. Folgen: Die Statuszeile
+    blieb fälschlich auf "Aktiv" statt "pausiert" (genau die Beobachtung des
+    Nutzers), und der nächste Chunk rannte ungebremst in dieselbe Wand.
+    Die Sperre wird jetzt nur noch bei **vollständiger** Lieferung aufgehoben -
+    ein unvollständiger Lauf ist kein Gesundheitsnachweis. Ein vollständig
+    gelieferter Lauf hebt sie weiterhin auf, damit ein längst wieder gesunder
+    Anbieter nicht unnötig gesperrt bleibt.
+  **Drittens gemeldet: erneutes Abfragen bereits übersetzter Texte** - das war
+  kein neuer Fehler, sondern die Nachwirkung des in Build 151 behobenen. Der
+  betreffende Lauf im Dump lief noch auf dem alten Stand: Der HTTP 504 verwarf
+  dort alle 21 Erfolge, und da `TranslateBatchUncached()` nur nicht-leere
+  Ergebnisse cacht, landete auch **nichts im Cache**. Der spätere Lauf musste
+  sie deshalb neu holen. Seit Build 151 werden Teilerfolge gespeichert *und*
+  gecacht; im aktuellen Lauf des Dumps sind die 90 Erfolge nachweislich beides.
+  Neuer Regressionstest (nach dem Rate-Limit wird kein weiterer Aufruf mehr
+  abgesetzt; die Erfolge davor bleiben trotzdem erhalten; ein unvollständiger
+  Lauf hebt die Sperre nicht auf; ein vollständiger sehr wohl; schlägt schon der
+  erste Text fehl, kommt genau ein Aufruf und danach `null` für den
+  Kettenwechsel; Symmetrie-Checks für Prüf-Reihenfolge und Aufhebe-Bedingung).

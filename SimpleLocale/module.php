@@ -8171,7 +8171,21 @@ private const LANGUAGE_FLAGS = [
             // Echter API-Erfolg (kein Cache-Treffer - der laeuft nie ueber
             // TranslateChunk, siehe TranslateBatch) - Eskalations-Kette dieses
             // Anbieters zuruecksetzen, siehe ClearProviderPause.
-            $this->ClearProviderPause($provider);
+            //
+            // Build 153 (live gemeldet, dump22): NUR bei VOLLSTAENDIGER
+            // Lieferung. Seit Build 151 kann ein Anbieter teilweise liefern -
+            // und ein Teilerfolg loeschte hier die Sperre, die derselbe
+            // Durchlauf gerade eben wegen eines Rate-Limits gesetzt hatte
+            // (gemeldet: 90 von 126 Texten geliefert, dann HTTP 429 mit
+            // 7h-Sperre - die sofort wieder verschwand). Folgen: die
+            // Statuszeile blieb faelschlich auf "Aktiv" statt "pausiert", und
+            // der naechste Chunk rannte ungebremst in dieselbe Wand.
+            //
+            // Ein unvollstaendiger Lauf ist kein Gesundheitsnachweis - die
+            // Sperre bleibt dann stehen und laeuft regulaer ab.
+            if (!in_array('', $result, true)) {
+                $this->ClearProviderPause($provider);
+            }
 
             foreach ($pendingIndexes as $position => $originalIndex) {
                 $value = $result[$position] ?? '';
@@ -8403,6 +8417,27 @@ private const LANGUAGE_FLAGS = [
         $failedCount = 0;
 
         foreach ($Texts as $text) {
+            // Build 153 (live gemeldet, dump22): Sobald der Anbieter waehrend
+            // DIESES Durchlaufs pausiert wurde (z.B. HTTP 429 "YOU USED ALL
+            // AVAILABLE FREE TRANSLATIONS FOR TODAY"), hat jeder weitere Aufruf
+            // garantiert dasselbe Ergebnis - er kostet nur Zeit und belastet
+            // einen ohnehin ueberlasteten Fremdserver zusaetzlich.
+            //
+            // Bis Build 151 stoppte der erste Fehlschlag den Durchlauf ohnehin
+            // (mit dem Nebeneffekt, alle Teilerfolge zu verwerfen - deshalb der
+            // Umbau). Seitdem lief die Schleife stur weiter: im gemeldeten Fall
+            // 35 voellig aussichtslose Aufrufe nach dem ersten 429.
+            //
+            // Die restlichen Texte bleiben offen (Leerstring) und werden beim
+            // naechsten Rescan erneut versucht - genau wie ein einzelner
+            // Fehlschlag.
+            if ($this->IsProviderPaused('free')) {
+                $results[] = '';
+                $failedCount++;
+                $this->RecordTranslationFailure('unreachable');
+                continue;
+            }
+
             $translated = $this->TranslateSingleFree($text, $Source, $Target, $DebugContext);
             if ($translated === null) {
                 // Anbieter nicht erreichbar / Fehler - ein erneuter Versuch
