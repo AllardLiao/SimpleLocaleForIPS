@@ -4294,6 +4294,30 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 161 (Nutzer-Wunsch): das Anbieter-Panel beschrieb ohne das Feature
+  `paid_providers` eine Funktion, die es in dieser Edition nicht gibt.**
+  "Sind beide eingetragen, wird zuerst der bevorzugte versucht" gilt nur bei
+  voller Verkettung. Ohne das Feature bleibt der kostenfreie Anbieter primär und
+  höchstens **ein** bezahlter greift als Rückfall dahinter (siehe
+  `GetProviderChain()`). Einleitungstext und die Beschriftung des Auswahlfelds
+  bekommen für solche Editionen jetzt eine eigene Formulierung samt Hinweis, ab
+  welcher Edition die Verkettung greift.
+
+  Der Hinweis nennt bewusst die **Standard** Edition, nicht Pro:
+  `paid_providers` ist ab Standard enthalten.
+
+  Das Auswahlfeld bleibt **bedienbar** - der ursprüngliche Wunsch war, es
+  auszugrauen, aber es ist dort weiterhin wirksam: es entscheidet, welcher der
+  beiden eingetragenen Schlüssel dieser eine Rückfall ist. Ausgrauen hätte echte
+  Funktion weggenommen; falsch war nur die Beschriftung.
+
+  Regressionstest `test_provider_texts_without_paid_chain.php` (6 Fälle: die
+  Wirksamkeit des Felds ohne Feature in beide Richtungen; ein einzelner
+  Schlüssel gewinnt unabhängig von der Präferenz; die volle Verkettung mit
+  Feature; beide Texte hängen am Feature und nichts wird deaktiviert; das
+  Einleitungs-Label trägt einen Namen - ohne den liefe der Fall ins Leere; beide
+  Ersatztexte in allen vier Sprachen registriert).
+
 * **Build 160 (Nutzer-Wunsch): ohne das Feature `manual_translations`
   verschwindet die "Eigene Übersetzungstabelle" jetzt ganz.**
   Bis Build 159 stand sie auch ohne das Feature im Formular: leer, nicht
