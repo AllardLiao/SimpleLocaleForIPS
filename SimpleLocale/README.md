@@ -4199,3 +4199,49 @@ der ursprünglichen Fassung übernommen.
   nach; bereits Übersetztes wird nicht überschrieben; durchgehend
   fehlgeschlagene Texte bleiben leer für den nächsten Rescan; Symmetrie-Checks
   inklusive des `array_filter()`-Fallstricks).
+
+* **Build 152 (Nutzer-Frage: "Wie bekommt der User vom Ausfall eines Anbieters
+  mit? Wenn es keine Information darüber gibt, könnte er denken, dass unsere App
+  nicht richtig funktioniert."): Ausfälle sind jetzt im Formular sichtbar - mit
+  konkreter Handlungsanweisung.**
+  Berechtigter Einwand, und Build 151 hatte das Problem sogar **verschärft**:
+  Vorher scheiterte bei einem Anbieterfehler der ganze Durchlauf und setzte
+  wenigstens einen Fehlerstatus. Seit Build 151 bleiben Teilerfolge erhalten
+  (richtig so), der Lauf gilt damit als gelungen - und der Ausfall wurde
+  unsichtbar. Der Nutzer sah nur leere Zellen und musste annehmen, das Modul
+  funktioniere nicht.
+  Ein neues Attribut hält die Bilanz des **letzten** Durchlaufs (wird zu dessen
+  Beginn zurückgesetzt) und speist zwei Hinweiszeilen direkt unter dem
+  Rescan-Button, jeweils nur sichtbar, wenn die zugehörige Zahl > 0 ist.
+  **Bewusst zwei getrennte Zähler**, weil sie zu gegensätzlichen Ratschlägen
+  führen:
+  - *Anbieter nicht erreichbar* (jeder HTTP >= 400, cURL-Fehler, Timeout - also
+    nicht nur der beobachtete 504, sondern auch 500/502/503, DNS-Ausfälle,
+    Verbindungsabbrüche): ein erneuter Scan kann helfen, also wird
+    **ausdrücklich dazu aufgefordert** ("Bitte führe einen erneuten Scan durch -
+    ggf. nach ein paar Minuten Wartezeit"). Eine Formulierung wie "wird
+    nachgeholt" wäre missverständlich - sie klänge, als geschähe das von selbst.
+  - *Zu lang für den kostenfreien Anbieter* (500-Byte-Grenze): ein erneuter Scan
+    ändert daran **nichts**, die Grenze bleibt exakt dieselbe. Hier lautet der
+    Rat stattdessen, einen Google- oder DeepL-Schlüssel zu hinterlegen. Wären
+    beide Ursachen zusammengeworfen, bekäme jemand mit zu langen Texten die
+    Aufforderung zum erneuten Scan - und der zweite Lauf endete exakt gleich.
+  **Statuszeile und Kachel bleiben bewusst unberührt** (Nutzer-Vorgabe): Das
+  Modul selbst ist in Ordnung, ein vorübergehend überlasteter Fremdserver ist
+  kein Instanzfehler; und der Gast kann daran ohnehin nichts ändern. Beides ist
+  per Test festgenagelt, damit es nicht später "hilfreich" ergänzt wird.
+  Da Teilerfolge seit Build 151 erhalten bleiben, **sinkt die Zahl von Lauf zu
+  Lauf** - der Nutzer sieht unmittelbar Fortschritt statt immer derselben
+  Meldung, und am Ende verschwindet der Hinweis von allein.
+  **Fehler aus Build 151 dabei mitkorrigiert:** Ein Text über der Byte-Grenze
+  liefert einen Leerstring, nicht `null` - der wurde dort fälschlich als Erfolg
+  gewertet. Ein Chunk aus lauter zu langen Texten hätte damit "Anbieter hat
+  funktioniert" gemeldet, und die Kette hätte Google/DeepL **nicht mehr
+  gefragt** - obwohl genau die diese Grenze nicht kennen. Jetzt zählt nur ein
+  nicht-leeres Ergebnis als Erfolg.
+  Neuer Regressionstest (Ausfall wird sichtbar, mit Anzahl; ein sauberer Lauf
+  zeigt nichts; beide Ursachen werden getrennt gezählt und gemeldet; zu lange
+  Texte fordern nicht zum sinnlosen erneuten Scan auf; die Bilanz gilt je
+  Durchlauf; die Zahl sinkt von Lauf zu Lauf und verschwindet am Ende;
+  Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
+  Kachel).

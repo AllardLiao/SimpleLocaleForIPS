@@ -383,6 +383,7 @@ private const LANGUAGE_FLAGS = [
         $this->RegisterAttributeString(self::attributeGuestLanguageNamesCache, '{}');
         $this->RegisterAttributeString(self::attributeTranslationCache, '{}');
         $this->RegisterAttributeString(self::attributeSeededManualTranslationKeys, '{}');
+        $this->RegisterAttributeString(self::attributeLastRunTranslationFailures, '{}');
         $this->RegisterAttributeString(self::attributeUnnamedObjects, '[]');
         $this->RegisterAttributeInteger(self::attributeLastCleanupRemovedCount, -1);
         $this->RegisterAttributeString(self::attributeLicenseInfo, '{}');
@@ -1210,6 +1211,28 @@ private const LANGUAGE_FLAGS = [
 
                 case self::propertyTileTemplateId:
                     $element['options'] = $this->BuildCatalogOptions(self::TILE_TEMPLATE_CATALOG, self::TILE_TEMPLATE_DEFAULT_ID);
+                    break;
+
+                // Build 152 (Nutzer-Frage: "Wie bekommt der User vom Ausfall
+                // eines Anbieters mit?"): Bilanz des letzten Rescans sichtbar
+                // machen. Bewusst NUR im Formular und NICHT in der Statuszeile -
+                // das Modul selbst ist in Ordnung, ein voruebergehend
+                // ueberlasteter Fremdserver ist kein Instanzfehler. Und bewusst
+                // nicht in der Kachel: der Gast kann daran nichts aendern.
+                case 'TranslationFailureUnreachableRow':
+                    $element['visible'] = ($this->GetTranslationFailureReport()['unreachable'] ?? 0) > 0;
+                    break;
+
+                case 'TranslationFailureUnreachableCountLabel':
+                    $element['caption'] = (string) ($this->GetTranslationFailureReport()['unreachable'] ?? 0);
+                    break;
+
+                case 'TranslationFailureTooLongRow':
+                    $element['visible'] = ($this->GetTranslationFailureReport()['tooLong'] ?? 0) > 0;
+                    break;
+
+                case 'TranslationFailureTooLongCountLabel':
+                    $element['caption'] = (string) ($this->GetTranslationFailureReport()['tooLong'] ?? 0);
                     break;
 
                 case 'UnnamedObjectsLabel':
@@ -4684,6 +4707,10 @@ private const LANGUAGE_FLAGS = [
         // Kommentare) - der Konsolen-Client uebersetzt diese feste, in locale.json
         // hinterlegte Zeichenkette selbst anhand der individuellen Konsolensprache
         // JEDES Betrachters, nicht nur der (instanzweiten) Symcon-Systemsprache.
+        // Build 152: Bilanz des VORIGEN Laufs verwerfen - der Hinweis im
+        // Formular soll immer den aktuellen Durchlauf widerspiegeln.
+        $this->ResetTranslationFailureReport();
+
         $this->SetRescanProgress('Baum wird eingelesen…');
 
         $scannedNames = [];
@@ -5014,6 +5041,33 @@ private const LANGUAGE_FLAGS = [
         $this->UpdateFormField('LinksNamedRemainingRow', 'visible', $skipped > 0);
         $this->UpdateFormField('LinksNamedRemainingCountLabel', 'caption', (string) $skipped);
         $this->UpdateFormField('LinksNamedPopup', 'visible', true);
+    }
+
+    // Build 152: Bilanz nicht uebersetzter Texte des letzten Durchlaufs - siehe
+    // attributeLastRunTranslationFailures fuer den Grund.
+    private function ResetTranslationFailureReport(): void
+    {
+        $this->WriteAttributeString(self::attributeLastRunTranslationFailures, '{}');
+    }
+
+    private function RecordTranslationFailure(string $Kind, int $Count = 1): void
+    {
+        if ($Count < 1) {
+            return;
+        }
+
+        $report = $this->GetTranslationFailureReport();
+        $report[$Kind] = ($report[$Kind] ?? 0) + $Count;
+        $report['at'] = time();
+
+        $this->WriteAttributeString(self::attributeLastRunTranslationFailures, json_encode($report));
+    }
+
+    private function GetTranslationFailureReport(): array
+    {
+        $report = json_decode($this->ReadAttributeString(self::attributeLastRunTranslationFailures), true);
+
+        return is_array($report) ? $report : [];
     }
 
     private function GetPendingUnnamedObjects(): array
@@ -8168,6 +8222,12 @@ private const LANGUAGE_FLAGS = [
             mb_substr((string) ($Texts[0] ?? ''), 0, 120, 'UTF-8')
         ), true);
 
+        // Build 152: auch der Totalausfall geht in die Bilanz fuers Formular -
+        // hier zaehlt der GESAMTE Chunk als nicht uebersetzt. Deckt zusaetzlich
+        // Google/DeepL ab, die (anders als MyMemory) pro Chunk nur ganz oder gar
+        // nicht liefern und deshalb keine Einzelzaehlung kennen.
+        $this->RecordTranslationFailure('unreachable', count($Texts));
+
         // Erneut PRÜFEN statt blind STATUS_TRANSLATE_ERROR zu setzen: der obige
         // Schleifendurchlauf kann selbst gerade erst den LETZTEN noch fehlenden
         // Anbieter pausiert haben (siehe RecordProviderPaused in
@@ -8345,12 +8405,26 @@ private const LANGUAGE_FLAGS = [
         foreach ($Texts as $text) {
             $translated = $this->TranslateSingleFree($text, $Source, $Target, $DebugContext);
             if ($translated === null) {
+                // Anbieter nicht erreichbar / Fehler - ein erneuter Versuch
+                // spaeter kann klappen.
                 $results[] = '';
                 $failedCount++;
+                $this->RecordTranslationFailure('unreachable');
                 continue;
             }
             $results[] = $translated;
-            $anySucceeded = true;
+
+            // Build 152: NUR ein nicht-leeres Ergebnis zaehlt als Erfolg. Ein
+            // Leerstring kommt von der 500-Byte-Grenze (siehe
+            // TranslateSingleFree) - dort hat der Anbieter gar nichts geliefert.
+            // Wuerde das als Erfolg gelten, meldete ein Chunk aus lauter zu
+            // langen Texten "Anbieter hat funktioniert", und die Kette wuerde
+            // Google/DeepL NICHT mehr fragen - obwohl genau die diese Grenze
+            // nicht kennen und den Text uebersetzen koennten. (Fehler aus
+            // Build 151, hier korrigiert.)
+            if ($translated !== '') {
+                $anySucceeded = true;
+            }
         }
 
         if (!$anySucceeded) {
@@ -8427,6 +8501,8 @@ private const LANGUAGE_FLAGS = [
                 $DebugContext !== '' ? $DebugContext : '(kein Kontext)',
                 mb_substr($Text, 0, 80, 'UTF-8')
             ));
+
+            $this->RecordTranslationFailure('tooLong');
 
             return '';
         }

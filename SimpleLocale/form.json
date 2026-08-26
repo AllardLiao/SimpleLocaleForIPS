@@ -865,6 +865,26 @@
         },
         {
             "type": "RowLayout",
+            "name": "TranslationFailureUnreachableRow",
+            "visible": false,
+            "items": [
+                {"type": "Label", "caption": "⚠"},
+                {"type": "Label", "name": "TranslationFailureUnreachableCountLabel", "caption": ""},
+                {"type": "Label", "caption": "Text(e) konnten beim letzten Durchlauf nicht übersetzt werden, weil der Übersetzungsanbieter vorübergehend nicht erreichbar war. Bereits übersetzte Inhalte sind gespeichert. Bitte führe einen erneuten Scan durch - ggf. nach ein paar Minuten Wartezeit."}
+            ]
+        },
+        {
+            "type": "RowLayout",
+            "name": "TranslationFailureTooLongRow",
+            "visible": false,
+            "items": [
+                {"type": "Label", "caption": "⚠"},
+                {"type": "Label", "name": "TranslationFailureTooLongCountLabel", "caption": ""},
+                {"type": "Label", "caption": "Text(e) sind für den kostenfreien Anbieter zu lang (Grenze: 500 Byte, Umlaute zählen doppelt). Ein erneuter Scan ändert daran nichts - diese Texte lassen sich nur mit einem Google- oder DeepL-Schlüssel übersetzen."}
+            ]
+        },
+        {
+            "type": "RowLayout",
             "items": [
                 {
                     "type": "Button",
