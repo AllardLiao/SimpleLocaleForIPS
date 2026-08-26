@@ -435,29 +435,19 @@ private const LANGUAGE_FLAGS = [
         // ApplyChanges().
         $this->SetVisualizationType(1);
 
-        // Einmalige Bereinigung: die frühere HTMLBox-Dropdown-Variable sowie die
-        // frühere "Sprache"-Variable (inkl. globalem Profil) existieren bei bereits
-        // eingerichteten Installationen noch, werden aber nicht mehr benötigt.
-        foreach ([self::identLanguageDropdown, self::identLanguage] as $staleIdent) {
-            $staleID = @IPS_GetObjectIDByIdent($staleIdent, $this->InstanceID);
-            if ($staleID !== false) {
-                IPS_DeleteVariable($staleID);
-            }
-        }
-
-        // Build 116 (Nutzer-Wunsch): der Build-98-Verzögerungstimer für den
-        // "Aufräumen"-Formular-Reload wird nicht mehr gebraucht (siehe
-        // CleanupOrphanedRows) - Symcons Konsole lädt das Konfigurationsformular
-        // nach JEDEM RequestAction ohnehin bereits selbst automatisch neu (live
-        // bestätigt: sowohl "Aufräumen" als auch "Rescan" luden bislang sichtbar
-        // ZWEIMAL neu - einmal automatisch von der Konsole, einmal zusätzlich
-        // durch das Modul selbst). Bereits eingerichtete Instanzen behalten das
-        // per RegisterTimer angelegte Event-Objekt sonst dauerhaft als
-        // toten Ballast im Objektbaum - einmalige Bereinigung wie oben.
-        $staleTimerID = @IPS_GetObjectIDByIdent(self::timerPrefix . $this->InstanceID . self::timerIdentCleanupReload, $this->InstanceID);
-        if ($staleTimerID !== false) {
-            IPS_DeleteEvent($staleTimerID);
-        }
+        // Build 167: hier standen zwei einmalige Bereinigungen fuer bereits
+        // eingerichtete Installationen - das Loeschen der frueheren
+        // HTMLBox-Dropdown-/"Sprache"-Variable und des toten Build-98-
+        // Verzoegerungstimers. Beide waren Existenz-Pruefungen, die auf einer
+        // frischen Instanz garantiert nie zutrafen. Da das Modul bis heute
+        // unveroeffentlicht ist, gibt es ausser der Entwicklungsinstanz (dort
+        // laengst bereinigt) keine Installation mit solchen Altobjekten - siehe
+        // dieselbe Begruendung bei attributeStatsRequestCount (Build 149).
+        //
+        // Zur Abgrenzung: BackfillRowSourceLanguage()/BackfillTranslationActiveFlag()
+        // und der sourceChangedAt-Zweig in IsRowLanguageTranslationCurrent() SEHEN
+        // aus wie Migrationen, sind es aber nicht - sie tragen ebenso frisch
+        // gescannte und von Hand angelegte Zeilen und bleiben deshalb.
 
         // IPSSL_AutoRescan(), NICHT IPSSL_Rescan() - siehe Kommentar dort (kein
         // ReloadForm(), damit ein offenes Konfigurationsformular während der

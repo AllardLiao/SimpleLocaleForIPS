@@ -530,7 +530,6 @@ trait SimpleLocaleConstants
     // Nur noch fuer die einmalige Bereinigung alter Installationen (siehe Create()) -
     // die Sprachauswahl ist jetzt eine echte Modul-Kachel (GetVisualizationTile),
     // keine HTMLBox-Variable mehr.
-    private const identLanguageDropdown = 'LanguageDropdown';
     private const identRescan = 'Rescan';
     private const identShowApiKeyWarning = 'ShowApiKeyWarning';
     private const identActivateLicense = 'ActivateLicense';
@@ -643,7 +642,6 @@ trait SimpleLocaleConstants
     private const timerIdentAutoRescan = 'AutoRescan';
     private const timerIdentTranslationStats = 'TranslationStats';
     private const timerIdentPendingRowUpdateFlush = 'PendingRowUpdateFlush';
-    private const timerIdentCleanupReload = 'CleanupReload';
     private const timerIdentLicenseCheck = 'LicenseCheck';
 
     // Intervall der taeglichen Lizenz-Statuspruefung (siehe CheckLicenseStatus) -
