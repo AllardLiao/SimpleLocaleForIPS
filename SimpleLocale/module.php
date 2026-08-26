@@ -4839,10 +4839,23 @@ private const LANGUAGE_FLAGS = [
         foreach ($this->GetTranslatableFieldGroupsByProperty() as $property => $fieldGroups) {
             foreach ($this->DecodeRows($property) as $row) {
                 $rowSourceLanguage = $this->GetRowSourceLanguage($row, $sourceLanguage);
+                // Build 166 (live gemeldet): GetEffectiveSelectedLanguage() MUSS auch
+                // hier greifen, exakt wie an jeder Schreibstelle. Bis Build 165 loeste
+                // der Fingerabdruck mit $CurrentLanguage auf und ignorierte damit die
+                // Checkbox "Uebersetzung aktiv" - ein Umschalten im Formular aenderte
+                // den Fingerabdruck also nicht, ApplyLanguage() lief nicht an, und die
+                // Visualisierung zeigte weiter den alten Stand. Gespeichert war die
+                // Aenderung, sichtbar wurde sie erst beim naechsten Sprachwechsel oder
+                // Rescan. Betraf ALLE Zeilen-Tabellen, gemeldet an Begruessung und
+                // Charts.
+                //
+                // Der Fingerabdruck muss abbilden, was tatsaechlich geschrieben WUERDE -
+                // weicht er davon ab, entscheidet er falsch.
+                $effectiveLanguage = $this->GetEffectiveSelectedLanguage($row, $CurrentLanguage);
                 foreach ($fieldGroups as $group) {
                     $parts[] = $this->ResolveRowValue(
                         $row,
-                        $CurrentLanguage,
+                        $effectiveLanguage,
                         $group['prefix'] . $CurrentLanguage,
                         $rowSourceLanguage,
                         $group['raw']

@@ -4294,6 +4294,32 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 166 (live gemeldet): ein Umschalten der Checkbox "Übersetzung aktiv"
+  wurde gespeichert, aber nicht in die Visualisierung durchgereicht.**
+  Gemeldet an Begrüßung und Charts, mit der Vermutung "vermutlich aber überall" -
+  die stimmte, es betraf alle Zeilen-Tabellen.
+
+  `ApplyChanges()` entscheidet über `ComputeActiveLanguageContentFingerprint()`,
+  ob `ApplyLanguage()` anlaufen muss: ändert sich der für die aktive Sprache
+  aufgelöste Inhalt irgendeiner Zeile, wird geschrieben (Build 104). Der
+  Fingerabdruck löste aber mit `$CurrentLanguage` auf, während **jede**
+  Schreibstelle `GetEffectiveSelectedLanguage()` verwendet und damit die Checkbox
+  berücksichtigt. Ein Umschalten änderte den Fingerabdruck also nicht - die
+  Änderung war gespeichert, wurde aber erst beim nächsten Sprachwechsel oder
+  Rescan sichtbar.
+
+  Der Fingerabdruck muss abbilden, was tatsächlich geschrieben **würde**; weicht
+  er davon ab, entscheidet er falsch. Das Sprachspalten-Feld bleibt dabei bewusst
+  an der aktiven Sprache, nur die Auswahl folgt dem Flag - genau wie an den
+  Schreibstellen.
+
+  Regressionstest `test_translation_active_takes_effect.php` (6 Fälle: der
+  gemeldete Fall mit identischem Fingerabdruck; der Fix; der Fingerabdruck bildet
+  ab, was geschrieben würde; kein Fehlalarm ohne Änderung - `ApplyChanges()` läuft
+  auch re-entrant bei jedem `VM_UPDATE`; bei aktiver Basissprache ist die Checkbox
+  wirkungslos und der Fingerabdruck bleibt gleich; Symmetrie-Check). Der Zähler in
+  `test_translation_active_flag.php` steht damit bei **acht** Auswertungsstellen.
+
 * **Build 165 (live gemeldet): eine geänderte Begrüßung wurde nicht übernommen
   und beim nächsten Sprachwechsel wieder überschrieben.**
   Im Modus "Name" steckt die Begrüßung in der Property `GreetingName` der
