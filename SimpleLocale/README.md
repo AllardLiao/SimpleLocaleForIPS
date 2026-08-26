@@ -4294,6 +4294,27 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 155 (live gemeldet): das Ergebnis-Popup von "Aufräumen" ging nach dem
+  automatischen Neuladen des Formulars ein zweites Mal auf - diesmal ohne Zahl.**
+  `PopulateFormElements()` stieg nur in `$element['items']` ab. Die Inhalte
+  eines `PopupAlert` liegen aber eine Ebene tiefer, in
+  `$element['popup']['items']`, und wurden deshalb nie befüllt. Das Popup selbst
+  ist ein Element oberster Ebene und wurde korrekt sichtbar gesetzt - daher
+  "Popup ja, Zahl nein". Dass das ERSTE Popup die Zahl noch zeigte, liegt an
+  `UpdateFormField()`: das adressiert ein Feld über seinen Namen und erreicht es
+  unabhängig von der Verschachtelung.
+
+  Geprüft, bevor die Rekursion erweitert wurde: von den 24 Feldern unterhalb
+  eines `popup`-Knotens hat genau eines (`CleanupResultCountLabel`) überhaupt
+  einen Zweig in `PopulateFormElements()` - der Eingriff ändert also an keinem
+  anderen Popup etwas.
+
+  Regressionstest `test_popup_items_populated.php` (6 Fälle: der gemeldete Fall
+  mit der lückenhaften Rekursion; der Fix; kein Popup ohne vorangegangenes
+  Aufräumen; ein Ergebnis von 0 erscheint als "0" statt als Leerfeld; beliebig
+  tief verschachtelte Popup-Inhalte; Symmetrie-Check inklusive des Nachweises,
+  dass das Feld real unterhalb eines `popup`-Knotens liegt).
+
 * **Build 154 (live gemeldet, per `dump23` nachgewiesen): Datenverlust - die
   Spalte `ORIGINAL_IMPORT_Text` in "Eigene Texte" wurde durch die eigene
   Übersetzung ersetzt.**
