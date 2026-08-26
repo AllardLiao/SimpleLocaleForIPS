@@ -4294,6 +4294,25 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 160 (Nutzer-Wunsch): ohne das Feature `manual_translations`
+  verschwindet die "Eigene Übersetzungstabelle" jetzt ganz.**
+  Bis Build 159 stand sie auch ohne das Feature im Formular: leer, nicht
+  vorbefüllt, aber mit funktionierendem Papierkorb. Der Nutzer sah also eine
+  Tabelle, erwartete dass sie etwas tut, und bekam nichts.
+
+  Überschrift und Beschreibung bleiben bewusst stehen - er soll lesen können,
+  was ihm entgeht -, darunter erscheint "Die eigene Übersetzungstabelle steht in
+  dieser Edition nicht zur Verfügung." Nichts zum Klicken, keine falsche
+  Erwartung. Der mitgelieferte Katalog für Einheiten und Kompassrichtungen wirkt
+  davon unberührt weiter im Hintergrund (siehe Build 158/159).
+
+  Regressionstest `test_manual_table_hidden_without_feature.php` (5 Fälle:
+  Tabelle weg ohne Feature; Überschrift und Absage erscheinen stattdessen; mit
+  Feature genau umgekehrt, damit die Überschrift nicht doppelt steht;
+  Symmetrie-Check inklusive der Reihenfolge, dass für eine unsichtbare Tabelle
+  keine Spalten mehr aufgebaut werden; beide Texte in allen vier Sprachen
+  registriert).
+
 * **Build 159 (live gemeldet): Build 158 hatte nur die halbe Strecke gebaut -
   bereits falsch gespeicherte Zellen wurden nicht korrigiert.**
   Der mitgelieferte Katalog griff seit Build 158 bei **neuen** Übersetzungen,

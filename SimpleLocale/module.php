@@ -1044,7 +1044,24 @@ private const LANGUAGE_FLAGS = [
                     $element['values'] = $this->DecodeRows(self::propertyObjectGreeting);
                     break;
 
+                // Build 160 (Nutzer-Wunsch): ohne "manual_translations" verschwindet die
+                // Tabelle GANZ, statt leer und unbedienbar dazustehen. Bis Build 159
+                // war sie sichtbar, wurde aber nicht vorbefuellt, und Zeilen liessen
+                // sich sogar loeschen - der Nutzer sah also eine Tabelle, erwartete
+                // dass sie etwas tut, und bekam nichts. Ueberschrift und Beschreibung
+                // bleiben bewusst stehen (er soll lesen koennen, was ihm entgeht),
+                // darunter erscheint die Absage. Nichts zum Klicken, keine falsche
+                // Erwartung.
+                case 'ManualTranslationsUnavailableHeading':
+                case 'ManualTranslationsUnavailableHint':
+                    $element['visible'] = !$this->HasLicenseFeature('manual_translations');
+                    break;
+
                 case self::propertyManualTranslations:
+                    if (!$this->HasLicenseFeature('manual_translations')) {
+                        $element['visible'] = false;
+                        break;
+                    }
                     $element['columns'] = $this->BuildListColumns($sourceLanguage, $targetLanguages, 'manual');
                     $element['values'] = $this->DecodeRows(self::propertyManualTranslations);
                     // Nutzer-Wunsch: ohne "manual_translations" (siehe HasLicenseFeature)
