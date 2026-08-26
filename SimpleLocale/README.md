@@ -570,6 +570,22 @@ noch gültige Übersetzungen. Im Zweifel vorher einmal die betroffenen Listen
 durchsehen (die "Pfad"-Spalte hilft dabei) oder ein Backup der Instanz-
 Konfiguration ziehen.
 
+> **Nur EINE Simple-Locale-Instanz je Visualisierungsbaum.** Zwei aktive
+> Instanzen, die sich denselben Baum oder auch nur einzelne String-Variablen
+> teilen, arbeiten gegeneinander: Jede schreibt bei einem Sprachwechsel ihre
+> eigene Übersetzung per `IPS_SetName()`/`SetValueString()` in dieselben
+> Objekte, und jede hält den Schreibvorgang der anderen für eine externe
+> Änderung. Bei "Eigene Texte" ist das besonders heikel, weil deren
+> String-Variablen per `VM_UPDATE` live verfolgt werden: Instanz A schreibt
+> ihre Übersetzung, Instanz B übernimmt sie als neuen Rohtext (der
+> Selbst-Schreib-Schutz greift nur für die EIGENEN Schreibvorgänge, siehe
+> `WriteTrackedValueString()`), übersetzt sie erneut und schreibt zurück - was
+> wiederum Instanz A auslöst. Ergebnis: Übersetzungen von Übersetzungen, die
+> sich mit jeder Runde weiter vom Original entfernen, und ein Dauerfeuer an
+> API-Anfragen, das jedes Tageskontingent in kurzer Zeit aufbraucht. Sollen
+> mehrere Visualisierungen übersetzt werden, braucht jede Instanz einen
+> eigenen, überschneidungsfreien Baum.
+
 **Wenn sich ein Text oder Name im Objektbaum nachträglich ändert**
 
 Ein Rescan aktualisiert den "Original-Import" bereits erfasster Zeilen
