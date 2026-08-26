@@ -3796,14 +3796,28 @@ private const LANGUAGE_FLAGS = [
             return;
         }
 
-        @SetValueString($ValueObjectID, $Value);
-
+        // Build 154 (live gefunden, per dump23 nachgewiesen): der Marker MUSS VOR
+        // dem Schreibvorgang stehen. Symcon stellt VM_UPDATE synchron zu - bis
+        // Build 153 lief HandleTrackedVariableUpdate() also bereits los, waehrend
+        // hier noch der ALTE Markerstand galt, und hielt den eigenen Schreibvorgang
+        // fuer eine externe Aenderung. Folge: die soeben geschriebene Uebersetzung
+        // wurde als neuer Rohtext uebernommen, und der naechste Lauf uebersetzte die
+        // Uebersetzung (live beobachtet: Deutsch -> Latein -> Latein-von-Latein, in
+        // einer Zeile bereits mit arabischen Fragmenten). Das ist das "seltene
+        // Timing-Fenster", das der Build-95-Kommentar nicht aufloesen konnte - es
+        // war kein Zufall, sondern schlicht die Reihenfolge.
+        // Schlaegt SetValueString() danach fehl, steht der Marker fuer einen nie
+        // geschriebenen Wert. Das kostet hoechstens, dass eine exakt gleichlautende
+        // externe Aenderung einmal ignoriert wird - unkritisch gegenueber dem
+        // Verlust des Quelltextes.
         $lastWritten = json_decode($this->ReadAttributeString(self::attributeLastSelfWrittenValues), true);
         if (!is_array($lastWritten)) {
             $lastWritten = [];
         }
         $lastWritten[(string) $ValueObjectID] = $Value;
         $this->WriteAttributeString(self::attributeLastSelfWrittenValues, json_encode($lastWritten));
+
+        @SetValueString($ValueObjectID, $Value);
     }
 
     // Hält die VM_UPDATE-Registrierungen synchron zu den aktuell in "Eigene Texte"
@@ -3965,6 +3979,41 @@ private const LANGUAGE_FLAGS = [
         if ($currentLanguage !== self::langOriginalImport
             && ($Rows[$RowIndex][$TranslatedPrefix . $currentLanguage] ?? null) === $NewValue) {
             return;
+        }
+
+        // Build 154: zweite Verteidigungslinie gegen den Rueckuebersetzungs-Zyklus.
+        // Der Vergleich oben prueft nur die AKTUELL aktive Sprache - und genau die
+        // Zelle war im live beobachteten Fall leer bzw. nach dem Kontingent-Abbruch
+        // nur teilweise gefuellt, sodass der Vergleich nicht griff und die eigene
+        // Uebersetzung als "neuer Rohtext" durchrutschte. Ein Wert, der EINER
+        // gespeicherten Zielsprachen-Zelle dieser Zeile entspricht, ist praktisch
+        // sicher ein Echo eines eigenen Schreibvorgangs und nie ein echter neuer
+        // Quelltext. Die Quellsprache der Zeile ist bewusst ausgenommen: dort ist
+        // Gleichheit mit dem Rohtext der Normalfall, kein Warnzeichen.
+        if ($NewValue !== '') {
+            $rowSourceLanguageForGuard = $this->GetRowSourceLanguage(
+                $Rows[$RowIndex],
+                $this->ReadPropertyString(self::propertySourceLanguage)
+            );
+            $configuredLanguages = json_decode($this->ReadPropertyString(self::propertyTargetLanguages), true);
+            if (is_array($configuredLanguages)) {
+                foreach ($configuredLanguages as $languageRow) {
+                    $code = (string) ($languageRow['code'] ?? '');
+                    if ($code === '' || $code === $rowSourceLanguageForGuard || $code === self::langOriginalImport) {
+                        continue;
+                    }
+                    if (($Rows[$RowIndex][$TranslatedPrefix . $code] ?? null) === $NewValue) {
+                        $this->SendDebug(
+                            'TrackedValue_BackTranslationBlocked',
+                            'ObjectID=' . $ValueObjectID . ': externer Wert entspricht der gespeicherten '
+                            . 'Uebersetzung fuer "' . $code . '" - Rohtext bleibt unangetastet.',
+                            0
+                        );
+
+                        return;
+                    }
+                }
+            }
         }
 
         // Build 105 (live gefunden): Baseline VOR jeder Mutation sichern - siehe
@@ -6356,7 +6405,7 @@ private const LANGUAGE_FLAGS = [
             $debugMapping[] = sprintf('[%d] ObjectID=%s: "%s"', $batchPosition, $Rows[$rowIndex]['ObjectID'] ?? '?', $preview);
             $batchPosition++;
         }
-        $this->SendDebug('GoogleTranslate_Mapping', $debugContext . "\n" . implode("\n", $debugMapping), 0);
+        $this->SendDebug('Translate_Mapping', $debugContext . "\n" . implode("\n", $debugMapping), 0);
 
         $translated = $this->TranslateBatch(array_values($pending), $ForceSource, $TargetLanguageCode, $debugContext, $IsHtml);
 
@@ -8276,7 +8325,7 @@ private const LANGUAGE_FLAGS = [
         ];
         $payload = json_encode($body);
 
-        // Vollständiger Request-Payload, positionsgleich mit dem GoogleTranslate_Mapping-
+        // Vollständiger Request-Payload, positionsgleich mit dem Translate_Mapping-
         // Log aus FillLanguageColumn (solange keine <style>/<script>-Blöcke vorkommen) -
         // damit sich pro Zeile nachvollziehen lässt, was Google wirklich gesendet und
         // zurückgegeben wurde, bei Verdacht auf einen Zeilen-Verrutscher oder eine

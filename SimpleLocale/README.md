@@ -4246,6 +4246,53 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 154 (live gemeldet, per `dump23` nachgewiesen): Datenverlust - die
+  Spalte `ORIGINAL_IMPORT_Text` in "Eigene Texte" wurde durch die eigene
+  Übersetzung ersetzt.**
+  Der Nutzer änderte nur die Begrüßung in der Visu-Instanz und sah daraufhin 88
+  Übersetzungsanfragen. 67 davon trugen als Quelltext exakt das, was ein früherer
+  Lauf als *Ergebnis* geliefert hatte - bei `langpair=de|la`. Die Mapping-Zeile
+  zeigte den Rohtext von sechs Objekten in Latein, eines bereits mit arabischen
+  Fragmenten: der Text war mehrfach im Kreis gelaufen (Deutsch → Latein →
+  Latein-von-Latein). Auf der Live-Instanz war praktisch jede Zeile betroffen.
+
+  *Ursache 1 (die eigentliche):* `WriteTrackedValueString()` setzte den
+  Selbst-Schreib-Marker (`attributeLastSelfWrittenValues`) **nach**
+  `SetValueString()`. Symcon stellt `VM_UPDATE` synchron zu -
+  `HandleTrackedVariableUpdate()` lief also bereits, während der Marker noch den
+  alten Stand trug, und hielt den eigenen Schreibvorgang für eine externe
+  Änderung. Das ist das "seltene Timing-Fenster", das der Build-95-Kommentar
+  nicht auflösen konnte: kein Zufall, sondern schlicht die Reihenfolge.
+
+  *Ursache 2 (warum das Netz darunter riss):* der Build-95-Schutz verglich den
+  externen Wert nur mit der Zelle der **aktuell aktiven** Sprache. Genau die war
+  nach dem Kontingent-Abbruch aus `dump22` leer bzw. nur teilweise gefüllt - der
+  Vergleich griff nicht.
+
+  *Fix:* Marker vor dem Schreibvorgang persistieren; zusätzlich eine
+  Rückübersetzungs-Sperre, die den externen Wert gegen **alle** gespeicherten
+  Zielsprachen-Zellen der Zeile prüft (Quellsprache bewusst ausgenommen, dort ist
+  Gleichheit der Normalfall) und im Debug als
+  `TrackedValue_BackTranslationBlocked` sichtbar wird.
+
+  Ebenfalls in diesem Build: die Debug-Kategorie `GoogleTranslate_Mapping` heißt
+  jetzt `Translate_Mapping`. Sie wird anbieterunabhängig geschrieben und hatte
+  den Nutzer zweimal glauben lassen, es gehe ein Aufruf an Google, obwohl gar
+  kein Google-Key konfiguriert war.
+
+  Für bereits beschädigte Installationen liegt ein eigenständiges
+  Reparatur-Skript bei: `tools/repair_original_import.php` (Modi `diagnose`,
+  `freeze`, `copy` aus einer intakten zweiten Instanz, `restore` aus dem
+  Symcon-Archiv; sichert vor jedem Schreibvorgang den Ist-Stand und verweigert
+  die Arbeit, solange die Instanz noch aktiv ist).
+
+  Regressionstest `test_back_translation_cycle.php` (8 Fälle: die
+  Marker-Reihenfolge; der gemeldete Fall mit leerer Zelle der aktiven Sprache;
+  der bestehende Build-95-Schutz bleibt wirksam; echte externe Änderungen kommen
+  weiterhin durch; die Quellsprache ist ausgenommen; ein leerer Wert löst die
+  Sperre nicht aus; zwei Sprachwechsel-Runden lassen den Rohtext unverändert;
+  Symmetrie-Checks gegen die reale Umsetzung).
+
 * **Build 153 (live gemeldet, per `dump22` nachgewiesen): zwei Regressionen aus
   Build 151 behoben - Weiterfragen trotz erschöpftem Kontingent, und eine
   Anbieter-Sperre, die sich selbst sofort wieder aufhob.**
