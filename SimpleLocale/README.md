@@ -4294,6 +4294,31 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 157 (live gemeldet, per Screenshot belegt): die mitgelieferten
+  Vorschlagszeilen der "Eigenen Übersetzungstabelle" blieben leer - und dadurch
+  wurde `°C` nach Englisch zu `°F`.**
+  In der Tabelle standen die Einheiten-Zeilen zwar da, ihre Sprachspalten waren
+  aber leer. `MergeBundledManualTranslations()` übersprang eine Zeile
+  vollständig, sobald es sie schon gab - kam eine Zielsprache erst **später**
+  dazu, wurde ihre Spalte nie mehr befüllt. Eine leere Zelle gilt in
+  `FindManualTranslation()` als "kein Treffer", der Text lief also ganz normal in
+  die API. Sichtbar an einem Einheiten-Suffix: aus `°C` wurde `°F` - eine
+  Einheitenumrechnung, keine Übersetzung.
+
+  *Fix:* bestehende Vorschlagszeilen werden nachbefüllt, aber **nur leere
+  Zellen** - ein vom Admin eingetragener Wert gewinnt immer. Der bestehende
+  Schutz bleibt unangetastet: eine bewusst gelöschte Vorschlagszeile kehrt
+  weiterhin nicht zurück (`attributeSeededManualTranslationKeys`). Anlegen und
+  Nachbefüllen speisen jetzt aus einer gemeinsamen Quelle
+  (`BuildBundledManualTranslationMap()`), damit sie nicht auseinanderlaufen
+  können.
+
+  Regressionstest `test_bundled_glossary_backfill.php` (6 Fälle: der gemeldete
+  Fall inklusive des ausbleibenden Glossartreffers; der Fix; ein Admin-Wert wird
+  nie überschrieben; gelöschte Vorschläge kehren nicht zurück; eigene Zeilen
+  bleiben unangetastet; Symmetrie-Check inklusive der Gegenseite, dass eine
+  leere Zelle weiterhin als "kein Treffer" gilt).
+
 * **Build 156 (live gemeldet, per Screenshot belegt): die Auswahltexte der
   Kachel-Kataloge folgten der Symcon-Systemsprache statt der Konsolensprache.**
   Bei englischer Konsole standen die Feldbeschriftungen korrekt auf Englisch

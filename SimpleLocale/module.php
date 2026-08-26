@@ -3353,12 +3353,7 @@ private const LANGUAGE_FLAGS = [
             return $ExistingRows;
         }
 
-        $existingKeys = [];
-        foreach ($ExistingRows as $row) {
-            if (($row[self::fieldRowSourceLanguage] ?? '') === 'de') {
-                $existingKeys[(string) ($row[self::langOriginalImport] ?? '')] = true;
-            }
-        }
+        $bundled = $this->BuildBundledManualTranslationMap();
 
         $alreadySeeded = json_decode($this->ReadAttributeString(self::attributeSeededManualTranslationKeys), true);
         if (!is_array($alreadySeeded)) {
@@ -3366,36 +3361,54 @@ private const LANGUAGE_FLAGS = [
         }
         $seededChanged = false;
 
-        $result = $ExistingRows;
-
-        foreach (self::UNIT_BUNDLED_TRANSLATIONS as $unit) {
-            if (isset($existingKeys[$unit]) || isset($alreadySeeded[$unit])) {
+        // Build 157 (live gemeldet): BESTEHENDE Vorschlagszeilen nachbefuellen.
+        // Bis Build 156 wurde eine Zeile, die es schon gab, komplett uebersprungen -
+        // kam eine Zielsprache erst SPAETER dazu, blieb ihre Spalte damit dauerhaft
+        // leer. Und eine leere Zelle gilt in FindManualTranslation() als "kein
+        // Treffer", der Text ging also ganz normal an die API. Live sichtbar an
+        // einem Einheiten-Suffix: "°C" wurde nach Englisch zu "°F" - eine
+        // Einheitenumrechnung, keine Uebersetzung.
+        //
+        // Nur LEERE Zellen werden gefuellt. Ein vom Admin eingetragener Wert
+        // gewinnt immer, auch wenn er vom mitgelieferten Vorschlag abweicht.
+        $existingKeys = [];
+        foreach ($ExistingRows as $index => $row) {
+            if (($row[self::fieldRowSourceLanguage] ?? '') !== 'de') {
                 continue;
             }
-            $row = [self::fieldRowSourceLanguage => 'de', self::langOriginalImport => $unit];
-            foreach (self::UNIT_COMPASS_BUNDLED_LANGUAGES as $language) {
-                // Standardmaessig universell durchgereicht, aber siehe
-                // UNIT_BUNDLED_LANGUAGE_OVERRIDES fuer bestaetigte Ausnahmen
-                // (z.B. Russisch verwendet fast durchgehend kyrillische Kuerzel).
-                $row[$language] = self::UNIT_BUNDLED_LANGUAGE_OVERRIDES[$unit][$language] ?? $unit;
+            $sourceText = (string) ($row[self::langOriginalImport] ?? '');
+            $existingKeys[$sourceText] = true;
+            if (!isset($bundled[$sourceText])) {
+                continue;
+            }
+            foreach ($bundled[$sourceText] as $language => $translation) {
+                if ((string) ($row[$language] ?? '') !== '') {
+                    continue;
+                }
+                $row[$language] = $translation;
                 $this->MarkRowLanguageTranslated($row, $language);
             }
-            $result[] = $row;
-            $alreadySeeded[$unit] = true;
-            $seededChanged = true;
+            $ExistingRows[$index] = $row;
         }
 
-        foreach (self::COMPASS_BUNDLED_TRANSLATIONS as $germanCompass => $translationsByLanguage) {
-            if (isset($existingKeys[$germanCompass]) || isset($alreadySeeded[$germanCompass])) {
+        $result = $ExistingRows;
+
+        // Neue Zeilen werden NIE zwangsweise wieder erzeugt, wenn der Nutzer sie
+        // einmal geloescht hat - attributeSeededManualTranslationKeys merkt sich,
+        // welche Vorschlaege schon einmal angeboten wurden, damit eine bewusste
+        // Loeschung (z.B. weil "SSW" in dieser Installation ein Personen-Kuerzel
+        // ist, keine Windrichtung) dauerhaft geloescht bleibt.
+        foreach ($bundled as $sourceText => $translationsByLanguage) {
+            if (isset($existingKeys[$sourceText]) || isset($alreadySeeded[$sourceText])) {
                 continue;
             }
-            $row = [self::fieldRowSourceLanguage => 'de', self::langOriginalImport => $germanCompass];
+            $row = [self::fieldRowSourceLanguage => 'de', self::langOriginalImport => $sourceText];
             foreach ($translationsByLanguage as $language => $translation) {
                 $row[$language] = $translation;
                 $this->MarkRowLanguageTranslated($row, $language);
             }
             $result[] = $row;
-            $alreadySeeded[$germanCompass] = true;
+            $alreadySeeded[$sourceText] = true;
             $seededChanged = true;
         }
 
@@ -3404,6 +3417,33 @@ private const LANGUAGE_FLAGS = [
         }
 
         return $result;
+    }
+
+    // Build 157: die mitgelieferten Vorschlaege als eine einzige Zuordnung
+    // Quelltext => [Sprache => Uebersetzung]. Vorher steckte diese Ableitung
+    // zweimal in MergeBundledManualTranslations (einmal Einheiten, einmal
+    // Kompass) - jetzt einmal, damit Anlegen UND Nachbefuellen garantiert
+    // dieselben Werte verwenden.
+    private function BuildBundledManualTranslationMap(): array
+    {
+        $map = [];
+
+        foreach (self::UNIT_BUNDLED_TRANSLATIONS as $unit) {
+            foreach (self::UNIT_COMPASS_BUNDLED_LANGUAGES as $language) {
+                // Standardmaessig universell durchgereicht, aber siehe
+                // UNIT_BUNDLED_LANGUAGE_OVERRIDES fuer bestaetigte Ausnahmen
+                // (z.B. Russisch verwendet fast durchgehend kyrillische Kuerzel).
+                $map[$unit][$language] = self::UNIT_BUNDLED_LANGUAGE_OVERRIDES[$unit][$language] ?? $unit;
+            }
+        }
+
+        foreach (self::COMPASS_BUNDLED_TRANSLATIONS as $germanCompass => $translationsByLanguage) {
+            foreach ($translationsByLanguage as $language => $translation) {
+                $map[$germanCompass][$language] = $translation;
+            }
+        }
+
+        return $map;
     }
 
     // Build 78: Nachschlagen EINES übersetzten Gast-Oberflächentexts aus einer
