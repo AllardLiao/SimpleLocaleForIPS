@@ -58,6 +58,10 @@ $BACKUP_DATEI = '';
 // true setzen, wenn der Trockenlauf die quellsprachigen Texte gezeigt hat.
 $RESET_BESTAETIGT = false;
 
+// Nur fuer 'backup': dieselbe Sicherung. Erst auf true setzen, wenn der
+// Trockenlauf den richtigen Kandidaten und eine plausible Trefferzahl zeigt.
+$BACKUP_BESTAETIGT = false;
+
 $EXPORT_DATEI = IPS_GetKernelDir() . 'simplelocale_objecttexts_backup.json';
 
 // ---------------------------------------------------------------- ab hier nichts aendern
@@ -490,7 +494,28 @@ if ($MODUS === 'backup') {
     }
 
     zeile();
-    zeile('Verwende Kandidat [' . $besterNr . '] mit ' . $besteDeckung . ' heilbaren Zeile(n).');
+    zeile('Bester Kandidat: [' . $besterNr . '] mit ' . $besteDeckung . ' heilbaren Zeile(n).');
+    zeile();
+
+    if (!$BACKUP_BESTAETIGT) {
+        zeile('Beispiele, was wiederhergestellt wuerde:');
+        $gezeigt = 0;
+        foreach ($befunde as $i => $b) {
+            if ($b['valueID'] === 0 || !isset($besteMap[$b['valueID']])) { continue; }
+            if ($besteMap[$b['valueID']] === $b['roh']) { continue; }
+            if ($gezeigt++ >= 8) { break; }
+            zeile('  [' . $i . '] ObjectID=' . $b['valueID']);
+            zeile('      jetzt:   ' . kuerze($b['roh'], 70));
+            zeile('      Backup:  ' . kuerze($besteMap[$b['valueID']], 70));
+        }
+        zeile();
+        zeile(str_repeat('-', 80));
+        zeile('TROCKENLAUF. Es wurde nichts geaendert.');
+        zeile('Stehen oben unter "Backup:" die quellsprachigen Originale, dann');
+        zeile('$BACKUP_BESTAETIGT = true setzen und erneut ausfuehren.');
+        return;
+    }
+
     @file_put_contents($EXPORT_DATEI, json_encode($zeilen, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
     zeile('Sicherung des IST-Standes: ' . $EXPORT_DATEI);
     zeile();
