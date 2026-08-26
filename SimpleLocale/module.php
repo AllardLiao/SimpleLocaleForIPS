@@ -823,6 +823,16 @@ private const LANGUAGE_FLAGS = [
                     // Bewusst kein Reset auf Original wie beim Testphase-Fall - die
                     // aktuell aktive Sprache bleibt einfach stehen, es wird nur der
                     // GEWÜNSCHTE Wechsel selbst verweigert.
+                    //
+                    // Build 162 (live gemeldet): die Kachel MUSS trotzdem neu
+                    // gezeichnet werden. Ohne das blieb die eingebaute Auswahl auf der
+                    // ABGELEHNTEN Sprache stehen - der Gast sah "en", obwohl weiterhin
+                    // "de" aktiv war. Dieser Zweig war der einzige der drei
+                    // Ablehnungspfade ohne den Aufruf; der Trial-Zweig unten und der
+                    // Zweig fuer unbekannte Sprachen oben hatten ihn von Anfang an.
+                    // Reihenfolge wie dort: erst neu zeichnen, dann die Meldung -
+                    // sonst ueberschreibt das Neuzeichnen die ALERT-Nutzlast.
+                    $this->PushVisualizationUpdate();
                     $this->PushLanguageSwitchLimitAlert($language);
                 } else {
                     $isActualSwitch = $language !== $this->ReadPropertyString(self::propertyCurrentLanguage)
