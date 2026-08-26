@@ -4294,6 +4294,29 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 162 (live gemeldet): ein wegen des Tageslimits abgelehnter
+  Sprachwechsel ließ die Kachel auf der abgelehnten Sprache stehen.**
+  Von "de" auf "en" gewechselt, der Wechsel wurde korrekt verweigert - in der
+  eingebauten Auswahl stand danach trotzdem "en", obwohl weiterhin "de" aktiv
+  war.
+
+  `RequestAction('Language')` kennt drei Ablehnungspfade. Der für unbekannte
+  Sprachen und der für die abgelaufene Testphase zeichneten die Kachel jeweils
+  neu, genau damit die Auswahl nicht falsch stehenbleibt - der Rate-Limit-Pfad
+  war der einzige ohne diesen Aufruf.
+
+  Reihenfolge bewusst wie in den anderen Pfaden: erst neu zeichnen, dann die
+  Meldung. Beides läuft über `UpdateVisualizationValue()`; umgekehrt würde das
+  Neuzeichnen die ALERT-Nutzlast wieder überschreiben und der Gast bekäme keine
+  Erklärung. Unverändert bleibt, dass hier **nicht** auf Original zurückgesetzt
+  wird - anders als beim Testphasen-Fall bleibt die bisher aktive Sprache aktiv,
+  verweigert wird nur der Wechsel.
+
+  Regressionstest `test_rejected_switch_redraws_tile.php` (6 Fälle: der
+  gemeldete Fall; die Reihenfolge; kein Reset auf Original; alle drei
+  Ablehnungspfade zeichnen neu, damit derselbe Fehler nicht beim nächsten Pfad
+  wieder anfällt; der Erfolgsfall zeichnet nicht doppelt; Symmetrie-Check).
+
 * **Build 161 (Nutzer-Wunsch): das Anbieter-Panel beschrieb ohne das Feature
   `paid_providers` eine Funktion, die es in dieser Edition nicht gibt.**
   "Sind beide eingetragen, wird zuerst der bevorzugte versucht" gilt nur bei
