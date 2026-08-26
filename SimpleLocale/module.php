@@ -412,6 +412,7 @@ private const LANGUAGE_FLAGS = [
         // den naechsten UpdateFormField()-Push warten zu muessen.
         $this->RegisterAttributeString(self::attributeRescanProgressMessage, '');
         $this->RegisterAttributeString(self::attributeEnumerationPresentationBackup, '{}');
+        $this->RegisterAttributeString(self::attributeEnumerationProfileBackup, '{}');
         $this->RegisterAttributeInteger(self::attributeEffectiveRootCategoryID, 0);
         $this->RegisterAttributeString(self::attributeLastRowSourceLanguageFingerprint, '');
         $this->RegisterAttributeString(self::attributeLastActiveLanguageContentFingerprint, '');
@@ -3807,6 +3808,21 @@ private const LANGUAGE_FLAGS = [
                 $this->WriteAttributeString(self::attributeEnumerationPresentationBackup, json_encode($backups));
             }
 
+            // Build 164: derselbe Rueckbau fuer den Profil-Fork (siehe unten).
+            // Erst die Variable auf ihren vorherigen Stand zuruecksetzen, DANN unser
+            // Profil loeschen - Symcon verweigert das Loeschen eines Profils, das noch
+            // an einer Variable haengt.
+            $profileBackups = $this->ReadEnumerationProfileBackups();
+            if (array_key_exists($backupKey, $profileBackups)) {
+                @IPS_SetVariableCustomProfile($ValueObjectID, (string) $profileBackups[$backupKey]);
+                $ownProfile = $this->GetForkedProfileName($ValueObjectID);
+                if (@IPS_VariableProfileExists($ownProfile)) {
+                    @IPS_DeleteVariableProfile($ownProfile);
+                }
+                unset($profileBackups[$backupKey]);
+                $this->WriteAttributeString(self::attributeEnumerationProfileBackup, json_encode($profileBackups));
+            }
+
             return;
         }
 
@@ -3824,6 +3840,30 @@ private const LANGUAGE_FLAGS = [
         if (($presentation['PRESENTATION'] ?? '') === VARIABLE_PRESENTATION_LEGACY) {
             $profileName = $presentation['PROFILE'] ?? '';
             if ($profileName === '' || !@IPS_VariableProfileExists($profileName) || $this->IsContinuousLegacyProfile($profileName)) {
+                return;
+            }
+
+            // Build 164 (live gemeldet, per Diagnose-Dump belegt): Symcon erlaubt die
+            // Enumeration-Praesentation NUR fuer Variablen mit Variablen-Aktion ("This
+            // presentation is only available for variables with a variable action").
+            // Bis Build 163 wurde trotzdem jede Legacy-Variable darauf umgestellt: der
+            // Fork kam durch (IPS_GetVariablePresentation lieferte die uebersetzten
+            // Captions), die Visu verwarf ihn aber und zeigte weiter das Profil.
+            // Live an einem Nuki-Schloss beobachtet - "Locking action" (mit Aktion)
+            // uebersetzt, "Blocking state"/"Batteries"/"Battery charge time"/"Keypad
+            // Battery" (ohne Aktion) nicht, obwohl alle vier dieselbe Behandlung
+            // bekamen.
+            //
+            // Fuer diese Variablen wird stattdessen das PROFIL geforkt: eine private
+            // Kopie mit uebersetzten Assoziationsnamen, gesetzt als
+            // VariableCustomProfile. Das geteilte Original bleibt unangetastet, genau
+            // wie beim Praesentations-Fork.
+            $variable = IPS_GetVariable($ValueObjectID);
+            $hasAction = (($variable['VariableAction'] ?? 0) !== 0)
+                || (($variable['VariableCustomAction'] ?? 0) !== 0);
+            if (!$hasAction) {
+                $this->ApplyForkedProfileToVariable($ValueObjectID, $variable, $profileName, $RowsByFieldPath, $Language, $SourceLanguage);
+
                 return;
             }
             $associations = IPS_GetVariableProfile($profileName)['Associations'] ?? [];
@@ -3887,6 +3927,117 @@ private const LANGUAGE_FLAGS = [
         // Variablen, die es referenzieren, lesen es beim nächsten Zugriff unverändert
         // weiter.
         @IPS_SetVariableCustomPresentation($ValueObjectID, $this->ApplyTranslatableFields($writeBase, '', $replacements));
+    }
+
+    // Build 164: Name des privaten Profils, das fuer EINE Variable geforkt wird.
+    // Enthaelt Instanz- UND Variablen-ID, ist also eindeutig und laesst sich beim
+    // Zurueckstellen zielsicher wieder loeschen.
+    private function GetForkedProfileName(int $ValueObjectID): string
+    {
+        return 'IPSSL.' . $this->InstanceID . '.' . $ValueObjectID;
+    }
+
+    private function ReadEnumerationProfileBackups(): array
+    {
+        $backups = json_decode($this->ReadAttributeString(self::attributeEnumerationProfileBackup), true);
+
+        return is_array($backups) ? $backups : [];
+    }
+
+    // Build 164: der zweite Fork-Weg fuer Variablen OHNE Variablen-Aktion (siehe
+    // ApplyEnumerationOptionsToVariable). Legt eine private Kopie des Profils mit
+    // uebersetzten Assoziationsnamen an und haengt sie als VariableCustomProfile an
+    // genau diese eine Variable. Das geteilte Originalprofil bleibt unberuehrt.
+    private function ApplyForkedProfileToVariable(
+        int $ValueObjectID,
+        array $Variable,
+        string $ProfileName,
+        array $RowsByFieldPath,
+        string $Language,
+        string $SourceLanguage
+    ): void {
+        $source = @IPS_GetVariableProfile($ProfileName);
+        if (!is_array($source)) {
+            return;
+        }
+        $associations = $source['Associations'] ?? [];
+        if ($associations === []) {
+            return;
+        }
+
+        // Dieselbe Aufloesung wie beim Praesentations-Fork: die Reihenfolge der
+        // Assoziationen entspricht den OPTIONS-Indizes, unter denen die Zeilen
+        // gescannt wurden (siehe ReadTranslatablePresentation).
+        $captions = [];
+        $anyTranslated = false;
+        foreach (array_values($associations) as $index => $association) {
+            $fieldPath = 'OPTIONS.' . $index . '.Caption';
+            $row = $RowsByFieldPath[$fieldPath] ?? null;
+            $original = (string) ($association['Name'] ?? '');
+            if ($row === null) {
+                $captions[$index] = $original;
+                continue;
+            }
+            $resolved = $this->ResolveRowValue(
+                $row,
+                $this->GetEffectiveSelectedLanguage($row, $Language),
+                $Language,
+                $this->GetRowSourceLanguage($row, $SourceLanguage),
+                self::langOriginalImport
+            );
+            $captions[$index] = $resolved !== '' ? $resolved : $original;
+            if ($captions[$index] !== $original) {
+                $anyTranslated = true;
+            }
+        }
+
+        // Nichts weicht ab - dann auch kein Fork. Sonst haengte an jeder Variable ein
+        // ueberfluessiges Privatprofil, das nur das Original nachbaut.
+        if (!$anyTranslated) {
+            return;
+        }
+
+        // Den vorherigen eigenen Profilnamen genau einmal sichern ('' = es gab keinen),
+        // damit das Zurueckstellen auf die Quellsprache ihn exakt wiederherstellt.
+        $backupKey = (string) $ValueObjectID;
+        $profileBackups = $this->ReadEnumerationProfileBackups();
+        if (!array_key_exists($backupKey, $profileBackups)) {
+            $profileBackups[$backupKey] = (string) ($Variable['VariableCustomProfile'] ?? '');
+            $this->WriteAttributeString(self::attributeEnumerationProfileBackup, json_encode($profileBackups));
+        }
+
+        $ownProfile = $this->GetForkedProfileName($ValueObjectID);
+        if (!@IPS_VariableProfileExists($ownProfile)) {
+            // Bewusst NICHT loeschen und neu anlegen, wenn es das Profil schon gibt:
+            // Symcon verweigert das Loeschen eines Profils, das noch an einer Variable
+            // haengt - und genau das ist beim zweiten Sprachwechsel der Fall. Die
+            // Assoziationen werden stattdessen unten ueberschrieben.
+            @IPS_CreateVariableProfile($ownProfile, (int) ($Variable['VariableType'] ?? 1));
+        }
+
+        // Alles ausser den Namen unveraendert uebernehmen - Symbol, Farben, Einheiten
+        // und Wertebereich sollen sich durch die Uebersetzung nicht aendern.
+        @IPS_SetVariableProfileIcon($ownProfile, (string) ($source['Icon'] ?? ''));
+        @IPS_SetVariableProfileText($ownProfile, (string) ($source['Prefix'] ?? ''), (string) ($source['Suffix'] ?? ''));
+        @IPS_SetVariableProfileValues(
+            $ownProfile,
+            (float) ($source['MinValue'] ?? 0),
+            (float) ($source['MaxValue'] ?? 0),
+            (float) ($source['StepSize'] ?? 0)
+        );
+        @IPS_SetVariableProfileDigits($ownProfile, (int) ($source['Digits'] ?? 0));
+
+        foreach (array_values($associations) as $index => $association) {
+            @IPS_SetVariableProfileAssociation(
+                $ownProfile,
+                $association['Value'] ?? 0,
+                $captions[$index],
+                (string) ($association['Icon'] ?? ''),
+                (int) ($association['Color'] ?? -1)
+            );
+        }
+
+        @IPS_SetVariableCustomProfile($ValueObjectID, $ownProfile);
     }
 
     // Schreibt einen Wert UND merkt ihn als "von der Instanz selbst geschrieben"
