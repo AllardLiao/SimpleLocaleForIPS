@@ -4328,11 +4328,14 @@ der ursprünglichen Fassung übernommen.
   den Nutzer zweimal glauben lassen, es gehe ein Aufruf an Google, obwohl gar
   kein Google-Key konfiguriert war.
 
-  Für bereits beschädigte Installationen liegt ein eigenständiges
-  Reparatur-Skript bei: `tools/repair_original_import.php` (Modi `diagnose`,
-  `freeze`, `copy` aus einer intakten zweiten Instanz, `restore` aus dem
-  Symcon-Archiv; sichert vor jedem Schreibvorgang den Ist-Stand und verweigert
-  die Arbeit, solange die Instanz noch aktiv ist).
+  Für die Reparatur der betroffenen Live-Installation entstand ein
+  eigenständiges Skript (`tools/repair_original_import.php`, Modi `diagnose`,
+  `freeze`, `copy` aus einer intakten zweiten Instanz, `backup` aus einer
+  `settings.json`, `restore` aus dem Symcon-Archiv und `reset_texts`). Es wird
+  bewusst **nicht** mit dem Modul ausgeliefert - IP-Symcon liest jede PHP-Datei
+  im Modulverzeichnis ein und meldet bei einem eigenständigen Skript mit Code
+  auf oberster Ebene Fehler. Bei Bedarf lässt es sich aus der Historie holen
+  (Commits `f342aa6` und `e4cc37c`).
 
   Regressionstest `test_back_translation_cycle.php` (8 Fälle: die
   Marker-Reihenfolge; der gemeldete Fall mit leerer Zelle der aktiven Sprache;
