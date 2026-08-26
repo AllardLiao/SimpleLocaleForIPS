@@ -4145,3 +4145,57 @@ der ursprünglichen Fassung übernommen.
   untranslatierbaren; mehrere gleichzeitig sind ebenso unschädlich;
   Symmetrie-Check der Unterscheidung). Bestehende Tests um die Log-Pflicht bei
   der Byte-Grenze erweitert.
+
+* **Build 151 (live gemeldet, per `dump21` nachgewiesen): ein Serverfehler
+  mitten im Durchlauf warf alle bereits fertigen Übersetzungen desselben Laufs
+  weg.**
+  Gemeldetes Symptom: Ein Rescan lief minutenlang, übersetzte nachweislich
+  erfolgreich - und trug trotzdem nichts in die Tabelle ein. Im Log stand die
+  letzte erfolgreiche Abfrage direkt vor einem Serverfehler: "erfolgreich
+  abgefragt, aber nicht in der Liste eingetragen".
+  Der Dump zeigte den Ablauf: MyMemory lieferte **21 Übersetzungen sauber aus**
+  (darunter die im Screenshot leer gebliebene Zeile sowie die beiden langen
+  Texte, die also *nicht* an der 500-Byte-Grenze scheiterten), dann kam ein
+  **HTTP 504 Gateway Time-out** - der Anbieter war schlicht überlastet.
+  `TranslateChunkFree()` brach daraufhin mit `return null` ab und verwarf dabei
+  **alle 21 fertigen Übersetzungen**; `TranslateChunk()` wertete das als
+  Anbieter-Ausfall und füllte den gesamten Chunk mit Leerstrings.
+  Das Kontingent war für diese 21 Anfragen längst verbraucht - beim nächsten
+  Rescan begann alles von vorn, inklusive erneutem Verbrauch. Bei einem
+  zeitweise überlasteten Anbieter konnte ein größerer Baum dadurch **nie fertig
+  übersetzt werden**.
+  Kern des Problems: MyMemory hat keinen Batch-Endpunkt und ruft pro Text
+  einzeln auf - ein **Teilerfolg ist dort der Normalfall**, anders als bei
+  Google/DeepL, wo ein Aufruf den ganzen Chunk abdeckt. Der Code behandelte
+  beide gleich.
+  - `TranslateChunkFree()` arbeitet jetzt weiter: erfolgreiche Texte behalten
+    ihr Ergebnis, nur der tatsächlich fehlgeschlagene bleibt offen. `null` ist
+    dem **Totalausfall** vorbehalten (kein einziger Text durchgekommen) - nur
+    dann gilt der Anbieter als gescheitert, was Kettenwechsel und
+    Pausen-Eskalation weiterhin korrekt auslöst.
+  - `TranslateChunk()` sammelt Teilergebnisse jetzt **über die Anbieter-Kette
+    hinweg** und reicht an den nächsten Anbieter nur die noch offenen Texte
+    weiter - der verbraucht damit auch kein Kontingent für bereits Übersetztes,
+    und ein bereits gutes Ergebnis wird nie überschrieben.
+  Nach der ganzen Kette noch offene Texte bleiben bewusst **leer** statt mit
+  dem Originaltext gefüllt: Eine leere Zelle gilt als "nicht aktuell" und wird
+  beim nächsten Rescan erneut versucht, ein eingetragener Originaltext würde
+  fälschlich als fertige Übersetzung gelten und nie wieder angefasst.
+  Beim Erkennen leerer Ergebnisse bewusst eine explizite Prüfung auf `!== ''`
+  statt `array_filter()` - letzteres wertet auch eine Übersetzung, die wörtlich
+  `"0"` lautet, als leer und würde sie verwerfen.
+  **Außerdem (Nutzer-Wunsch): der Laufbalken nennt jetzt die zu erwartende
+  Dauer.** Gerade der erste Scan läuft bei vielen Objekten minutenlang, weil
+  jeder noch nicht gecachte Text einzeln an den Anbieter geht - ohne Zeitangabe
+  wirkt das wie ein Hänger. Die beiden Übersetzungs-Stufen tragen den Hinweis
+  "(je nach Anzahl der Objekte kann das einige Minuten dauern)" in allen vier
+  Sprachen. Die schnellen Stufen ("Baum wird eingelesen", "Ergebnis wird
+  gespeichert") bewusst **nicht** - dort wäre die Ankündigung einer
+  minutenlangen Wartezeit falsch und würde den Hinweis überall entwerten; ein
+  Test sichert beide Richtungen ab.
+  Neuer Regressionstest (Erfolge überleben einen Serverfehler im selben
+  Durchlauf; alle 21 Erfolge aus dem Report bleiben erhalten; ein Totalausfall
+  liefert weiterhin `null`; die Kette holt offene Texte beim nächsten Anbieter
+  nach; bereits Übersetztes wird nicht überschrieben; durchgehend
+  fehlgeschlagene Texte bleiben leer für den nächsten Rescan; Symmetrie-Checks
+  inklusive des `array_filter()`-Fallstricks).

@@ -68,4 +68,40 @@ assert(strpos($trailingBody, 'if (') === false || strpos($trailingBody, 'if (') 
 assert(strpos($trailingBody, '$this->ReloadForm();') === false, 'nach dem abschliessenden Clear darf kein ReloadForm()-AUFRUF mehr folgen - der einzige erlaubte sitzt im frueher zurueckkehrenden Abbruch-Zweig');
 echo "Test 4 (der finale Clear bleibt unbedingt; genau ein ReloadForm() existiert, im Abbruch-Zweig und durch \$IsInteractive geschützt) OK\n";
 
+// Test 5 (Build 151, Nutzer-Wunsch): gerade der ERSTE Scan kann lange dauern -
+// bei vielen Objekten laeuft er minutenlang, weil jeder noch nicht gecachte
+// Text einzeln an den Uebersetzungsanbieter geht. Ohne Zeitangabe wirkt das wie
+// ein Haenger, und der Nutzer bricht ab oder klickt erneut.
+//
+// Die beiden UEBERSETZUNGS-Stufen tragen den Hinweis deshalb fest im
+// Meldungstext. Die uebrigen Stufen ("Baum wird eingelesen", "Ergebnis wird
+// gespeichert") bewusst NICHT: die sind schnell, dort waere die Ankuendigung
+// einer minutenlangen Wartezeit schlicht falsch und wuerde den Hinweis
+// entwerten.
+$uebersetzungsStufen = [
+    'Objektnamen und Texte werden übersetzt…',
+    'Weitere Inhalte werden übersetzt…',
+];
+foreach ($uebersetzungsStufen as $stufe) {
+    assert(strpos($moduleSource, "SetRescanProgress('" . $stufe . " (je nach Anzahl der Objekte kann das einige Minuten dauern)')") !== false, "die Uebersetzungs-Stufe \"$stufe\" muss den Dauer-Hinweis tragen - ohne ihn wirkt ein minutenlanger Erstscan wie ein Haenger");
+}
+// Gegenprobe: die schnellen Stufen duerfen ihn NICHT tragen.
+foreach (['Baum wird eingelesen…', 'Ergebnis wird gespeichert…'] as $schnelleStufe) {
+    assert(strpos($moduleSource, "SetRescanProgress('" . $schnelleStufe . "')") !== false, "die schnelle Stufe \"$schnelleStufe\" muss ohne Dauer-Hinweis bleiben - sonst verliert er seine Aussagekraft");
+}
+// Der Hinweistext muss uebersetzt sein, sonst steht er in jeder Konsolensprache
+// auf Deutsch mitten in einer sonst uebersetzten Meldung.
+$localeJson = file_get_contents(dirname(__DIR__) . '/SimpleLocale/locale.json');
+$locale = json_decode($localeJson, true);
+foreach (['en', 'es', 'it', 'fr'] as $lang) {
+    $treffer = 0;
+    foreach ($locale['translations'][$lang] as $key => $value) {
+        if (strpos($key, 'werden übersetzt… (je nach Anzahl') !== false) {
+            $treffer++;
+        }
+    }
+    assert($treffer === 2, "beide Uebersetzungs-Stufen muessen fuer '$lang' uebersetzt sein - gefunden: $treffer");
+}
+echo "Test 5 (nur die langsamen Übersetzungs-Stufen tragen den Dauer-Hinweis, in allen vier Sprachen) OK\n";
+
 echo "\nAll tests passed.\n";
