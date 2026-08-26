@@ -1,0 +1,384 @@
+{
+    "Instanz": 16422,
+    "InstanzName": "EG-Nuki",
+    "Marke": "de",
+    "Zeitpunkt": "2026-08-26T22:35:16+02:00",
+    "PresentationAPI": true,
+    "Variablen": [
+        {
+            "ID": 58878,
+            "Name": "Batterieladung",
+            "Ident": "BatteryChargeState",
+            "VariableType": 1,
+            "VariableAction": 0,
+            "VariableCustomAction": 0,
+            "HatAktion": false,
+            "VariableProfile": "NUKISLMQTT.16422.BatteryChargeState",
+            "VariableCustomProfile": "",
+            "VariablePresentation": {
+                "PROFILE": "NUKISLMQTT.16422.BatteryChargeState",
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}"
+            },
+            "VariableCustomPresentation": [],
+            "WirksamePresentation": {
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}",
+                "PROFILE": "NUKISLMQTT.16422.BatteryChargeState"
+            },
+            "ProfilAssoziationen": []
+        },
+        {
+            "ID": 28373,
+            "Name": "Batterie",
+            "Ident": "BatteryCritical",
+            "VariableType": 0,
+            "VariableAction": 0,
+            "VariableCustomAction": 0,
+            "HatAktion": false,
+            "VariableProfile": "NUKISLMQTT.16422.BatteryCritical",
+            "VariableCustomProfile": "NUKISLMQTT.16422.BatteryCritical",
+            "VariablePresentation": {
+                "PROFILE": "NUKISLMQTT.16422.BatteryCritical",
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}"
+            },
+            "VariableCustomPresentation": {
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}",
+                "PROFILE": "NUKISLMQTT.16422.BatteryCritical"
+            },
+            "WirksamePresentation": {
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}",
+                "PROFILE": "NUKISLMQTT.16422.BatteryCritical"
+            },
+            "ProfilAssoziationen": [
+                {
+                    "Value": false,
+                    "Name": "OK",
+                    "Icon": "",
+                    "Color": 65280
+                },
+                {
+                    "Value": true,
+                    "Name": "Schwache Batterie",
+                    "Icon": "",
+                    "Color": 16711680
+                }
+            ]
+        },
+        {
+            "ID": 24112,
+            "Name": "Keypad Batterie",
+            "Ident": "KeypadBatteryCritical",
+            "VariableType": 0,
+            "VariableAction": 0,
+            "VariableCustomAction": 0,
+            "HatAktion": false,
+            "VariableProfile": "NUKISLMQTT.16422.KeypadBatteryCritical",
+            "VariableCustomProfile": "NUKISLMQTT.16422.KeypadBatteryCritical",
+            "VariablePresentation": {
+                "PROFILE": "NUKISLMQTT.16422.KeypadBatteryCritical",
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}"
+            },
+            "VariableCustomPresentation": {
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}",
+                "PROFILE": "NUKISLMQTT.16422.KeypadBatteryCritical"
+            },
+            "WirksamePresentation": {
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}",
+                "PROFILE": "NUKISLMQTT.16422.KeypadBatteryCritical"
+            },
+            "ProfilAssoziationen": [
+                {
+                    "Value": false,
+                    "Name": "OK",
+                    "Icon": "",
+                    "Color": 65280
+                },
+                {
+                    "Value": true,
+                    "Name": "Schwache Batterie",
+                    "Icon": "",
+                    "Color": 16711680
+                }
+            ]
+        },
+        {
+            "ID": 26788,
+            "Name": "Sperrzustand",
+            "Ident": "LockState",
+            "VariableType": 1,
+            "VariableAction": 0,
+            "VariableCustomAction": 0,
+            "HatAktion": false,
+            "VariableProfile": "NUKISLMQTT.16422.LockState",
+            "VariableCustomProfile": "NUKISLMQTT.16422.LockState",
+            "VariablePresentation": {
+                "PROFILE": "NUKISLMQTT.16422.LockState",
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}"
+            },
+            "VariableCustomPresentation": {
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}",
+                "PROFILE": "NUKISLMQTT.16422.LockState"
+            },
+            "WirksamePresentation": {
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}",
+                "PROFILE": "NUKISLMQTT.16422.LockState"
+            },
+            "ProfilAssoziationen": [
+                {
+                    "Value": 0,
+                    "Name": "Unkalibriert",
+                    "Icon": "Warning",
+                    "Color": 16711680
+                },
+                {
+                    "Value": 1,
+                    "Name": "Zugesperrt",
+                    "Icon": "LockClosed",
+                    "Color": 16711680
+                },
+                {
+                    "Value": 2,
+                    "Name": "Aufsperren",
+                    "Icon": "LockOpen",
+                    "Color": 255
+                },
+                {
+                    "Value": 3,
+                    "Name": "Aufgesperrt",
+                    "Icon": "LockOpen",
+                    "Color": 255
+                },
+                {
+                    "Value": 4,
+                    "Name": "Zusperren",
+                    "Icon": "LockClosed",
+                    "Color": 16711680
+                },
+                {
+                    "Value": 5,
+                    "Name": "Tür offen",
+                    "Icon": "Door",
+                    "Color": 65280
+                },
+                {
+                    "Value": 6,
+                    "Name": "Aufgesperrt (Lock 'n' Go)",
+                    "Icon": "LockOpen",
+                    "Color": 255
+                },
+                {
+                    "Value": 7,
+                    "Name": "Entriegeln",
+                    "Icon": "Door",
+                    "Color": 65280
+                },
+                {
+                    "Value": 253,
+                    "Name": "-",
+                    "Icon": "Information",
+                    "Color": -1
+                },
+                {
+                    "Value": 254,
+                    "Name": "Motor blockiert",
+                    "Icon": "Warning",
+                    "Color": 16711680
+                },
+                {
+                    "Value": 255,
+                    "Name": "Unbestimmt",
+                    "Icon": "Warning",
+                    "Color": -1
+                }
+            ]
+        },
+        {
+            "ID": 48587,
+            "Name": "Batterieaufladung",
+            "Ident": "BatteryCharging",
+            "VariableType": 0,
+            "VariableAction": 0,
+            "VariableCustomAction": 0,
+            "HatAktion": false,
+            "VariableProfile": "NUKISLMQTT.16422.BatteryCharging",
+            "VariableCustomProfile": "NUKISLMQTT.16422.BatteryCharging",
+            "VariablePresentation": {
+                "PROFILE": "NUKISLMQTT.16422.BatteryCharging",
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}"
+            },
+            "VariableCustomPresentation": {
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}",
+                "PROFILE": "NUKISLMQTT.16422.BatteryCharging"
+            },
+            "WirksamePresentation": {
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}",
+                "PROFILE": "NUKISLMQTT.16422.BatteryCharging"
+            },
+            "ProfilAssoziationen": [
+                {
+                    "Value": false,
+                    "Name": "Inaktiv",
+                    "Icon": "",
+                    "Color": 16711680
+                },
+                {
+                    "Value": true,
+                    "Name": "Aktiv",
+                    "Icon": "",
+                    "Color": 65280
+                }
+            ]
+        },
+        {
+            "ID": 34675,
+            "Name": "Protokoll",
+            "Ident": "Protocol",
+            "VariableType": 3,
+            "VariableAction": 0,
+            "VariableCustomAction": 0,
+            "HatAktion": false,
+            "VariableProfile": "~HTMLBox",
+            "VariableCustomProfile": "",
+            "VariablePresentation": {
+                "PROFILE": "~HTMLBox",
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}"
+            },
+            "VariableCustomPresentation": [],
+            "WirksamePresentation": {
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}",
+                "PROFILE": "~HTMLBox"
+            },
+            "ProfilAssoziationen": []
+        },
+        {
+            "ID": 46561,
+            "Name": "Letzte Aktualisierung",
+            "Ident": "LastUpdate",
+            "VariableType": 3,
+            "VariableAction": 0,
+            "VariableCustomAction": 0,
+            "HatAktion": false,
+            "VariableProfile": "",
+            "VariableCustomProfile": "",
+            "VariablePresentation": [],
+            "VariableCustomPresentation": [],
+            "WirksamePresentation": {
+                "USAGE_TYPE": 0,
+                "THOUSANDS_SEPARATOR": "",
+                "SHOW_PREVIEW": true,
+                "PRESENTATION": "{3319437D-7CDE-699D-750A-3C6A3841FA75}",
+                "SUFFIX": "",
+                "COLOR": -1,
+                "PREFIX": "",
+                "CONTENT_COLOR": -1,
+                "MAX": 100,
+                "MULTILINE": false,
+                "DECIMAL_SEPARATOR": "Client",
+                "PERCENTAGE": false,
+                "DIGITS": 2,
+                "INTERVALS": "[]",
+                "DISPLAY_TYPE": 0,
+                "ICON": "",
+                "INTERVALS_ACTIVE": false,
+                "PREVIEW_STYLE": 1,
+                "MIN": 0,
+                "OPTIONS": "[]"
+            }
+        },
+        {
+            "ID": 18003,
+            "Name": "NukiID",
+            "Ident": "",
+            "VariableType": 3,
+            "VariableAction": 0,
+            "VariableCustomAction": 1,
+            "HatAktion": true,
+            "VariableProfile": "",
+            "VariableCustomProfile": "",
+            "VariablePresentation": [],
+            "VariableCustomPresentation": [],
+            "WirksamePresentation": {
+                "USAGE_TYPE": 0,
+                "THOUSANDS_SEPARATOR": "",
+                "SHOW_PREVIEW": true,
+                "PRESENTATION": "{3319437D-7CDE-699D-750A-3C6A3841FA75}",
+                "SUFFIX": "",
+                "COLOR": -1,
+                "PREFIX": "",
+                "CONTENT_COLOR": -1,
+                "MAX": 100,
+                "MULTILINE": false,
+                "DECIMAL_SEPARATOR": "Client",
+                "PERCENTAGE": false,
+                "DIGITS": 2,
+                "INTERVALS": "[]",
+                "DISPLAY_TYPE": 0,
+                "ICON": "",
+                "INTERVALS_ACTIVE": false,
+                "PREVIEW_STYLE": 1,
+                "MIN": 0,
+                "OPTIONS": "[]"
+            }
+        },
+        {
+            "ID": 16216,
+            "Name": "Sperraktion",
+            "Ident": "LockAction",
+            "VariableType": 1,
+            "VariableAction": 16422,
+            "VariableCustomAction": 0,
+            "HatAktion": true,
+            "VariableProfile": "NUKISLMQTT.16422.LockAction",
+            "VariableCustomProfile": "NUKISLMQTT.16422.LockAction",
+            "VariablePresentation": {
+                "PROFILE": "NUKISLMQTT.16422.LockAction",
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}"
+            },
+            "VariableCustomPresentation": {
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}",
+                "PROFILE": "NUKISLMQTT.16422.LockAction"
+            },
+            "WirksamePresentation": {
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}",
+                "PROFILE": "NUKISLMQTT.16422.LockAction"
+            },
+            "ProfilAssoziationen": [
+                {
+                    "Value": 1,
+                    "Name": "Aufsperren",
+                    "Icon": "LockOpen",
+                    "Color": 255
+                },
+                {
+                    "Value": 2,
+                    "Name": "Zusperren",
+                    "Icon": "LockClosed",
+                    "Color": 16711680
+                },
+                {
+                    "Value": 3,
+                    "Name": "Tür öffnen",
+                    "Icon": "Door",
+                    "Color": 65280
+                },
+                {
+                    "Value": 4,
+                    "Name": "Lock 'n' Go",
+                    "Icon": "Lock",
+                    "Color": 16776960
+                },
+                {
+                    "Value": 5,
+                    "Name": "Lock 'n' Go Tür öffnen",
+                    "Icon": "Door",
+                    "Color": 65280
+                },
+                {
+                    "Value": 6,
+                    "Name": "Vollverriegelung 2x (720)",
+                    "Icon": "LockClosed",
+                    "Color": 16711680
+                }
+            ]
+        }
+    ]
+}

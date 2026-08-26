@@ -368,6 +368,15 @@ trait SimpleLocaleConstants
     // (von einem anderen Modul oder manuell vom Admin gesetzt) geht nicht verloren.
     private const attributeEnumerationPresentationBackup = 'EnumerationPresentationBackup';
 
+    // Build 164: Gegenstueck fuer den ZWEITEN Fork-Weg. Variablen ohne
+    // Variablen-Aktion lehnt Symcon fuer die Enumeration-Praesentation ab
+    // ("This presentation is only available for variables with a variable
+    // action") - fuer sie wird stattdessen ein privates Profil geforkt und als
+    // VariableCustomProfile gesetzt. Haelt je Variable den VORHER gesetzten
+    // eigenen Profilnamen ('' = es gab keinen), damit das Zurueckstellen auf die
+    // Quellsprache ihn exakt wiederherstellen kann.
+    private const attributeEnumerationProfileBackup = 'EnumerationProfileBackup';
+
     // Objekte ohne Namen, die beim letzten Rescan im Root-Baum gefunden wurden (JSON-
     // Array aus ObjectID+Path) - ein Rescan bricht ab, sobald welche existieren, bevor
     // irgendetwas übersetzt wird (leerer Name lässt sich sonst nicht sinnvoll übersetzen

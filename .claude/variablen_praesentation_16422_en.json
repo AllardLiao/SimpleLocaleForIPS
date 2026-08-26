@@ -1,0 +1,414 @@
+{
+    "Instanz": 16422,
+    "InstanzName": "EG-Nuki",
+    "Marke": "en",
+    "Zeitpunkt": "2026-08-26T22:33:19+02:00",
+    "PresentationAPI": true,
+    "Variablen": [
+        {
+            "ID": 58878,
+            "Name": "Battery charge",
+            "Ident": "BatteryChargeState",
+            "VariableType": 1,
+            "VariableAction": 0,
+            "VariableCustomAction": 0,
+            "HatAktion": false,
+            "VariableProfile": "NUKISLMQTT.16422.BatteryChargeState",
+            "VariableCustomProfile": "",
+            "VariablePresentation": {
+                "PROFILE": "NUKISLMQTT.16422.BatteryChargeState",
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}"
+            },
+            "VariableCustomPresentation": [],
+            "WirksamePresentation": {
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}",
+                "PROFILE": "NUKISLMQTT.16422.BatteryChargeState"
+            },
+            "ProfilAssoziationen": []
+        },
+        {
+            "ID": 28373,
+            "Name": "Batteries",
+            "Ident": "BatteryCritical",
+            "VariableType": 0,
+            "VariableAction": 0,
+            "VariableCustomAction": 0,
+            "HatAktion": false,
+            "VariableProfile": "NUKISLMQTT.16422.BatteryCritical",
+            "VariableCustomProfile": "",
+            "VariablePresentation": {
+                "PROFILE": "NUKISLMQTT.16422.BatteryCritical",
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}"
+            },
+            "VariableCustomPresentation": {
+                "DISPLAY": 0,
+                "ICON": "",
+                "LAYOUT": 0,
+                "OPTIONS": "[{\"Value\":false,\"Caption\":\"OK\",\"IconActive\":false,\"IconValue\":\"\",\"Color\":65280},{\"Value\":true,\"Caption\":\"weak battery\",\"IconActive\":false,\"IconValue\":\"\",\"Color\":16711680}]",
+                "PRESENTATION": "{52D9E126-D7D2-2CBB-5E62-4CF7BA7C5D82}"
+            },
+            "WirksamePresentation": {
+                "PRESENTATION": "{52D9E126-D7D2-2CBB-5E62-4CF7BA7C5D82}",
+                "OPTIONS": "[{\"Value\":false,\"Caption\":\"OK\",\"IconActive\":false,\"IconValue\":\"\",\"Color\":65280},{\"Value\":true,\"Caption\":\"weak battery\",\"IconActive\":false,\"IconValue\":\"\",\"Color\":16711680}]",
+                "LAYOUT": 0,
+                "ICON": "",
+                "DISPLAY": 0
+            },
+            "ProfilAssoziationen": [
+                {
+                    "Value": false,
+                    "Name": "OK",
+                    "Icon": "",
+                    "Color": 65280
+                },
+                {
+                    "Value": true,
+                    "Name": "Schwache Batterie",
+                    "Icon": "",
+                    "Color": 16711680
+                }
+            ]
+        },
+        {
+            "ID": 24112,
+            "Name": "Keypad Battery",
+            "Ident": "KeypadBatteryCritical",
+            "VariableType": 0,
+            "VariableAction": 0,
+            "VariableCustomAction": 0,
+            "HatAktion": false,
+            "VariableProfile": "NUKISLMQTT.16422.KeypadBatteryCritical",
+            "VariableCustomProfile": "",
+            "VariablePresentation": {
+                "PROFILE": "NUKISLMQTT.16422.KeypadBatteryCritical",
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}"
+            },
+            "VariableCustomPresentation": {
+                "DISPLAY": 0,
+                "ICON": "",
+                "LAYOUT": 0,
+                "OPTIONS": "[{\"Value\":false,\"Caption\":\"OK\",\"IconActive\":false,\"IconValue\":\"\",\"Color\":65280},{\"Value\":true,\"Caption\":\"weak battery\",\"IconActive\":false,\"IconValue\":\"\",\"Color\":16711680}]",
+                "PRESENTATION": "{52D9E126-D7D2-2CBB-5E62-4CF7BA7C5D82}"
+            },
+            "WirksamePresentation": {
+                "PRESENTATION": "{52D9E126-D7D2-2CBB-5E62-4CF7BA7C5D82}",
+                "OPTIONS": "[{\"Value\":false,\"Caption\":\"OK\",\"IconActive\":false,\"IconValue\":\"\",\"Color\":65280},{\"Value\":true,\"Caption\":\"weak battery\",\"IconActive\":false,\"IconValue\":\"\",\"Color\":16711680}]",
+                "LAYOUT": 0,
+                "ICON": "",
+                "DISPLAY": 0
+            },
+            "ProfilAssoziationen": [
+                {
+                    "Value": false,
+                    "Name": "OK",
+                    "Icon": "",
+                    "Color": 65280
+                },
+                {
+                    "Value": true,
+                    "Name": "Schwache Batterie",
+                    "Icon": "",
+                    "Color": 16711680
+                }
+            ]
+        },
+        {
+            "ID": 26788,
+            "Name": "Blocking state",
+            "Ident": "LockState",
+            "VariableType": 1,
+            "VariableAction": 0,
+            "VariableCustomAction": 0,
+            "HatAktion": false,
+            "VariableProfile": "NUKISLMQTT.16422.LockState",
+            "VariableCustomProfile": "",
+            "VariablePresentation": {
+                "PROFILE": "NUKISLMQTT.16422.LockState",
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}"
+            },
+            "VariableCustomPresentation": {
+                "DISPLAY": 0,
+                "ICON": "",
+                "LAYOUT": 0,
+                "OPTIONS": "[{\"Caption\":\"Uncalibrated\",\"Color\":16711680,\"IconActive\":true,\"IconValue\":\"Warning\",\"Value\":0},{\"Caption\":\"Locked\",\"Color\":16711680,\"IconActive\":true,\"IconValue\":\"LockClosed\",\"Value\":1},{\"Caption\":\"Unlocking\",\"Color\":255,\"IconActive\":true,\"IconValue\":\"LockOpen\",\"Value\":2},{\"Caption\":\"Unlocked\",\"Color\":255,\"IconActive\":true,\"IconValue\":\"LockOpen\",\"Value\":3},{\"Caption\":\"Locking\",\"Color\":16711680,\"IconActive\":true,\"IconValue\":\"LockClosed\",\"Value\":4},{\"Caption\":\"door open\",\"Color\":65280,\"IconActive\":true,\"IconValue\":\"Door\",\"Value\":5},{\"Caption\":\"Lock 'n' Go\",\"Color\":255,\"IconActive\":true,\"IconValue\":\"LockOpen\",\"Value\":6},{\"Caption\":\"Entriegeln\",\"Color\":65280,\"IconActive\":true,\"IconValue\":\"Door\",\"Value\":7},{\"Caption\":\"-\",\"Color\":-1,\"IconActive\":true,\"IconValue\":\"Information\",\"Value\":253},{\"Caption\":\"Pump motor--Stalling\",\"Color\":16711680,\"IconActive\":true,\"IconValue\":\"Warning\",\"Value\":254},{\"Caption\":\"Indeterminate\",\"Color\":-1,\"IconActive\":true,\"IconValue\":\"Warning\",\"Value\":255}]",
+                "PRESENTATION": "{52D9E126-D7D2-2CBB-5E62-4CF7BA7C5D82}"
+            },
+            "WirksamePresentation": {
+                "PRESENTATION": "{52D9E126-D7D2-2CBB-5E62-4CF7BA7C5D82}",
+                "OPTIONS": "[{\"Caption\":\"Uncalibrated\",\"Color\":16711680,\"IconActive\":true,\"IconValue\":\"Warning\",\"Value\":0},{\"Caption\":\"Locked\",\"Color\":16711680,\"IconActive\":true,\"IconValue\":\"LockClosed\",\"Value\":1},{\"Caption\":\"Unlocking\",\"Color\":255,\"IconActive\":true,\"IconValue\":\"LockOpen\",\"Value\":2},{\"Caption\":\"Unlocked\",\"Color\":255,\"IconActive\":true,\"IconValue\":\"LockOpen\",\"Value\":3},{\"Caption\":\"Locking\",\"Color\":16711680,\"IconActive\":true,\"IconValue\":\"LockClosed\",\"Value\":4},{\"Caption\":\"door open\",\"Color\":65280,\"IconActive\":true,\"IconValue\":\"Door\",\"Value\":5},{\"Caption\":\"Lock 'n' Go\",\"Color\":255,\"IconActive\":true,\"IconValue\":\"LockOpen\",\"Value\":6},{\"Caption\":\"Entriegeln\",\"Color\":65280,\"IconActive\":true,\"IconValue\":\"Door\",\"Value\":7},{\"Caption\":\"-\",\"Color\":-1,\"IconActive\":true,\"IconValue\":\"Information\",\"Value\":253},{\"Caption\":\"Pump motor--Stalling\",\"Color\":16711680,\"IconActive\":true,\"IconValue\":\"Warning\",\"Value\":254},{\"Caption\":\"Indeterminate\",\"Color\":-1,\"IconActive\":true,\"IconValue\":\"Warning\",\"Value\":255}]",
+                "LAYOUT": 0,
+                "ICON": "",
+                "DISPLAY": 0
+            },
+            "ProfilAssoziationen": [
+                {
+                    "Value": 0,
+                    "Name": "Unkalibriert",
+                    "Icon": "Warning",
+                    "Color": 16711680
+                },
+                {
+                    "Value": 1,
+                    "Name": "Zugesperrt",
+                    "Icon": "LockClosed",
+                    "Color": 16711680
+                },
+                {
+                    "Value": 2,
+                    "Name": "Aufsperren",
+                    "Icon": "LockOpen",
+                    "Color": 255
+                },
+                {
+                    "Value": 3,
+                    "Name": "Aufgesperrt",
+                    "Icon": "LockOpen",
+                    "Color": 255
+                },
+                {
+                    "Value": 4,
+                    "Name": "Zusperren",
+                    "Icon": "LockClosed",
+                    "Color": 16711680
+                },
+                {
+                    "Value": 5,
+                    "Name": "Tür offen",
+                    "Icon": "Door",
+                    "Color": 65280
+                },
+                {
+                    "Value": 6,
+                    "Name": "Aufgesperrt (Lock 'n' Go)",
+                    "Icon": "LockOpen",
+                    "Color": 255
+                },
+                {
+                    "Value": 7,
+                    "Name": "Entriegeln",
+                    "Icon": "Door",
+                    "Color": 65280
+                },
+                {
+                    "Value": 253,
+                    "Name": "-",
+                    "Icon": "Information",
+                    "Color": -1
+                },
+                {
+                    "Value": 254,
+                    "Name": "Motor blockiert",
+                    "Icon": "Warning",
+                    "Color": 16711680
+                },
+                {
+                    "Value": 255,
+                    "Name": "Unbestimmt",
+                    "Icon": "Warning",
+                    "Color": -1
+                }
+            ]
+        },
+        {
+            "ID": 48587,
+            "Name": "Battery charge time",
+            "Ident": "BatteryCharging",
+            "VariableType": 0,
+            "VariableAction": 0,
+            "VariableCustomAction": 0,
+            "HatAktion": false,
+            "VariableProfile": "NUKISLMQTT.16422.BatteryCharging",
+            "VariableCustomProfile": "",
+            "VariablePresentation": {
+                "PROFILE": "NUKISLMQTT.16422.BatteryCharging",
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}"
+            },
+            "VariableCustomPresentation": {
+                "DISPLAY": 0,
+                "ICON": "",
+                "LAYOUT": 0,
+                "OPTIONS": "[{\"Value\":false,\"Caption\":\"Inactive\",\"IconActive\":false,\"IconValue\":\"\",\"Color\":16711680},{\"Value\":true,\"Caption\":\"Active\",\"IconActive\":false,\"IconValue\":\"\",\"Color\":65280}]",
+                "PRESENTATION": "{52D9E126-D7D2-2CBB-5E62-4CF7BA7C5D82}"
+            },
+            "WirksamePresentation": {
+                "PRESENTATION": "{52D9E126-D7D2-2CBB-5E62-4CF7BA7C5D82}",
+                "OPTIONS": "[{\"Value\":false,\"Caption\":\"Inactive\",\"IconActive\":false,\"IconValue\":\"\",\"Color\":16711680},{\"Value\":true,\"Caption\":\"Active\",\"IconActive\":false,\"IconValue\":\"\",\"Color\":65280}]",
+                "LAYOUT": 0,
+                "ICON": "",
+                "DISPLAY": 0
+            },
+            "ProfilAssoziationen": [
+                {
+                    "Value": false,
+                    "Name": "Inaktiv",
+                    "Icon": "",
+                    "Color": 16711680
+                },
+                {
+                    "Value": true,
+                    "Name": "Aktiv",
+                    "Icon": "",
+                    "Color": 65280
+                }
+            ]
+        },
+        {
+            "ID": 34675,
+            "Name": "Minutes",
+            "Ident": "Protocol",
+            "VariableType": 3,
+            "VariableAction": 0,
+            "VariableCustomAction": 0,
+            "HatAktion": false,
+            "VariableProfile": "~HTMLBox",
+            "VariableCustomProfile": "",
+            "VariablePresentation": {
+                "PROFILE": "~HTMLBox",
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}"
+            },
+            "VariableCustomPresentation": [],
+            "WirksamePresentation": {
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}",
+                "PROFILE": "~HTMLBox"
+            },
+            "ProfilAssoziationen": []
+        },
+        {
+            "ID": 46561,
+            "Name": "Last update",
+            "Ident": "LastUpdate",
+            "VariableType": 3,
+            "VariableAction": 0,
+            "VariableCustomAction": 0,
+            "HatAktion": false,
+            "VariableProfile": "",
+            "VariableCustomProfile": "",
+            "VariablePresentation": [],
+            "VariableCustomPresentation": [],
+            "WirksamePresentation": {
+                "USAGE_TYPE": 0,
+                "THOUSANDS_SEPARATOR": "",
+                "SHOW_PREVIEW": true,
+                "PRESENTATION": "{3319437D-7CDE-699D-750A-3C6A3841FA75}",
+                "SUFFIX": "",
+                "COLOR": -1,
+                "PREFIX": "",
+                "CONTENT_COLOR": -1,
+                "MAX": 100,
+                "MULTILINE": false,
+                "DECIMAL_SEPARATOR": "Client",
+                "PERCENTAGE": false,
+                "DIGITS": 2,
+                "INTERVALS": "[]",
+                "DISPLAY_TYPE": 0,
+                "ICON": "",
+                "INTERVALS_ACTIVE": false,
+                "PREVIEW_STYLE": 1,
+                "MIN": 0,
+                "OPTIONS": "[]"
+            }
+        },
+        {
+            "ID": 18003,
+            "Name": "NukiID",
+            "Ident": "",
+            "VariableType": 3,
+            "VariableAction": 0,
+            "VariableCustomAction": 1,
+            "HatAktion": true,
+            "VariableProfile": "",
+            "VariableCustomProfile": "",
+            "VariablePresentation": [],
+            "VariableCustomPresentation": [],
+            "WirksamePresentation": {
+                "USAGE_TYPE": 0,
+                "THOUSANDS_SEPARATOR": "",
+                "SHOW_PREVIEW": true,
+                "PRESENTATION": "{3319437D-7CDE-699D-750A-3C6A3841FA75}",
+                "SUFFIX": "",
+                "COLOR": -1,
+                "PREFIX": "",
+                "CONTENT_COLOR": -1,
+                "MAX": 100,
+                "MULTILINE": false,
+                "DECIMAL_SEPARATOR": "Client",
+                "PERCENTAGE": false,
+                "DIGITS": 2,
+                "INTERVALS": "[]",
+                "DISPLAY_TYPE": 0,
+                "ICON": "",
+                "INTERVALS_ACTIVE": false,
+                "PREVIEW_STYLE": 1,
+                "MIN": 0,
+                "OPTIONS": "[]"
+            }
+        },
+        {
+            "ID": 16216,
+            "Name": "Locking action",
+            "Ident": "LockAction",
+            "VariableType": 1,
+            "VariableAction": 16422,
+            "VariableCustomAction": 0,
+            "HatAktion": true,
+            "VariableProfile": "NUKISLMQTT.16422.LockAction",
+            "VariableCustomProfile": "",
+            "VariablePresentation": {
+                "PROFILE": "NUKISLMQTT.16422.LockAction",
+                "PRESENTATION": "{4153A8D4-5C33-C65F-C1F3-7B61AAF99B1C}"
+            },
+            "VariableCustomPresentation": {
+                "DISPLAY": 0,
+                "ICON": "",
+                "LAYOUT": 0,
+                "OPTIONS": "[{\"Caption\":\"Unlocking\",\"Color\":255,\"IconActive\":true,\"IconValue\":\"LockOpen\",\"Value\":1},{\"Caption\":\"Locking\",\"Color\":16711680,\"IconActive\":true,\"IconValue\":\"LockClosed\",\"Value\":2},{\"Caption\":\"Open the door\",\"Color\":65280,\"IconActive\":true,\"IconValue\":\"Door\",\"Value\":3},{\"Caption\":\"Lock 'n' Go\",\"Color\":16776960,\"IconActive\":true,\"IconValue\":\"Lock\",\"Value\":4},{\"Caption\":\"Open lock 'n' go door\",\"Color\":65280,\"IconActive\":true,\"IconValue\":\"Door\",\"Value\":5},{\"Caption\":\"Full locking 2x (720)\",\"Color\":16711680,\"IconActive\":true,\"IconValue\":\"LockClosed\",\"Value\":6}]",
+                "PRESENTATION": "{52D9E126-D7D2-2CBB-5E62-4CF7BA7C5D82}"
+            },
+            "WirksamePresentation": {
+                "PRESENTATION": "{52D9E126-D7D2-2CBB-5E62-4CF7BA7C5D82}",
+                "OPTIONS": "[{\"Caption\":\"Unlocking\",\"Color\":255,\"IconActive\":true,\"IconValue\":\"LockOpen\",\"Value\":1},{\"Caption\":\"Locking\",\"Color\":16711680,\"IconActive\":true,\"IconValue\":\"LockClosed\",\"Value\":2},{\"Caption\":\"Open the door\",\"Color\":65280,\"IconActive\":true,\"IconValue\":\"Door\",\"Value\":3},{\"Caption\":\"Lock 'n' Go\",\"Color\":16776960,\"IconActive\":true,\"IconValue\":\"Lock\",\"Value\":4},{\"Caption\":\"Open lock 'n' go door\",\"Color\":65280,\"IconActive\":true,\"IconValue\":\"Door\",\"Value\":5},{\"Caption\":\"Full locking 2x (720)\",\"Color\":16711680,\"IconActive\":true,\"IconValue\":\"LockClosed\",\"Value\":6}]",
+                "LAYOUT": 0,
+                "ICON": "",
+                "DISPLAY": 0
+            },
+            "ProfilAssoziationen": [
+                {
+                    "Value": 1,
+                    "Name": "Aufsperren",
+                    "Icon": "LockOpen",
+                    "Color": 255
+                },
+                {
+                    "Value": 2,
+                    "Name": "Zusperren",
+                    "Icon": "LockClosed",
+                    "Color": 16711680
+                },
+                {
+                    "Value": 3,
+                    "Name": "Tür öffnen",
+                    "Icon": "Door",
+                    "Color": 65280
+                },
+                {
+                    "Value": 4,
+                    "Name": "Lock 'n' Go",
+                    "Icon": "Lock",
+                    "Color": 16776960
+                },
+                {
+                    "Value": 5,
+                    "Name": "Lock 'n' Go Tür öffnen",
+                    "Icon": "Door",
+                    "Color": 65280
+                },
+                {
+                    "Value": 6,
+                    "Name": "Vollverriegelung 2x (720)",
+                    "Icon": "LockClosed",
+                    "Color": 16711680
+                }
+            ]
+        }
+    ]
+}

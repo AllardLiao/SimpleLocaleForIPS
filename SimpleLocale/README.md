@@ -4294,6 +4294,46 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 164 (live gemeldet, per Diagnose-Dump belegt): Aufzählungs-Captions
+  wurden nur bei Variablen mit Variablen-Aktion übersetzt.**
+  An einem Nuki-Schloss übersetzte "Locking action" korrekt, "Blocking state",
+  "Batteries", "Battery charge time" und "Keypad Battery" nicht - obwohl alle
+  fünf gefüllte Übersetzungen in der Tabelle hatten und alle fünf identisch
+  behandelt wurden.
+
+  Symcon erlaubt die Enumeration-Präsentation nur für Variablen mit
+  Variablen-Aktion ("This presentation is only available for variables with a
+  variable action"). Bis Build 163 wurde trotzdem **jede** Legacy-Variable darauf
+  umgestellt. Der Fork kam durch - `IPS_GetVariablePresentation()` lieferte die
+  übersetzten Captions -, die Visualisierung verwarf ihn aber und zeigte weiter
+  das Profil. Genau deshalb war es im Objektbaum-Dialog zu sehen, in der Visu
+  nicht.
+
+  Der Dump belegte beides: alle fünf bekamen `PRESENTATION {52D9E126…}`
+  (Enumeration) statt `{4153A8D4…}` (Legacy), und nur "Locking action" trug
+  `VariableAction = 16422` - die Nuki-Instanz selbst, gesetzt von
+  `EnableAction()`. Im Dialog sieht das täuschend leer aus: dort steht "Custom
+  Action: (None)", während die vom Modul gelieferte "Default Action" darunter
+  aktiv ist.
+
+  *Fix:* Variablen ohne Aktion bekommen statt der Präsentation ein geforktes
+  **Profil** - eine private Kopie mit übersetzten Assoziationsnamen, gesetzt als
+  `VariableCustomProfile`. Das geteilte Originalprofil bleibt unangetastet, genau
+  wie beim Präsentations-Fork. Symbol, Farben, Einheiten und Wertebereich werden
+  unverändert übernommen; weicht keine einzige Caption ab, wird gar kein Profil
+  angelegt.
+
+  Zwei Fallen, die der Test festhält: beim Zurückstellen auf die Quellsprache
+  muss die Variable **zuerst** auf ihr altes Profil zurückgesetzt und das eigene
+  **danach** gelöscht werden (Symcon verweigert das Löschen eines noch
+  zugewiesenen Profils), und ein bereits vorhandenes Fork-Profil wird
+  weiterverwendet statt neu angelegt - beim zweiten Sprachwechsel hängt es noch
+  an der Variable.
+
+  Regressionstest `test_profile_fork_without_action.php` (7 Fälle) plus
+  angepasster Zähler in `test_translation_active_flag.php`: das
+  "Übersetzung aktiv"-Flag wird jetzt an **sieben** Schreibstellen ausgewertet.
+
 * **Build 163 (live gemeldet, per Screenshot belegt): die Statuszeile meldete
   "Google Translate Fehler - bitte API-Key prüfen", obwohl gar kein
   Google-Schlüssel hinterlegt war.**
