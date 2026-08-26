@@ -1193,6 +1193,34 @@ private const LANGUAGE_FLAGS = [
                 // dazukam. Mit einem einzigen, festen Gesamttext kann die Konsole wieder
                 // exakt matchen und in die tatsächliche Konsolensprache des Betrachters
                 // übersetzen (nicht nur die Symcon-Systemsprache wie bei Translate()).
+                // Build 161 (Nutzer-Wunsch): ohne "paid_providers" beschreiben beide
+                // Texte hier eine Funktion, die es in dieser Edition gar nicht gibt -
+                // "sind beide eingetragen, wird zuerst der bevorzugte versucht" gilt
+                // nur bei voller Verkettung. Ohne das Feature bleibt der kostenfreie
+                // Anbieter primaer und hoechstens EIN bezahlter greift als Rueckfall
+                // dahinter (siehe GetProviderChain).
+                //
+                // Das Auswahlfeld bleibt dabei bewusst BEDIENBAR: es entscheidet dort
+                // weiterhin, WELCHER der beiden eingetragenen Schluessel dieser eine
+                // Rueckfall ist. Ausgrauen wuerde echte Funktion wegnehmen - nur die
+                // Beschriftung war falsch.
+                //
+                // Feste, vollstaendig vorregistrierte Gesamttexte statt zur Laufzeit
+                // zusammengesetzter Ketten - siehe Build 156: eine zusammengebaute
+                // Zeichenkette matcht nie einen locale.json-Eintrag und bliebe an der
+                // Systemsprache haengen.
+                case 'ProviderIntroLabel':
+                    if (!$this->HasLicenseFeature('paid_providers')) {
+                        $element['caption'] = 'Ohne jede Eingabe unten funktioniert die Übersetzung sofort über den kostenfreien Anbieter (kein Konto nötig). Google oder DeepL sind optional und greifen in dieser Edition als einzelner Rückfall hinter dem kostenfreien Anbieter. Beide bezahlten Anbieter kombiniert und VOR dem kostenfreien versucht - also mehrere Kontingente nacheinander - gibt es ab der Standard Edition.';
+                    }
+                    break;
+
+                case self::propertyPreferredPaidProvider:
+                    if (!$this->HasLicenseFeature('paid_providers')) {
+                        $element['caption'] = 'Bevorzugter Anbieter (nur relevant, wenn beide oben eingetragen sind - in dieser Edition wird genau einer davon als Rückfall genutzt)';
+                    }
+                    break;
+
                 case self::propertyAutoRescanInterval:
                     if (!$this->HasLicenseFeature('auto_rescan')) {
                         $element['enabled'] = false;

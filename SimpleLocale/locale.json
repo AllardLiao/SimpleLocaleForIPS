@@ -210,7 +210,9 @@
             "Automatisch (Standard)": "Automatic (Standard)",
             "Automatisch (Simple-Locale-Symbol)": "Automatic (Simple Locale icon)",
             "Automatisch (Weltkugel)": "Automatic (Globe)",
-            "Die eigene Übersetzungstabelle steht in dieser Edition nicht zur Verfügung.": "The custom translation table is not available in this edition."
+            "Die eigene Übersetzungstabelle steht in dieser Edition nicht zur Verfügung.": "The custom translation table is not available in this edition.",
+            "Ohne jede Eingabe unten funktioniert die Übersetzung sofort über den kostenfreien Anbieter (kein Konto nötig). Google oder DeepL sind optional und greifen in dieser Edition als einzelner Rückfall hinter dem kostenfreien Anbieter. Beide bezahlten Anbieter kombiniert und VOR dem kostenfreien versucht - also mehrere Kontingente nacheinander - gibt es ab der Standard Edition.": "Without entering anything below, translation works right away through the free provider (no account needed). Google or DeepL are optional and act as a single fallback behind the free provider in this edition. Combining both paid providers and trying them BEFORE the free one - several quotas one after another - is available from the Standard edition.",
+            "Bevorzugter Anbieter (nur relevant, wenn beide oben eingetragen sind - in dieser Edition wird genau einer davon als Rückfall genutzt)": "Preferred provider (only relevant if both are entered above - in this edition exactly one of them is used as the fallback)"
         },
         "es": {
             "Aktiv": "Activo",
@@ -422,7 +424,9 @@
             "Automatisch (Standard)": "Automático (Estándar)",
             "Automatisch (Simple-Locale-Symbol)": "Automático (Símbolo de Simple Locale)",
             "Automatisch (Weltkugel)": "Automático (Globo terráqueo)",
-            "Die eigene Übersetzungstabelle steht in dieser Edition nicht zur Verfügung.": "La tabla de traducción propia no está disponible en esta edición."
+            "Die eigene Übersetzungstabelle steht in dieser Edition nicht zur Verfügung.": "La tabla de traducción propia no está disponible en esta edición.",
+            "Ohne jede Eingabe unten funktioniert die Übersetzung sofort über den kostenfreien Anbieter (kein Konto nötig). Google oder DeepL sind optional und greifen in dieser Edition als einzelner Rückfall hinter dem kostenfreien Anbieter. Beide bezahlten Anbieter kombiniert und VOR dem kostenfreien versucht - also mehrere Kontingente nacheinander - gibt es ab der Standard Edition.": "Sin introducir nada abajo, la traducción funciona de inmediato a través del proveedor gratuito (no hace falta cuenta). Google o DeepL son opcionales y actúan en esta edición como único recurso de reserva detrás del proveedor gratuito. Combinar ambos proveedores de pago e intentarlos ANTES del gratuito - varias cuotas una tras otra - está disponible a partir de la edición Standard.",
+            "Bevorzugter Anbieter (nur relevant, wenn beide oben eingetragen sind - in dieser Edition wird genau einer davon als Rückfall genutzt)": "Proveedor preferido (solo relevante si ambos están introducidos arriba: en esta edición se utiliza exactamente uno de ellos como reserva)"
         },
         "it": {
             "Aktiv": "Attivo",
@@ -634,7 +638,9 @@
             "Automatisch (Standard)": "Automatico (Standard)",
             "Automatisch (Simple-Locale-Symbol)": "Automatico (Icona Simple Locale)",
             "Automatisch (Weltkugel)": "Automatico (Globo)",
-            "Die eigene Übersetzungstabelle steht in dieser Edition nicht zur Verfügung.": "La tabella di traduzione personalizzata non è disponibile in questa edizione."
+            "Die eigene Übersetzungstabelle steht in dieser Edition nicht zur Verfügung.": "La tabella di traduzione personalizzata non è disponibile in questa edizione.",
+            "Ohne jede Eingabe unten funktioniert die Übersetzung sofort über den kostenfreien Anbieter (kein Konto nötig). Google oder DeepL sind optional und greifen in dieser Edition als einzelner Rückfall hinter dem kostenfreien Anbieter. Beide bezahlten Anbieter kombiniert und VOR dem kostenfreien versucht - also mehrere Kontingente nacheinander - gibt es ab der Standard Edition.": "Senza inserire nulla qui sotto, la traduzione funziona subito tramite il provider gratuito (nessun account necessario). Google o DeepL sono facoltativi e in questa edizione intervengono come unico ripiego dopo il provider gratuito. Combinare entrambi i provider a pagamento e provarli PRIMA di quello gratuito - più quote una dopo l'altra - è disponibile dall'edizione Standard.",
+            "Bevorzugter Anbieter (nur relevant, wenn beide oben eingetragen sind - in dieser Edition wird genau einer davon als Rückfall genutzt)": "Provider preferito (rilevante solo se entrambi sono inseriti sopra: in questa edizione ne viene usato esattamente uno come ripiego)"
         },
         "fr": {
             "Aktiv": "Actif",
@@ -846,7 +852,9 @@
             "Automatisch (Standard)": "Automatique (Standard)",
             "Automatisch (Simple-Locale-Symbol)": "Automatique (Icône Simple Locale)",
             "Automatisch (Weltkugel)": "Automatique (Globe)",
-            "Die eigene Übersetzungstabelle steht in dieser Edition nicht zur Verfügung.": "Le tableau de traduction personnalisé n'est pas disponible dans cette édition."
+            "Die eigene Übersetzungstabelle steht in dieser Edition nicht zur Verfügung.": "Le tableau de traduction personnalisé n'est pas disponible dans cette édition.",
+            "Ohne jede Eingabe unten funktioniert die Übersetzung sofort über den kostenfreien Anbieter (kein Konto nötig). Google oder DeepL sind optional und greifen in dieser Edition als einzelner Rückfall hinter dem kostenfreien Anbieter. Beide bezahlten Anbieter kombiniert und VOR dem kostenfreien versucht - also mehrere Kontingente nacheinander - gibt es ab der Standard Edition.": "Sans rien saisir ci-dessous, la traduction fonctionne immédiatement via le fournisseur gratuit (aucun compte nécessaire). Google ou DeepL sont facultatifs et interviennent dans cette édition comme unique solution de repli derrière le fournisseur gratuit. Combiner les deux fournisseurs payants et les essayer AVANT le gratuit - plusieurs quotas l'un après l'autre - est disponible à partir de l'édition Standard.",
+            "Bevorzugter Anbieter (nur relevant, wenn beide oben eingetragen sind - in dieser Edition wird genau einer davon als Rückfall genutzt)": "Fournisseur préféré (pertinent uniquement si les deux sont saisis ci-dessus : dans cette édition, exactement l'un d'eux sert de solution de repli)"
         }
     }
 }

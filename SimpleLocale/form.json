@@ -238,6 +238,7 @@
                     "items": [
                         {
                             "type": "Label",
+                            "name": "ProviderIntroLabel",
                             "caption": "Ohne jede Eingabe unten funktioniert die Übersetzung sofort über den kostenfreien Anbieter (kein Konto nötig). Google und/oder DeepL sind optional - sind beide eingetragen, wird zuerst der bevorzugte versucht; schlägt ein Anbieter fehl (z.B. Tageskontingent erschöpft), springt die Übersetzung automatisch zum nächsten."
                         },
                         {
