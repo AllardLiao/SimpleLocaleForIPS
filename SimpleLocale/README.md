@@ -4294,6 +4294,32 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 158 (Nutzer-Entscheidung nach dem Befund aus Build 157): die
+  mitgelieferte Nachschlagetabelle für Einheiten und Kompassrichtungen greift
+  jetzt in JEDER Edition.**
+  Bis Build 157 hingen zwei Dinge an einem einzigen Lizenz-Flag
+  (`manual_translations`): die editierbare "Eigene Übersetzungstabelle" **und**
+  der mitgelieferte Katalog. Eine Edition ohne das Feature schickte damit auch
+  `°C` ganz normal an die API - und bekam auf Englisch `°F` zurück. Eine
+  Einheitenumrechnung als Übersetzung ist in jeder Edition falsch, und dem
+  Kunden ist nicht vermittelbar, dass das an seiner Edition liegt.
+
+  Verkauft wird die **editierbare** Tabelle, nicht die korrekte Behandlung von
+  Einheiten. Ohne das Feature bleibt sie unsichtbar und unbearbeitbar, der
+  interne Lookup greift trotzdem - das kostet nichts und spart sogar Kontingent.
+
+  Die Gegenrichtung ist bewusst unverändert: **mit** dem Feature gibt es keinen
+  Fallback. Dort ist die Tabelle maßgeblich, und eine bewusst gelöschte Zeile
+  (z. B. weil "SSW" in dieser Installation ein Personen-Kürzel ist, keine
+  Windrichtung) muss gelöscht bleiben - ein Fallback würde genau diese Löschung
+  wirkungslos machen.
+
+  Regressionstest `test_bundled_glossary_all_editions.php` (6 Fälle: der
+  gemeldete Fall; die Gegenrichtung mit Feature; ein eingetragener Wert gewinnt
+  immer; der Katalog greift nur bei deutscher Quellsprache; unbekannte Texte
+  gehen weiterhin an die API; Symmetrie-Check inklusive der Pufferung der Karte,
+  da die Suche je Text läuft).
+
 * **Build 157 (live gemeldet, per Screenshot belegt): die mitgelieferten
   Vorschlagszeilen der "Eigenen Übersetzungstabelle" blieben leer - und dadurch
   wurde `°C` nach Englisch zu `°F`.**

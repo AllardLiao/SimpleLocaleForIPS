@@ -7258,7 +7258,54 @@ private const LANGUAGE_FLAGS = [
             }
         }
 
-        return null;
+        // Build 158 (Nutzer-Entscheidung): die MITGELIEFERTE Nachschlagetabelle
+        // (Einheiten, Kompassrichtungen) greift in JEDER Edition - aber nur dort,
+        // wo es die editierbare Tabelle gar nicht gibt.
+        //
+        // Grund: bis Build 157 hing beides an einem einzigen Flag. Eine Edition
+        // ohne "manual_translations" schickte damit auch "°C" ganz normal an die
+        // API - und die lieferte auf Englisch "°F" zurueck. Eine Einheiten-
+        // umrechnung als Uebersetzung ist in jeder Edition schlicht falsch, und
+        // dem Kunden ist nicht vermittelbar, dass das an seiner Edition liegt.
+        //
+        // Verkauft wird die EDITIERBARE Tabelle, nicht die korrekte Behandlung von
+        // Einheiten. Ohne das Feature bleibt sie unsichtbar und unbearbeitbar, der
+        // interne Lookup greift trotzdem - das kostet nichts und spart sogar
+        // Kontingent.
+        //
+        // MIT dem Feature bleibt bewusst alles beim Alten: dort ist die Tabelle
+        // massgeblich, und eine bewusst geloeschte Zeile (z.B. weil "SSW" in dieser
+        // Installation ein Personen-Kuerzel ist, keine Windrichtung) muss geloescht
+        // BLEIBEN. Ein Fallback wuerde genau diese Loeschung wirkungslos machen.
+        if ($this->HasLicenseFeature('manual_translations')) {
+            return null;
+        }
+
+        return $this->FindBundledTranslation($SourceLanguage, $TargetLanguage, $Text);
+    }
+
+    // Build 158: Nachschlagen im mitgelieferten Katalog, unabhaengig von der
+    // gespeicherten Tabelle. Der Katalog ist durchgehend deutschsprachig
+    // indiziert (siehe MergeBundledManualTranslations), greift also nur fuer
+    // Zeilen mit deutscher Quellsprache.
+    private function FindBundledTranslation(string $SourceLanguage, string $TargetLanguage, string $Text): ?string
+    {
+        if ($SourceLanguage !== 'de') {
+            return null;
+        }
+
+        // Die Karte ist eine reine Ableitung zweier Konstanten und aendert sich zur
+        // Laufzeit nie - einmal bauen genuegt. Ohne diesen Puffer entstuende sie bei
+        // jedem einzelnen zu uebersetzenden Text neu (rund 90 Eintraege x 9
+        // Sprachen), und FindManualTranslation() laeuft je Text.
+        static $bundled = null;
+        if ($bundled === null) {
+            $bundled = $this->BuildBundledManualTranslationMap();
+        }
+
+        $translation = (string) ($bundled[$Text][$TargetLanguage] ?? '');
+
+        return $translation !== '' ? $translation : null;
     }
 
     // Uebersetzt (Quelle, Ziel, Text) IMMER zuerst gegen den lokalen Cache
