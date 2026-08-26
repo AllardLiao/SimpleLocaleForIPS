@@ -935,6 +935,20 @@ private const LANGUAGE_FLAGS = [
                 $this->PopulateFormElements($element['items'], $CleanupResultCount);
             }
 
+            // Build 155 (live gemeldet): die Inhalte eines PopupAlert stecken NICHT
+            // in $element['items'], sondern eine Ebene tiefer in
+            // $element['popup']['items'] - ohne diesen Zweig wurde dort nie ein Feld
+            // befuellt. Sichtbar wurde das am Ergebnis-Popup von "Aufraeumen": das
+            // Popup selbst ist ein Element oberster Ebene und wurde korrekt sichtbar
+            // gesetzt, die Zahl darin (CleanupResultCountLabel) blieb aber leer,
+            // sobald Symcons Konsole das Formular nach dem RequestAction neu aufbaute.
+            // Beim ERSTEN, per UpdateFormField live eingeblendeten Popup stand die
+            // Zahl noch drin - UpdateFormField adressiert ein Feld ueber seinen Namen
+            // und erreicht es unabhaengig von der Verschachtelung.
+            if (isset($element['popup']['items']) && is_array($element['popup']['items'])) {
+                $this->PopulateFormElements($element['popup']['items'], $CleanupResultCount);
+            }
+
             switch ($element['name'] ?? '') {
                 case self::propertySourceLanguage:
                     $element['options'] = $this->BuildLanguageOptions();
