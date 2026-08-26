@@ -570,6 +570,38 @@ noch gültige Übersetzungen. Im Zweifel vorher einmal die betroffenen Listen
 durchsehen (die "Pfad"-Spalte hilft dabei) oder ein Backup der Instanz-
 Konfiguration ziehen.
 
+**Wenn sich ein Text oder Name im Objektbaum nachträglich ändert**
+
+Ein Rescan aktualisiert den "Original-Import" bereits erfasster Zeilen
+**nicht**. Das ist Absicht: nur so bleibt der bei der Ersterfassung
+vorgefundene Zustand erhalten, auf den sich die Visualisierung zurückstellen
+lässt (siehe `MergeRows()`). Ein Rescan findet also ausschließlich *neue*
+Objekte. Was das für eine nachträgliche Änderung bedeutet, hängt davon ab, um
+welche Art Zeile es geht:
+
+* **"Eigene Texte" und "Begrüßung" (Modus "Variable")** - hier wird nichts
+  gebraucht. Das Modul ist auf diese String-Variablen per `VM_UPDATE`
+  registriert, übernimmt einen extern geschriebenen Wert sofort als neuen
+  Rohtext, markiert die bisherigen Übersetzungen als veraltet und übersetzt die
+  gerade aktive Sprache nach. Alle übrigen Zielsprachen holt es nach, sobald
+  jemand auf sie umschaltet.
+* **Alle anderen Listen** - "Objektnamen", "Beschriftungen", "Automations",
+  "Charts", "Aufzählungen". Diese werden **nicht** live verfolgt. Wird ein
+  Objekt im Baum umbenannt oder ein Aufzählungstext geändert, merkt das Modul
+  davon nichts, und ein Rescan ändert daran nichts. Der Weg ist: **die
+  betroffene Zeile im Konfigurationsformular über das Papierkorb-Symbol
+  löschen, dann einen Rescan auslösen** - die Zeile wird dann frisch aus dem
+  Objektbaum aufgebaut, mit dem neuen Text als "Original-Import" und leeren
+  Übersetzungsspalten, die im selben Durchlauf gefüllt werden.
+
+**Eine Ausnahme, die leicht übersehen wird:** solange die Instanz auf
+"Aktiv = aus" steht, ist auch die Live-Verfolgung abgeschaltet (Notaus-Schalter,
+siehe Tabelle oben). Änderungen an "Eigene Texte"-Variablen aus dieser Zeit
+werden nicht bemerkt - und ein späterer Rescan holt sie aus dem oben genannten
+Grund ebenfalls nicht nach. Wer während einer Deaktivierung solche Texte
+bearbeitet hat, muss die betroffenen Zeilen danach löschen und neu einlesen
+lassen, genau wie bei den nicht verfolgten Listen.
+
 > **Wichtig beim Weiterentwickeln der Visualisierung: immer mit "Aktuell aktive
 > Sprache" = Scan-Sprache (bzw. "Original") arbeiten, solange neue Objekte
 > hinzugefügt werden.** Ein Rescan übernimmt für ein NEUES Objekt immer dessen
