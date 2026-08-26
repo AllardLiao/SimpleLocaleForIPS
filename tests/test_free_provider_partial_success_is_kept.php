@@ -139,7 +139,13 @@ $moduleSource = file_get_contents(dirname(__DIR__) . '/SimpleLocale/module.php')
 $fnStart = strpos($moduleSource, 'private function TranslateChunkFree');
 $fnBody = substr($moduleSource, $fnStart, 2600);
 assert(strpos($fnBody, '$anySucceeded') !== false, 'TranslateChunkFree() muss Teilerfolge erkennen');
-assert(preg_match('/if\s*\(\$translated === null\)\s*\{\s*\$results\[\] = \x27\x27;/', $fnBody) === 1, 'DER FIX: ein einzelner Fehlschlag darf nicht mehr den ganzen Durchlauf abbrechen, sondern nur diesen einen Text offen lassen');
+// Bewusst auf die BESTANDTEILE des Zweigs geprueft statt auf eine starre
+// Textfolge - dazwischen stehen legitim Kommentare und (seit Build 152) die
+// Fehler-Bilanz.
+$nullBranch = substr($fnBody, strpos($fnBody, 'if ($translated === null)'), 400);
+assert(strpos($nullBranch, "\$results[] = '';") !== false, 'DER FIX: ein einzelner Fehlschlag darf nicht mehr den ganzen Durchlauf abbrechen, sondern nur diesen einen Text offen lassen');
+assert(strpos($nullBranch, 'return null;') === false, 'DER BUG: im Fehlschlag-Zweig darf kein "return null" mehr stehen - das verwarf frueher alle bereits fertigen Uebersetzungen');
+assert(strpos($nullBranch, 'continue;') !== false, 'nach einem Fehlschlag muss mit dem naechsten Text weitergemacht werden');
 assert(strpos($fnBody, 'if (!$anySucceeded) {') !== false, 'nur bei komplettem Ausfall darf null zurueckkommen');
 
 $chunkStart = strpos($moduleSource, 'private function TranslateChunk(');

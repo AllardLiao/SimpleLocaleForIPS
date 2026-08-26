@@ -481,6 +481,28 @@ trait SimpleLocaleConstants
     // wieder auftauchen, statt geloescht zu bleiben.
     private const attributeSeededManualTranslationKeys = 'SeededManualTranslationKeys';
 
+    // Build 152 (Nutzer-Frage: "Wie bekommt der User vom Ausfall eines
+    // Anbieters mit?"): Bilanz des LETZTEN Rescan-Durchlaufs als JSON
+    // {"unreachable": N, "tooLong": M, "at": <Unix-Timestamp>}. Wird zu Beginn
+    // jedes Rescans zurueckgesetzt und danach hochgezaehlt.
+    //
+    // Hintergrund: Seit Build 151 bleiben Teilerfolge erhalten, statt bei einem
+    // Fehlschlag komplett verworfen zu werden - das ist richtig, machte den
+    // Ausfall aber UNSICHTBAR. Vorher scheiterte der ganze Durchlauf und setzte
+    // wenigstens einen Fehlerstatus; jetzt gelingt er teilweise, und der Nutzer
+    // saehe ohne diese Bilanz nur leere Zellen und muesste annehmen, das Modul
+    // funktioniere nicht.
+    //
+    // Bewusst zwei getrennte Zaehler, weil sie zu GEGENSAETZLICHEN Ratschlaegen
+    // fuehren:
+    //   unreachable - Anbieter nicht erreichbar/Fehler (jeder HTTP >= 400,
+    //                 cURL-Fehler, Timeout). Ein erneuter Scan kann klappen.
+    //   tooLong     - Text ueber MyMemorys 500-Byte-Grenze. Ein erneuter Scan
+    //                 aendert daran GAR NICHTS, hier hilft nur ein Google-/
+    //                 DeepL-Key. "Bitte nochmal scannen" waere hier ein
+    //                 wertloser Rat, der nur Frust erzeugt.
+    private const attributeLastRunTranslationFailures = 'LastRunTranslationFailures';
+
     // Idents (RequestAction) - kein zugehöriges Variablen-/Profilobjekt mehr, siehe
     // propertyCurrentLanguage oben. "Language" bleibt nur noch als reiner Aktions-Ident.
     private const identLanguage = 'Language';
