@@ -4294,6 +4294,39 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 167 (Nutzer-Entscheidung): die beiden Bereinigungen für
+  Bestandsinstallationen sind entfernt.**
+  Das Modul ist bis heute unveröffentlicht - außer der Entwicklungsinstanz gibt
+  es keine Installation mit Altobjekten. Entfallen sind daher die einmalige
+  Löschung der früheren HTMLBox-Dropdown-/"Sprache"-Variable und die des toten
+  Build-98-Verzögerungstimers, beides Existenz-Prüfungen, die auf einer frischen
+  Instanz nie zutrafen. Ihre Konstanten sind mit weg.
+
+  **Bewusst NICHT entfernt**, obwohl es nach Migration aussieht - diese
+  Abgrenzung ist der eigentliche Inhalt des Builds:
+
+  * `BackfillRowSourceLanguage()` und `BackfillTranslationActiveFlag()` tragen
+    ebenso jede **frisch gescannte** und jede von Hand im Formular angelegte
+    Zeile. Ohne sie hätte eine neue Zeile keine Quellsprache.
+  * Der `sourceChangedAt === 0`-Zweig in `IsRowLanguageTranslationCurrent()`
+    deckt nicht nur Altzeilen ab, sondern jede Zeile, die seit ihrer Erfassung
+    nie geändert wurde. Ohne ihn gälte der komplette Bestand als veraltet und
+    würde neu übersetzt - teuer und falsch.
+  * `TRANSLATION_CACHE_SCHEMA_VERSION` ist keine Migration, sondern die
+    Invalidierung für **künftige** Versionssprünge.
+
+  Der Checklistenpunkt "Upgrade-Pfad testen" entfällt damit - nicht wegen der
+  Entfernung, sondern weil es keine Population mit Altdaten gibt. Die dort
+  erwähnte Build-132-Anomalie (Counter-Reset) war bereits mit Build 149 geklärt:
+  Ursache war eine wertlesende Migration in `Create()`, wo Attribute nur
+  deklariert werden und `ReadAttribute*` nicht zuverlässig den persistierten Wert
+  liefert.
+
+  Regressionstest `test_no_legacy_install_cleanup.php` (7 Fälle: beide
+  Bereinigungen samt Konstanten entfernt; der gleichnamige Aktions-Ident
+  "Language" bleibt; die drei Abgrenzungsfälle bleiben erhalten; und `Create()`
+  liest kein Attribut mehr - die Lehre aus Build 132).
+
 * **Build 166 (live gemeldet): ein Umschalten der Checkbox "Übersetzung aktiv"
   wurde gespeichert, aber nicht in die Visualisierung durchgereicht.**
   Gemeldet an Begrüßung und Charts, mit der Vermutung "vermutlich aber überall" -
