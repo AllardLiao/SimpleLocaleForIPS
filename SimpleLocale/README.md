@@ -4294,6 +4294,39 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 165 (live gemeldet): eine geänderte Begrüßung wurde nicht übernommen
+  und beim nächsten Sprachwechsel wieder überschrieben.**
+  Im Modus "Name" steckt die Begrüßung in der Property `GreetingName` der
+  Visualisierungs-Instanz - dafür gibt es kein `VM_UPDATE`. Aufgefrischt wurde
+  sie nur bei einem Rescan, und auch dann nur, wenn zufällig die Basissprache
+  aktiv war (`MergeGreetingRows`, `$IsSourceLanguageActive`). Wer die Begrüßung
+  bearbeitet, während eine Zielsprache läuft, kam damit nie durch.
+
+  Der Guard selbst war richtig: bei aktiver Zielsprache steht in `GreetingName`
+  unsere **eigene** Übersetzung, die niemals zum Rohtext werden darf. Es fehlte
+  die Unterscheidung zwischen "eigene Übersetzung" und "Änderung von außen" -
+  gelöst wie bei "Eigene Texte" über einen Selbst-Schreib-Marker
+  (`attributeLastSelfWrittenGreetingName`, gesetzt **vor** dem Schreibvorgang,
+  siehe die Falle aus Build 154).
+
+  Dazu ein Listener: die Visualisierungs-Instanz wird auf `IM_CHANGESETTINGS`
+  überwacht, die Änderung also sofort übernommen statt erst beim nächsten
+  Rescan - ohne das schriebe ein Sprachwechsel bis dahin den alten Stand zurück,
+  genau die gemeldete Beschwerde. Die Rückkopplung ist abgesichert:
+  `ApplyGreetingLanguage()` schreibt selbst per `IPS_SetProperty` +
+  `IPS_ApplyChanges` in dieselbe Instanz und löst dieselbe Nachricht erneut aus -
+  entspricht der gefundene Text dem zuletzt selbst geschriebenen, endet der
+  Durchlauf sofort. Im Modus "Variable" hält sich der Handler heraus, dort läuft
+  die Aktualisierung bereits über `VM_UPDATE`.
+
+  Ebenfalls in diesem Build (Nutzer-Wunsch): die Begrüßungstabelle ist nur noch
+  eine Zeile hoch - mehr kann es dort nicht geben.
+
+  Regressionstest `test_greeting_external_edit.php` (7 Fälle: der gemeldete Fall;
+  die Gegenprobe, dass die eigene Übersetzung nie zum Rohtext wird; das bisherige
+  Verhalten bei aktiver Basissprache; ein unveränderter Text löst nichts aus;
+  Marker-Reihenfolge; Listener samt Rückkopplungsschutz; die Tabellenhöhe).
+
 * **Build 164 (live gemeldet, per Diagnose-Dump belegt): Aufzählungs-Captions
   wurden nur bei Variablen mit Variablen-Aktion übersetzt.**
   An einem Nuki-Schloss übersetzte "Locking action" korrekt, "Blocking state",

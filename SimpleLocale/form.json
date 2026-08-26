@@ -588,7 +588,7 @@
                     "width": "100%",
                     "add": false,
                     "delete": true,
-                    "rowCount": 2,
+                    "rowCount": 1,
                     "columns": [
                         {
                             "caption": "Original-Import",
