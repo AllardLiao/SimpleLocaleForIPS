@@ -68,7 +68,8 @@ echo "Test 3 (ein geblockter Schlüssel wird weiterhin neu gemeldet) OK\n";
 
 // Test 4: die reale Umsetzung im Modul.
 $moduleSource = file_get_contents(dirname(__DIR__) . '/SimpleLocale/module.php');
-assert(strpos($moduleSource, 'private function FetchLicenseStatus(string $KeyHash): void') !== false, 'die Statusabfrage muss existieren');
+assert(strpos($moduleSource, 'private function FetchLicenseStatus(string $KeyHash, bool $WithAssets = false): void') !== false,
+    'die Statusabfrage muss existieren - seit Build 174 mit optionaler Bitte um die Kachel-Designs');
 assert(strpos($moduleSource, "'statusOnly'     => true,") !== false, 'sie muss das Flag setzen');
 assert(strpos($moduleSource, 'private function TrackLicenseActivationIfNew(bool $AllowRecheck = false): bool') !== false,
     'die Meldefunktion muss zurueckgeben, ob sie gemeldet hat');

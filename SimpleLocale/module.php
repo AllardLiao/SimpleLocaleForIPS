@@ -2014,7 +2014,7 @@ class SimpleLocale extends IPSModuleStrict
             // bis zu 24 Stunden spaeter an, naemlich mit der Tagespruefung - der
             // Kunde drueckte auf den Knopf und sah nichts passieren.
             if (!$reported && self::LICENSE_ACTIVATION_REPORT_URL !== '') {
-                $this->FetchLicenseStatus(hash('sha256', $this->ReadPropertyString(self::propertyLicenseKey)));
+                $this->FetchLicenseStatus(hash('sha256', $this->ReadPropertyString(self::propertyLicenseKey)), true);
             }
             // TrackLicenseActivationIfNew() kann den Schluessel gerade erst als
             // "geblockt" markiert (oder entsperrt) haben (siehe dort) - GetLicenseInfo()
@@ -2246,7 +2246,18 @@ class SimpleLocale extends IPSModuleStrict
     // aktualisieren" bei unveraendertem Schluessel: dort ist genau DAS erwuenscht -
     // ein serverseitig gesetztes Kulanz-Ablaufdatum sofort holen, ohne die Aktivierung
     // ein zweites Mal zu melden.
-    private function FetchLicenseStatus(string $KeyHash): void
+    // $WithAssets: Build 174 - der ausdrueckliche Klick auf "Lizenz aktivieren/
+    // aktualisieren" bittet zusaetzlich um die Kachel-Designs. Ohne das gab es
+    // fuer einen laengst gemeldeten Schluessel keinen Weg mehr, sie jemals zu
+    // bekommen: Designs reisen nur mit einer echten Aktivierung mit, und die
+    // findet je Schluessel genau einmal statt. Wer sie beim ersten Mal verpasste -
+    // Server defekt, Instanz offline -, blieb dauerhaft ohne.
+    //
+    // Die Bitte aendert nichts an "statusOnly": es wird weiterhin KEINE
+    // Aktivierung eingetragen. Nur die Antwort faellt groesser aus, und das auch
+    // nur auf ausdruecklichen Knopfdruck - die taegliche Pruefung fragt bewusst
+    // nicht danach.
+    private function FetchLicenseStatus(string $KeyHash, bool $WithAssets = false): void
     {
         $entry = [
             'licenseKeyHash' => $KeyHash,
@@ -2254,6 +2265,9 @@ class SimpleLocale extends IPSModuleStrict
             'activatedAt'    => time(),
             'statusOnly'     => true,
         ];
+        if ($WithAssets) {
+            $entry['withAssets'] = true;
+        }
 
         $response = $this->CallActivationReportAPI(self::LICENSE_ACTIVATION_REPORT_URL, json_encode($entry));
         $this->ApplyActivationReportResponse($KeyHash, $response);
@@ -2273,7 +2287,24 @@ class SimpleLocale extends IPSModuleStrict
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 5);
         $response = @curl_exec($ch);
+        $httpStatus = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
         curl_close($ch);
+
+        // Build 174 (live gefunden): ein HTTP-Fehlerstatus zaehlt NICHT als
+        // angekommen. Bis Build 173 galt jede Antwort ausser einem Transportfehler
+        // als Erfolg - eine 500 liefert aber eine nicht-leere Fehlerseite als Body,
+        // und genau die wurde als gelungene Meldung verbucht. Live passiert: der
+        // Endpunkt war kurzzeitig defekt, die Instanz vermerkte den Schluessel
+        // trotzdem als gemeldet und fragte fortan nur noch den Status ab. Ein
+        // Nachholen konnte es danach nie mehr geben.
+        //
+        // "Erfolg" heisst ab jetzt: eine verwertbare Antwort, nicht bloss
+        // empfangene Bytes.
+        if ($httpStatus >= 400) {
+            $this->SendDebug('ActivationReport', 'HTTP ' . $httpStatus . ' - gilt als nicht gemeldet', 0);
+
+            return null;
+        }
 
         // Build 170: null bedeutet ab jetzt AUSSCHLIESSLICH "Server nicht erreicht".
         // Bis Build 169 lieferte auch die voellig normale, leere 204-Antwort ("nichts
