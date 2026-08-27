@@ -4343,6 +4343,38 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 174 (live gefunden): ein HTTP-Fehlerstatus galt als erfolgreiche
+  Meldung - dadurch kamen Kachel-Designs dauerhaft nie an.**
+  Symbol und Vorlage einer Edition tauchten nicht in den Auswahlfeldern auf,
+  obwohl der Server sie nachweislich auslieferte (HTTP 200 mit `assets` im JSON).
+
+  Die Kette: beim ersten Aktivieren antwortete der Endpunkt mit **HTTP 500**
+  (eine fehlende `require`-Zeile auf der Website). `CallActivationReportAPI()`
+  wertete aber alles außer einem Transportfehler als "angekommen" - und eine 500
+  liefert eine nicht-leere Fehlerseite als Body. Der Schlüssel galt damit als
+  erfolgreich gemeldet. Seitdem lief jeder Klick über den `statusOnly`-Pfad, wo
+  der Server die Designs bewusst weglässt. **Das konnte sich nie von selbst
+  auflösen:** Designs reisen nur mit einer echten Aktivierung mit, und die findet
+  je Schlüssel genau einmal statt.
+
+  *Erste Reparatur:* "Erfolg" heißt jetzt **verwertbare Antwort**, nicht bloß
+  empfangene Bytes - ein Status ab 400 zählt als nicht gemeldet. Damit greift das
+  Nachholen aus Build 170 wieder, und ein defekter Endpunkt kann eine Meldung
+  nicht mehr dauerhaft verschlucken.
+
+  *Zweite Reparatur:* der ausdrückliche Klick auf "Lizenz aktivieren/
+  aktualisieren" fordert die Designs zusätzlich an (`withAssets`), ohne
+  `statusOnly` aufzuheben - es wird also **keine** weitere Aktivierung
+  eingetragen. Ohne diesen Weg bliebe eine Instanz, deren Schlüssel längst
+  gemeldet ist, dauerhaft ohne Designs. Die tägliche Prüfung fragt bewusst nicht
+  danach und bleibt klein.
+
+  Regressionstest `test_activation_report_http_error.php` (6 Fälle: die 500 gilt
+  nicht mehr als Erfolg, die leere 204 weiterhin schon; die Meldung bleibt danach
+  offen; der Klick holt Designs ohne neue Aktivierung; die Tagesprüfung bleibt
+  klein; eine echte Aktivierung bekommt sie wie bisher; Symmetrie-Check inklusive
+  der Zusicherung, dass `withAssets` `statusOnly` nicht aufhebt).
+
 * **Build 173 (Nutzer-Frage): das gewählte Symbol lässt sich jetzt einzeln in
   ein eigenes Template setzen - `<!--TILE_ICON-->`.**
   Die Frage lautete, wie man das Symbol in ein eigenes Template einbindet.
