@@ -4294,6 +4294,56 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 172 (Nutzer-Wunsch): Kachel-Symbole und -Vorlagen je Edition kommen
+  jetzt vom Server - kein Modul-Release mehr pro Sonder-Edition.**
+  Bis Build 171 waren `TILE_ICON_CATALOG` und `TILE_TEMPLATE_CATALOG`
+  einkompilierte Konstanten, die Inhalte Dateien im Modulverzeichnis. Ein neues
+  Design für eine Sonder-Edition hieß: neue Datei, neuer Katalogeintrag, neues
+  Release - inklusive Begutachtung durch Symcon. Genau das sollte entfallen.
+
+  Die Designs werden jetzt auf der Website gepflegt
+  (`shop/admin/tile-assets.php`) und reisen bei der **Lizenz-Aktivierung** mit.
+  Dort - und nur dort - steht fest, zu welcher Edition eine Installation gehört;
+  die tägliche Statusprüfung (`statusOnly`, Build 169) lässt sie bewusst weg,
+  sonst wäre sie jeden Tag für jede Installation unnötig groß.
+
+  **Signiert, nicht bloß ausgeliefert.** Das Paket trägt dieselbe
+  Ed25519-Signatur wie ein Lizenzschlüssel und wird gegen den einkompilierten
+  `LICENSE_PUBLIC_KEY` geprüft; ohne gültige Signatur wird nichts gespeichert.
+  Das Modul lädt also Inhalte aus dem Netz, akzeptiert aber ausschließlich, was
+  mit dem privaten Offline-Schlüssel signiert wurde - ein manipulierter DNS, ein
+  übernommener Webserver oder ein Man-in-the-Middle können nichts einschleusen.
+  Für die Symcon-Begutachtung ist außerdem der Präzedenzfall im eigenen Modul
+  wichtig: die Kachel rendert seit jeher frei editierbares HTML aus einem
+  Property (`custom_tile`). Signierte Herstellervorlagen sind damit keine neue
+  Fähigkeitsklasse, sondern dieselbe Renderstrecke mit einer *strengeren*
+  Herkunftsprüfung.
+
+  **Zwei Bindungen:** ein Design mit Edition geht nur an deren Käufer und wird
+  von "Automatisch" **von selbst gewählt** - der Wiedererkennungswert, um den es
+  bei einer Sonder-Edition geht. Ein editionsloses geht an alle und verhält sich
+  wie der Standard: immer wählbar, nie automatisch.
+
+  **Dauerhaft:** das geprüfte Paket liegt im Attribut
+  `attributeTileAssetBundle`. Ein einmal ausgeliefertes Design bleibt auswählbar -
+  auch ohne Netz und auch, wenn es auf der Website später entfernt wird. Ein
+  eingebauter Katalogeintrag wird nie überschrieben, sonst ließe sich die Kachel
+  nicht mehr auf den Auslieferungszustand zurücksetzen.
+
+  *Bekannte Einschränkung:* die Bezeichnung eines gelieferten Designs erscheint
+  in genau der Sprache, in der sie eingetragen wurde. Anders als die eingebauten
+  Bezeichnungen kann sie nicht über `locale.json` übersetzt werden - dem Modul
+  ist sie beim Erstellen ja nicht bekannt (siehe Build 156).
+
+  Regressionstest `test_tile_asset_bundle.php` (7 Fälle: der Rundlauf; ein fremd
+  signiertes Paket wird verworfen; nachträglich veränderter Inhalt bricht die
+  Signatur; kaputte Pakete bleiben folgenlos; unvollständige Einträge werden
+  aussortiert; Symmetrie-Check inklusive der Zusicherung, dass kein Aufrufer mehr
+  direkt auf die Konstanten zugreift; nur editionsgebundene Designs gewinnen
+  "Automatisch"). Zusätzlich wurde der Interop beider realer Implementierungen
+  geprüft: die Signierfunktion der Website erzeugt ein Paket, das die exakte
+  Prüfstrecke des Moduls akzeptiert.
+
 * **Build 171 (live gemeldet, per Screenshot belegt): der Ablauf-Hinweis in der
   Kachel wurde abgeschnitten.**
   Er gab die komplette Kauf-URL als **Linktext** aus - "Deine Lizenz läuft ab am

@@ -394,6 +394,15 @@ trait SimpleLocaleConstants
     // taegliche Pruefung holt sie jetzt anhand dieses Attributs nach.
     private const attributeReportedLicenseKeyHash = 'ReportedLicenseKeyHash';
 
+    // Build 172: die vom Server bei der Lizenz-Aktivierung gelieferten
+    // Kachel-Symbole und -Vorlagen (siehe ApplyActivationReportResponse und
+    // Synergetix-Website/includes/tile_assets.php). Bewusst DAUERHAFT
+    // gespeichert: ein einmal ausgeliefertes Design bleibt auswaehlbar, auch
+    // ohne Netz und auch, wenn es auf der Website spaeter entfernt wird - was
+    // der Kunde erworben hat, soll ihm nicht ueberraschend abhanden kommen.
+    // Inhalt ist das bereits GEPRUEFTE Paket; ungeprueft wird nie gespeichert.
+    private const attributeTileAssetBundle = 'TileAssetBundle';
+
     // Objekte ohne Namen, die beim letzten Rescan im Root-Baum gefunden wurden (JSON-
     // Array aus ObjectID+Path) - ein Rescan bricht ab, sobald welche existieren, bevor
     // irgendetwas übersetzt wird (leerer Name lässt sich sonst nicht sinnvoll übersetzen

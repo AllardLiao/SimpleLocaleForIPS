@@ -414,6 +414,7 @@ class SimpleLocale extends IPSModuleStrict
         $this->RegisterAttributeString(self::attributeLastSelfWrittenGreetingName, '');
         $this->RegisterAttributeInteger(self::attributeRegisteredVisuInstanceID, 0);
         $this->RegisterAttributeString(self::attributeReportedLicenseKeyHash, '');
+        $this->RegisterAttributeString(self::attributeTileAssetBundle, '[]');
         $this->RegisterAttributeString(self::attributeLastRowSourceLanguageFingerprint, '');
         $this->RegisterAttributeString(self::attributeLastActiveLanguageContentFingerprint, '');
         $this->RegisterAttributeString(self::attributeProviderPausedUntil, '{}');
@@ -1277,11 +1278,11 @@ class SimpleLocale extends IPSModuleStrict
                 // auf, die es auch erworben haben. Dasselbe Muster wie bei den
                 // Zielsprachen (siehe BuildTargetLanguageOptions).
                 case self::propertyTileIconId:
-                    $element['options'] = $this->BuildCatalogOptions(self::TILE_ICON_CATALOG, self::TILE_ICON_DEFAULT_ID);
+                    $element['options'] = $this->BuildCatalogOptions($this->GetTileCatalog('icon'), self::TILE_ICON_DEFAULT_ID);
                     break;
 
                 case self::propertyTileTemplateId:
-                    $element['options'] = $this->BuildCatalogOptions(self::TILE_TEMPLATE_CATALOG, self::TILE_TEMPLATE_DEFAULT_ID);
+                    $element['options'] = $this->BuildCatalogOptions($this->GetTileCatalog('template'), self::TILE_TEMPLATE_DEFAULT_ID);
                     break;
 
                 // Build 152 (Nutzer-Frage: "Wie bekommt der User vom Ausfall
@@ -2151,6 +2152,13 @@ class SimpleLocale extends IPSModuleStrict
         $decoded = $ResponseJson !== null ? json_decode($ResponseJson, true) : null;
         if (!is_array($decoded)) {
             return;
+        }
+
+        // Build 172: Kachel-Designs reisen nur mit einer echten Aktivierung mit
+        // (der Server laesst sie bei der taeglichen Statuspruefung weg) - genau
+        // dort steht fest, zu welcher Edition diese Installation gehoert.
+        if (is_string($decoded['assets'] ?? null)) {
+            $this->StoreTileAssetBundle($decoded['assets']);
         }
 
         if (($decoded['revoked'] ?? false) === true) {
@@ -9573,13 +9581,19 @@ class SimpleLocale extends IPSModuleStrict
     // unbekannt ist oder die Berechtigung fehlt.
     private function GetSelectedTileTemplateHtml(): string
     {
+        $catalog = $this->GetTileCatalog('template');
         $templateId = $this->ResolveCatalogId(
-            self::TILE_TEMPLATE_CATALOG,
+            $catalog,
             $this->ReadPropertyString(self::propertyTileTemplateId),
             self::TILE_TEMPLATE_DEFAULT_ID
         );
 
-        $html = (string) @file_get_contents(__DIR__ . '/' . self::TILE_TEMPLATE_CATALOG[$templateId]['file']);
+        // Build 172: eine vom Server gelieferte Vorlage traegt ihren Inhalt
+        // direkt bei sich, eine eingebaute liegt als Datei daneben.
+        $entry = $catalog[$templateId];
+        $html = isset($entry['content'])
+            ? (string) $entry['content']
+            : (string) @file_get_contents(__DIR__ . '/' . $entry['file']);
         if (trim($html) === '') {
             // Vorlagendatei fehlt/ist leer (unvollstaendige Installation) -
             // lieber die Standardvorlage als eine leere Kachel.
@@ -9961,6 +9975,15 @@ HTML;
     {
         $automatic = $DefaultId;
         foreach ($Catalog as $id => $entry) {
+            // Build 172: ein vom Server geliefertes, EDITIONSGEBUNDENES Design
+            // zaehlt hier genauso wie ein eingebautes Saison-Design - es kam ja
+            // nur, weil die Lizenz zu seiner Edition gehoert. Ein editionsloses
+            // ('auto' => false) verhaelt sich wie der Standard: waehlbar, aber
+            // nie von selbst gewaehlt.
+            if (($entry['auto'] ?? false) === true) {
+                $automatic = $id;
+                continue;
+            }
             $feature = $entry['feature'] ?? null;
             if ($feature !== null && $this->HasThemeEntitlement($feature)) {
                 $automatic = $id;
@@ -9970,17 +9993,149 @@ HTML;
         return $automatic;
     }
 
+    // Build 172: Kachel-Designs, die der Server bei der Lizenz-Aktivierung
+    // mitgeliefert hat, in den mitgelieferten Katalog einmischen. Ab hier
+    // verhalten sie sich wie eingebaute Eintraege - Auswahlfeld, "Automatisch",
+    // Rueckfall auf den Standard, alles unveraendert.
+    //
+    // Der Zweck des Ganzen: eine Sonder-Edition mit eigenem Design braucht damit
+    // kein neues Modul-Release samt Symcon-Begutachtung mehr.
+    //
+    // BERECHTIGUNG: ein geliefertes Design ist immer waehlbar ('feature' => null).
+    // Es kam ja nur, weil die Lizenz zu seiner Edition gehoerte - und was der
+    // Kunde damit erworben hat, soll ihm nicht wieder abhanden kommen. Die
+    // Entitlement-Pruefung der EINGEBAUTEN Eintraege bleibt davon unberuehrt.
+    private function GetTileCatalog(string $Kind): array
+    {
+        $catalog = $Kind === 'icon' ? self::TILE_ICON_CATALOG : self::TILE_TEMPLATE_CATALOG;
+
+        foreach ($this->ReadVerifiedTileAssets() as $asset) {
+            if (($asset['kind'] ?? '') !== $Kind) {
+                continue;
+            }
+            $key = (string) ($asset['key'] ?? '');
+            if ($key === '' || isset($catalog[$key])) {
+                // Ein eingebauter Eintrag gewinnt: sonst koennte ein
+                // Server-Design den Standard verdraengen und die Kachel liesse
+                // sich nicht mehr auf den Auslieferungszustand zuruecksetzen.
+                continue;
+            }
+            $catalog[$key] = [
+                'label'   => (string) ($asset['label'] ?? $key),
+                'feature' => null,
+                // Nur ein EDITIONSGEBUNDENES Design wird von "Automatisch" von
+                // selbst gewaehlt - das ist der Wiedererkennungswert einer
+                // Sonder-Edition. Ein editionsloses verhaelt sich wie der
+                // Standard: waehlbar, aber nie automatisch.
+                'auto'    => ($asset['scope'] ?? '') === 'edition',
+                'content' => (string) ($asset['content'] ?? ''),
+            ];
+        }
+
+        return $catalog;
+    }
+
+    // Liest das gespeicherte, bereits gepruefte Paket. Bewusst tolerant: ein
+    // beschaedigtes Attribut fuehrt zum eingebauten Katalog, nie zu einem Fehler -
+    // die Gast-Kachel darf daran nicht scheitern.
+    private function ReadVerifiedTileAssets(): array
+    {
+        $assets = json_decode($this->ReadAttributeString(self::attributeTileAssetBundle), true);
+
+        return is_array($assets) ? $assets : [];
+    }
+
+    // Prueft ein vom Server geliefertes Paket gegen den einkompilierten
+    // oeffentlichen Schluessel und speichert es NUR bei gueltiger Signatur.
+    //
+    // Das ist der Kern der ganzen Konstruktion: das Modul laedt zwar Inhalte aus
+    // dem Netz, akzeptiert aber ausschliesslich, was mit dem privaten
+    // Offline-Schluessel des Herstellers signiert wurde. Ein manipulierter DNS,
+    // ein uebernommener Webserver oder ein Man-in-the-Middle koennen nichts
+    // einschleusen - sie besitzen den privaten Schluessel nicht. Dieselbe
+    // Vertrauensbeziehung wie beim Lizenzschluessel selbst (siehe
+    // ValidateLicenseKey), nur fuer Anzeigeinhalte statt fuer Berechtigungen.
+    private function StoreTileAssetBundle(string $Bundle): void
+    {
+        if (!function_exists('sodium_crypto_sign_verify_detached')) {
+            return;
+        }
+
+        $parts = explode('.', $Bundle);
+        if (count($parts) !== 2) {
+            return;
+        }
+        $payloadJson = $this->Base64UrlDecode($parts[0]);
+        $signature = $this->Base64UrlDecode($parts[1]);
+        $publicKey = base64_decode(self::LICENSE_PUBLIC_KEY, true);
+        if ($payloadJson === false || $signature === false || $publicKey === false) {
+            return;
+        }
+        if (strlen($signature) !== SODIUM_CRYPTO_SIGN_BYTES || strlen($publicKey) !== SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES) {
+            return;
+        }
+        if (!sodium_crypto_sign_verify_detached($signature, $payloadJson, $publicKey)) {
+            $this->SendDebug('TileAssets', 'Signatur ungueltig - Paket verworfen', 0);
+
+            return;
+        }
+
+        $payload = json_decode($payloadJson, true);
+        if (!is_array($payload) || !is_array($payload['assets'] ?? null)) {
+            return;
+        }
+
+        // Nur vollstaendige Eintraege uebernehmen - ein halber Eintrag wuerde im
+        // Katalog als waehlbares, aber leeres Design erscheinen.
+        $clean = [];
+        foreach ($payload['assets'] as $asset) {
+            if (!is_array($asset)) {
+                continue;
+            }
+            $kind = (string) ($asset['kind'] ?? '');
+            $key = (string) ($asset['key'] ?? '');
+            $content = (string) ($asset['content'] ?? '');
+            if ($key === '' || $content === '' || !in_array($kind, ['icon', 'template'], true)) {
+                continue;
+            }
+            $clean[] = [
+                'key'     => $key,
+                'kind'    => $kind,
+                'label'   => (string) ($asset['label'] ?? $key),
+                'scope'   => ($asset['scope'] ?? '') === 'edition' ? 'edition' : 'all',
+                'content' => $content,
+            ];
+        }
+
+        $this->WriteAttributeString(self::attributeTileAssetBundle, json_encode($clean));
+        $this->SendDebug('TileAssets', count($clean) . ' Design(s) uebernommen', 0);
+    }
+
+    private function Base64UrlDecode(string $Data): string|false
+    {
+        return base64_decode(strtr($Data, '-_', '+/'), true);
+    }
+
     private function BuildAppIconImgHtml(): string
     {
+        $catalog = $this->GetTileCatalog('icon');
         $iconId = $this->ResolveCatalogId(
-            self::TILE_ICON_CATALOG,
+            $catalog,
             $this->ReadPropertyString(self::propertyTileIconId),
             self::TILE_ICON_DEFAULT_ID
         );
-        $entry = self::TILE_ICON_CATALOG[$iconId];
+        $entry = $catalog[$iconId];
 
         if (isset($entry['emoji'])) {
             return $entry['emoji'];
+        }
+
+        // Build 172: ein vom Server geliefertes Symbol kommt bereits als Base64
+        // und wird unveraendert eingebettet - dieselbe Ausgabe wie unten, nur
+        // ohne den Umweg ueber eine Datei.
+        if (isset($entry['content'])) {
+            return '<img alt="" style="height:100%;width:auto;display:block;"'
+                . ' src="data:image/png;base64,' . $entry['content'] . '">';
         }
 
         $iconData = @file_get_contents(__DIR__ . '/../libs/assets/' . $entry['file']);
