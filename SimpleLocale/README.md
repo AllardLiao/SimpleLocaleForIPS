@@ -4294,6 +4294,41 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 169 (Nutzer-Frage): ein zweiter Klick auf "Lizenz aktivieren" tat
+  nichts - und die Tagesprüfung meldete täglich eine Aktivierung.**
+  Auf die Frage, was bei erneutem Klick mit demselben Schlüssel passiert, war die
+  Antwort: nichts. `TrackLicenseActivationIfNew()` steigt bei unverändertem
+  Schlüssel vorher aus (richtig, sonst gäbe es Melde-Spam). Das stand aber dem
+  Kulanz-Weg im Weg: setzt der Admin "Ablaufdatum überschreiben" für eine
+  Bestellung, holte das Modul den neuen Wert nicht - er kam erst mit der
+  Tagesprüfung, also bis zu 24 Stunden später. Der Kunde drückte den Knopf und
+  sah nichts passieren.
+
+  Dabei fiel ein zweiter, schwererer Befund auf: die **Tagesprüfung** schickte
+  dieselbe Nutzlast wie eine echte Erstaktivierung, und der Endpunkt legt pro
+  Aufruf eine Zeile in `slips_license_activations` an - pro Lizenz also **jeden
+  Tag** eine. Die Weiterverkaufs-Erkennung (derselbe Hash mit abweichenden
+  `licensee`-Werten) ersoff in diesem Rauschen.
+
+  Beides löst dasselbe Flag: `"statusOnly": true` fragt den Stand ab, ohne eine
+  Aktivierung zu melden. Es nutzen jetzt die Tagesprüfung und der ausdrückliche
+  Klick bei unverändertem Schlüssel; ein neuer oder als geblockt bekannter
+  Schlüssel meldet unverändert eine echte Aktivierung.
+
+  Das Flag ist **bewusst keine Sicherheitsgrenze** - der Endpunkt ist
+  unauthentifiziert, wer sich der Registrierung entziehen wollte, müsste einfach
+  gar nicht anfragen. Es verhindert nur, dass ehrliche Clients Aktivierungen
+  eintragen, die sie gar nicht vornehmen.
+
+  Der Knopf heißt jetzt **"Lizenz aktivieren/aktualisieren"** (Nutzer-Wunsch, in
+  allen vier Sprachen) - der zweite Klick tut ja jetzt etwas.
+
+  Regressionstest `test_license_status_only_refresh.php` (5 Fälle: der zweite
+  Klick holt den Stand ohne erneute Aktivierung; ein neuer Schlüssel meldet wie
+  bisher und fragt nicht zusätzlich ab; ein geblockter Schlüssel wird weiterhin
+  neu gemeldet; die Tagesprüfung baut keine eigene Nutzlast mehr; die neue
+  Beschriftung ist in allen Sprachen vorhanden und die alte überall entfernt).
+
 * **Build 168 (Nutzer-Auftrag "prüfe auf weiteren toten Code"): drei
   nur-geschriebene Attribute und vier verwaiste Übersetzungen entfernt.**
   `attributeEffectiveRootCategoryID`, `attributeLastDailyLicenseCheckAt` und

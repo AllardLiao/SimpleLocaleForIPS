@@ -2003,7 +2003,17 @@ class SimpleLocale extends IPSModuleStrict
             // jedes "Uebernehmen" fuer ein voellig unabhaengiges Formularfeld (z.B. ein
             // Checkbox-Toggle) still im Hintergrund einen weiteren Netzwerk-Request
             // ausloesen.
-            $this->TrackLicenseActivationIfNew(true);
+            $reported = $this->TrackLicenseActivationIfNew(true);
+            // Build 169 (Nutzer-Wunsch): Wurde nichts gemeldet, ist der Schluessel
+            // unveraendert und laengst registriert - dann holt der ausdrueckliche
+            // Klick wenigstens den AKTUELLEN Stand vom Server, ohne eine weitere
+            // Aktivierung einzutragen. Ohne das kam ein serverseitig gesetztes
+            // Kulanz-Ablaufdatum (siehe expires_at_override im Bestell-Admin) erst
+            // bis zu 24 Stunden spaeter an, naemlich mit der Tagespruefung - der
+            // Kunde drueckte auf den Knopf und sah nichts passieren.
+            if (!$reported && self::LICENSE_ACTIVATION_REPORT_URL !== '') {
+                $this->FetchLicenseStatus(hash('sha256', $this->ReadPropertyString(self::propertyLicenseKey)));
+            }
             // TrackLicenseActivationIfNew() kann den Schluessel gerade erst als
             // "geblockt" markiert (oder entsperrt) haben (siehe dort) - GetLicenseInfo()
             // frisch neu abfragen statt das oben zwischengespeicherte $info weiterzuverwenden.
@@ -2034,7 +2044,7 @@ class SimpleLocale extends IPSModuleStrict
     // gerade als geblockt bekannt: dann wird auch bei unverändertem Schlüssel erneut
     // online nachgefragt (siehe ActivateLicense), ohne das würde ein serverseitiges
     // Entsperren (siehe shop/admin) auf dieser Instanz nie ankommen.
-    private function TrackLicenseActivationIfNew(bool $AllowRecheck = false): void
+    private function TrackLicenseActivationIfNew(bool $AllowRecheck = false): bool
     {
         $info = $this->GetLicenseInfo();
         if (!($info['valid'] ?? false) && !($info['blocked'] ?? false) && !($info['revoked'] ?? false)) {
@@ -2044,7 +2054,7 @@ class SimpleLocale extends IPSModuleStrict
             // geprüft werden.
             $this->WriteAttributeString(self::attributeLastCheckedLicenseKeyHash, '');
 
-            return;
+            return false;
         }
 
         $keyHash = hash('sha256', $this->ReadPropertyString(self::propertyLicenseKey));
@@ -2055,7 +2065,7 @@ class SimpleLocale extends IPSModuleStrict
         );
 
         if (!$recheckBlocked && $this->ReadAttributeString(self::attributeLastCheckedLicenseKeyHash) === $keyHash) {
-            return;
+            return false;
         }
 
         $this->WriteAttributeString(self::attributeLastCheckedLicenseKeyHash, $keyHash);
@@ -2066,6 +2076,8 @@ class SimpleLocale extends IPSModuleStrict
         }
 
         $this->RecordLicenseActivation($keyHash, $licensee, $log);
+
+        return true;
     }
 
     // Eigener Wrapper um IPS_GetLicensee() (wie CallGoogleTranslateAPI/
@@ -2186,15 +2198,31 @@ class SimpleLocale extends IPSModuleStrict
             return;
         }
 
-        $keyHash = hash('sha256', $key);
+        $this->FetchLicenseStatus(hash('sha256', $key));
+    }
+
+    // Build 169: fragt NUR den aktuellen Stand eines bereits registrierten
+    // Schluessels ab - "statusOnly" verhindert, dass der Server daraus eine weitere
+    // Aktivierung macht. Bis Build 168 schickte die taegliche Pruefung dieselbe
+    // Nutzlast wie eine echte Erstaktivierung, der Server legte also pro Lizenz JEDEN
+    // TAG eine Aktivierungszeile an - die Weiterverkaufs-Erkennung (derselbe Hash mit
+    // abweichenden licensee-Werten) ersoff darin.
+    //
+    // Zweiter Aufrufer ist der ausdrueckliche Klick auf "Lizenz aktivieren/
+    // aktualisieren" bei unveraendertem Schluessel: dort ist genau DAS erwuenscht -
+    // ein serverseitig gesetztes Kulanz-Ablaufdatum sofort holen, ohne die Aktivierung
+    // ein zweites Mal zu melden.
+    private function FetchLicenseStatus(string $KeyHash): void
+    {
         $entry = [
-            'licenseKeyHash' => $keyHash,
+            'licenseKeyHash' => $KeyHash,
             'licensee'       => $this->GetLicenseeIdentifier(),
             'activatedAt'    => time(),
+            'statusOnly'     => true,
         ];
 
         $response = $this->CallActivationReportAPI(self::LICENSE_ACTIVATION_REPORT_URL, json_encode($entry));
-        $this->ApplyActivationReportResponse($keyHash, $response);
+        $this->ApplyActivationReportResponse($KeyHash, $response);
     }
 
     // Eigene, überschreibbare Methode fürs HTTP-POST (wie CallGoogleTranslateAPI) - so

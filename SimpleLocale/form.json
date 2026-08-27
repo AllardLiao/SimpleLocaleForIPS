@@ -847,7 +847,7 @@
     "actions": [
         {
             "type": "Button",
-            "caption": "Lizenz aktivieren",
+            "caption": "Lizenz aktivieren/aktualisieren",
             "onClick": "IPS_RequestAction($id, 'ActivateLicense', true);"
         },
         {
@@ -1129,7 +1129,7 @@
                 },
                 {
                     "type": "Label",
-                    "caption": "Mit Klick auf \"Lizenz aktivieren\" oben bestätigst du, dass du diese Nutzungsbedingungen gelesen hast und akzeptierst. Beim Kauf im Shop werden sie zusätzlich vor Zahlungsabschluss per Checkbox abgefragt.",
+                    "caption": "Mit Klick auf \"Lizenz aktivieren/aktualisieren\" oben bestätigst du, dass du diese Nutzungsbedingungen gelesen hast und akzeptierst. Beim Kauf im Shop werden sie zusätzlich vor Zahlungsabschluss per Checkbox abgefragt.",
                     "bold": true
                 }
             ]
