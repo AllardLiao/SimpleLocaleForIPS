@@ -413,6 +413,7 @@ class SimpleLocale extends IPSModuleStrict
         $this->RegisterAttributeString(self::attributeEnumerationProfileBackup, '{}');
         $this->RegisterAttributeString(self::attributeLastSelfWrittenGreetingName, '');
         $this->RegisterAttributeInteger(self::attributeRegisteredVisuInstanceID, 0);
+        $this->RegisterAttributeString(self::attributeReportedLicenseKeyHash, '');
         $this->RegisterAttributeString(self::attributeLastRowSourceLanguageFingerprint, '');
         $this->RegisterAttributeString(self::attributeLastActiveLanguageContentFingerprint, '');
         $this->RegisterAttributeString(self::attributeProviderPausedUntil, '{}');
@@ -2099,7 +2100,7 @@ class SimpleLocale extends IPSModuleStrict
     // ausgewertet (geteilt mit der taeglichen Statuspruefung, siehe
     // PerformDailyLicenseCheck) - {"blocked": true}/{"revoked": true}/
     // {"active": true, "expiresAt": ...} statt der sonst immer leeren 204-Antwort.
-    private function RecordLicenseActivation(string $KeyHash, string $Licensee, array $Log): void
+    private function RecordLicenseActivation(string $KeyHash, string $Licensee, array $Log): bool
     {
         $entry = [
             'licenseKeyHash' => $KeyHash,
@@ -2112,11 +2113,20 @@ class SimpleLocale extends IPSModuleStrict
         $this->SendDebug('LicenseActivation', json_encode($entry), 0);
 
         if (self::LICENSE_ACTIVATION_REPORT_URL === '') {
-            return;
+            // Kein Meldeserver konfiguriert - dann gibt es auch nichts nachzuholen.
+            return true;
         }
 
         $response = $this->CallActivationReportAPI(self::LICENSE_ACTIVATION_REPORT_URL, json_encode($entry));
         $this->ApplyActivationReportResponse($KeyHash, $response);
+
+        if ($response === null) {
+            return false;
+        }
+
+        $this->WriteAttributeString(self::attributeReportedLicenseKeyHash, $KeyHash);
+
+        return true;
     }
 
     // Geteilte Antwort-Auswertung fuer RecordLicenseActivation() (einmalig, bei
@@ -2198,7 +2208,23 @@ class SimpleLocale extends IPSModuleStrict
             return;
         }
 
-        $this->FetchLicenseStatus(hash('sha256', $key));
+        $keyHash = hash('sha256', $key);
+
+        // Build 170 (Nutzer-Hinweis): Ist die Erstmeldung nie angekommen - Server beim
+        // Eintragen des Schluessels nicht erreichbar, oder die Instanz war offline -,
+        // wird sie hier nachgeholt statt nur den Status abzufragen. Es ist derselbe
+        // Aufruf mit denselben Daten, nur ohne "statusOnly", und die taegliche Pruefung
+        // ist der natuerliche Wiederholungspunkt: der passive Pfad (jedes "Uebernehmen")
+        // darf bewusst NICHT wiederholen, sonst loest jeder Formular-Klick bei einem
+        // dauerhaft nicht erreichbaren Server einen weiteren Netzwerk-Request aus.
+        if ($this->ReadAttributeString(self::attributeReportedLicenseKeyHash) !== $keyHash) {
+            $log = json_decode($this->ReadAttributeString(self::attributeActivationLog), true);
+            $this->RecordLicenseActivation($keyHash, $this->GetLicenseeIdentifier(), is_array($log) ? $log : []);
+
+            return;
+        }
+
+        $this->FetchLicenseStatus($keyHash);
     }
 
     // Build 169: fragt NUR den aktuellen Stand eines bereits registrierten
@@ -2241,7 +2267,14 @@ class SimpleLocale extends IPSModuleStrict
         $response = @curl_exec($ch);
         curl_close($ch);
 
-        return is_string($response) && $response !== '' ? $response : null;
+        // Build 170: null bedeutet ab jetzt AUSSCHLIESSLICH "Server nicht erreicht".
+        // Bis Build 169 lieferte auch die voellig normale, leere 204-Antwort ("nichts
+        // zu melden") null - Erfolg und Netzwerkfehler waren damit nicht
+        // unterscheidbar, und genau diese Unterscheidung braucht das Nachholen einer
+        // fehlgeschlagenen Erstmeldung. Ein leerer String heisst jetzt "angekommen,
+        // nichts zu melden"; ApplyActivationReportResponse() behandelt ihn wie zuvor
+        // (json_decode('') ergibt null, also keine Aktion).
+        return $response === false ? null : (string) $response;
     }
 
     // Lizenzschlüssel-Format: "<base64url(JSON-Payload)>.<base64url(Ed25519-Signatur)>".

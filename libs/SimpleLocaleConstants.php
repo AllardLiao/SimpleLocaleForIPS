@@ -386,6 +386,14 @@ trait SimpleLocaleConstants
     // damit eine Umkonfiguration keine verwaiste Registrierung hinterlaesst.
     private const attributeRegisteredVisuInstanceID = 'RegisteredVisuInstanceID';
 
+    // Build 170: welcher Schluessel-Hash TATSAECHLICH erfolgreich beim Meldeserver
+    // angekommen ist. Abgrenzung zu attributeLastCheckedLicenseKeyHash, das nur
+    // "schon einmal VERSUCHT" bedeutet und Melde-Spam bei jedem "Uebernehmen"
+    // verhindert: war der Server beim ersten Versuch nicht erreichbar (fail open),
+    // galt die Meldung damit dauerhaft als erledigt und wurde nie nachgeholt. Die
+    // taegliche Pruefung holt sie jetzt anhand dieses Attributs nach.
+    private const attributeReportedLicenseKeyHash = 'ReportedLicenseKeyHash';
+
     // Objekte ohne Namen, die beim letzten Rescan im Root-Baum gefunden wurden (JSON-
     // Array aus ObjectID+Path) - ein Rescan bricht ab, sobald welche existieren, bevor
     // irgendetwas übersetzt wird (leerer Name lässt sich sonst nicht sinnvoll übersetzen
