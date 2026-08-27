@@ -4294,6 +4294,29 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 171 (live gemeldet, per Screenshot belegt): der Ablauf-Hinweis in der
+  Kachel wurde abgeschnitten.**
+  Er gab die komplette Kauf-URL als **Linktext** aus - "Deine Lizenz läuft ab am
+  28.08.2026. Verlängern: https://www.synergetix.de/simplelocale/pricing.php" -
+  und das umbrach auf drei Zeilen. Bei Visu-Höhe 1 ist die Kachelhöhe fest (siehe
+  Build 143), der Text wurde also unten abgeschnitten; im Screenshot brach er
+  mitten in "Verlängern:" ab. Der Testphasen-Hinweis daneben war schon immer
+  einzeilig - nur dieser eine druckte die URL aus.
+
+  Verlinkt wird jetzt das **Wort selbst**, die URL steckt im `title`-Attribut und
+  bleibt beim Darüberfahren sichtbar. Der abschließende Doppelpunkt der Vorgabe
+  ("Verlängern:") fällt weg - vor einer URL war er richtig, vor einem verlinkten
+  Wort zeigt er ins Leere. Abgeschnitten wird bewusst am **Wert**, nicht an der
+  Vorgabe: eine bereits vom Kunden übersetzte Zeile trägt ihren eigenen
+  Doppelpunkt (siehe `GetOwnUiText`).
+
+  Regressionstest `test_license_notice_fits_tile.php` (6 Fälle: die URL
+  verschwindet aus dem sichtbaren Text und dieser wird deutlich kürzer; die URL
+  bleibt Ziel und Tooltip - sonst wäre der Hinweis eine Sackgasse; der
+  Doppelpunkt fällt weg; auch bei einer übersetzten Beschriftung; eine
+  Beschriftung ohne Doppelpunkt bleibt unangetastet; Symmetrie-Check inklusive
+  der Zusicherung, dass die URL nur noch zweimal vorkommt).
+
 * **Build 170 (Nutzer-Hinweis): eine fehlgeschlagene Erstmeldung wurde nie
   nachgeholt.**
   Der Hinweis lautete, man könne eine "vergessene" Aktivierung doch bei der
