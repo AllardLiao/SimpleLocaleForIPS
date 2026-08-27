@@ -4294,6 +4294,39 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 170 (Nutzer-Hinweis): eine fehlgeschlagene Erstmeldung wurde nie
+  nachgeholt.**
+  Der Hinweis lautete, man könne eine "vergessene" Aktivierung doch bei der
+  Gültigkeitsprüfung nachholen - es sei ja derselbe Aufruf. Vergessen kann man
+  sie zwar nicht (`TrackLicenseActivationIfNew()` meldet auch beim bloßen
+  "Übernehmen"), aber der Gedanke traf eine echte Lücke im **Fehlschlag**:
+  `attributeLastCheckedLicenseKeyHash` wurde **vor** dem Netzwerkaufruf gesetzt,
+  und der ist bewusst "fail open". War der Server in dem Moment nicht erreichbar -
+  oder die Instanz offline -, galt die Meldung dauerhaft als erledigt.
+
+  Erschwerend kam dazu: `CallActivationReportAPI()` lieferte `null` sowohl bei
+  einem Netzwerkfehler als auch bei der völlig normalen leeren 204-Antwort
+  ("nichts zu melden"). Erfolg und Fehlschlag waren nicht unterscheidbar - ohne
+  diese Unterscheidung lässt sich ein Nachholen gar nicht bauen. `null` bedeutet
+  jetzt ausschließlich "Server nicht erreicht", ein leerer String "angekommen,
+  nichts zu melden".
+
+  Darauf setzt `attributeReportedLicenseKeyHash` auf: es hält den Hash, der
+  **tatsächlich** angekommen ist. Die tägliche Prüfung schickt daraufhin
+  entweder die nachzuholende echte Meldung oder - im Normalfall - nur die
+  `statusOnly`-Abfrage aus Build 169.
+
+  Der **passive** Pfad (jedes "Übernehmen") wiederholt bewusst **nicht**: bei
+  einem dauerhaft nicht erreichbaren Server löste sonst jeder Formular-Klick
+  einen weiteren Netzwerk-Request aus. Die tägliche Prüfung ist der natürliche
+  Wiederholungspunkt.
+
+  Regressionstest `test_activation_report_retry.php` (6 Fälle: die
+  Unterscheidung 204 vs. Transportfehler; ein Fehlschlag markiert nichts als
+  erledigt; die Tagesprüfung holt nach; danach wieder nur Statusabfrage, damit
+  Build 169 nicht zunichte wird; ein dauerhaft unerreichbarer Server wird täglich
+  erneut versucht; Symmetrie-Check inklusive der Reihenfolge).
+
 * **Build 169 (Nutzer-Frage): ein zweiter Klick auf "Lizenz aktivieren" tat
   nichts - und die Tagesprüfung meldete täglich eine Aktivierung.**
   Auf die Frage, was bei erneutem Klick mit demselben Schlüssel passiert, war die

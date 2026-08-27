@@ -77,7 +77,11 @@ assert(strpos($moduleSource, 'if (!$reported && self::LICENSE_ACTIVATION_REPORT_
 
 // Die Tagespruefung darf keine eigene Nutzlast mehr bauen - sonst faellt sie
 // wieder aus dem statusOnly-Pfad heraus.
-$daily = substr($moduleSource, strpos($moduleSource, 'private function PerformDailyLicenseCheck'), 900);
+// Rumpf sauber abgrenzen statt festes Zeichenfenster - sonst laeuft die Pruefung
+// in die naechste Funktion hinein und schlaegt an deren Nutzlast an.
+$dailyStart = strpos($moduleSource, 'private function PerformDailyLicenseCheck');
+$dailyEnde = strpos($moduleSource, "\n    private function ", $dailyStart + 10);
+$daily = substr($moduleSource, $dailyStart, $dailyEnde - $dailyStart);
 assert(strpos($daily, '$this->FetchLicenseStatus(') !== false, 'die Tagespruefung muss ueber die Statusabfrage laufen');
 assert(strpos($daily, "'licenseKeyHash' =>") === false, 'sie darf keine eigene Nutzlast mehr bauen - sonst meldet sie wieder taeglich eine Aktivierung');
 echo "Test 4 (Modul: Statusabfrage verdrahtet, Tagesprüfung nutzt sie) OK\n";
