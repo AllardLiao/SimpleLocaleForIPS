@@ -9611,6 +9611,18 @@ class SimpleLocale extends IPSModuleStrict
     // wenn sie innerhalb einer eigenen "Sprachauswahl"-Kachel (siehe
     // propertyCustomLanguageSelectHtml) verwendet werden, nicht nur im äußeren
     // Kachel-Rahmen selbst.
+    // Liefert das Symbol fuer den <!--TILE_ICON-->-Platzhalter: dieselbe Auswahl
+    // wie in der eingebauten Kachel, aber ohne deren festen Rahmen - siehe
+    // BuildAppIconImgHtml() fuer den Grund der abweichenden Style-Angabe.
+    private function ResolveTileIconHtml(): string
+    {
+        if (!$this->ReadPropertyBoolean(self::propertyShowGlobeIcon)) {
+            return '';
+        }
+
+        return $this->BuildAppIconImgHtml('max-width:100%;max-height:100%;display:block;', 'ipssl-tile-icon');
+    }
+
     private function ApplyTilePlaceholders(string $Html): string
     {
         // Instanz-eigene ID (nicht nur eine Klasse) - falls mehrere Instanzen jemals
@@ -9618,6 +9630,17 @@ class SimpleLocale extends IPSModuleStrict
         // eine ID-Kollision zwischen den Kacheln verschiedener Instanzen.
         $html = str_replace('<!--WRAPPER_ID-->', 'ipssl-select-wrapper-' . $this->InstanceID, $Html);
         $html = str_replace('<!--LANGUAGE_SELECT-->', $this->ResolveLanguageSelectHtml(), $html);
+
+        // Build 173 (Nutzer-Wunsch): das gewaehlte Symbol EINZELN verfuegbar
+        // machen. Bis dahin steckte es fest in der generierten Sprachauswahl -
+        // wer eine EIGENE Sprachauswahl hinterlegte, verlor es damit ersatzlos
+        // und konnte es nirgends zurueckholen. Seit Build 172 liefern wir
+        // editionsgebundene Symbole vom Server aus; ohne diesen Platzhalter
+        // koennte ausgerechnet ein eigenes Template sie nie zeigen.
+        //
+        // Respektiert die Checkbox "Symbol in der Kachel anzeigen" - steht sie
+        // aus, bleibt der Platzhalter leer, statt sie zu uebergehen.
+        $html = str_replace('<!--TILE_ICON-->', $this->ResolveTileIconHtml(), $html);
 
         return $this->ApplyTranslationStatsPlaceholders($html);
     }
@@ -10116,7 +10139,14 @@ HTML;
         return base64_decode(strtr($Data, '-_', '+/'), true);
     }
 
-    private function BuildAppIconImgHtml(): string
+    // $ImgStyle/$CssClass: Build 173 - die eingebaute Kachel setzt das Symbol in
+    // einen <span class="ipssl-globe"> mit fester Hoehe, dort passt
+    // "height:100%". Ein EIGENES Template hat diesen Rahmen nicht: dieselbe
+    // Angabe liefe dort ins Leere und das Symbol waere unsichtbar. Der
+    // Platzhalter <!--TILE_ICON--> bekommt deshalb eine Angabe, die nie
+    // kollabiert (natuerliche Groesse, schrumpft nur bei Bedarf) plus eine
+    // Klasse zum Ansprechen.
+    private function BuildAppIconImgHtml(string $ImgStyle = 'height:100%;width:auto;display:block;', string $CssClass = ''): string
     {
         $catalog = $this->GetTileCatalog('icon');
         $iconId = $this->ResolveCatalogId(
@@ -10127,14 +10157,18 @@ HTML;
         $entry = $catalog[$iconId];
 
         if (isset($entry['emoji'])) {
-            return $entry['emoji'];
+            return $CssClass !== ''
+                ? '<span class="' . $CssClass . '">' . $entry['emoji'] . '</span>'
+                : $entry['emoji'];
         }
 
         // Build 172: ein vom Server geliefertes Symbol kommt bereits als Base64
         // und wird unveraendert eingebettet - dieselbe Ausgabe wie unten, nur
         // ohne den Umweg ueber eine Datei.
+        $classAttribute = $CssClass !== '' ? ' class="' . $CssClass . '"' : '';
+
         if (isset($entry['content'])) {
-            return '<img alt="" style="height:100%;width:auto;display:block;"'
+            return '<img alt=""' . $classAttribute . ' style="' . $ImgStyle . '"'
                 . ' src="data:image/png;base64,' . $entry['content'] . '">';
         }
 
@@ -10142,10 +10176,10 @@ HTML;
         if ($iconData === false) {
             // Datei fehlt (unvollstaendige Installation) - dasselbe Zeichen wie
             // seit jeher als letzter Rueckfall, damit die Kachel nie leer bleibt.
-            return '🌐';
+            return $CssClass !== '' ? '<span class="' . $CssClass . '">🌐</span>' : '🌐';
         }
 
-        return '<img alt="" style="height:100%;width:auto;display:block;"'
+        return '<img alt=""' . $classAttribute . ' style="' . $ImgStyle . '"'
             . ' src="data:image/png;base64,' . base64_encode($iconData) . '">';
     }
 

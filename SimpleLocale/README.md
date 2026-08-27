@@ -809,6 +809,41 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
    liefert die Kachel weiterhin selbst aus** (`GetVisualizationTile()`) -
    nur eben mit dem editierten HTML/CSS/JS statt der eingebauten Optik.
 
+   **Welches HTML die Kachel überhaupt verwendet** (`GetVisualizationTile()`) -
+   das entscheidet sich VOR jedem Platzhalter, und zwar in dieser Reihenfolge:
+
+   1. "Eigene Sprachauswahl-Kachel verwenden" ist an **und** das Pro-Feature
+      `custom_tile` liegt vor **und** das Feld "HTML-Code" ist nicht leer
+      → dein HTML.
+   2. Sonst die **ausgewählte mitgelieferte Vorlage** (Feld "Kachel-Vorlage",
+      seit Build 172 auch serverseitig ausgelieferte, siehe Abschnitt 8).
+   3. Deren Standard ist `module.html`.
+
+   `module.html` ist also der Rückfall, nicht der Träger: es wird nicht
+   "ausgeliefert und ergänzt", sondern ist einer von mehreren möglichen
+   Ausgangstexten. Erst auf den Gewinner laufen die Platzhalter.
+
+   **Es sind zwei unabhängige Ebenen.** Die Hülle (Feld "HTML-Code") und die
+   Sprachauswahl darin (Feld "Sprachauswahl-HTML-Code") lassen sich einzeln
+   austauschen: eigene Hülle mit eingebauter Auswahl, eingebaute Hülle mit
+   eigener Auswahl, oder beides eigen.
+
+   **Alle Platzhalter auf einen Blick** (`ApplyTilePlaceholders()`):
+
+   | Platzhalter | wird ersetzt durch |
+   |---|---|
+   | `<!--LANGUAGE_SELECT-->` | die Sprachauswahl - eigene, falls hinterlegt, sonst die generierte |
+   | `<!--WRAPPER_ID-->` | eine pro Instanz eindeutige DOM-ID |
+   | `<!--TILE_ICON-->` | das gewählte Symbol, einzeln platzierbar (Build 173) |
+   | `<!--COUNT_TRANSLATIONS-->` | reine Zahl: Übersetzungen/h |
+   | `<!--COUNT_SIGNES-->` | reine Zahl: Zeichen/h |
+   | `<!--COUNT_CACHE_TRANSLATIONS-->` | Gesamtzahl der durch den Cache gesparten Anfragen |
+   | `<!--COUNT_CACHE_SIGNES-->` | dieselbe Ersparnis in Zeichen |
+
+   Die vier Zähler liefern **nur die Zahl**, keinen Einheitstext - den Satz
+   drumherum baust du selbst. Kein Platzhalter ist Pflicht: fehlt einer, wird
+   an dieser Stelle schlicht nichts eingesetzt.
+
    Das Bearbeiten-Fenster enthält zwei getrennte Felder:
 
    - **"HTML-Code"** - der äußere Rahmen (Layout/CSS), vorbefüllt mit einer
@@ -843,6 +878,20 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
      stattdessen jedes beliebige eigene Icon/Emoji stehen, die CSS-Klasse
      `ipssl-globe` (Name aus historischen Gründen unverändert) liefert
      bereits einen passenden 32×32px-Kreis als Container.
+
+     **Das gewählte Symbol einzeln einsetzen: `<!--TILE_ICON-->` (Build 173).**
+     Oben steckt das Symbol INNERHALB der generierten Sprachauswahl - wer eine
+     eigene Sprachauswahl hinterlegt, ersetzt damit den ganzen Block und verliert
+     es. Mit diesem Platzhalter setzt du es an eine beliebige Stelle deines
+     Templates, und die Auswahl im Feld "Symbol in der Kachel" bleibt wirksam -
+     einschließlich der seit Build 172 serverseitig ausgelieferten
+     Editions-Symbole. Ist die Checkbox "Symbol in der Kachel anzeigen"
+     abgeschaltet, bleibt der Platzhalter leer.
+
+     Das eingesetzte `<img>` trägt die Klasse `ipssl-tile-icon` und eine
+     Größenangabe, die **nicht kollabiert** (`max-width`/`max-height` statt
+     `height:100%`): dein Container braucht also keine feste Höhe zu haben.
+     Willst du es anders skalieren, sprich die Klasse in deinem CSS an.
 
      Zusätzlich zu den beiden oben genannten PFLICHT-Platzhaltern gibt es
      zwei OPTIONALE Platzhalter für die in [Abschnitt 2](#2-bekannte-einschränkungen)
@@ -4293,6 +4342,41 @@ der ursprünglichen Fassung übernommen.
   Durchlauf; die Zahl sinkt von Lauf zu Lauf und verschwindet am Ende;
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
+
+* **Build 173 (Nutzer-Frage): das gewählte Symbol lässt sich jetzt einzeln in
+  ein eigenes Template setzen - `<!--TILE_ICON-->`.**
+  Die Frage lautete, wie man das Symbol in ein eigenes Template einbindet.
+  Antwort war: gar nicht. Es wurde ausschließlich **innerhalb** der generierten
+  Sprachauswahl gebaut (`<span class="ipssl-globe">…`). Wer eine eigene
+  Sprachauswahl hinterlegte, ersetzte damit den ganzen Block und verlor das
+  Symbol ersatzlos - es gab keinen Weg, es zurückzuholen.
+
+  Das traf ausgerechnet Build 172: dort werden editionsgebundene Symbole vom
+  Server ausgeliefert, und ein eigenes Template hätte sie nie zeigen können. Der
+  Wiedererkennungswert wäre genau dort verlorengegangen, wo am meisten gestaltet
+  wird.
+
+  Der Platzhalter respektiert die Checkbox "Symbol in der Kachel anzeigen" -
+  steht sie aus, bleibt er leer, statt sie zu übergehen. Die eingesetzte
+  Fassung trägt die Klasse `ipssl-tile-icon` und eine Größenangabe, die **nicht
+  kollabiert**: die eingebaute Kachel setzt das Symbol in einen Rahmen mit fester
+  Höhe, wo `height:100%` passt - ein eigenes Template hat diesen Rahmen nicht,
+  dort wäre das Symbol unsichtbar geworden. Die eingebaute Kachel behält ihre
+  bisherige Angabe unverändert.
+
+  Ebenfalls in diesem Build: **Abschnitt 7 der Dokumentation nachgebessert**
+  (Nutzer-Rückmeldung, das sei "nicht so einfach" zu verstehen gewesen). Neu
+  vorangestellt sind die Entscheidungslogik - welches HTML überhaupt verwendet
+  wird und dass `module.html` der Rückfall ist, nicht der Träger -, der Hinweis
+  auf die zwei unabhängig austauschbaren Ebenen (Hülle und Sprachauswahl) und
+  eine Tabelle aller sieben Platzhalter. Vorher fing der Abschnitt direkt bei
+  den Feldern des Bearbeiten-Dialogs an.
+
+  Regressionstest `test_tile_icon_placeholder.php` (6 Fälle: der Platzhalter
+  wirkt; die Checkbox wird respektiert und der Platzhalter verschwindet trotzdem;
+  die Fassung kollabiert nicht ohne Elternrahmen; bestehende Templates bleiben
+  unverändert; mehrfaches Vorkommen wird ersetzt; Symmetrie-Check inklusive der
+  Zusicherung, dass die eingebaute Kachel ihre Style-Angabe behält).
 
 * **Build 172 (Nutzer-Wunsch): Kachel-Symbole und -Vorlagen je Edition kommen
   jetzt vom Server - kein Modul-Release mehr pro Sonder-Edition.**
