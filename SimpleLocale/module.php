@@ -10139,11 +10139,27 @@ HTML;
             return '';
         }
 
+        // Build 171 (live gemeldet): NICHT mehr die komplette URL als Linktext
+        // ausgeben. Sie umbrach auf drei Zeilen und wurde von der Kachel
+        // abgeschnitten - bei Visu-Hoehe 1 ist die Hoehe fest, der Text kann also
+        // nicht einfach weiterwachsen (siehe Build 143). Verlinkt wird jetzt das
+        // Wort selbst; die URL steckt im title-Attribut, damit sie beim
+        // Darueberfahren trotzdem sichtbar ist.
+        //
+        // Ein abschliessender Doppelpunkt wird abgeschnitten: die Vorgabe lautet
+        // "Verlängern:", was vor einer URL richtig war, vor einem verlinkten Wort
+        // aber ins Leere zeigt. Bewusst am WERT abgeschnitten statt die Vorgabe zu
+        // aendern - eine bereits vom Kunden uebersetzte Zeile traegt ihren
+        // Doppelpunkt sonst weiter (siehe GetOwnUiText).
+        $renewLabel = rtrim($renew, ': ');
+
         return '<div class="ipssl-license-notice" style="font-size:11px; color:#c0392b; text-align:center;">'
-            . htmlspecialchars($text . ' ' . $renew, ENT_QUOTES, 'UTF-8')
+            . htmlspecialchars($text, ENT_QUOTES, 'UTF-8')
             . ' <a href="' . htmlspecialchars(self::LICENSE_PURCHASE_URL, ENT_QUOTES, 'UTF-8') . '"'
-            . ' target="_blank" rel="noopener" style="color:inherit;">'
-            . htmlspecialchars(self::LICENSE_PURCHASE_URL, ENT_QUOTES, 'UTF-8')
+            . ' target="_blank" rel="noopener"'
+            . ' title="' . htmlspecialchars(self::LICENSE_PURCHASE_URL, ENT_QUOTES, 'UTF-8') . '"'
+            . ' style="color:inherit;">'
+            . htmlspecialchars($renewLabel, ENT_QUOTES, 'UTF-8')
             . '</a></div>';
     }
 
