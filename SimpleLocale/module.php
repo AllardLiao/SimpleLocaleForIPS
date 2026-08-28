@@ -9964,13 +9964,17 @@ class SimpleLocale extends IPSModuleStrict
      Bei Bedarf (weitere/andere Zielsprachen) hier direkt anpassen - siehe
      README Abschnitt 7 für die Erklärung des Mechanismus.
 
-     WICHTIG: Die Sprachcodes unten ('en') sind fest eingetragen und muessen zu
-     den eigenen Zielsprachen passen. Ein Klick auf eine Flagge, deren Code
-     nicht als Zielsprache konfiguriert ist, wird ignoriert (siehe
-     Debug-Kategorie "IPSSL_Language"). -->
+     WICHTIG: Die Sprachcodes unten sind fest eingetragen und muessen zu den
+     eigenen Zielsprachen passen - die Scan-Sprache eingeschlossen, die immer
+     als Zielsprache mitgefuehrt wird. Steht deine Scan-Sprache nicht auf
+     Deutsch, ersetze 'de' unten entsprechend.
+
+     Ein Klick auf eine Flagge, deren Code nicht konfiguriert ist, wird
+     abgelehnt: die aktive Sprache bleibt stehen, und der Gast bekommt einen
+     Hinweis in der Kachel (siehe auch Debug-Kategorie "IPSSL_Language"). -->
 <div style="display:flex; align-items:center; gap:10px;">
     <span style="opacity:0.6; font-size:13px;">Custom tile example:</span>
-    <span onclick="requestAction('Language', 'ORIGINAL_IMPORT');" style="cursor:pointer; font-size:24px;" title="Deutsch">🇩🇪</span>
+    <span onclick="requestAction('Language', 'de');" style="cursor:pointer; font-size:24px;" title="Deutsch">🇩🇪</span>
     <span onclick="requestAction('Language', 'en');" style="cursor:pointer; font-size:24px;" title="English">🇬🇧</span>
 </div>
 HTML;
