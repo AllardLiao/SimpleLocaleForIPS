@@ -9926,8 +9926,43 @@ HTML;
 
     private function PushVisualizationUpdate(): void
     {
+        // Build 180: gar nicht erst senden, wenn die aktive Vorlage
+        // <!--LANGUAGE_SELECT--> nicht benutzt.
+        //
+        // REFRESH ersetzt den kompletten Inhalt des Elements mit
+        // <!--WRAPPER_ID--> durch die Sprachauswahl. Eine Vorlage, die ihre
+        // Auswahl selbst baut, hat dort aber eigenes Layout stehen - das wuerde
+        // weggeloescht. Build 179 hat das fuer den vom Modul ERGAENZTEN Handler
+        // geloest; wer module.html als Vorlage nimmt und nur
+        // <!--LANGUAGE_SELECT--> durch eigenes Markup ersetzt, bringt den
+        // Handler aber selbst mit - und der wuerde weiterhin loeschen. Deshalb
+        // hier an der Quelle: was nicht gesendet wird, kann nichts zerstoeren.
+        //
+        // Verloren geht dabei nichts: ohne den Platzhalter gibt es nichts
+        // nachzuzeichnen. Die Gast-Hinweise laufen ueber ALERT und sind davon
+        // unberuehrt.
+        if (!$this->ActiveTileSupportsRefresh()) {
+            return;
+        }
+
         $payload = json_encode(['action' => 'REFRESH', 'payload' => ['html' => $this->ResolveLanguageSelectHtml()]]);
         $this->UpdateVisualizationValue($payload);
+    }
+
+    // Nutzt die gerade aktive Kachel <!--LANGUAGE_SELECT-->? Bewusst gegen
+    // dieselbe Quelle geprueft, aus der GetVisualizationTile() spaeter das HTML
+    // nimmt - sonst koennten Pruefung und Ausgabe auseinanderlaufen.
+    private function ActiveTileSupportsRefresh(): bool
+    {
+        $html = '';
+        if ($this->ReadPropertyBoolean(self::propertyUseCustomTile) && $this->HasLicenseFeature('custom_tile')) {
+            $html = $this->ReadPropertyString(self::propertyCustomTileHtml);
+        }
+        if (trim($html) === '') {
+            $html = $this->GetSelectedTileTemplateHtml();
+        }
+
+        return strpos($html, '<!--LANGUAGE_SELECT-->') !== false;
     }
 
     // Hinweis-Popup nach einem Sprachwechsel-Versuch bei abgelaufener Testphase -
