@@ -4416,6 +4416,30 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 183: der mitgelieferte Beispielcode für die eigene Sprachauswahl-Kachel
+  schickte für Deutsch `ORIGINAL_IMPORT`.**
+  Das Beispiel aus `GetDefaultCustomLanguageSelectHtml()` ist der Startwert des
+  Feldes - jeder Pro-Kunde bekommt es vorbefüllt zu sehen und baut sein eigenes
+  Design typischerweise darauf auf. Es trug damit ausgerechnet den Sentinel nach
+  außen, der seit Build 175 als modulintern aus der Anleitung für eigene Kacheln
+  entfernt ist: das Beispiel lehrte das Gegenteil der Dokumentation.
+
+  Jetzt steht dort der Sprachcode selbst (`'de'`). Das ist gleichwertig, nicht
+  nur kosmetisch: `IsSelectableGuestLanguage()` lässt die Scan-Sprache in einem
+  eigenen Zweig neben `langOriginalImport` durch, und
+  `IsLanguageSwitchRateLimited()` nimmt sie ebenso ausdrücklich vom Tagesschalter
+  aus - ein Klick auf die Scan-Sprache verhält sich also identisch.
+
+  Der Kommentar darüber sagte außerdem noch, ein nicht konfigurierter Sprachcode
+  werde "ignoriert". Seit Build 175 stimmt das nicht mehr: die aktive Sprache
+  bleibt stehen, und der Gast bekommt einen Hinweis in der Kachel. Ergänzt wurde
+  zudem, dass die Scan-Sprache immer als Zielsprache mitgeführt wird und `'de'`
+  entsprechend anzupassen ist, wenn sie eine andere ist.
+
+  Regressionstest `test_default_custom_tile_example.php` (4 Fälle, darunter die
+  Zusicherung der Freistellung der Scan-Sprache auf **beiden** Wegen - ohne die
+  wäre der Wechsel weg von `ORIGINAL_IMPORT` eine Verschlechterung).
+
 * **Build 182: die Ausweich-Protokollierung im `MessageSink` ist stillgelegt -
   Fehler erscheinen dort wieder rot als "FEHLER".**
   Bis Build 181 wich `LogTranslateMessage()` im `MessageSink`-Kontext auf die
