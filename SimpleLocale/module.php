@@ -8770,6 +8770,10 @@ class SimpleLocale extends IPSModuleStrict
         // Uebersetztes.
         $collected = array_fill(0, count($Texts), '');
         $attempts = [];
+        // Build 181: bleibt nur wahr, wenn JEDER Anbieterversuch dieses Chunks
+        // ausschliesslich an der Laengengrenze scheiterte. Ein bezahlter Anbieter
+        // kennt diese Grenze nicht - schlaegt er fehl, ist es ein echter Ausfall.
+        $onlyTooLong = true;
 
         foreach ($this->GetProviderChain() as $provider) {
             $pendingIndexes = array_keys(array_filter(
@@ -8790,11 +8794,17 @@ class SimpleLocale extends IPSModuleStrict
 
             $pendingTexts = array_values(array_map(static fn (int $i) => $Texts[$i], $pendingIndexes));
 
+            $freeOnlyTooLong = false;
             $result = match ($provider) {
                 'google' => $this->TranslateChunkGoogle($pendingTexts, $Source, $Target, $this->GetApiKeyForProvider('google'), $DebugContext, $IsHtml),
                 'deepl'  => $this->TranslateChunkDeepL($pendingTexts, $Source, $Target, $this->GetApiKeyForProvider('deepl'), $DebugContext, $IsHtml),
-                default  => $this->TranslateChunkFree($pendingTexts, $Source, $Target, $DebugContext),
+                default  => $this->TranslateChunkFree($pendingTexts, $Source, $Target, $DebugContext, $freeOnlyTooLong),
             };
+            // Build 181: Ein Chunk, der ausschliesslich an MyMemorys 500-Byte-Grenze
+            // gescheitert ist, ist KEIN Anbieterausfall - der Dienst hat sauber
+            // geantwortet, die Texte sind schlicht zu lang. Wird unten
+            // ausgewertet, um daraus keinen Instanz-Fehlerstatus zu machen.
+            $onlyTooLong = $onlyTooLong && $freeOnlyTooLong;
             if ($result === null) {
                 $attempts[] = $provider;
                 continue;
@@ -8858,6 +8868,32 @@ class SimpleLocale extends IPSModuleStrict
         // CallDeepLAPI/CallFreeTranslateAPI/TranslateChunkGoogle/TranslateChunkDeepL),
         // hier nur noch die Zusammenfassung mit allen fuer die Diagnose relevanten
         // Eckdaten an einer Stelle.
+        // Build 181 (live gemeldet): War die EINZIGE Ursache, dass jeder Text
+        // MyMemorys 500-Byte-Grenze ueberschritt, ist das kein Ausfall. Der
+        // Anbieter hat sauber geantwortet; die Texte sind zu lang, und daran
+        // aendert kein Wiederholungsversuch etwas. Bis Build 180 landete die
+        // Instanz dadurch dauerhaft auf "Uebersetzung fehlgeschlagen - kein
+        // Anbieter war erreichbar": sachlich falsch (erreichbar war er sehr wohl)
+        // und nicht abstellbar, weil jeder Lauf denselben Status neu setzte.
+        //
+        // Der Hinweis bleibt sichtbar - als WARNUNG im Log und als eigene Zeile
+        // im Formular (siehe RecordTranslationFailure('tooLong')), die zum
+        // richtigen Mittel raet: einen Google-/DeepL-Schluessel, der diese Grenze
+        // nicht kennt. Ein Instanz-Fehlerstatus waere dafuer das falsche
+        // Werkzeug.
+        if ($onlyTooLong) {
+            $this->LogTranslateMessage(sprintf(
+                'Übersetzung übersprungen: alle %d Text(e) überschreiten die 500-Byte-Grenze des kostenfreien '
+                    . 'Anbieters (Kontext: %s, erster Text: "%s"). Das ist kein Ausfall - MyMemory hat sauber '
+                    . 'geantwortet. Abhilfe schafft nur ein Google-/DeepL-Schlüssel, der diese Grenze nicht kennt.',
+                count($Texts),
+                $DebugContext !== '' ? $DebugContext : '(kein Kontext)',
+                mb_substr((string) ($Texts[0] ?? ''), 0, 120, 'UTF-8')
+            ));
+
+            return array_fill(0, count($Texts), '');
+        }
+
         $this->LogTranslateMessage(sprintf(
             'Übersetzung fehlgeschlagen: alle Anbieter der Kette (%s) haben "%s" -> "%s" abgelehnt (Kontext: %s, %d Text(e), erster Text: "%s"). Details zu jedem einzelnen Anbieter-Fehler stehen als Warnung direkt darüber in diesem Log.',
             implode(', ', $attempts),
@@ -9042,11 +9078,18 @@ class SimpleLocale extends IPSModuleStrict
     // null bleibt dem TOTALAUSFALL vorbehalten (kein einziger Text
     // durchgekommen) - nur dann ist der Anbieter als Ganzes gescheitert, was
     // Pausen-Eskalation und Kettenwechsel ausloesen soll.
-    private function TranslateChunkFree(array $Texts, string $Source, string $Target, string $DebugContext = ''): ?array
+    // $OnlyTooLong: Build 181 - true, wenn KEIN Text durchkam und jeder einzelne
+    // ausschliesslich an MyMemorys 500-Byte-Grenze gescheitert ist. Das ist kein
+    // Anbieterproblem, sondern eine bekannte, dauerhafte Eigenschaft des
+    // kostenfreien Dienstes - und darf deshalb nicht wie ein Ausfall behandelt
+    // werden (siehe Aufrufer).
+    private function TranslateChunkFree(array $Texts, string $Source, string $Target, string $DebugContext = '', ?bool &$OnlyTooLong = null): ?array
     {
         $results = [];
         $anySucceeded = false;
         $failedCount = 0;
+        $tooLongCount = 0;
+        $OnlyTooLong = false;
 
         foreach ($Texts as $text) {
             // Build 153 (live gemeldet, dump22): Sobald der Anbieter waehrend
@@ -9071,6 +9114,18 @@ class SimpleLocale extends IPSModuleStrict
             }
 
             $translated = $this->TranslateSingleFree($text, $Source, $Target, $DebugContext);
+
+            // Build 181: der Laengen-Waechter in TranslateSingleFree() liefert
+            // bewusst '' statt null - der Text ist nicht "fehlgeschlagen", er
+            // wurde uebersprungen. Getrennt gezaehlt, damit ein Chunk aus lauter
+            // zu langen Texten nicht als Anbieterausfall gilt.
+            if ($translated === '') {
+                $results[] = '';
+                $failedCount++;
+                $tooLongCount++;
+                continue;
+            }
+
             if ($translated === null) {
                 // Anbieter nicht erreichbar / Fehler - ein erneuter Versuch
                 // spaeter kann klappen.
@@ -9095,6 +9150,8 @@ class SimpleLocale extends IPSModuleStrict
         }
 
         if (!$anySucceeded) {
+            $OnlyTooLong = $tooLongCount === count($Texts);
+
             return null;
         }
 

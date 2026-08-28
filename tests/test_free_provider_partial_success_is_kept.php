@@ -137,7 +137,8 @@ echo "Test 6 (durchgehend fehlgeschlagene Texte bleiben leer und werden später 
 // Test 7: Symmetrie-Check gegen die reale module.php.
 $moduleSource = file_get_contents(dirname(__DIR__) . '/SimpleLocale/module.php');
 $fnStart = strpos($moduleSource, 'private function TranslateChunkFree');
-$fnBody = substr($moduleSource, $fnStart, 2600);
+// Rumpf sauber abgrenzen statt festes Zeichenfenster - die Funktion waechst.
+$fnBody = substr($moduleSource, $fnStart, strpos($moduleSource, "\n    private function ", $fnStart + 10) - $fnStart);
 assert(strpos($fnBody, '$anySucceeded') !== false, 'TranslateChunkFree() muss Teilerfolge erkennen');
 // Bewusst auf die BESTANDTEILE des Zweigs geprueft statt auf eine starre
 // Textfolge - dazwischen stehen legitim Kommentare und (seit Build 152) die
