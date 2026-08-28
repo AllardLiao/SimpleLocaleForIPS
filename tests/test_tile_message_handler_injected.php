@@ -16,7 +16,7 @@ declare(strict_types=1);
 // Kachel-HTML), bis klar wurde, dass es eine GELIEFERTE Vorlage war.
 
 // Repliziert EnsureTileMessageHandler().
-function ensureReplica(string $html, int $instanceId = 42): string
+function ensureReplica(string $html, bool $supportsRefresh = true): string
 {
     if (strpos($html, 'handleMessage') !== false) {
         return $html;
@@ -57,13 +57,15 @@ echo "Test 4 (ein Fragment bekommt es angehängt) OK\n";
 
 // Test 5: Symmetrie-Check gegen die reale Umsetzung.
 $moduleSource = file_get_contents(dirname(__DIR__) . '/SimpleLocale/module.php');
-assert(strpos($moduleSource, 'private function EnsureTileMessageHandler(string $Html): string') !== false,
-    'die Absicherung muss existieren');
+assert(strpos($moduleSource, 'private function EnsureTileMessageHandler(string $Html, bool $SupportsRefresh): string') !== false,
+    'die Absicherung muss existieren - seit Build 179 mit der Angabe, ob neu gezeichnet werden darf');
 $start = strpos($moduleSource, 'private function EnsureTileMessageHandler');
 $body = substr($moduleSource, $start, 2600);
 assert(strpos($body, "strpos(\$Html, 'handleMessage') !== false") !== false, 'ein vorhandener Handler muss erkannt werden');
 assert(strpos($body, 'm.action==="ALERT"') !== false, 'der eingesetzte Handler muss ALERT verarbeiten');
-assert(strpos($body, 'm.action==="REFRESH"') !== false, 'und REFRESH');
+assert(strpos($body, 'm.action==="REFRESH"') !== false, 'und REFRESH - aber nur, wenn die Vorlage das vertraegt');
+assert(strpos($body, '$refresh = $SupportsRefresh') !== false,
+    'DER FIX AUS BUILD 179: das Neuzeichnen haengt daran, ob die Vorlage <!--LANGUAGE_SELECT--> benutzt');
 // Fehlt das Ziel-Element, darf das Neuzeichnen still scheitern - die Meldungen
 // muessen trotzdem ankommen.
 assert(strpos($body, 'if(w){w.innerHTML=m.payload.html;}') !== false,

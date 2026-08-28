@@ -4353,6 +4353,36 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 179 (live gemeldet): das Popup zerlegte die Kachel.**
+  "Sobald das Popup aufpoppt wird das Tile zerstört - ein Refresh bringt das
+  korrekte zurück."
+
+  Das Modul zeichnet die Kachel vor jeder Ablehnung neu, und `REFRESH` ersetzt
+  den **kompletten Inhalt** des Elements mit `<!--WRAPPER_ID-->` durch die
+  Sprachauswahl. In `module.html` steht dort auch genau nur sie. Eine gelieferte
+  Vorlage kann die ID aber am **äußeren** Element tragen und daneben eigenes
+  Layout enthalten - genau das wurde weggelöscht. Ein Seiten-Reload stellte es
+  wieder her, weil dann das Original-HTML neu gerendert wurde.
+
+  Doppelt sinnlos war es obendrein: eine Vorlage **ohne**
+  `<!--LANGUAGE_SELECT-->` baut ihre Auswahl selbst, es gibt gar nichts
+  nachzuzeichnen. Der ergänzte Handler kennt deshalb jetzt nur noch die
+  Nachrichten, die zur Vorlage passen - `ALERT` immer, `REFRESH` nur, wenn die
+  Vorlage den Platzhalter tatsächlich benutzt.
+
+  Entschieden wird das am **Original**, vor den Ersetzungen: danach steht der
+  Platzhalter ja nicht mehr im Dokument, und die Prüfung wäre immer negativ.
+
+  *Für Vorlagen-Autoren:* eine gelieferte Vorlage ist die komplette Hülle, kein
+  Einsatz - sie ersetzt `module.html` vollständig und wird **nicht** an
+  `<!--LANGUAGE_SELECT-->` eingesetzt. Wer die Auswahl selbst baut, lässt den
+  Platzhalter weg; wer die eingebaute will (und das Nachzeichnen inklusive der
+  laufenden Statistik-Zähler), führt `<!--WRAPPER_ID-->` und
+  `<!--LANGUAGE_SELECT-->` gemeinsam auf einem Element auf, das sonst nichts
+  enthält.
+
+  Regressionstest `test_refresh_only_with_selector.php` (6 Fälle).
+
 * **Build 178 (live gefunden): eine vom Server gelieferte Kachel-Vorlage bekam
   weder Popups noch das automatische Neuzeichnen.**
   Das Modul schickt der Kachel zwei Arten von Nachrichten - `REFRESH` (Auswahl

@@ -9733,7 +9733,13 @@ class SimpleLocale extends IPSModuleStrict
         // aus, bleibt der Platzhalter leer, statt sie zu uebergehen.
         $html = str_replace('<!--TILE_ICON-->', $this->ResolveTileIconHtml(), $html);
 
-        return $this->EnsureTileMessageHandler($this->ApplyTranslationStatsPlaceholders($html));
+        // Build 179: ob diese Vorlage ueberhaupt neu gezeichnet werden DARF, haengt
+        // daran, ob sie <!--LANGUAGE_SELECT--> benutzt - gegen den Zustand VOR den
+        // Ersetzungen geprueft, danach steht der Platzhalter ja nicht mehr da.
+        return $this->EnsureTileMessageHandler(
+            $this->ApplyTranslationStatsPlaceholders($html),
+            strpos($Html, '<!--LANGUAGE_SELECT-->') !== false
+        );
     }
 
     // Build 178 (live gefunden): sorgt dafuer, dass JEDE Kachel Nachrichten des
@@ -9755,20 +9761,35 @@ class SimpleLocale extends IPSModuleStrict
     //
     // Die Verdrahtung ist Sache des Moduls, nicht des Designers. Bringt eine
     // Vorlage einen eigenen Handler mit, bleibt sie unangetastet.
-    private function EnsureTileMessageHandler(string $Html): string
+    private function EnsureTileMessageHandler(string $Html, bool $SupportsRefresh): string
     {
         if (strpos($Html, 'handleMessage') !== false) {
             return $Html;
         }
 
+        // Build 179 (live gefunden): NEU ZEICHNEN nur, wenn die Vorlage
+        // <!--LANGUAGE_SELECT--> ueberhaupt benutzt.
+        //
+        // REFRESH ersetzt den kompletten Inhalt des Elements mit
+        // <!--WRAPPER_ID--> durch die Sprachauswahl. In module.html steht dort
+        // auch genau nur sie. Eine gelieferte Vorlage kann die ID aber am
+        // AEUSSEREN Element tragen und daneben eigenes Layout enthalten - dann
+        // loescht das Neuzeichnen genau dieses Layout weg. Live so passiert: das
+        // Popup erschien, und im selben Moment zerfiel die Kachel.
+        //
+        // Ohne <!--LANGUAGE_SELECT--> gibt es ohnehin nichts sinnvoll
+        // nachzuzeichnen - die Vorlage baut ihre Auswahl ja selbst. Die
+        // Gast-Hinweise (ALERT) kommen unabhaengig davon immer an.
         $wrapperId = 'ipssl-select-wrapper-' . $this->InstanceID;
+        $refresh = $SupportsRefresh
+            // Fehlt das Ziel-Element trotzdem, wird still uebersprungen statt
+            // abgebrochen - die Meldungen sollen davon nie abhaengen.
+            ? 'if(m.action==="REFRESH"&&m.payload&&typeof m.payload.html==="string"){'
+                . 'var w=document.getElementById(' . json_encode($wrapperId) . ');if(w){w.innerHTML=m.payload.html;}}else '
+            : '';
         $script = '<script>function handleMessage(data){var m;try{m=JSON.parse(data);}catch(e){return;}'
-            . 'if(m.action==="REFRESH"&&m.payload&&typeof m.payload.html==="string"){'
-            // Fehlt das Ziel-Element (die Vorlage nutzt <!--WRAPPER_ID--> nicht),
-            // wird das Neuzeichnen still uebersprungen - die Meldungen unten
-            // funktionieren trotzdem. Lieber halb als gar nicht.
-            . 'var w=document.getElementById(' . json_encode($wrapperId) . ');if(w){w.innerHTML=m.payload.html;}'
-            . '}else if(m.action==="ALERT"&&m.payload&&typeof m.payload.text==="string"){alert(m.payload.text);}}</script>';
+            . $refresh
+            . 'if(m.action==="ALERT"&&m.payload&&typeof m.payload.text==="string"){alert(m.payload.text);}}</script>';
 
         $position = strripos($Html, '</body>');
 
