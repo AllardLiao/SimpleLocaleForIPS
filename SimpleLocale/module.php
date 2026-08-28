@@ -9710,8 +9710,17 @@ class SimpleLocale extends IPSModuleStrict
         // Instanz-eigene ID (nicht nur eine Klasse) - falls mehrere Instanzen jemals
         // im selben DOM landen sollten (statt jeweils eigenem iframe), verhindert das
         // eine ID-Kollision zwischen den Kacheln verschiedener Instanzen.
-        $html = str_replace('<!--WRAPPER_ID-->', 'ipssl-select-wrapper-' . $this->InstanceID, $Html);
-        $html = str_replace('<!--LANGUAGE_SELECT-->', $this->ResolveLanguageSelectHtml(), $html);
+        // Build 177 (live gefunden): die Sprachauswahl wird ZUERST eingesetzt,
+        // erst danach laufen die uebrigen Platzhalter. Vorher war es umgekehrt -
+        // ein <!--WRAPPER_ID--> im eigenen Sprachauswahl-HTML blieb dadurch
+        // woertlich stehen, weil es zum Zeitpunkt der Ersetzung noch gar nicht im
+        // Dokument war. Live in einem Kunden-Template aufgefallen.
+        //
+        // <!--TILE_ICON--> und die Zaehler standen schon immer danach und
+        // funktionierten deshalb in beiden Feldern; jetzt gilt das fuer alle
+        // gleichermassen.
+        $html = str_replace('<!--LANGUAGE_SELECT-->', $this->ResolveLanguageSelectHtml(), $Html);
+        $html = str_replace('<!--WRAPPER_ID-->', 'ipssl-select-wrapper-' . $this->InstanceID, $html);
 
         // Build 173 (Nutzer-Wunsch): das gewaehlte Symbol EINZELN verfuegbar
         // machen. Bis dahin steckte es fest in der generierten Sprachauswahl -
