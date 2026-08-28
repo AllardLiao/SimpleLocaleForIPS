@@ -4416,6 +4416,34 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 182: die Ausweich-Protokollierung im `MessageSink` ist stillgelegt -
+  Fehler erscheinen dort wieder rot als "FEHLER".**
+  Bis Build 181 wich `LogTranslateMessage()` im `MessageSink`-Kontext auf die
+  globale `IPS_LogMessage()` aus, weil dort einmal (17.08.2026, live beobachtet)
+  *"Warning: InstanceInterface is not available"* auftrat. Das kostete den
+  Schweregrad: `IPS_LogMessage()` kennt keinen, die Meldung erschien als graues
+  "Custom" mit Text-Präfix statt als rotes "FEHLER" - ausgerechnet im Pfad der
+  Live-Nachübersetzung.
+
+  Nachgestellt wurde der Fehler anschließend in einem eigenen Minimalmodul
+  ([TestIPSLogMessage](https://github.com/AllardLiao/TestIPSLogMessage)) in vier
+  Konstellationen: schlichtes Loggen im `MessageSink`; zusätzlich
+  `IPS_SetProperty` + `IPS_ApplyChanges` auf die **eigene** Instanz von dort
+  aus; zusätzlich Zurückschreiben in die überwachte Variable, also verschachtelte
+  Zustellung derselben Nachricht; und ein zehn Sekunden langer Durchlauf.
+  Einzeln und kombiniert - **durchweg fehlerfrei**.
+
+  Die Zuordnung war also vermutlich falsch: die Warnung fiel zeitlich mit dem
+  Log-Aufruf zusammen, stammte aber wohl von woanders. Passend dazu definiert
+  dieses Modul überhaupt kein Interface.
+
+  Der Rückbau läuft über eine Konstante (`LOG_VIA_GLOBAL_IN_MESSAGE_SINK`), die
+  Ausweichlogik bleibt **vollständig im Code**: taucht die Warnung je wieder
+  auf, stellt ein Wort den alten Weg wieder her.
+
+  Regressionstest `test_log_severity_restored.php` (5 Fälle, darunter die
+  Zusicherung, dass der alte Weg erhalten und mit einem Wort umkehrbar bleibt).
+
 * **Build 181 (live gemeldet): die Instanz stand dauerhaft auf "Übersetzung
   fehlgeschlagen", obwohl gar nichts fehlgeschlagen war.**
   "Wenn ich die Lizenz aktiviere meldet sie direkt *aktiv* - kurz danach aber
