@@ -847,8 +847,9 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
    Das Bearbeiten-Fenster enthält zwei getrennte Felder:
 
    - **"HTML-Code"** - der äußere Rahmen (Layout/CSS), vorbefüllt mit einer
-     1:1-Kopie der eingebauten `module.html`. Muss zwei Platzhalter
-     enthalten, die bei jedem Laden der Kachel automatisch ersetzt werden:
+     1:1-Kopie der eingebauten `module.html`. Diese beiden Platzhalter braucht
+     eine funktionierende Kachel - technisch erzwungen ist keiner, ohne sie
+     bleibt die Stelle aber schlicht leer:
      - `<!--WRAPPER_ID-->` - eine pro Instanz eindeutige DOM-ID, verhindert
        ID-Kollisionen, falls mehrere Kacheln im selben DOM landen. Kommt in
        der Standardvorlage **zweimal** vor (als `id`-Attribut des
@@ -893,31 +894,29 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
      `height:100%`): dein Container braucht also keine feste Höhe zu haben.
      Willst du es anders skalieren, sprich die Klasse in deinem CSS an.
 
-     Zusätzlich zu den beiden oben genannten PFLICHT-Platzhaltern gibt es
-     zwei OPTIONALE Platzhalter für die in [Abschnitt 2](#2-bekannte-einschränkungen)
-     beschriebene Nutzungsstatistik: `<!--COUNT_TRANSLATIONS-->` und
-     `<!--COUNT_SIGNES-->` werden, falls im HTML vorhanden, durch die
-     aktuelle durchschnittliche Anzahl an Übersetzungsanfragen bzw.
-     übersetzten Zeichen pro Stunde ersetzt - jeweils als reine gerundete
-     Ganzzahl ohne Einheit (z. B. "30" bzw. "500"); die passende
-     Beschriftung ("Übersetzungen/h", "Zeichen/h" o. ä.) ergänzt man selbst
-     im umgebenden HTML. Beide funktionieren unabhängig vom eingebauten
-     Toggle "Übersetzungsstatistik in der Kachel anzeigen" (der betrifft nur
-     die eingebaute Standard-Kachel) und sowohl im "HTML-Code"-Feld als auch
-     im "Sprachauswahl-HTML-Code"-Feld weiter unten. Kommt keiner der beiden
-     Platzhalter im HTML vor, entsteht kein zusätzlicher Aufwand. Aktualisiert
-     wird alle 10 Minuten über denselben `PushVisualizationUpdate()`-
-     Mechanismus, der auch den `REFRESH`-Payload weiter unten auslöst - nie
-     über einen Formular-Reload.
+     Dazu kommen **vier Zähler-Platzhalter** für die in
+     [Abschnitt 2](#2-bekannte-einschränkungen) beschriebene Nutzungsstatistik.
+     Alle vier liefern eine reine, gerundete Ganzzahl ohne Einheit (z. B. "30"
+     oder "500") - die passende Beschriftung ("Übersetzungen/h", "Zeichen/h",
+     "gesparte Anfragen" o. ä.) ergänzt man selbst im umgebenden HTML:
 
-     Seit Build 61 gibt es dazu zwei weitere, ebenfalls optionale Platzhalter:
-     `<!--COUNT_CACHE_TRANSLATIONS-->` und `<!--COUNT_CACHE_SIGNES-->` liefern
-     die reine Gesamtzahl der seit Inbetriebnahme durch den Übersetzungs-Cache
-     eingesparten Anfragen bzw. Zeichen (ebenfalls als reine Ganzzahl ohne
-     Einheit, aber - anders als die beiden oben - eine Gesamtsumme, keine
-     Pro-Stunde-Rate). Gelten dieselben Regeln wie für
-     `<!--COUNT_TRANSLATIONS-->`/`<!--COUNT_SIGNES-->`: unabhängig vom Toggle,
-     in beiden Feldern nutzbar, kein zusätzlicher Aufwand, falls ungenutzt.
+     | Platzhalter | liefert |
+     |---|---|
+     | `<!--COUNT_TRANSLATIONS-->` | Übersetzungsanfragen pro Stunde (Durchschnitt) |
+     | `<!--COUNT_SIGNES-->` | übersetzte Zeichen pro Stunde (Durchschnitt) |
+     | `<!--COUNT_CACHE_TRANSLATIONS-->` | seit Inbetriebnahme durch den Cache gesparte Anfragen (Gesamtsumme) |
+     | `<!--COUNT_CACHE_SIGNES-->` | dieselbe Ersparnis in Zeichen (Gesamtsumme) |
+
+     Die ersten beiden sind eine **Rate pro Stunde**, die beiden Cache-Zähler
+     eine **Gesamtsumme** - das ist der einzige inhaltliche Unterschied.
+
+     Für alle vier gilt dasselbe: unabhängig vom eingebauten Toggle
+     "Übersetzungsstatistik in der Kachel anzeigen" (der betrifft nur die
+     eingebaute Standard-Kachel), nutzbar sowohl im "HTML-Code"-Feld als auch im
+     "Sprachauswahl-HTML-Code"-Feld weiter unten, und ohne zusätzlichen Aufwand,
+     falls keiner davon im HTML vorkommt. Aktualisiert wird alle 10 Minuten über
+     denselben `PushVisualizationUpdate()`-Mechanismus, der auch den
+     `REFRESH`-Payload weiter unten auslöst - nie über einen Formular-Reload.
 
    - **"Sprachauswahl-HTML-Code"** - ersetzt `<!--LANGUAGE_SELECT-->`.
      Standardmäßig **vorbefüllt mit einem funktionierenden Beispiel** (zwei
