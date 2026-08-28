@@ -9,7 +9,7 @@ Beschreibung des Moduls.
 4. [Software-Installation](#4-software-installation)
 5. [Einrichten der Instanzen in Symcon](#5-einrichten-der-instanzen-in-symcon)
 6. [Statusvariablen und Profile](#6-statusvariablen-und-profile)
-7. [WebFront](#7-webfront)
+7. [Visualisierung](#7-visualisierung)
 8. [Lizenz und Testversion](#8-lizenz-und-testversion)
 9. [PHP-Befehlsreferenz](#9-php-befehlsreferenz)
 10. [Integration für Modulentwickler](#10-integration-für-modulentwickler)
@@ -1238,6 +1238,42 @@ anwendet, steuert die Konstante `IS_TRIAL_BUILD` in `module.php` - für einen
 Vollversion-Build (z. B. an zahlende Kunden nach Kauf) dort auf `false`
 setzen, dann entfallen Sprach- und Zeitbeschränkung unabhängig vom
 Lizenzschlüssel.
+
+**Kachel-Designs je Edition (Symbol und Vorlage):** Eine Edition kann ein
+eigenes Design mitbringen - ein Symbol für die Kachel, eine komplette
+Kachel-Vorlage, oder beides. Gepflegt wird das nicht im Modul, sondern beim
+Anbieter; ausgeliefert wird es bei der **Lizenz-Aktivierung**, denn erst dort
+steht fest, zu welcher Edition eine Installation gehört. Ein ausdrücklicher
+Klick auf "Lizenz aktivieren/aktualisieren" holt es ebenfalls, ohne dabei eine
+weitere Aktivierung zu melden.
+
+Zwei Bindungen: Ein Design **mit** Edition geht nur an deren Käufer und wird von
+der Einstellung "Automatisch" von selbst ausgewählt - das ist der
+Wiedererkennungswert einer Sonder-Edition. Ein Design **ohne** Edition geht an
+alle und verhält sich wie der Auslieferungszustand: immer wählbar, nie
+automatisch.
+
+Beim **ersten** Eintreffen wird ein editionsgebundenes Design gleich aktiv
+gesetzt, damit der Käufer es nicht suchen muss. Kommt dasselbe Design bei einer
+späteren Aktivierung erneut mit, bleibt die Auswahl unangetastet - was einmal
+abgewählt wurde, bleibt abgewählt. Ein einmal geliefertes Design bleibt
+dauerhaft auswählbar, auch ohne Internetverbindung und auch dann, wenn der
+Anbieter es später zurückzieht.
+
+Die eingebauten Einträge (Standard-Vorlage, Simple-Locale-Symbol, Weltkugel)
+werden dabei nie überschrieben - die Kachel lässt sich also immer auf den
+Auslieferungszustand zurücksetzen. Wie eine solche Vorlage aufgebaut sein muss,
+steht in [Abschnitt 7](#7-visualisierung).
+
+**Warum das sicher ist:** Das Paket trägt dieselbe Ed25519-Signatur wie ein
+Lizenzschlüssel und wird gegen denselben einkompilierten öffentlichen Schlüssel
+geprüft; ohne gültige Signatur wird nichts übernommen. Das Modul lädt also
+Inhalte aus dem Netz, akzeptiert aber ausschließlich, was mit dem privaten
+Offline-Schlüssel des Anbieters signiert wurde - ein manipulierter DNS, ein
+übernommener Webserver oder ein Man-in-the-Middle können nichts einschleusen.
+Gerendert wird das Ergebnis über dieselbe Strecke, die auch selbst editiertes
+Kachel-HTML seit jeher ausliefert (siehe `custom_tile` in
+[Abschnitt 7](#7-visualisierung)) - nur mit einer strengeren Herkunftsprüfung.
 
 **Signatur der Lizenzschlüssel (Ed25519, asymmetrisch):** Geprüft wird mit
 `sodium_crypto_sign_verify_detached()` gegen den öffentlichen Schlüssel in
