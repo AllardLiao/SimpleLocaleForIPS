@@ -4416,6 +4416,34 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 181 (live gemeldet): die Instanz stand dauerhaft auf "Übersetzung
+  fehlgeschlagen", obwohl gar nichts fehlgeschlagen war.**
+  "Wenn ich die Lizenz aktiviere meldet sie direkt *aktiv* - kurz danach aber
+  wieder *fehlgeschlagen*." Im Debug-Dump liefen alle 47 Übersetzungen sauber
+  durch; im Meldungs-Log stand die Ursache eine Zeile höher: einzelne Texte
+  überschritten MyMemorys **500-Byte-Grenze** und wurden übersprungen.
+
+  Da nur der kostenfreie Anbieter in der Kette steht, galt ein Chunk aus lauter
+  übersprungenen Texten als komplett gescheitert - und das setzte den
+  Instanz-Fehlerstatus. Doppelt falsch: die Meldung lautet "kein Anbieter war
+  erreichbar", obwohl MyMemory sauber geantwortet hat, und der Zustand war nicht
+  abstellbar, weil jeder Lauf ihn neu setzte. An der Textlänge ändert kein
+  Wiederholungsversuch etwas.
+
+  Der Längen-Wächter liefert bewusst `''` statt `null` - der Text ist nicht
+  fehlgeschlagen, er wurde übersprungen. Diese Unterscheidung wird jetzt bis nach
+  oben durchgereicht: scheiterte **jeder** Text ausschließlich an der Grenze,
+  wird eine Warnung geloggt und **kein** Fehlerstatus gesetzt. Ein einziger
+  echter Fehlschlag genügt weiterhin für den Status, und ein bezahlter Anbieter
+  kennt diese Grenze ohnehin nicht - schlägt er fehl, ist es ein echter Ausfall.
+
+  Sichtbar bleibt es trotzdem: als Warnung im Log und als eigene Zeile im
+  Formular (Build 152), die zum richtigen Mittel rät - einem Google-/DeepL-
+  Schlüssel ohne diese Grenze. Die übersprungenen Texte bleiben leer und werden
+  später erneut versucht, sobald ein solcher Anbieter da ist.
+
+  Regressionstest `test_too_long_is_not_an_outage.php` (6 Fälle).
+
 * **Build 180: kein Neuzeichnen mehr an Vorlagen, die es nicht vertragen -
   diesmal an der Quelle.**
   Build 179 hatte das zerstörerische Neuzeichnen für den vom Modul **ergänzten**
