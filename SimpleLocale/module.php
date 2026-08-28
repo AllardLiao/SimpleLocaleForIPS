@@ -8672,9 +8672,35 @@ class SimpleLocale extends IPSModuleStrict
     // zuverlässig aus JEDEM Ausführungskontext - dafür ohne Farbcodierung
     // (erscheint als "Custom"), weshalb hier weiterhin ein Text-Präfix nötig
     // ist, um den Schweregrad wenigstens lesbar zu machen.
+    // Build 182: Ausweichlogik STILLGELEGT, aber nicht entfernt - auf true
+    // setzen stellt sie vollstaendig wieder her.
+    //
+    // Hintergrund: Bis Build 181 wich diese Funktion im MessageSink-Kontext auf
+    // die globale IPS_LogMessage() aus, weil dort einmal (2026-08-17, live
+    // beobachtet) "Warning: InstanceInterface is not available" +
+    // "InstanzManager: Kann Schnittstellen-Instanz nicht erstellen" auftrat.
+    //
+    // Nachgestellt wurde das anschliessend in einem eigenen Minimalmodul
+    // (github.com/AllardLiao/TestIPSLogMessage) in vier Konstellationen:
+    // schlichtes Loggen im MessageSink; zusaetzlich IPS_SetProperty +
+    // IPS_ApplyChanges auf die EIGENE Instanz von dort aus; zusaetzlich
+    // Zurueckschreiben in die ueberwachte Variable (also verschachtelte
+    // Zustellung derselben Nachricht); und ein zehn Sekunden langer Durchlauf.
+    // Einzeln und kombiniert - durchweg fehlerfrei.
+    //
+    // Die Zuordnung war also vermutlich falsch: die Warnung fiel zeitlich mit
+    // dem Log-Aufruf zusammen, stammte aber wohl von woanders. Passend dazu
+    // definiert dieses Modul ueberhaupt kein Interface.
+    //
+    // Der Umweg kostete etwas Reales: IPS_LogMessage() kennt keinen
+    // Schweregrad, die Meldung erschien als graues "Custom" mit Text-Praefix
+    // statt als rotes "FEHLER" - ausgerechnet im Pfad der Live-Nachuebersetzung.
+    // Deshalb der Rueckbau. Taucht die Warnung je wieder auf: Konstante auf true.
+    private const LOG_VIA_GLOBAL_IN_MESSAGE_SINK = false;
+
     private function LogTranslateMessage(string $Message, bool $IsError = false): void
     {
-        if (!$this->isInMessageSinkDispatch) {
+        if (!self::LOG_VIA_GLOBAL_IN_MESSAGE_SINK || !$this->isInMessageSinkDispatch) {
             $this->LogMessage($Message, $IsError ? KL_ERROR : KL_WARNING);
 
             return;
