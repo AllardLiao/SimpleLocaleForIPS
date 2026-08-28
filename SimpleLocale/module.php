@@ -808,7 +808,12 @@ class SimpleLocale extends IPSModuleStrict
                     // wird verweigert. Die Kachel wird trotzdem neu gezeichnet,
                     // damit eine eingebaute Auswahl nicht faelschlich auf der
                     // abgelehnten Sprache stehen bleibt.
+                    //
+                    // Build 175: erst neu zeichnen, DANN die Meldung - dieselbe
+                    // Reihenfolge wie in den anderen Ablehnungspfaden, sonst
+                    // ueberschreibt das Neuzeichnen die ALERT-Nutzlast.
                     $this->PushVisualizationUpdate();
+                    $this->PushUnknownLanguageAlert();
 
                     return;
                 }
@@ -2005,7 +2010,8 @@ class SimpleLocale extends IPSModuleStrict
             // jedes "Uebernehmen" fuer ein voellig unabhaengiges Formularfeld (z.B. ein
             // Checkbox-Toggle) still im Hintergrund einen weiteren Netzwerk-Request
             // ausloesen.
-            $reported = $this->TrackLicenseActivationIfNew(true);
+            $serverReached = true;
+            $reported = $this->TrackLicenseActivationIfNew(true, $serverReached);
             // Build 169 (Nutzer-Wunsch): Wurde nichts gemeldet, ist der Schluessel
             // unveraendert und laengst registriert - dann holt der ausdrueckliche
             // Klick wenigstens den AKTUELLEN Stand vom Server, ohne eine weitere
@@ -2014,14 +2020,25 @@ class SimpleLocale extends IPSModuleStrict
             // bis zu 24 Stunden spaeter an, naemlich mit der Tagespruefung - der
             // Kunde drueckte auf den Knopf und sah nichts passieren.
             if (!$reported && self::LICENSE_ACTIVATION_REPORT_URL !== '') {
-                $this->FetchLicenseStatus(hash('sha256', $this->ReadPropertyString(self::propertyLicenseKey)), true);
+                $serverReached = $this->FetchLicenseStatus(
+                    hash('sha256', $this->ReadPropertyString(self::propertyLicenseKey)),
+                    true
+                );
             }
             // TrackLicenseActivationIfNew() kann den Schluessel gerade erst als
             // "geblockt" markiert (oder entsperrt) haben (siehe dort) - GetLicenseInfo()
             // frisch neu abfragen statt das oben zwischengespeicherte $info weiterzuverwenden.
             $info = $this->GetLicenseInfo();
-            $this->UpdateFormField('LicenseBlockedPopup', 'visible', $info['blocked'] ?? false);
-            $this->UpdateFormField('LicenseValidPopup', 'visible', !($info['blocked'] ?? false));
+            $blocked = $info['blocked'] ?? false;
+            $this->UpdateFormField('LicenseBlockedPopup', 'visible', $blocked);
+
+            // Build 175 (Nutzer-Wunsch): War der Server nicht erreichbar, sagt das
+            // Popup GENAU das - und zugleich, dass die Lizenz trotzdem gilt. Vorher
+            // erschien kommentarlos "Lizenz gueltig", und der Nutzer konnte nicht
+            // wissen, dass die Bestaetigung beim Server ausgeblieben ist. Beides
+            // gleichzeitig anzuzeigen waere widerspruechlich, deshalb entweder/oder.
+            $this->UpdateFormField('LicenseServerUnreachablePopup', 'visible', !$blocked && !$serverReached);
+            $this->UpdateFormField('LicenseValidPopup', 'visible', !$blocked && $serverReached);
         } else {
             $this->UpdateFormField('LicenseInvalidPopup', 'visible', true);
         }
@@ -2046,7 +2063,7 @@ class SimpleLocale extends IPSModuleStrict
     // gerade als geblockt bekannt: dann wird auch bei unverändertem Schlüssel erneut
     // online nachgefragt (siehe ActivateLicense), ohne das würde ein serverseitiges
     // Entsperren (siehe shop/admin) auf dieser Instanz nie ankommen.
-    private function TrackLicenseActivationIfNew(bool $AllowRecheck = false): bool
+    private function TrackLicenseActivationIfNew(bool $AllowRecheck = false, ?bool &$ServerReached = null): bool
     {
         $info = $this->GetLicenseInfo();
         if (!($info['valid'] ?? false) && !($info['blocked'] ?? false) && !($info['revoked'] ?? false)) {
@@ -2077,7 +2094,7 @@ class SimpleLocale extends IPSModuleStrict
             $log = [];
         }
 
-        $this->RecordLicenseActivation($keyHash, $licensee, $log);
+        $ServerReached = $this->RecordLicenseActivation($keyHash, $licensee, $log);
 
         return true;
     }
@@ -2257,7 +2274,7 @@ class SimpleLocale extends IPSModuleStrict
     // Aktivierung eingetragen. Nur die Antwort faellt groesser aus, und das auch
     // nur auf ausdruecklichen Knopfdruck - die taegliche Pruefung fragt bewusst
     // nicht danach.
-    private function FetchLicenseStatus(string $KeyHash, bool $WithAssets = false): void
+    private function FetchLicenseStatus(string $KeyHash, bool $WithAssets = false): bool
     {
         $entry = [
             'licenseKeyHash' => $KeyHash,
@@ -2271,6 +2288,8 @@ class SimpleLocale extends IPSModuleStrict
 
         $response = $this->CallActivationReportAPI(self::LICENSE_ACTIVATION_REPORT_URL, json_encode($entry));
         $this->ApplyActivationReportResponse($KeyHash, $response);
+
+        return $response !== null;
     }
 
     // Eigene, überschreibbare Methode fürs HTTP-POST (wie CallGoogleTranslateAPI) - so
@@ -2300,8 +2319,37 @@ class SimpleLocale extends IPSModuleStrict
         //
         // "Erfolg" heisst ab jetzt: eine verwertbare Antwort, nicht bloss
         // empfangene Bytes.
+        // Build 175 (Nutzer-Wunsch): Fehlschlaege der Serverkommunikation gehoeren
+        // als ECHTE Fehlermeldung ins Symcon-Log, nicht nur ins Debug-Fenster. Der
+        // Nutzer soll sehen, dass etwas klemmt - auch wenn es taeglich klemmt.
+        // Bewusst KEIN Instanz-Fehlerstatus: die Lizenz ist offline geprueft und
+        // gueltig, das Modul arbeitet vollstaendig weiter. Ein nicht erreichbarer
+        // Meldeserver ist eine Randnotiz, kein Betriebsausfall.
+        // Bewusst ueber LogTranslateMessage() statt direkt ueber $this->LogMessage():
+        // dieser Aufruf kann innerhalb von MessageSink landen (IM_CHANGESETTINGS ->
+        // IPS_ApplyChanges -> passiver Melde-Pfad), und dort scheitert die von
+        // IPSModule geerbte Methode nachweislich (siehe dortiger Kommentar). Der
+        // Helfer weicht in genau diesem Kontext auf IPS_LogMessage() aus.
+        if ($response === false) {
+            $this->LogTranslateMessage(
+                'Der Lizenzserver ist nicht erreichbar. Die Lizenz bleibt lokal geprueft und gueltig,'
+                    . ' das Modul arbeitet normal weiter. Der Versuch wird spaeter automatisch wiederholt.',
+                true
+            );
+
+            return null;
+        }
+
         if ($httpStatus >= 400) {
             $this->SendDebug('ActivationReport', 'HTTP ' . $httpStatus . ' - gilt als nicht gemeldet', 0);
+            $this->LogTranslateMessage(
+                sprintf(
+                    'Der Lizenzserver antwortete mit HTTP %d. Die Lizenz bleibt lokal geprueft und gueltig,'
+                        . ' das Modul arbeitet normal weiter. Der Versuch wird spaeter automatisch wiederholt.',
+                    $httpStatus
+                ),
+                true
+            );
 
             return null;
         }
@@ -2313,7 +2361,7 @@ class SimpleLocale extends IPSModuleStrict
         // fehlgeschlagenen Erstmeldung. Ein leerer String heisst jetzt "angekommen,
         // nichts zu melden"; ApplyActivationReportResponse() behandelt ihn wie zuvor
         // (json_decode('') ergibt null, also keine Aktion).
-        return $response === false ? null : (string) $response;
+        return (string) $response;
     }
 
     // Lizenzschlüssel-Format: "<base64url(JSON-Payload)>.<base64url(Ed25519-Signatur)>".
@@ -9835,6 +9883,34 @@ HTML;
 
     // Aufbau bewusst identisch zu PushTrialExpiredAlert - kein Reset auf Original,
     // der Aufrufer (RequestAction) lässt die aktuell aktive Sprache einfach stehen.
+    // Build 175 (Nutzer-Wunsch): Hinweis fuer den GAST, wenn die Kachel eine
+    // Sprache anfordert, die nicht konfiguriert ist. Der Fall selbst wird seit
+    // Build 142 sauber abgefangen (kein ungueltiger Code in der Property), war
+    // dem Gast gegenueber aber stumm: er klickte, nichts geschah, und im Debug
+    // stand die Erklaerung, die er nie sieht. Typisch bei einer eigenen
+    // Sprachauswahl-Kachel mit fest eingetragenen Codes, die nicht zu den
+    // konfigurierten Zielsprachen passen.
+    //
+    // Uebersetzt wird in die AKTUELL aktive Sprache, nicht in die angeforderte:
+    // die angeforderte ist ja gerade die unbekannte - ein Uebersetzungsversuch
+    // dorthin waere im besten Fall sinnlos, im schlechteren ein API-Aufruf fuer
+    // einen erfundenen Sprachcode.
+    private function PushUnknownLanguageAlert(): void
+    {
+        $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
+        $currentLanguage = $this->ReadPropertyString(self::propertyCurrentLanguage);
+        $text = self::UNKNOWN_LANGUAGE_ALERT_TEXT;
+
+        if ($currentLanguage !== $sourceLanguage && $currentLanguage !== self::langOriginalImport && $currentLanguage !== '') {
+            $translated = $this->TranslateBatch([$text], $sourceLanguage, $currentLanguage);
+            if (($translated[0] ?? '') !== '') {
+                $text = $translated[0];
+            }
+        }
+
+        $this->UpdateVisualizationValue(json_encode(['action' => 'ALERT', 'payload' => ['text' => $text]]));
+    }
+
     private function PushLanguageSwitchLimitAlert(string $RequestedLanguage): void
     {
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
@@ -10161,8 +10237,43 @@ HTML;
             ];
         }
 
+        // Build 175 (Nutzer-Wunsch): ein ERSTMALS eingetroffenes, editionsgebundenes
+        // Design wird gleich aktiv gesetzt - der Kaeufer soll sein Design sehen,
+        // ohne es erst suchen zu muessen.
+        //
+        // Ausschliesslich beim ersten Mal: kommt dasselbe Design bei einer
+        // spaeteren Aktivierung erneut mit, bleibt die Auswahl unangetastet. Sonst
+        // wuerde eine bewusste Abwahl des Kunden bei jeder Aktivierung wieder
+        // ueberschrieben - was er einmal weggeklickt hat, soll weggeklickt bleiben.
+        $previousKeys = [];
+        foreach ($this->ReadVerifiedTileAssets() as $previous) {
+            $previousKeys[($previous['kind'] ?? '') . '|' . ($previous['key'] ?? '')] = true;
+        }
+
         $this->WriteAttributeString(self::attributeTileAssetBundle, json_encode($clean));
         $this->SendDebug('TileAssets', count($clean) . ' Design(s) uebernommen', 0);
+
+        $properties = [
+            'icon'     => self::propertyTileIconId,
+            'template' => self::propertyTileTemplateId,
+        ];
+        $changed = false;
+        foreach ($clean as $asset) {
+            if ($asset['scope'] !== 'edition' || isset($previousKeys[$asset['kind'] . '|' . $asset['key']])) {
+                continue;
+            }
+            $property = $properties[$asset['kind']] ?? null;
+            if ($property === null || $this->ReadPropertyString($property) === $asset['key']) {
+                continue;
+            }
+            IPS_SetProperty($this->InstanceID, $property, $asset['key']);
+            $changed = true;
+            $this->SendDebug('TileAssets', 'Neues Editions-Design "' . $asset['key'] . '" (' . $asset['kind'] . ') aktiv gesetzt', 0);
+        }
+
+        if ($changed) {
+            IPS_ApplyChanges($this->InstanceID);
+        }
     }
 
     private function Base64UrlDecode(string $Data): string|false

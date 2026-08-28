@@ -68,10 +68,10 @@ echo "Test 3 (ein geblockter Schlüssel wird weiterhin neu gemeldet) OK\n";
 
 // Test 4: die reale Umsetzung im Modul.
 $moduleSource = file_get_contents(dirname(__DIR__) . '/SimpleLocale/module.php');
-assert(strpos($moduleSource, 'private function FetchLicenseStatus(string $KeyHash, bool $WithAssets = false): void') !== false,
+assert(strpos($moduleSource, 'private function FetchLicenseStatus(string $KeyHash, bool $WithAssets = false): bool') !== false,
     'die Statusabfrage muss existieren - seit Build 174 mit optionaler Bitte um die Kachel-Designs');
 assert(strpos($moduleSource, "'statusOnly'     => true,") !== false, 'sie muss das Flag setzen');
-assert(strpos($moduleSource, 'private function TrackLicenseActivationIfNew(bool $AllowRecheck = false): bool') !== false,
+assert(strpos($moduleSource, 'private function TrackLicenseActivationIfNew(bool $AllowRecheck = false, ?bool &$ServerReached = null): bool') !== false,
     'die Meldefunktion muss zurueckgeben, ob sie gemeldet hat');
 assert(strpos($moduleSource, 'if (!$reported && self::LICENSE_ACTIVATION_REPORT_URL !== \'\') {') !== false,
     'ActivateLicense muss nur bei ausbleibender Meldung nachfragen');

@@ -92,8 +92,15 @@ $constantsSource = file_get_contents(dirname(__DIR__) . '/libs/SimpleLocaleConst
 
 assert(strpos($constantsSource, "attributeReportedLicenseKeyHash = 'ReportedLicenseKeyHash'") !== false,
     'das Attribut fuer die tatsaechlich erfolgte Meldung muss deklariert sein');
-assert(strpos($moduleSource, 'return $response === false ? null : (string) $response;') !== false,
-    'DER KERN: null darf nur noch "Server nicht erreicht" bedeuten');
+// Seit Build 174/175 steht die Bedingung nicht mehr in einer Zeile, sondern als
+// zwei fruehe Ausstiege (Transportfehler, HTTP-Fehlerstatus). Der KERN bleibt:
+// null bedeutet ausschliesslich "keine verwertbare Antwort".
+$callStart = strpos($moduleSource, 'private function CallActivationReportAPI');
+$callBody = substr($moduleSource, $callStart, strpos($moduleSource, "\n    private function ", $callStart + 10) - $callStart);
+assert(strpos($callBody, 'if ($response === false) {') !== false, 'ein Transportfehler muss null liefern');
+assert(strpos($callBody, 'if ($httpStatus >= 400) {') !== false, 'ein HTTP-Fehlerstatus ebenso');
+assert(substr_count($callBody, 'return null;') === 2, 'genau diese beiden Faelle - kein weiterer stiller Fehlschlag');
+assert(strpos($callBody, 'return (string) $response;') !== false, 'alles andere gilt als verwertbare Antwort');
 assert(strpos($moduleSource, 'private function RecordLicenseActivation(string $KeyHash, string $Licensee, array $Log): bool') !== false,
     'die Meldefunktion muss den Erfolg zurueckgeben');
 assert(strpos($moduleSource, 'WriteAttributeString(self::attributeReportedLicenseKeyHash, $KeyHash);') !== false,

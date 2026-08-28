@@ -1165,6 +1165,25 @@
             }
         },
         {
+            "name": "LicenseServerUnreachablePopup",
+            "type": "PopupAlert",
+            "visible": false,
+            "popup": {
+                "caption": "Aktivierung nicht bestätigt",
+                "closeCaption": "OK",
+                "items": [
+                    {
+                        "type": "Label",
+                        "caption": "Der Lizenzserver war nicht erreichbar - die Aktivierung konnte dort nicht bestätigt werden. Bitte später noch einmal versuchen."
+                    },
+                    {
+                        "type": "Label",
+                        "caption": "Deine Lizenz ist davon unberührt: sie wurde lokal geprüft und ist gültig. Das Modul arbeitet vollständig weiter, auch wenn der Server längere Zeit nicht erreichbar bleibt."
+                    }
+                ]
+            }
+        },
+        {
             "name": "LicenseValidPopup",
             "type": "PopupAlert",
             "visible": false,

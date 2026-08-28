@@ -403,6 +403,11 @@ trait SimpleLocaleConstants
     // Inhalt ist das bereits GEPRUEFTE Paket; ungeprueft wird nie gespeichert.
     private const attributeTileAssetBundle = 'TileAssetBundle';
 
+    // Build 175: Gast-Hinweis, wenn die Kachel eine Sprache anfordert, die gar
+    // nicht konfiguriert ist. Rohtext (nicht ueber Translate()) - er wird live in
+    // die AKTUELL aktive Sprache uebersetzt, siehe PushUnknownLanguageAlert.
+    private const UNKNOWN_LANGUAGE_ALERT_TEXT = 'Diese Sprache ist derzeit nicht eingerichtet. Bitte wähle eine andere.';
+
     // Objekte ohne Namen, die beim letzten Rescan im Root-Baum gefunden wurden (JSON-
     // Array aus ObjectID+Path) - ein Rescan bricht ab, sobald welche existieren, bevor
     // irgendetwas übersetzt wird (leerer Name lässt sich sonst nicht sinnvoll übersetzen
