@@ -828,6 +828,26 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
    austauschen: eigene Hülle mit eingebauter Auswahl, eingebaute Hülle mit
    eigener Auswahl, oder beides eigen.
 
+   > **Für Autoren einer gelieferten Vorlage** (siehe Abschnitt 8): eine Vorlage
+   > ist die **komplette Hülle** und ersetzt `module.html` vollständig - sie wird
+   > *nicht* an `<!--LANGUAGE_SELECT-->` eingesetzt. Der einfachste Weg ist,
+   > `module.html` zu nehmen und anzupassen. Drei Dinge dabei:
+   >
+   > 1. **Kein `margin`/`padding` auf `body`.** Symcon legt Titel und
+   >    Vergrößern-Symbol als Overlay über den Inhalt und reserviert oben Platz
+   >    dafür. Wer den Rand entfernt, schiebt seinen Inhalt unter die Titelzeile.
+   >    Muss das Standardpadding doch angefasst werden, dann nur links/rechts.
+   > 2. **`<!--WRAPPER_ID-->` und `<!--LANGUAGE_SELECT-->` gehören zusammen** auf
+   >    ein Element, das sonst **nichts** enthält - beim Neuzeichnen wird dessen
+   >    kompletter Inhalt ersetzt.
+   > 3. **Eigene Auswahl statt der eingebauten?** Dann `<!--LANGUAGE_SELECT-->`
+   >    weglassen. Das Modul zeichnet die Kachel dann nicht mehr nach (es gäbe ja
+   >    nichts nachzuzeichnen), die Statistik-Zähler stehen still, und die
+   >    Gast-Hinweise kommen unverändert an.
+   >
+   > Den `handleMessage`-Block musst du nicht mitliefern - fehlt er, ergänzt ihn
+   > das Modul.
+
    **Alle Platzhalter auf einen Blick** (`ApplyTilePlaceholders()`):
 
    | Platzhalter | wird ersetzt durch |
@@ -4352,6 +4372,29 @@ der ursprünglichen Fassung übernommen.
   Durchlauf; die Zahl sinkt von Lauf zu Lauf und verschwindet am Ende;
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
+
+* **Build 180: kein Neuzeichnen mehr an Vorlagen, die es nicht vertragen -
+  diesmal an der Quelle.**
+  Build 179 hatte das zerstörerische Neuzeichnen für den vom Modul **ergänzten**
+  Handler abgestellt. Wer aber `module.html` als Vorlage nimmt und nur
+  `<!--LANGUAGE_SELECT-->` durch eigenes Markup ersetzt - der naheliegendste Weg
+  überhaupt -, bringt den Handler **selbst** mit. Er wird also nicht ergänzt, und
+  seine `REFRESH`-Behandlung hätte weiterhin den Inhalt des Wrappers gelöscht.
+
+  Jetzt entscheidet die sendende Seite: benutzt die aktive Vorlage den
+  Platzhalter nicht, wird gar kein `REFRESH` mehr geschickt. Was nicht gesendet
+  wird, kann nichts zerstören - unabhängig davon, welcher Handler in der Kachel
+  sitzt. Die Gast-Hinweise laufen über `ALERT` und sind davon unberührt.
+
+  Ebenfalls in diesem Build: Abschnitt 7 bekommt einen Kasten **für Autoren einer
+  gelieferten Vorlage** mit den drei Punkten, über die diese Runde gestolpert ist
+  - kein `margin`/`padding` auf `body` (Symcon reserviert dort den Platz für
+  Titel und Vergrößern-Symbol), `<!--WRAPPER_ID-->` und `<!--LANGUAGE_SELECT-->`
+  gehören auf ein Element, das sonst nichts enthält, und was es bedeutet, den
+  Platzhalter wegzulassen.
+
+  Regressionstest `test_no_refresh_without_selector.php` (4 Fälle, darunter die
+  Zusicherung, dass die Gast-Hinweise NICHT an dieser Bedingung hängen).
 
 * **Build 179 (live gemeldet): das Popup zerlegte die Kachel.**
   "Sobald das Popup aufpoppt wird das Tile zerstört - ein Refresh bringt das
