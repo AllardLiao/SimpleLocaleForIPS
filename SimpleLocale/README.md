@@ -4353,6 +4353,21 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 177 (an einem Kunden-Template aufgefallen): `<!--WRAPPER_ID-->` blieb
+  in einer eigenen Sprachauswahl wörtlich stehen.**
+  `ApplyTilePlaceholders()` ersetzte `<!--WRAPPER_ID-->` **vor**
+  `<!--LANGUAGE_SELECT-->`. Zum Zeitpunkt der Ersetzung war das eigene
+  Sprachauswahl-HTML also noch gar nicht im Dokument - sein Platzhalter wurde nie
+  gesehen und landete unverändert in der Ausgabe.
+
+  `<!--TILE_ICON-->` und die vier Zähler standen schon immer **nach** der
+  Sprachauswahl und funktionierten deshalb in beiden Feldern. Genau diese
+  Ungleichbehandlung war der Fehler: die Sprachauswahl wird jetzt zuerst
+  eingesetzt, danach laufen alle übrigen Platzhalter über das fertige Dokument.
+
+  Regressionstest `test_placeholder_order.php` (5 Fälle, darunter der
+  Symmetrie-Check auf die Reihenfolge selbst - sie ist der ganze Fix).
+
 * **Build 176 (live gemeldet): Gast-Popups erschienen nur beim ersten Mal.**
   Gemeldet für den neuen Hinweis bei unbekanntem Sprachcode - betroffen waren
   aber **alle drei** Gast-Popups (Testphase, Sprachwechsel-Limit, unbekannte
