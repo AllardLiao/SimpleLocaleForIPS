@@ -9733,7 +9733,48 @@ class SimpleLocale extends IPSModuleStrict
         // aus, bleibt der Platzhalter leer, statt sie zu uebergehen.
         $html = str_replace('<!--TILE_ICON-->', $this->ResolveTileIconHtml(), $html);
 
-        return $this->ApplyTranslationStatsPlaceholders($html);
+        return $this->EnsureTileMessageHandler($this->ApplyTranslationStatsPlaceholders($html));
+    }
+
+    // Build 178 (live gefunden): sorgt dafuer, dass JEDE Kachel Nachrichten des
+    // Moduls verarbeiten kann - auch eine, die nichts davon weiss.
+    //
+    // Das Modul schickt der Kachel zwei Arten von Nachrichten: REFRESH (die
+    // Sprachauswahl neu zeichnen, etwa nach einem abgelehnten Wechsel oder alle
+    // 10 Minuten fuer die Statistik) und ALERT (Gast-Hinweise: abgelaufene
+    // Testphase, Sprachwechsel-Limit, unbekannter Sprachcode). Verarbeitet werden
+    // sie von einer Funktion handleMessage(), die bisher ausschliesslich in
+    // module.html stand.
+    //
+    // Eine vom Server gelieferte Vorlage (siehe Build 172) ersetzt aber die
+    // KOMPLETTE Huelle. Wer ein Design anlegt, hat damit unbemerkt saemtliche
+    // Popups und das automatische Neuzeichnen abgeschaltet - live genau so
+    // passiert: der Sprachwechsel wurde korrekt abgelehnt, die Ablehnung stand im
+    // Log, in der Kachel geschah nichts. Dasselbe gilt fuer eine von Hand
+    // geschriebene eigene Kachel.
+    //
+    // Die Verdrahtung ist Sache des Moduls, nicht des Designers. Bringt eine
+    // Vorlage einen eigenen Handler mit, bleibt sie unangetastet.
+    private function EnsureTileMessageHandler(string $Html): string
+    {
+        if (strpos($Html, 'handleMessage') !== false) {
+            return $Html;
+        }
+
+        $wrapperId = 'ipssl-select-wrapper-' . $this->InstanceID;
+        $script = '<script>function handleMessage(data){var m;try{m=JSON.parse(data);}catch(e){return;}'
+            . 'if(m.action==="REFRESH"&&m.payload&&typeof m.payload.html==="string"){'
+            // Fehlt das Ziel-Element (die Vorlage nutzt <!--WRAPPER_ID--> nicht),
+            // wird das Neuzeichnen still uebersprungen - die Meldungen unten
+            // funktionieren trotzdem. Lieber halb als gar nicht.
+            . 'var w=document.getElementById(' . json_encode($wrapperId) . ');if(w){w.innerHTML=m.payload.html;}'
+            . '}else if(m.action==="ALERT"&&m.payload&&typeof m.payload.text==="string"){alert(m.payload.text);}}</script>';
+
+        $position = strripos($Html, '</body>');
+
+        return $position === false
+            ? $Html . $script
+            : substr($Html, 0, $position) . $script . substr($Html, $position);
     }
 
     // Für eigene Kacheln gedacht (siehe propertyCustomTileHtml/
