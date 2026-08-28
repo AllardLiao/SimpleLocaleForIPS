@@ -208,7 +208,10 @@
             "Bevorzugter Anbieter (nur relevant, wenn beide oben eingetragen sind - in dieser Edition wird genau einer davon als Rückfall genutzt)": "Preferred provider (only relevant if both are entered above - in this edition exactly one of them is used as the fallback)",
             "Übersetzung fehlgeschlagen - kein Anbieter war erreichbar (Details siehe Konfigurationsformular)": "Translation failed - no provider could be reached (see the configuration form for details)",
             "Lizenz aktivieren/aktualisieren": "Activate/update license",
-            "Mit Klick auf \"Lizenz aktivieren/aktualisieren\" oben bestätigst du, dass du diese Nutzungsbedingungen gelesen hast und akzeptierst. Beim Kauf im Shop werden sie zusätzlich vor Zahlungsabschluss per Checkbox abgefragt.": "By clicking \"Activate/update license\" above, you confirm that you've read and accept these terms of usage. When purchasing in the shop, they're additionally confirmed via checkbox before payment."
+            "Mit Klick auf \"Lizenz aktivieren/aktualisieren\" oben bestätigst du, dass du diese Nutzungsbedingungen gelesen hast und akzeptierst. Beim Kauf im Shop werden sie zusätzlich vor Zahlungsabschluss per Checkbox abgefragt.": "By clicking \"Activate/update license\" above, you confirm that you've read and accept these terms of usage. When purchasing in the shop, they're additionally confirmed via checkbox before payment.",
+            "Aktivierung nicht bestätigt": "Activation not confirmed",
+            "Der Lizenzserver war nicht erreichbar - die Aktivierung konnte dort nicht bestätigt werden. Bitte später noch einmal versuchen.": "The licence server could not be reached, so the activation was not confirmed there. Please try again later.",
+            "Deine Lizenz ist davon unberührt: sie wurde lokal geprüft und ist gültig. Das Modul arbeitet vollständig weiter, auch wenn der Server längere Zeit nicht erreichbar bleibt.": "Your licence is unaffected: it was verified locally and is valid. The module keeps working in full, even if the server stays unreachable for a longer time."
         },
         "es": {
             "Aktiv": "Activo",
@@ -418,7 +421,10 @@
             "Bevorzugter Anbieter (nur relevant, wenn beide oben eingetragen sind - in dieser Edition wird genau einer davon als Rückfall genutzt)": "Proveedor preferido (solo relevante si ambos están introducidos arriba: en esta edición se utiliza exactamente uno de ellos como reserva)",
             "Übersetzung fehlgeschlagen - kein Anbieter war erreichbar (Details siehe Konfigurationsformular)": "La traducción falló: no se pudo contactar con ningún proveedor (más detalles en el formulario de configuración)",
             "Lizenz aktivieren/aktualisieren": "Activar/actualizar licencia",
-            "Mit Klick auf \"Lizenz aktivieren/aktualisieren\" oben bestätigst du, dass du diese Nutzungsbedingungen gelesen hast und akzeptierst. Beim Kauf im Shop werden sie zusätzlich vor Zahlungsabschluss per Checkbox abgefragt.": "Al hacer clic en \"Activar/actualizar licencia\" arriba, confirmas que has leído y aceptas estas condiciones de uso. Al comprar en la tienda, se confirman además mediante una casilla antes de completar el pago."
+            "Mit Klick auf \"Lizenz aktivieren/aktualisieren\" oben bestätigst du, dass du diese Nutzungsbedingungen gelesen hast und akzeptierst. Beim Kauf im Shop werden sie zusätzlich vor Zahlungsabschluss per Checkbox abgefragt.": "Al hacer clic en \"Activar/actualizar licencia\" arriba, confirmas que has leído y aceptas estas condiciones de uso. Al comprar en la tienda, se confirman además mediante una casilla antes de completar el pago.",
+            "Aktivierung nicht bestätigt": "Activación no confirmada",
+            "Der Lizenzserver war nicht erreichbar - die Aktivierung konnte dort nicht bestätigt werden. Bitte später noch einmal versuchen.": "No se pudo contactar con el servidor de licencias, por lo que la activación no se confirmó allí. Vuelve a intentarlo más tarde.",
+            "Deine Lizenz ist davon unberührt: sie wurde lokal geprüft und ist gültig. Das Modul arbeitet vollständig weiter, auch wenn der Server längere Zeit nicht erreichbar bleibt.": "Tu licencia no se ve afectada: se verificó localmente y es válida. El módulo sigue funcionando por completo, aunque el servidor permanezca inaccesible durante más tiempo."
         },
         "it": {
             "Aktiv": "Attivo",
@@ -628,7 +634,10 @@
             "Bevorzugter Anbieter (nur relevant, wenn beide oben eingetragen sind - in dieser Edition wird genau einer davon als Rückfall genutzt)": "Provider preferito (rilevante solo se entrambi sono inseriti sopra: in questa edizione ne viene usato esattamente uno come ripiego)",
             "Übersetzung fehlgeschlagen - kein Anbieter war erreichbar (Details siehe Konfigurationsformular)": "Traduzione non riuscita: nessun provider raggiungibile (dettagli nel modulo di configurazione)",
             "Lizenz aktivieren/aktualisieren": "Attiva/aggiorna licenza",
-            "Mit Klick auf \"Lizenz aktivieren/aktualisieren\" oben bestätigst du, dass du diese Nutzungsbedingungen gelesen hast und akzeptierst. Beim Kauf im Shop werden sie zusätzlich vor Zahlungsabschluss per Checkbox abgefragt.": "Facendo clic su \"Attiva/aggiorna licenza\" sopra, confermi di aver letto e accettato queste condizioni d'uso. Durante l'acquisto nello shop, vengono inoltre confermate tramite casella di controllo prima del pagamento."
+            "Mit Klick auf \"Lizenz aktivieren/aktualisieren\" oben bestätigst du, dass du diese Nutzungsbedingungen gelesen hast und akzeptierst. Beim Kauf im Shop werden sie zusätzlich vor Zahlungsabschluss per Checkbox abgefragt.": "Facendo clic su \"Attiva/aggiorna licenza\" sopra, confermi di aver letto e accettato queste condizioni d'uso. Durante l'acquisto nello shop, vengono inoltre confermate tramite casella di controllo prima del pagamento.",
+            "Aktivierung nicht bestätigt": "Attivazione non confermata",
+            "Der Lizenzserver war nicht erreichbar - die Aktivierung konnte dort nicht bestätigt werden. Bitte später noch einmal versuchen.": "Il server delle licenze non era raggiungibile, quindi l'attivazione non è stata confermata. Riprova più tardi.",
+            "Deine Lizenz ist davon unberührt: sie wurde lokal geprüft und ist gültig. Das Modul arbeitet vollständig weiter, auch wenn der Server längere Zeit nicht erreichbar bleibt.": "La tua licenza non ne risente: è stata verificata localmente ed è valida. Il modulo continua a funzionare pienamente, anche se il server resta irraggiungibile a lungo."
         },
         "fr": {
             "Aktiv": "Actif",
@@ -838,7 +847,10 @@
             "Bevorzugter Anbieter (nur relevant, wenn beide oben eingetragen sind - in dieser Edition wird genau einer davon als Rückfall genutzt)": "Fournisseur préféré (pertinent uniquement si les deux sont saisis ci-dessus : dans cette édition, exactement l'un d'eux sert de solution de repli)",
             "Übersetzung fehlgeschlagen - kein Anbieter war erreichbar (Details siehe Konfigurationsformular)": "Échec de la traduction - aucun fournisseur n'a pu être contacté (détails dans le formulaire de configuration)",
             "Lizenz aktivieren/aktualisieren": "Activer/mettre à jour la licence",
-            "Mit Klick auf \"Lizenz aktivieren/aktualisieren\" oben bestätigst du, dass du diese Nutzungsbedingungen gelesen hast und akzeptierst. Beim Kauf im Shop werden sie zusätzlich vor Zahlungsabschluss per Checkbox abgefragt.": "En cliquant sur « Activer/mettre à jour la licence » ci-dessus, vous confirmez avoir lu et accepté ces conditions d'utilisation. Lors d'un achat dans la boutique, elles sont en outre confirmées via une case à cocher avant le paiement."
+            "Mit Klick auf \"Lizenz aktivieren/aktualisieren\" oben bestätigst du, dass du diese Nutzungsbedingungen gelesen hast und akzeptierst. Beim Kauf im Shop werden sie zusätzlich vor Zahlungsabschluss per Checkbox abgefragt.": "En cliquant sur « Activer/mettre à jour la licence » ci-dessus, vous confirmez avoir lu et accepté ces conditions d'utilisation. Lors d'un achat dans la boutique, elles sont en outre confirmées via une case à cocher avant le paiement.",
+            "Aktivierung nicht bestätigt": "Activation non confirmée",
+            "Der Lizenzserver war nicht erreichbar - die Aktivierung konnte dort nicht bestätigt werden. Bitte später noch einmal versuchen.": "Le serveur de licences était injoignable, l'activation n'a donc pas pu y être confirmée. Merci de réessayer plus tard.",
+            "Deine Lizenz ist davon unberührt: sie wurde lokal geprüft und ist gültig. Das Modul arbeitet vollständig weiter, auch wenn der Server längere Zeit nicht erreichbar bleibt.": "Votre licence n'est pas affectée : elle a été vérifiée localement et elle est valide. Le module continue de fonctionner entièrement, même si le serveur reste injoignable longtemps."
         }
     }
 }

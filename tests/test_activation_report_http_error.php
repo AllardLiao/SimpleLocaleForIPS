@@ -86,8 +86,12 @@ assert(strpos($fetch, "'statusOnly'     => true,") !== false, 'sie darf statusOn
 
 $activateStart = strpos($moduleSource, 'private function ActivateLicense');
 $activate = substr($moduleSource, $activateStart, 2500);
-assert(strpos($activate, '$this->FetchLicenseStatus(hash(\'sha256\', $this->ReadPropertyString(self::propertyLicenseKey)), true);') !== false,
-    'der ausdrueckliche Klick muss die Designs anfordern');
+// Seit Build 175 wird der Rueckgabewert ausgewertet (Server erreicht?), der
+// Aufruf steht daher ueber mehrere Zeilen.
+assert(strpos($activate, '$serverReached = $this->FetchLicenseStatus(') !== false,
+    'der ausdrueckliche Klick muss die Statusabfrage stellen und ihr Ergebnis auswerten');
+assert(preg_match('/FetchLicenseStatus\(\s*hash\(\x27sha256\x27[^;]*?,\s*true\s*\)/s', $activate) === 1,
+    'und dabei die Designs anfordern');
 echo "Test 6 (die reale Umsetzung prüft den Status und fordert beim Klick an) OK\n";
 
 echo "\nAll tests passed.\n";

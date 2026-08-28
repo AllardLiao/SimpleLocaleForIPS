@@ -865,7 +865,7 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
      <div class="ipssl-select-row">
        <span class="ipssl-globe" aria-hidden="true"><img src="data:image/png;base64,..." alt=""></span>
        <select onchange="requestAction('Language', this.value);">
-         <option value="ORIGINAL_IMPORT">Deutsch</option>
+         <option value="de">Deutsch</option>
          <option value="en" selected>English</option>
        </select>
        <span class="ipssl-info-icon" aria-hidden="true" onclick="alert('...');">ⓘ</span>
@@ -925,7 +925,7 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
      Aktivieren etwas Sichtbares/Funktionierendes in der Kachel steht:
      ```html
      <div style="display:flex; align-items:center; gap:10px;">
-         <span onclick="requestAction('Language', 'ORIGINAL_IMPORT');" style="cursor:pointer; font-size:24px;" title="Deutsch">🇩🇪</span>
+         <span onclick="requestAction('Language', 'de');" style="cursor:pointer; font-size:24px;" title="Deutsch">🇩🇪</span>
          <span onclick="requestAction('Language', 'en');" style="cursor:pointer; font-size:24px;" title="English">🇬🇧</span>
      </div>
      ```
@@ -933,9 +933,20 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
      die von Symcon in jede Kachel injizierte JS-Funktion, die einen
      Sprachwechsel auslöst; sie ist an keine bestimmte HTML-Struktur
      gebunden (kein `<select>` nötig - jedes klickbare Element reicht).
-     `<Code>` ist entweder ein echter, konfigurierter Zielsprachcode (z. B.
-     `en`, `fr`) oder die interne Pseudo-Sprache `ORIGINAL_IMPORT`
-     (unbearbeiteter Rohtext in der Scan-Sprache).
+     `<Code>` muss ein **konfigurierter** Sprachcode sein (z. B. `en`, `fr`) -
+     die Scan-Sprache eingeschlossen, die immer als Zielsprache mitgeführt wird
+     (siehe `EnsureSourceLanguageIsTarget()`). Über sie kommt man zum
+     unbearbeiteten Originaltext zurück, also z. B. `de` statt eines
+     Sonderwerts.
+
+     > Ein Code, den die Instanz nicht kennt, wird abgelehnt: die aktive Sprache
+     > bleibt stehen, und der Gast bekommt seit Build 175 ein Popup, das genau
+     > das sagt. Genau dieser Fall tritt auf, wenn eine eigene Sprachauswahl
+     > feste Codes trägt und später die Zielsprachen geändert werden.
+
+     `ORIGINAL_IMPORT` ist seit Build 79 **keine wählbare Gast-Sprache mehr**
+     und rein modulintern (Rückfall bei abgelaufener Testphase). In einer
+     eigenen Kachel hat der Wert nichts zu suchen.
 
      **Bewusst einfach gehalten, keine Sprachenliste/Wiederholungs-Vorlage:**
      dieses Feld wird 1:1 verwendet, ohne Kenntnis der tatsächlich
@@ -970,9 +981,9 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
    - `IPSSL_GetAvailableLanguages(int $InstanzID): string` - liefert die
      wählbaren Sprachen als JSON-Array `[{code, name, current}, ...]`, live
      in die aktuell aktive Sprache übersetzt und alphabetisch sortiert -
-     exakt dieselbe Liste wie im eingebauten Dropdown. `code` ist entweder
-     ein echter Sprachcode oder die interne Pseudo-Sprache
-     `ORIGINAL_IMPORT` (unbearbeiteter Rohtext, siehe oben).
+     exakt dieselbe Liste wie im eingebauten Dropdown - also ausschließlich
+     konfigurierte Sprachcodes, die Scan-Sprache eingeschlossen. Genau diese
+     Werte akzeptiert auch `IPSSL_SetLanguage()`.
    - `IPSSL_SetLanguage(int $InstanzID, string $Sprachcode): void` -
      wechselt die aktive Sprache, mit derselben Logik wie ein Klick im
      eingebauten Dropdown (Testphase-/Rate-Limit-Prüfung inklusive).
@@ -4342,6 +4353,49 @@ der ursprünglichen Fassung übernommen.
   Durchlauf; die Zahl sinkt von Lauf zu Lauf und verschwindet am Ende;
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
+
+* **Build 175 (vier Nutzer-Wünsche): Rückmeldung bei Serverproblemen, Gast-Hinweis
+  bei unbekannter Sprache, `ORIGINAL_IMPORT` aus der Custom-Tile-Doku, und ein
+  neues Editions-Design wird gleich aktiv.**
+
+  *Der Aktivierungsknopf war bei einem Serverproblem stumm.* Es erschien
+  kommentarlos "Lizenz gültig", obwohl die Bestätigung beim Server ausgeblieben
+  war - genau die Situation, in der man eine Rückmeldung braucht. Jetzt sagt ein
+  eigenes Popup, dass die Aktivierung nicht bestätigt werden konnte und man es
+  später erneut versuchen soll **und** dass die Lizenz davon unberührt bleibt:
+  lokal geprüft, gültig, das Modul arbeitet vollständig weiter. Beide Popups
+  schließen sich gegenseitig aus, sonst wäre die Aussage widersprüchlich.
+
+  *Fehlschläge der Serverkommunikation landen jetzt im Symcon-Log*, als echte
+  Fehlermeldung statt nur im Debug-Fenster - der Nutzer soll sehen, dass etwas
+  klemmt, auch wenn es täglich klemmt. **Bewusst ohne Instanz-Fehlerstatus:** ein
+  nicht erreichbarer Meldeserver ist eine Randnotiz, kein Betriebsausfall.
+  Geloggt wird über `LogTranslateMessage()` statt über `$this->LogMessage()` -
+  der Aufruf kann innerhalb von `MessageSink` landen (`IM_CHANGESETTINGS` →
+  `IPS_ApplyChanges` → passiver Melde-Pfad), und dort scheitert die geerbte
+  Methode nachweislich (siehe Build 130).
+
+  *Ein Gast, der eine nicht konfigurierte Sprache anfordert, bekommt jetzt ein
+  Popup.* Der Fall wird seit Build 142 sauber abgefangen, war dem Gast gegenüber
+  aber stumm: er klickte, nichts geschah, die Erklärung stand im Debug-Log, das
+  er nie sieht. Typisch bei einer eigenen Sprachauswahl mit fest eingetragenen
+  Codes, die nicht mehr zu den Zielsprachen passen. Übersetzt wird in die
+  **aktuell aktive** Sprache, nicht in die angeforderte - die ist ja gerade die
+  unbekannte.
+
+  *`ORIGINAL_IMPORT` ist aus der Custom-Tile-Dokumentation verschwunden.* Der
+  Wert ist seit Build 79 keine wählbare Gast-Sprache mehr und rein modulintern;
+  in einer eigenen Kachel hat er nichts zu suchen. Die Beispiele nutzen jetzt die
+  Scan-Sprache (`de`), die ohnehin immer als Zielsprache mitgeführt wird und
+  denselben Zweck erfüllt.
+
+  *Ein erstmals eingetroffenes, editionsgebundenes Design wird gleich aktiv
+  gesetzt* - der Käufer soll sein Design sehen, ohne es zu suchen. **Nur beim
+  ersten Mal:** kommt dasselbe Design bei einer späteren Aktivierung erneut mit,
+  bleibt die Auswahl unangetastet. Was der Kunde einmal weggeklickt hat, soll
+  weggeklickt bleiben. Editionslose Designs stellen nie etwas um.
+
+  Regressionstest `test_activation_feedback_and_autoselect.php` (7 Fälle).
 
 * **Build 174 (live gefunden): ein HTTP-Fehlerstatus galt als erfolgreiche
   Meldung - dadurch kamen Kachel-Designs dauerhaft nie an.**
