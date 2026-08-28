@@ -4353,6 +4353,32 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 178 (live gefunden): eine vom Server gelieferte Kachel-Vorlage bekam
+  weder Popups noch das automatische Neuzeichnen.**
+  Das Modul schickt der Kachel zwei Arten von Nachrichten - `REFRESH` (Auswahl
+  neu zeichnen) und `ALERT` (Gast-Hinweise: Testphase, Sprachwechsel-Limit,
+  unbekannter Sprachcode). Verarbeitet werden sie von `handleMessage()`, und die
+  stand ausschließlich in `module.html`. Eine gelieferte Vorlage (Build 172)
+  ersetzt aber die **komplette Hülle**: wer ein Design anlegt, hatte damit
+  unbemerkt sämtliche Hinweise und das Neuzeichnen abgeschaltet.
+
+  Live genau so aufgetreten: der Wechsel auf einen nicht konfigurierten
+  Sprachcode wurde korrekt abgelehnt, die Ablehnung stand im Log - in der Kachel
+  geschah nichts.
+
+  Die Verdrahtung ist Sache des Moduls, nicht des Designers: fehlt einer Vorlage
+  der Handler, ergänzt ihn das Modul. Bringt sie einen eigenen mit, bleibt sie
+  unangetastet. Fehlt das Ziel-Element fürs Neuzeichnen (die Vorlage nutzt
+  `<!--WRAPPER_ID-->` nicht), wird nur dieser Teil still übersprungen - die
+  Hinweise kommen trotzdem an.
+
+  *Zur Fehlersuche:* die Spur führte zunächst in die falsche Richtung, weil die
+  Felder für eigenes Kachel-HTML gefüllt aussahen. Sie tragen aber nur die
+  Vorbefüllung und werden bei ausgeschaltetem "Eigene Sprachauswahl-Kachel
+  verwenden" gar nicht verwendet - gerendert wurde die gelieferte Vorlage.
+
+  Regressionstest `test_tile_message_handler_injected.php` (6 Fälle).
+
 * **Build 177 (an einem Kunden-Template aufgefallen): `<!--WRAPPER_ID-->` blieb
   in einer eigenen Sprachauswahl wörtlich stehen.**
   `ApplyTilePlaceholders()` ersetzte `<!--WRAPPER_ID-->` **vor**
