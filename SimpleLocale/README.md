@@ -4354,6 +4354,28 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 176 (live gemeldet): Gast-Popups erschienen nur beim ersten Mal.**
+  Gemeldet für den neuen Hinweis bei unbekanntem Sprachcode - betroffen waren
+  aber **alle drei** Gast-Popups (Testphase, Sprachwechsel-Limit, unbekannte
+  Sprache).
+
+  `UpdateVisualizationValue()` setzt einen **Wert**, keine Nachricht. Ein Wert,
+  der sich nicht ändert, löst in der Kachel kein Ereignis aus. Zweimal dieselbe
+  Ablehnung - gleicher ungültiger Sprachcode, gleiche Meldung - ergab eine
+  byteweise identische Nutzlast: das Popup erschien einmal und danach nie wieder.
+  Beim Testen fällt genau das auf, weil man den Fall wiederholt.
+
+  Alle drei laufen jetzt über einen gemeinsamen Sender, der jeder Nutzlast eine
+  laufende Nummer mitgibt. Bewusst ein **Zähler** und nicht nur ein Zeitstempel:
+  zwei Versuche innerhalb derselben Sekunde wären sonst wieder identisch. Die
+  Kachel muss davon nichts wissen - `handleMessage()` ignoriert unbekannte
+  Felder, `module.html` bleibt unverändert.
+
+  Regressionstest `test_tile_alert_repeats.php` (6 Fälle: der gemeldete Fall; der
+  Fix; die Zeitstempel-Falle; der angezeigte Text bleibt gleich; Symmetrie-Check
+  inklusive der Zusicherung, dass genau eine Stelle die ALERT-Nutzlast baut und
+  kein Pfad den gemeinsamen Sender umgeht).
+
 * **Build 175 (vier Nutzer-Wünsche): Rückmeldung bei Serverproblemen, Gast-Hinweis
   bei unbekannter Sprache, `ORIGINAL_IMPORT` aus der Custom-Tile-Doku, und ein
   neues Editions-Design wird gleich aktiv.**
