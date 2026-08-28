@@ -837,9 +837,16 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
    >    Vergrößern-Symbol als Overlay über den Inhalt und reserviert oben Platz
    >    dafür. Wer den Rand entfernt, schiebt seinen Inhalt unter die Titelzeile.
    >    Muss das Standardpadding doch angefasst werden, dann nur links/rechts.
-   > 2. **`<!--WRAPPER_ID-->` und `<!--LANGUAGE_SELECT-->` gehören zusammen** auf
-   >    ein Element, das sonst **nichts** enthält - beim Neuzeichnen wird dessen
-   >    kompletter Inhalt ersetzt.
+   > 2. **Wenn du die eingebaute Auswahl nutzt:** `<!--WRAPPER_ID-->` gehört in
+   >    das `id`-Attribut, `<!--LANGUAGE_SELECT-->` als **Inhalt** desselben
+   >    Elements - und dieses Element enthält sonst nichts, denn beim Neuzeichnen
+   >    wird sein kompletter Inhalt ersetzt:
+   >    ```html
+   >    <div id="<!--WRAPPER_ID-->"><!--LANGUAGE_SELECT--></div>
+   >    ```
+   >    Beide in dasselbe Attribut zu schreiben ist ein naheliegender, aber
+   >    folgenschwerer Fehler: die komplette Sprachauswahl landet dann als Text im
+   >    ID-Wert.
    > 3. **Eigene Auswahl statt der eingebauten?** Dann `<!--LANGUAGE_SELECT-->`
    >    weglassen. Das Modul zeichnet die Kachel dann nicht mehr nach (es gäbe ja
    >    nichts nachzuzeichnen), die Statistik-Zähler stehen still, und die
