@@ -34,6 +34,9 @@ class SimpleLocale extends IPSModuleStrict
     // richtige Farbcodierung (ERROR/WARNING statt grau "Custom") im Status Log.
     private bool $isInMessageSinkDispatch = false;
 
+    // Build 176: laufende Nummer fuer Gast-Popups, siehe PushTileAlert().
+    private int $alertSequence = 0;
+
     // Hinweistexte fürs Info-Symbol neben dem Dropdown - live in die aktive
     // Gast-Sprache übersetzt (siehe EnsureGuestLanguageNamesFresh), damit auch
     // dieser Text nicht die Konsolensprache des Admins mit der Gast-Sprache mischt.
@@ -9826,6 +9829,30 @@ HTML;
     // würde eine Aktualisierung eine vom Nutzer eingetragene eigene Sprachauswahl
     // (siehe propertyCustomLanguageSelectHtml) in JEDER anderen offenen Kachel
     // stillschweigend wieder durch die eingebaute <select>-Zeile ersetzen.
+    // Build 176 (live gemeldet): gemeinsamer Sender fuer alle Gast-Popups.
+    //
+    // UpdateVisualizationValue() setzt einen WERT, keine Nachricht. Zwei Aufrufe
+    // im selben Durchlauf (erst REFRESH, dann ALERT) laufen auf den zuletzt
+    // gesetzten Wert hinaus, und ein Wert, der sich nicht aendert, loest im Tile
+    // kein Ereignis aus. Bei zweimal derselben Ablehnung - gleicher ungueltiger
+    // Sprachcode, gleiche Meldung - war die Nutzlast byteweise identisch: das
+    // Popup erschien einmal und danach nie wieder.
+    //
+    // Die laufende Nummer macht jede Nutzlast eindeutig, ohne dass das Tile
+    // etwas davon wissen muss (unbekannte Felder ignoriert handleMessage
+    // ohnehin). Bewusst ein Zaehler statt eines Zeitstempels: zwei Aufrufe
+    // innerhalb derselben Sekunde waeren sonst wieder identisch.
+    private function PushTileAlert(string $Text): void
+    {
+        $this->alertSequence++;
+
+        $this->UpdateVisualizationValue(json_encode([
+            'action'  => 'ALERT',
+            'payload' => ['text' => $Text],
+            'seq'     => $this->alertSequence . '-' . microtime(true),
+        ]));
+    }
+
     private function PushVisualizationUpdate(): void
     {
         $payload = json_encode(['action' => 'REFRESH', 'payload' => ['html' => $this->ResolveLanguageSelectHtml()]]);
@@ -9850,8 +9877,7 @@ HTML;
             }
         }
 
-        $payload = json_encode(['action' => 'ALERT', 'payload' => ['text' => $text . "\n" . self::LICENSE_PURCHASE_URL]]);
-        $this->UpdateVisualizationValue($payload);
+        $this->PushTileAlert($text . "\n" . self::LICENSE_PURCHASE_URL);
     }
 
     // Pro-Feature "unlimited_language_switch": ohne dieses Feature ist ein
@@ -9908,7 +9934,7 @@ HTML;
             }
         }
 
-        $this->UpdateVisualizationValue(json_encode(['action' => 'ALERT', 'payload' => ['text' => $text]]));
+        $this->PushTileAlert($text);
     }
 
     private function PushLanguageSwitchLimitAlert(string $RequestedLanguage): void
@@ -9923,8 +9949,7 @@ HTML;
             }
         }
 
-        $payload = json_encode(['action' => 'ALERT', 'payload' => ['text' => $text . "\n" . self::LICENSE_PURCHASE_URL]]);
-        $this->UpdateVisualizationValue($payload);
+        $this->PushTileAlert($text . "\n" . self::LICENSE_PURCHASE_URL);
     }
 
     // Build 77: liest das kleine, eigens fürs Inline-Einbetten verkleinerte
