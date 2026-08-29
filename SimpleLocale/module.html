@@ -109,9 +109,35 @@
                 return;
             }
 
-            if (message.action === "REFRESH" && message.payload && typeof message.payload.html === "string") {
-                document.getElementById("<!--WRAPPER_ID-->").innerHTML = message.payload.html;
-            } else if (message.action === "ALERT" && message.payload && typeof message.payload.text === "string") {
+            if (!message || !message.payload) {
+                return;
+            }
+
+            if (message.action === "REFRESH") {
+                // Fehlt html, wird nichts ersetzt - das Modul laesst das Feld
+                // bewusst weg, wenn die Vorlage ihre Auswahl selbst baut, damit
+                // deren Layout nicht ueberschrieben wird.
+                if (typeof message.payload.html === "string") {
+                    const wrapper = document.getElementById("<!--WRAPPER_ID-->");
+                    if (wrapper) {
+                        wrapper.innerHTML = message.payload.html;
+                    }
+                }
+
+                // Baust Du Deine eigene Kachel auf Basis dieser Datei, definiere
+                // window.ipsslOnLanguageChange - dann bekommst Du bei jedem
+                // Sprachwechsel die aktive Sprache und die Liste der
+                // verfuegbaren. Die Platzhalter <!--ACTIVE_LANGUAGE--> und
+                // <!--AVAILABLE_LANGUAGES--> liefern denselben Stand, aber nur
+                // einmal beim Laden.
+                if (typeof window.ipsslOnLanguageChange === "function") {
+                    try {
+                        window.ipsslOnLanguageChange(message.payload.activeLanguage, message.payload.languages);
+                    } catch (e) {
+                        // Ein Fehler in eigenem Code darf die Kachel nicht mitreissen.
+                    }
+                }
+            } else if (message.action === "ALERT" && typeof message.payload.text === "string") {
                 alert(message.payload.text);
             }
         }

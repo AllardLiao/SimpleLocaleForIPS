@@ -34,8 +34,14 @@ class SimpleLocale extends IPSModuleStrict
     // richtige Farbcodierung (ERROR/WARNING statt grau "Custom") im Status Log.
     private bool $isInMessageSinkDispatch = false;
 
-    // Build 176: laufende Nummer fuer Gast-Popups, siehe PushTileAlert().
-    private int $alertSequence = 0;
+    // Build 176: laufende Nummer fuer Kachel-Nachrichten, siehe PushTileAlert()
+    // und PushVisualizationUpdate(). UpdateVisualizationValue() setzt einen WERT,
+    // keine Nachricht - eine zum Vorgaenger identische Nutzlast loest in der
+    // Kachel deshalb gar kein Ereignis aus. Build 184: seit REFRESH auch ohne
+    // html-Teil verschickt wird (nur noch aktive Sprache + Liste), tritt genau
+    // dieser Fall auch dort auf, etwa bei einem ABGELEHNTEN Wechsel - die Nummer
+    // gilt darum jetzt fuer beide Nachrichtenarten.
+    private int $tileMessageSequence = 0;
 
     // Hinweistexte fürs Info-Symbol neben dem Dropdown - live in die aktive
     // Gast-Sprache übersetzt (siehe EnsureGuestLanguageNamesFresh), damit auch
@@ -9788,6 +9794,45 @@ class SimpleLocale extends IPSModuleStrict
         return $this->BuildAppIconImgHtml('max-width:100%;max-height:100%;display:block;', 'ipssl-tile-icon');
     }
 
+    // Build 184: gemeinsame Quelle fuer <!--AVAILABLE_LANGUAGES--> und die
+    // REFRESH-Nutzlast. Beide muessen dasselbe liefern - sonst zeigt ein
+    // Template beim Laden etwas anderes als nach dem ersten Sprachwechsel.
+    //
+    // Immer gueltiges JSON, auch im Sperrfall: der Wert landet in einem Template
+    // typischerweise direkt in einer JS-Zuweisung, ein Klartextsatz waere dort
+    // ein Syntaxfehler und wuerde das ganze Skript mitreissen.
+    //
+    // An "custom_tile" gebunden wie die gleichnamige oeffentliche Funktion.
+    // Ohne das Feature bleibt die Liste leer statt zu scheitern: mitgelieferte
+    // Editions-Designs (Build 172) haengen an HasThemeEntitlement(), NICHT an
+    // "custom_tile" - der Platzhalter kann also sehr wohl bei einem Nutzer ohne
+    // Pro ankommen.
+    private function GetTileAvailableLanguagesJson(): string
+    {
+        if (!$this->HasLicenseFeature('custom_tile')) {
+            return '[]';
+        }
+
+        return $this->GetAvailableLanguages();
+    }
+
+    // Build 184: die aktive Sprache als Sprachcode, wie ein Template sie
+    // erwartet. Leer ist die Property nie - ihr Registrierungs-Default ist
+    // "ORIGINAL_IMPORT", und ApplyChanges() schreibt genau den auf die
+    // tatsaechliche Quellsprache um (siehe dort). Der Sentinel wird hier
+    // trotzdem abgefangen: er ist modulintern und hat in einem Template nichts
+    // verloren (siehe Build 183), und ein Wechsel zurueck aufs Original schreibt
+    // ihn kurzzeitig hinein.
+    private function GetTileActiveLanguageCode(): string
+    {
+        $active = $this->ReadPropertyString(self::propertyCurrentLanguage);
+        if ($active === '' || $active === self::langOriginalImport) {
+            return $this->ReadPropertyString(self::propertySourceLanguage);
+        }
+
+        return $active;
+    }
+
     private function ApplyTilePlaceholders(string $Html): string
     {
         // Instanz-eigene ID (nicht nur eine Klasse) - falls mehrere Instanzen jemals
@@ -9815,6 +9860,36 @@ class SimpleLocale extends IPSModuleStrict
         // Respektiert die Checkbox "Symbol in der Kachel anzeigen" - steht sie
         // aus, bleibt der Platzhalter leer, statt sie zu uebergehen.
         $html = str_replace('<!--TILE_ICON-->', $this->ResolveTileIconHtml(), $html);
+
+        // Build 184: <!--AVAILABLE_LANGUAGES--> und <!--ACTIVE_LANGUAGE--> geben
+        // einem eigenen Template die Konfiguration selbst in die Hand, damit es
+        // sein Layout daran ausrichten kann - etwa nur die tatsaechlich
+        // konfigurierten Flaggen zeigen und die aktive davon hervorheben, statt
+        // die Codes wie bisher fest einzutippen.
+        //
+        // Inhalt ist JSON, exakt das Format der gleichnamigen oeffentlichen
+        // Funktion: eine Liste aus {code, name, current}.
+        //
+        // BEIDE liefern IMMER gueltiges JSON, auch im Sperrfall. Ein Template
+        // setzt sie typischerweise direkt in eine JS-Zuweisung ein
+        // (var langs = <!--AVAILABLE_LANGUAGES-->;) - ein Klartextsatz waere
+        // dort ein Syntaxfehler und wuerde das komplette Skript des Templates
+        // mitreissen, inklusive einer eigenen handleMessage().
+        //
+        // <!--AVAILABLE_LANGUAGES--> haengt wie die oeffentliche Funktion am
+        // Pro-Feature "custom_tile". Ohne das Feature bleibt die Liste LEER,
+        // statt zu scheitern: mitgelieferte Editions-Designs (Build 172) sind
+        // nicht an "custom_tile" gebunden, der Platzhalter kann also sehr wohl
+        // bei einem Nutzer ohne Pro ankommen.
+        $html = str_replace('<!--AVAILABLE_LANGUAGES-->', $this->GetTileAvailableLanguagesJson(), $html);
+
+        // Immer ein echter Sprachcode. Leer ist die Property nie - ihr
+        // Registrierungs-Default ist "ORIGINAL_IMPORT", und ApplyChanges()
+        // schreibt genau den auf die tatsaechliche Quellsprache um (siehe dort).
+        // Der Sentinel wird hier trotzdem abgefangen: er ist modulintern und hat
+        // in einem Template nichts verloren (siehe Build 183), und ein
+        // Sprachwechsel zurueck aufs Original schreibt ihn kurzzeitig hinein.
+        $html = str_replace('<!--ACTIVE_LANGUAGE-->', json_encode($this->GetTileActiveLanguageCode()), $html);
 
         // Build 179: ob diese Vorlage ueberhaupt neu gezeichnet werden DARF, haengt
         // daran, ob sie <!--LANGUAGE_SELECT--> benutzt - gegen den Zustand VOR den
@@ -9847,7 +9922,16 @@ class SimpleLocale extends IPSModuleStrict
     private function EnsureTileMessageHandler(string $Html, bool $SupportsRefresh): string
     {
         if (strpos($Html, 'handleMessage') !== false) {
-            return $Html;
+            // Build 184: der eigene Handler bleibt unangetastet - aber der Haken
+            // fuer window.ipsslOnLanguageChange muss ihn trotzdem erreichen.
+            //
+            // Wer sein Template aus einer AELTEREN module.html abgeleitet hat,
+            // bringt einen handleMessage OHNE den Haken mit. Frueher hiesse das:
+            // <!--ACTIVE_LANGUAGE--> im eigenen HTML ergaenzt, und der Wert
+            // friert stumm auf dem Ladezeitpunkt ein - ein Fehler, den man nur
+            // live sieht und schwer zuordnet. Genau der wahrscheinlichste Weg,
+            // auf dem ein bestehender Pro-Nutzer den neuen Platzhalter benutzt.
+            return $this->EnsureLanguageChangeHook($Html);
         }
 
         // Build 179 (live gefunden): NEU ZEICHNEN nur, wenn die Vorlage
@@ -9864,16 +9948,61 @@ class SimpleLocale extends IPSModuleStrict
         // nachzuzeichnen - die Vorlage baut ihre Auswahl ja selbst. Die
         // Gast-Hinweise (ALERT) kommen unabhaengig davon immer an.
         $wrapperId = 'ipssl-select-wrapper-' . $this->InstanceID;
-        $refresh = $SupportsRefresh
+        $redraw = $SupportsRefresh
             // Fehlt das Ziel-Element trotzdem, wird still uebersprungen statt
             // abgebrochen - die Meldungen sollen davon nie abhaengen.
-            ? 'if(m.action==="REFRESH"&&m.payload&&typeof m.payload.html==="string"){'
-                . 'var w=document.getElementById(' . json_encode($wrapperId) . ');if(w){w.innerHTML=m.payload.html;}}else '
+            ? 'if(typeof m.payload.html==="string"){'
+                . 'var w=document.getElementById(' . json_encode($wrapperId) . ');if(w){w.innerHTML=m.payload.html;}}'
             : '';
+        // Build 184: der Haken fuer eigene Vorlagen. Definiert eine Vorlage
+        // window.ipsslOnLanguageChange, bekommt sie bei JEDEM Sprachwechsel die
+        // aktive Sprache und die Liste der verfuegbaren - dieselben Daten wie in
+        // den Platzhaltern <!--ACTIVE_LANGUAGE-->/<!--AVAILABLE_LANGUAGES-->,
+        // die sonst auf dem Stand des Ladezeitpunkts einfrieren wuerden.
+        // Definiert sie ihn nicht, aendert sich gegenueber vorher nichts.
+        //
+        // Bewusst ausserhalb der html-Bedingung: er muss auch dann feuern, wenn
+        // gar kein html mitkommt - genau der Fall bei einer Vorlage mit eigener
+        // Auswahl, also bei jeder, die den Haken ueberhaupt braucht.
+        $hook = 'if(typeof window.ipsslOnLanguageChange==="function"){'
+            . 'try{window.ipsslOnLanguageChange(m.payload.activeLanguage,m.payload.languages);}catch(e){}}';
         $script = '<script>function handleMessage(data){var m;try{m=JSON.parse(data);}catch(e){return;}'
-            . $refresh
-            . 'if(m.action==="ALERT"&&m.payload&&typeof m.payload.text==="string"){alert(m.payload.text);}}</script>';
+            . 'if(!m||!m.payload){return;}'
+            . 'if(m.action==="REFRESH"){' . $redraw . $hook . '}'
+            . 'else if(m.action==="ALERT"&&typeof m.payload.text==="string"){alert(m.payload.text);}}</script>';
 
+        $position = strripos($Html, '</body>');
+
+        return $position === false
+            ? $Html . $script
+            : substr($Html, 0, $position) . $script . substr($Html, $position);
+    }
+
+    // Build 184: legt den Haken window.ipsslOnLanguageChange um einen BEREITS
+    // vorhandenen handleMessage herum, statt ihn zu ersetzen.
+    //
+    // Der fremde Handler bleibt vollstaendig zustaendig und wird unveraendert
+    // weiter aufgerufen - davor wird nur, bei REFRESH, die optionale Funktion des
+    // Templates bedient. Faellt sie aus, faengt der try/catch das ab: eigener
+    // Code darf die Kachel nie mitreissen.
+    //
+    // Uebersprungen, wenn das Template den Haken schon selbst bedient (jede
+    // Kopie der module.html ab Build 184) - sonst liefe er doppelt.
+    private function EnsureLanguageChangeHook(string $Html): string
+    {
+        if (strpos($Html, 'ipsslOnLanguageChange') !== false) {
+            return $Html;
+        }
+
+        $script = '<script>(function(){if(typeof handleMessage!=="function"){return;}'
+            . 'var inner=handleMessage;'
+            . 'window.handleMessage=function(data){var m;try{m=JSON.parse(data);}catch(e){m=null;}'
+            . 'if(m&&m.action==="REFRESH"&&m.payload&&typeof window.ipsslOnLanguageChange==="function"){'
+            . 'try{window.ipsslOnLanguageChange(m.payload.activeLanguage,m.payload.languages);}catch(e){}}'
+            . 'return inner.apply(this,arguments);};})();</script>';
+
+        // Ans ENDE des Body - der eigene Handler muss vorher definiert sein,
+        // sonst greift die Umhuellung ins Leere.
         $position = strripos($Html, '</body>');
 
         return $position === false
@@ -10002,38 +10131,58 @@ HTML;
     // innerhalb derselben Sekunde waeren sonst wieder identisch.
     private function PushTileAlert(string $Text): void
     {
-        $this->alertSequence++;
+        $this->tileMessageSequence++;
 
         $this->UpdateVisualizationValue(json_encode([
             'action'  => 'ALERT',
             'payload' => ['text' => $Text],
-            'seq'     => $this->alertSequence . '-' . microtime(true),
+            'seq'     => $this->tileMessageSequence . '-' . microtime(true),
         ]));
     }
 
     private function PushVisualizationUpdate(): void
     {
-        // Build 180: gar nicht erst senden, wenn die aktive Vorlage
-        // <!--LANGUAGE_SELECT--> nicht benutzt.
+        // Build 184: die Nachricht geht jetzt IMMER raus - auch an Vorlagen ohne
+        // <!--LANGUAGE_SELECT-->. Neu darin: die aktive Sprache und die Liste
+        // der verfuegbaren, damit eine Vorlage ihre eigene Auswahl live
+        // nachfuehren kann (siehe die Platzhalter gleichen Namens). Ohne das
+        // waere <!--ACTIVE_LANGUAGE--> ein reiner Ladezeit-Wert: nach dem ersten
+        // Klick haette ein Template die falsche Flagge hervorgehoben, bis der
+        // Gast neu laedt.
         //
-        // REFRESH ersetzt den kompletten Inhalt des Elements mit
+        // Der gefaehrliche Teil ist und bleibt allein "html":
+        //
+        // Build 180: REFRESH ersetzt den kompletten Inhalt des Elements mit
         // <!--WRAPPER_ID--> durch die Sprachauswahl. Eine Vorlage, die ihre
         // Auswahl selbst baut, hat dort aber eigenes Layout stehen - das wuerde
         // weggeloescht. Build 179 hat das fuer den vom Modul ERGAENZTEN Handler
         // geloest; wer module.html als Vorlage nimmt und nur
         // <!--LANGUAGE_SELECT--> durch eigenes Markup ersetzt, bringt den
-        // Handler aber selbst mit - und der wuerde weiterhin loeschen. Deshalb
-        // hier an der Quelle: was nicht gesendet wird, kann nichts zerstoeren.
+        // Handler aber selbst mit - und der wuerde weiterhin loeschen.
         //
-        // Verloren geht dabei nichts: ohne den Platzhalter gibt es nichts
-        // nachzuzeichnen. Die Gast-Hinweise laufen ueber ALERT und sind davon
-        // unberuehrt.
-        if (!$this->ActiveTileSupportsRefresh()) {
-            return;
+        // Deshalb wird jetzt nicht mehr die ganze Nachricht unterdrueckt,
+        // sondern genau dieses eine Feld weggelassen. Beide Handler pruefen es
+        // einzeln (typeof ... === "string"), fehlt es, wird nichts geloescht -
+        // die Daten kommen trotzdem an.
+        $payload = [
+            'activeLanguage' => $this->GetTileActiveLanguageCode(),
+            'languages'      => json_decode($this->GetTileAvailableLanguagesJson(), true) ?: [],
+        ];
+        if ($this->ActiveTileSupportsRefresh()) {
+            $payload['html'] = $this->ResolveLanguageSelectHtml();
         }
 
-        $payload = json_encode(['action' => 'REFRESH', 'payload' => ['html' => $this->ResolveLanguageSelectHtml()]]);
-        $this->UpdateVisualizationValue($payload);
+        $this->tileMessageSequence++;
+
+        $this->UpdateVisualizationValue(json_encode([
+            'action'  => 'REFRESH',
+            'payload' => $payload,
+            // Ohne html ist die Nutzlast bei einem ABGELEHNTEN Wechsel identisch
+            // zur vorigen - und eine identische Nutzlast loest in der Kachel gar
+            // kein Ereignis aus (UpdateVisualizationValue setzt einen WERT).
+            // Dieselbe Nonce wie in PushTileAlert().
+            'seq'     => $this->tileMessageSequence . '-' . microtime(true),
+        ]));
     }
 
     // Nutzt die gerade aktive Kachel <!--LANGUAGE_SELECT-->? Bewusst gegen
