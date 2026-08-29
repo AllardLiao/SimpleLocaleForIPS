@@ -1595,6 +1595,28 @@ class SimpleLocale extends IPSModuleStrict
             throw new Exception('IPSSL_GetAvailableLanguages benoetigt die Pro Edition (Feature "custom_tile").');
         }
 
+        return $this->BuildAvailableLanguagesJson();
+    }
+
+    // Build 184: der reine Aufbau, OHNE Sperre - fuer <!--AVAILABLE_LANGUAGES-->
+    // und die REFRESH-Nutzlast.
+    //
+    // Warum dort ohne Sperre: an dieser Stelle ist sie bereits gefallen. Eigenes
+    // Kachel-HTML wirkt sich ueberhaupt nur mit "custom_tile" aus (siehe
+    // GetVisualizationTile/ResolveLanguageSelectHtml) - ein Nutzer ohne das
+    // Feature kann den Platzhalter also gar nicht erst einschleusen. Der einzige
+    // andere Weg, auf dem er in die Kachel kommt, ist ein mitgeliefertes
+    // Editions-Design (Build 172), und das schreiben nicht die Nutzer.
+    //
+    // Eine zweite Sperre hier wuerde deshalb niemanden aussperren, den die erste
+    // nicht schon aussperrt - sie wuerde nur ausgerechnet die gelieferten
+    // Designs leer laufen lassen, fuer die der Platzhalter gedacht ist.
+    //
+    // Die oeffentliche Funktion oben bleibt hart gesperrt: sie ist der Weg, eine
+    // eigene Auswahl per Skript/HTMLBox an der Kachel VORBEI zu bauen - dort
+    // gibt es keine vorgelagerte Pruefung, die das abfaengt.
+    private function BuildAvailableLanguagesJson(): string
+    {
         $currentLanguage = $this->ReadPropertyString(self::propertyCurrentLanguage);
         $guestCache = $this->EnsureGuestLanguageNamesFresh();
 
@@ -9794,45 +9816,6 @@ class SimpleLocale extends IPSModuleStrict
         return $this->BuildAppIconImgHtml('max-width:100%;max-height:100%;display:block;', 'ipssl-tile-icon');
     }
 
-    // Build 184: gemeinsame Quelle fuer <!--AVAILABLE_LANGUAGES--> und die
-    // REFRESH-Nutzlast. Beide muessen dasselbe liefern - sonst zeigt ein
-    // Template beim Laden etwas anderes als nach dem ersten Sprachwechsel.
-    //
-    // Immer gueltiges JSON, auch im Sperrfall: der Wert landet in einem Template
-    // typischerweise direkt in einer JS-Zuweisung, ein Klartextsatz waere dort
-    // ein Syntaxfehler und wuerde das ganze Skript mitreissen.
-    //
-    // An "custom_tile" gebunden wie die gleichnamige oeffentliche Funktion.
-    // Ohne das Feature bleibt die Liste leer statt zu scheitern: mitgelieferte
-    // Editions-Designs (Build 172) haengen an HasThemeEntitlement(), NICHT an
-    // "custom_tile" - der Platzhalter kann also sehr wohl bei einem Nutzer ohne
-    // Pro ankommen.
-    private function GetTileAvailableLanguagesJson(): string
-    {
-        if (!$this->HasLicenseFeature('custom_tile')) {
-            return '[]';
-        }
-
-        return $this->GetAvailableLanguages();
-    }
-
-    // Build 184: die aktive Sprache als Sprachcode, wie ein Template sie
-    // erwartet. Leer ist die Property nie - ihr Registrierungs-Default ist
-    // "ORIGINAL_IMPORT", und ApplyChanges() schreibt genau den auf die
-    // tatsaechliche Quellsprache um (siehe dort). Der Sentinel wird hier
-    // trotzdem abgefangen: er ist modulintern und hat in einem Template nichts
-    // verloren (siehe Build 183), und ein Wechsel zurueck aufs Original schreibt
-    // ihn kurzzeitig hinein.
-    private function GetTileActiveLanguageCode(): string
-    {
-        $active = $this->ReadPropertyString(self::propertyCurrentLanguage);
-        if ($active === '' || $active === self::langOriginalImport) {
-            return $this->ReadPropertyString(self::propertySourceLanguage);
-        }
-
-        return $active;
-    }
-
     private function ApplyTilePlaceholders(string $Html): string
     {
         // Instanz-eigene ID (nicht nur eine Klasse) - falls mehrere Instanzen jemals
@@ -9881,7 +9864,7 @@ class SimpleLocale extends IPSModuleStrict
         // statt zu scheitern: mitgelieferte Editions-Designs (Build 172) sind
         // nicht an "custom_tile" gebunden, der Platzhalter kann also sehr wohl
         // bei einem Nutzer ohne Pro ankommen.
-        $html = str_replace('<!--AVAILABLE_LANGUAGES-->', $this->GetTileAvailableLanguagesJson(), $html);
+        $html = str_replace('<!--AVAILABLE_LANGUAGES-->', $this->BuildAvailableLanguagesJson(), $html);
 
         // Immer ein echter Sprachcode. Leer ist die Property nie - ihr
         // Registrierungs-Default ist "ORIGINAL_IMPORT", und ApplyChanges()
@@ -9889,7 +9872,13 @@ class SimpleLocale extends IPSModuleStrict
         // Der Sentinel wird hier trotzdem abgefangen: er ist modulintern und hat
         // in einem Template nichts verloren (siehe Build 183), und ein
         // Sprachwechsel zurueck aufs Original schreibt ihn kurzzeitig hinein.
-        $html = str_replace('<!--ACTIVE_LANGUAGE-->', json_encode($this->GetTileActiveLanguageCode()), $html);
+        // Bewusst ueber die OEFFENTLICHE Funktion, nicht ueber einen eigenen
+        // Lesepfad: der Platzhalter und IPSSL_GetCurrentLanguageCode() muessen
+        // denselben Wert liefern, sonst zeigt ein Template etwas anderes an, als
+        // ein Skript daneben ausliest. Sie bildet den modulinternen Sentinel
+        // ORIGINAL_IMPORT bereits auf die Quellsprache ab (siehe
+        // ResolveDisplayLanguageCode) - genau das, was ein Template braucht.
+        $html = str_replace('<!--ACTIVE_LANGUAGE-->', json_encode($this->GetCurrentLanguageCode()), $html);
 
         // Build 179: ob diese Vorlage ueberhaupt neu gezeichnet werden DARF, haengt
         // daran, ob sie <!--LANGUAGE_SELECT--> benutzt - gegen den Zustand VOR den
@@ -10165,8 +10154,8 @@ HTML;
         // einzeln (typeof ... === "string"), fehlt es, wird nichts geloescht -
         // die Daten kommen trotzdem an.
         $payload = [
-            'activeLanguage' => $this->GetTileActiveLanguageCode(),
-            'languages'      => json_decode($this->GetTileAvailableLanguagesJson(), true) ?: [],
+            'activeLanguage' => $this->GetCurrentLanguageCode(),
+            'languages'      => json_decode($this->BuildAvailableLanguagesJson(), true) ?: [],
         ];
         if ($this->ActiveTileSupportsRefresh()) {
             $payload['html'] = $this->ResolveLanguageSelectHtml();

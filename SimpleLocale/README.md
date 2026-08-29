@@ -862,7 +862,7 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
    | `<!--LANGUAGE_SELECT-->` | die Sprachauswahl - eigene, falls hinterlegt, sonst die generierte |
    | `<!--WRAPPER_ID-->` | eine pro Instanz eindeutige DOM-ID |
    | `<!--TILE_ICON-->` | das gewählte Symbol, einzeln platzierbar (Build 173) |
-   | `<!--AVAILABLE_LANGUAGES-->` | JSON: alle konfigurierten Sprachen (Build 184, Pro) |
+   | `<!--AVAILABLE_LANGUAGES-->` | JSON: alle konfigurierten Sprachen (Build 184) |
    | `<!--ACTIVE_LANGUAGE-->` | JSON: der Code der aktiven Sprache (Build 184) |
    | `<!--COUNT_TRANSLATIONS-->` | reine Zahl: Übersetzungen/h |
    | `<!--COUNT_SIGNES-->` | reine Zahl: Zeichen/h |
@@ -959,12 +959,18 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
      ist modulintern und erscheint hier nie - ist die Ursprungssprache aktiv,
      steht deren Code drin.
 
-     `<!--AVAILABLE_LANGUAGES-->` setzt das Pro-Feature `custom_tile` voraus,
-     genau wie die gleichnamige Funktion. Fehlt es, steht dort eine **leere
-     Liste** `[]` statt eines Fehlers - dein Skript läuft weiter, zeigt aber
-     nichts an. Für ein ausgeliefertes Editions-Design heißt das: benutzt es
-     diesen Platzhalter, gehört es an Editionen gebunden, die `custom_tile`
-     enthalten - sonst steht die Kachel beim Kunden leer da.
+     Anders als die gleichnamige Funktion `IPSSL_GetAvailableLanguages()` sind
+     **beide Platzhalter an kein Feature gebunden**. Sie brauchen es nicht: an
+     dieser Stelle ist die Sperre bereits gefallen. Eigenes Kachel-HTML wirkt
+     sich überhaupt nur mit `custom_tile` aus - ohne das Feature lässt sich ein
+     Platzhalter also gar nicht erst einschleusen. Der einzige andere Weg in die
+     Kachel ist ein mitgeliefertes Editions-Design, und die schreiben nicht die
+     Anwender. Ein solches Design darf den Platzhalter deshalb ohne Rücksicht
+     auf die Edition des Empfängers benutzen.
+
+     Die Funktion selbst bleibt gesperrt - sie ist der Weg, eine eigene Auswahl
+     per Skript **an der Kachel vorbei** zu bauen, und dort greift keine
+     vorgelagerte Prüfung.
 
      > **Wichtig - beide frieren beim Laden ein.** Sie werden einmal eingesetzt,
      > wenn die Kachel gerendert wird. Wechselt der Nutzer danach die Sprache, wird
@@ -1077,13 +1083,22 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
    - `IPSSL_SetLanguage(int $InstanzID, string $Sprachcode): void` -
      wechselt die aktive Sprache, mit derselben Logik wie ein Klick im
      eingebauten Dropdown (Testphase-/Rate-Limit-Prüfung inklusive).
+   - `IPSSL_GetCurrentLanguageCode(int $InstanzID): string` - der Code der
+     gerade aktiven Sprache (z. B. `"en"`), um die eigene Anzeige darauf
+     einzustellen: welcher Eintrag hervorgehoben wird, ob überhaupt neu
+     aufgebaut werden muss. Liefert immer einen echten Sprachcode - ist die
+     Ursprungssprache aktiv, steht deren Code drin, nie der modulinterne
+     Wert `ORIGINAL_IMPORT`. **Nicht** an `custom_tile` gebunden, im
+     Gegensatz zu den beiden anderen: der Befehl liest nur, er baut nichts
+     an der Kachel vorbei. Denselben Wert liefert innerhalb einer Vorlage
+     der Platzhalter `<!--ACTIVE_LANGUAGE-->` (siehe oben).
 
 Ohne das Feature `custom_tile` bleiben die Formularfelder aus Weg 1
 ausgegraut UND die eingebaute Kachel aktiv (unabhängig vom gespeicherten
-Wert), UND die beiden Befehle aus Weg 2 werfen bei jedem Aufruf eine
-Exception, statt einfach nichts zu tun - eine selbstgebaute Kachel ließe
-sich sonst komplett kostenlos an der Lizenzprüfung vorbei realisieren, siehe
-[Abschnitt 8](#8-lizenz-und-testversion).
+Wert), UND die beiden **erstgenannten** Befehle aus Weg 2 werfen bei jedem
+Aufruf eine Exception, statt einfach nichts zu tun - eine selbstgebaute
+Kachel ließe sich sonst komplett kostenlos an der Lizenzprüfung vorbei
+realisieren, siehe [Abschnitt 8](#8-lizenz-und-testversion).
 
 ### 8. Lizenz und Testversion
 
@@ -4490,12 +4505,21 @@ der ursprünglichen Fassung übernommen.
 
   Drei Dinge, die beim Einbau auffielen und mitbehoben wurden:
 
-  * Der Sperrwert ohne Pro war ein **Klartextsatz**. Der landet in einem Template
-    aber typischerweise direkt in einer JS-Zuweisung
-    (`var langs = <!--AVAILABLE_LANGUAGES-->;`) - also ein Syntaxfehler, der das
-    komplette Skript mitreißt, inklusive einer eigenen `handleMessage()`. Und der
-    Fall ist erreichbar: mitgelieferte Editions-Designs hängen an
-    `HasThemeEntitlement()`, **nicht** an `custom_tile`. Jetzt `[]`.
+  * Die Sperre saß an der falschen Ebene. `<!--AVAILABLE_LANGUAGES-->` hing
+    zunächst selbst an `custom_tile` und setzte ohne das Feature einen
+    **Klartextsatz** ein - der landet in einem Template aber typischerweise
+    direkt in einer JS-Zuweisung (`var langs = <!--AVAILABLE_LANGUAGES-->;`),
+    also ein Syntaxfehler, der das komplette Skript mitreißt, inklusive einer
+    eigenen `handleMessage()`. Ausgesperrt hätte sie ohnehin niemanden: eigenes
+    Kachel-HTML wirkt sich überhaupt nur mit `custom_tile` aus, ein Anwender
+    ohne das Feature kann den Platzhalter also gar nicht erst einschleusen. Der
+    einzige andere Weg in die Kachel ist ein mitgeliefertes Editions-Design -
+    und genau die wären leer geblieben, obwohl sie nicht von Anwendern stammen.
+    Der Platzhalter ist deshalb ungesperrt; der Aufbau liegt jetzt in
+    `BuildAvailableLanguagesJson()`, und die **Funktion**
+    `IPSSL_GetAvailableLanguages()` bleibt hart gesperrt - sie ist der Weg, eine
+    eigene Auswahl per Skript an der Kachel vorbei zu bauen, wo keine
+    vorgelagerte Prüfung greift.
   * `ORIGINAL_IMPORT` wäre nach außen gedrungen - der Registrierungs-Default der
     Property *ist* der Sentinel, und ein Wechsel zurück aufs Original schreibt
     ihn kurzzeitig hinein. Wird auf die Quellsprache abgebildet, damit genau der
@@ -4531,6 +4555,13 @@ der ursprünglichen Fassung übernommen.
   **abgelehnten** Wechsel identisch zur vorigen - und eine identische Nutzlast
   löst in der Kachel gar kein Ereignis aus, weil
   `UpdateVisualizationValue()` einen Wert setzt, keine Nachricht.
+
+  `<!--ACTIVE_LANGUAGE-->` läuft bewusst über die **öffentliche** Funktion
+  `GetCurrentLanguageCode()` statt über einen eigenen Lesepfad - sonst könnte
+  ein Template etwas anderes anzeigen, als ein Skript daneben ausliest. Sie war
+  bereits vorhanden und ungesperrt; [Abschnitt 7](#7-visualisierung) führt sie
+  jetzt auch bei der komplett eigenständigen Kachel auf, wo sie genauso
+  gebraucht wird.
 
   Regressionstest `test_config_placeholders.php` (8 Fälle, darunter die
   Symmetrie: Ladezeit-Wert und Live-Aktualisierung müssen aus derselben Quelle

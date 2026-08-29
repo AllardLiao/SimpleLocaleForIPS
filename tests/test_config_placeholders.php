@@ -6,71 +6,81 @@ declare(strict_types=1);
 // ZWECK: ein eigenes Template soll sein Layout an der KONFIGURATION ausrichten
 // koennen (nur die konfigurierten Flaggen zeigen, die aktive hervorheben),
 // statt die Sprachcodes fest einzutippen - genau die Fehlerquelle, die in
-// Build 175 das Popup fuer unbekannte Codes noetig gemacht hat.
+// Build 175 den Hinweis fuer unbekannte Codes noetig gemacht hat.
 //
-// Die beiden Platzhalter landen typischerweise direkt in einer JS-Zuweisung
+// Die Werte landen typischerweise direkt in einer JS-Zuweisung
 // (var langs = <!--AVAILABLE_LANGUAGES-->;). Daraus folgt die zentrale
-// Zusicherung dieses Tests: der eingesetzte Wert ist IMMER gueltiges JSON,
-// auch im Sperr- und im Sonderfall. Ein Klartextsatz waere dort ein
-// Syntaxfehler und wuerde das ganze Skript des Templates mitreissen.
+// Zusicherung: der eingesetzte Wert ist IMMER gueltiges JSON. Ein Klartextsatz
+// waere dort ein Syntaxfehler und wuerde das ganze Skript mitreissen.
 
-$moduleSource = file_get_contents(dirname(__DIR__) . '/SimpleLocale/module.php');
-assert($moduleSource !== false, 'module.php lesbar');
+$moduleSource = (string) file_get_contents(dirname(__DIR__) . '/SimpleLocale/module.php');
+assert($moduleSource !== '', 'module.php lesbar');
 
-// Repliziert die beiden Ersetzungen aus ApplyTilePlaceholders().
-function placeholderValues(bool $hatPro, string $current, string $source): array
-{
-    $available = '[]';
-    if ($hatPro) {
-        $available = json_encode([['code' => 'de', 'name' => 'Deutsch', 'current' => true]]);
-    }
+$fenster = function (string $von, string $bis) use ($moduleSource): string {
+    // Immer an der Folgestelle begrenzen, nie auf eine feste Zeichenzahl - eine
+    // feste Groesse ist in dieser Suite schon mehrfach gerissen, sobald eine
+    // Funktion durch Kommentare wuchs.
+    $a = (int) strpos($moduleSource, $von);
+    $b = (int) strpos($moduleSource, $bis, $a + 1);
 
-    $active = $current;
-    if ($active === '' || $active === 'ORIGINAL_IMPORT') {
-        $active = $source;
-    }
+    return substr($moduleSource, $a, $b - $a);
+};
 
-    return ['available' => $available, 'active' => json_encode($active)];
-}
+$apply = $fenster('private function ApplyTilePlaceholders', 'private function EnsureTileMessageHandler');
+$push = $fenster('private function PushVisualizationUpdate', "\n    // ");
+$build = $fenster('private function BuildAvailableLanguagesJson', "\n    // ");
+$public = $fenster('public function GetAvailableLanguages', 'private function BuildAvailableLanguagesJson');
 
-// Test 1: DER FEHLER - ohne Pro wurde ein Klartextsatz eingesetzt. Jetzt eine
-// leere, gueltige JSON-Liste.
-$v = placeholderValues(false, 'de', 'de');
-assert(json_decode($v['available'], true) === [],
-    'DER FEHLER: ohne Pro eine leere Liste statt eines Klartextsatzes');
-assert(json_last_error() === JSON_ERROR_NONE, 'und damit parsbar');
-echo "Test 1 (ohne Pro gültiges, leeres JSON) OK\n";
+// Test 1: DIE EBENE DER SPERRE. Der Platzhalter selbst ist an KEIN Feature
+// gebunden - dort ist die Sperre laengst gefallen: eigenes Kachel-HTML wirkt
+// sich ueberhaupt nur mit "custom_tile" aus, ein Anwender ohne das Feature kann
+// den Platzhalter also gar nicht erst einschleusen. Eine zweite Sperre haette
+// nur die mitgelieferten Editions-Designs leer laufen lassen, fuer die er
+// gedacht ist - und die schreiben nicht die Anwender.
+assert(strpos($build, 'HasLicenseFeature') === false,
+    'DIE EBENE: der Aufbau fuer den Platzhalter darf nicht noch einmal sperren');
+assert(strpos($apply, 'HasLicenseFeature') === false,
+    'und die Platzhalter-Kette ebenso wenig');
+echo "Test 1 (der Platzhalter sperrt nicht ein zweites Mal) OK\n";
 
-// Test 2: der Sperrfall ist erreichbar - mitgelieferte Editions-Designs haengen
-// NICHT an "custom_tile", der Platzhalter kann also ohne Pro ankommen.
-$moduleSource = (string) $moduleSource;
-$tileHtml = substr($moduleSource, (int) strpos($moduleSource, 'public function GetVisualizationTile'), 900);
-assert(strpos($tileHtml, 'GetSelectedTileTemplateHtml') !== false,
-    'gelieferte Vorlagen laufen durch denselben Platzhalter-Pfad');
-echo "Test 2 (gelieferte Designs erreichen den Platzhalter auch ohne Pro) OK\n";
+// Test 2: die vorgelagerte Sperre muss es aber wirklich geben, sonst waere
+// Test 1 ein Loch statt einer Vereinfachung.
+$tile = $fenster('public function GetVisualizationTile', 'private function GetSelectedTileTemplateHtml');
+assert(strpos($tile, "HasLicenseFeature('custom_tile')") !== false,
+    'eigenes Kachel-HTML wirkt nur mit dem Feature');
+$resolve = $fenster('private function ResolveLanguageSelectHtml', 'private function GetDefaultCustomTileHtml');
+assert(strpos($resolve, "HasLicenseFeature('custom_tile')") !== false,
+    'und eine eigene Sprachauswahl ebenso');
+assert(strpos($tile, 'GetSelectedTileTemplateHtml') !== false,
+    'der einzige andere Weg in die Kachel ist ein geliefertes Design');
+echo "Test 2 (die Sperre sitzt eine Ebene hoeher und greift dort) OK\n";
 
-// Test 3: mit Pro das Format der oeffentlichen Funktion - {code, name, current}.
-$v = placeholderValues(true, 'de', 'de');
-$liste = json_decode($v['available'], true);
-assert(is_array($liste) && isset($liste[0]['code'], $liste[0]['name'], $liste[0]['current']),
-    'mit Pro die Liste aus code/name/current');
-echo "Test 3 (mit Pro das Format der öffentlichen Funktion) OK\n";
+// Test 3: DIE FUNKTION bleibt hart gesperrt - sie ist der Weg, eine eigene
+// Auswahl per Skript AN DER KACHEL VORBEI zu bauen, wo nichts vorgelagert ist.
+assert(strpos($public, "HasLicenseFeature('custom_tile')") !== false
+    && strpos($public, 'throw new Exception') !== false,
+    'IPSSL_GetAvailableLanguages muss weiterhin werfen');
+echo "Test 3 (die öffentliche Funktion bleibt gesperrt) OK\n";
 
 // Test 4: DER SENTINEL - ORIGINAL_IMPORT ist modulintern (siehe Build 183) und
-// darf nie in einem Template landen. Ein Wechsel zurueck aufs Original schreibt
-// ihn kurzzeitig in die Property.
-assert(placeholderValues(true, 'ORIGINAL_IMPORT', 'de')['active'] === '"de"',
-    'DER SENTINEL: ORIGINAL_IMPORT wird auf die Quellsprache abgebildet');
-assert(placeholderValues(true, '', 'fr')['active'] === '"fr"',
-    'und eine leere Property ebenso');
-assert(placeholderValues(true, 'en', 'de')['active'] === '"en"',
-    'eine echte aktive Sprache bleibt unangetastet');
+// darf nie in einem Template landen. Der Platzhalter laeuft deshalb ueber die
+// oeffentliche GetCurrentLanguageCode(), die ihn bereits auf die Quellsprache
+// abbildet - und die damit garantiert denselben Wert liefert wie ein Skript,
+// das daneben IPSSL_GetCurrentLanguageCode() aufruft.
+assert(strpos($apply, '$this->GetCurrentLanguageCode()') !== false,
+    'DER SENTINEL: der Platzhalter laeuft ueber die oeffentliche Funktion');
+$current = $fenster('public function GetCurrentLanguageCode', 'public function GetAvailableLanguages');
+assert(strpos($current, 'ResolveDisplayLanguageCode') !== false, 'die den Sentinel abbildet');
+$resolveCode = $fenster('private function ResolveDisplayLanguageCode', 'private function GetGuestLanguageName');
+assert(strpos($resolveCode, 'langOriginalImport') !== false
+    && strpos($resolveCode, 'propertySourceLanguage') !== false,
+    'naemlich auf die Quellsprache');
 echo "Test 4 (ORIGINAL_IMPORT dringt nicht ins Template) OK\n";
 
 // Test 5: DIE FALLE - die Stats-Liste ersetzt ueber zwei parallele Arrays.
 // Stehen dort mehr Platzhalter als Werte, fuellt PHP still mit '' auf. Die
 // beiden neuen gehoeren dort nicht hinein, sie sind vorher schon ersetzt.
-$stats = substr($moduleSource, (int) strpos($moduleSource, 'private function ApplyTranslationStatsPlaceholders'), 1400);
+$stats = $fenster('private function ApplyTranslationStatsPlaceholders', "\n    // ");
 assert(strpos($stats, 'AVAILABLE_LANGUAGES') === false && strpos($stats, 'ACTIVE_LANGUAGE') === false,
     'DIE FALLE: die neuen Platzhalter stehen nicht in der Stats-Liste');
 preg_match('/\$placeholders = \[(.*?)\];/s', $stats, $m);
@@ -80,16 +90,6 @@ echo "Test 5 (keine Längen-Asymmetrie in der Stats-Ersetzung) OK\n";
 // Test 6: beide Platzhalter werden VOR EnsureTileMessageHandler ersetzt - sonst
 // stuende ein <!--ACTIVE_LANGUAGE--> im gelieferten Design woertlich da (exakt
 // der Build-177-Fehler mit <!--WRAPPER_ID-->).
-// Fenster exakt an der naechsten Funktion begrenzen statt auf eine feste
-// Zeichenzahl - eine feste Groesse ist in dieser Suite schon mehrfach in die
-// Folgefunktion gelaufen.
-$applyStart = (int) strpos($moduleSource, 'private function ApplyTilePlaceholders');
-$applyEnd = (int) strpos($moduleSource, 'private function EnsureTileMessageHandler', $applyStart);
-$apply = substr($moduleSource, $applyStart, $applyEnd - $applyStart);
-$pushStart = (int) strpos($moduleSource, 'private function PushVisualizationUpdate');
-$pushEnd = (int) strpos($moduleSource, "\n    // ", $pushStart);
-$push = substr($moduleSource, $pushStart, $pushEnd - $pushStart);
-
 $posAvailable = strpos($apply, "str_replace('<!--AVAILABLE_LANGUAGES-->'");
 $posActive = strpos($apply, "str_replace('<!--ACTIVE_LANGUAGE-->'");
 $posHandler = strpos($apply, 'return $this->EnsureTileMessageHandler');
@@ -100,20 +100,25 @@ echo "Test 6 (Reihenfolge: Ersetzung vor dem Handler) OK\n";
 // Test 7: DIE SYMMETRIE - Ladezeit-Wert und Live-Aktualisierung muessen aus
 // DERSELBEN Quelle kommen. Sonst zeigt ein Template beim Laden etwas anderes als
 // nach dem ersten Sprachwechsel, und der Fehler waere nur live zu sehen.
-foreach (['GetTileAvailableLanguagesJson', 'GetTileActiveLanguageCode'] as $helfer) {
-    assert(substr_count($moduleSource, '$this->' . $helfer . '()') === 2,
-        "DIE SYMMETRIE: $helfer muss von beiden Seiten benutzt werden - Platzhalter UND REFRESH");
-    assert(strpos($apply, '$this->' . $helfer . '()') !== false, "$helfer speist den Platzhalter");
-    assert(strpos($push, '$this->' . $helfer . '()') !== false, "$helfer speist die REFRESH-Nutzlast");
+foreach (['BuildAvailableLanguagesJson', 'GetCurrentLanguageCode'] as $quelle) {
+    assert(strpos($apply, '$this->' . $quelle . '()') !== false, "$quelle speist den Platzhalter");
+    assert(strpos($push, '$this->' . $quelle . '()') !== false, "$quelle speist die REFRESH-Nutzlast");
 }
 echo "Test 7 (Ladezeit-Wert und Live-Aktualisierung aus derselben Quelle) OK\n";
 
-// Test 8: der Haken laeuft ueber die Kachel-Nachricht, nicht ueber ein erneutes
-// Rendern - GetVisualizationTile() wird nur beim Laden aufgerufen.
+// Test 8: die REFRESH-Nutzlast traegt beide Angaben und eine Nonce - ohne
+// html-Teil ist sie bei einem ABGELEHNTEN Wechsel sonst identisch zur vorigen,
+// und eine identische Nutzlast loest in der Kachel gar kein Ereignis aus.
 assert(strpos($push, "'activeLanguage'") !== false && strpos($push, "'languages'") !== false,
     'die REFRESH-Nutzlast traegt beide Angaben');
-assert(strpos($push, "'seq'") !== false,
-    'und eine Nonce - ohne html ist die Nutzlast bei einem abgelehnten Wechsel sonst identisch zur vorigen');
+assert(strpos($push, "'seq'") !== false, 'und eine Nonce');
 echo "Test 8 (REFRESH trägt Daten und Nonce) OK\n";
+
+// Test 9: das Ergebnis ist in jedem Fall gueltiges JSON - die Zusicherung, an
+// der die ganze Runde haengt.
+$beispiel = json_encode([['code' => 'de', 'name' => 'Deutsch', 'current' => true]]);
+assert(json_decode($beispiel, true)[0]['code'] === 'de', 'die Liste ist parsbar');
+assert(json_decode(json_encode('de')) === 'de', 'und der aktive Code ebenso');
+echo "Test 9 (beide Werte sind gültiges JSON) OK\n";
 
 echo "\nAlle Tests OK (Build 184: Konfigurations-Platzhalter).\n";
