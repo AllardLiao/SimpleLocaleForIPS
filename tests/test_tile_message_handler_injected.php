@@ -15,11 +15,20 @@ declare(strict_types=1);
 // geschah nichts. Die Suche lief zuerst in die falsche Richtung (eigenes
 // Kachel-HTML), bis klar wurde, dass es eine GELIEFERTE Vorlage war.
 
-// Repliziert EnsureTileMessageHandler().
+// Repliziert EnsureTileMessageHandler() inkl. der Umhuellung aus Build 184.
 function ensureReplica(string $html, bool $supportsRefresh = true): string
 {
     if (strpos($html, 'handleMessage') !== false) {
-        return $html;
+        // Build 184: der eigene Handler bleibt, bekommt aber den Haken
+        // umgelegt - sonst erreichte window.ipsslOnLanguageChange genau die
+        // Templates nie, die aus einer aelteren module.html stammen.
+        if (strpos($html, 'ipsslOnLanguageChange') !== false) {
+            return $html;
+        }
+        $wrap = '<script>/* wrapper: ipsslOnLanguageChange */</script>';
+        $p = strripos($html, '</body>');
+
+        return $p === false ? $html . $wrap : substr($html, 0, $p) . $wrap . substr($html, $p);
     }
     $script = '<script>function handleMessage(data){/* ... */}</script>';
     $pos = strripos($html, '</body>');
@@ -37,8 +46,19 @@ echo "Test 1 (eine Vorlage ohne Handler bekommt einen) OK\n";
 // Test 2: DIE ABGRENZUNG - bringt eine Vorlage einen eigenen Handler mit, wird
 // nichts angefasst. Sonst gaebe es zwei Funktionen gleichen Namens.
 $mitEigenem = '<div></div><script>function handleMessage(d){ meineLogik(d); }</script>';
-assert(ensureReplica($mitEigenem) === $mitEigenem, 'eine Vorlage mit eigenem Handler darf NICHT ergaenzt werden');
+$out = ensureReplica($mitEigenem);
+assert(strpos($out, 'function handleMessage(d){ meineLogik(d); }') !== false,
+    'eine Vorlage mit eigenem Handler behaelt ihn unveraendert');
+assert(substr_count($out, 'function handleMessage') === 1, 'kein zweiter Handler gleichen Namens');
 echo "Test 2 (ein eigener Handler bleibt unangetastet) OK\n";
+
+// Test 2b (Build 184): er bekommt aber den Haken umgelegt - sonst waere
+// <!--ACTIVE_LANGUAGE--> in genau diesen Templates stumm eingefroren. Bringt das
+// Template den Haken schon selbst mit (jede Kopie ab Build 184), passiert nichts.
+assert(strpos($out, 'ipsslOnLanguageChange') !== false, 'der Haken muss ihn trotzdem erreichen');
+$schonAktuell = '<div></div><script>function handleMessage(d){ window.ipsslOnLanguageChange && 0; }</script>';
+assert(ensureReplica($schonAktuell) === $schonAktuell, 'ein Template mit eigenem Haken wird nicht doppelt bedient');
+echo "Test 2b (der Haken erreicht auch einen eigenen Handler, aber nie doppelt) OK\n";
 
 // Test 3: bei vollstaendigem HTML landet das Script INNERHALB des Body - danach
 // wuerde es der Browser zwar auch ausfuehren, aber sauber ist sauber.
@@ -59,13 +79,27 @@ echo "Test 4 (ein Fragment bekommt es angehängt) OK\n";
 $moduleSource = file_get_contents(dirname(__DIR__) . '/SimpleLocale/module.php');
 assert(strpos($moduleSource, 'private function EnsureTileMessageHandler(string $Html, bool $SupportsRefresh): string') !== false,
     'die Absicherung muss existieren - seit Build 179 mit der Angabe, ob neu gezeichnet werden darf');
-$start = strpos($moduleSource, 'private function EnsureTileMessageHandler');
-$body = substr($moduleSource, $start, 2600);
+// Fenster an der naechsten Funktion begrenzen, nicht auf eine feste
+// Zeichenzahl - eine feste Groesse ist in dieser Suite schon mehrfach gerissen,
+// sobald die Funktion durch Kommentare wuchs.
+$start = (int) strpos($moduleSource, 'private function EnsureTileMessageHandler');
+$end = (int) strpos($moduleSource, 'private function EnsureLanguageChangeHook', $start);
+$body = substr($moduleSource, $start, $end - $start);
 assert(strpos($body, "strpos(\$Html, 'handleMessage') !== false") !== false, 'ein vorhandener Handler muss erkannt werden');
 assert(strpos($body, 'm.action==="ALERT"') !== false, 'der eingesetzte Handler muss ALERT verarbeiten');
 assert(strpos($body, 'm.action==="REFRESH"') !== false, 'und REFRESH - aber nur, wenn die Vorlage das vertraegt');
-assert(strpos($body, '$refresh = $SupportsRefresh') !== false,
+assert(strpos($body, '$redraw = $SupportsRefresh') !== false,
     'DER FIX AUS BUILD 179: das Neuzeichnen haengt daran, ob die Vorlage <!--LANGUAGE_SELECT--> benutzt');
+// Build 184: der Haken fuer eigene Vorlagen muss AUSSERHALB dieser Bedingung
+// stehen. Genau die Vorlagen, die kein html bekommen (weil sie ihre Auswahl
+// selbst bauen), sind die, die ihn brauchen - haenge er mit am Neuzeichnen,
+// erreichte er nie eine davon.
+assert(strpos($body, 'window.ipsslOnLanguageChange') !== false,
+    'der Haken fuer eigene Vorlagen muss eingesetzt werden');
+assert(strpos($body, '$hook = ') !== false && strpos($body, '$hook') > strpos($body, '$redraw = $SupportsRefresh'),
+    'er wird unabhaengig von $SupportsRefresh gebaut');
+assert(strpos($body, '$redraw . $hook') !== false,
+    'und unbedingt in den REFRESH-Zweig gesetzt, nicht in den html-Teil');
 // Fehlt das Ziel-Element, darf das Neuzeichnen still scheitern - die Meldungen
 // muessen trotzdem ankommen.
 assert(strpos($body, 'if(w){w.innerHTML=m.payload.html;}') !== false,
@@ -81,6 +115,20 @@ echo "Test 5 (die reale Umsetzung ist verdrahtet und bricht nicht ab) OK\n";
 // dort darf nichts ergaenzt werden.
 $tileSource = file_get_contents(dirname(__DIR__) . '/SimpleLocale/module.html');
 assert(strpos($tileSource, 'handleMessage') !== false, 'die eingebaute Kachel behaelt ihren eigenen Handler');
+assert(strpos($tileSource, 'ipsslOnLanguageChange') !== false,
+    'Build 184: sie bedient den Haken selbst - Kopien davon brauchen keine Umhuellung');
 echo "Test 6 (die eingebaute Kachel bleibt unverändert) OK\n";
+
+// Test 7 (Build 184): die Umhuellung ersetzt den fremden Handler nicht, sondern
+// ruft ihn weiter auf - sonst verloere ein Template sein eigenes Verhalten.
+$hookStart = (int) strpos($moduleSource, 'private function EnsureLanguageChangeHook');
+$hookBody = substr($moduleSource, $hookStart, (int) strpos($moduleSource, "\n    // Für eigene Kacheln", $hookStart) - $hookStart);
+assert(strpos($hookBody, 'var inner=handleMessage;') !== false, 'der vorhandene Handler wird festgehalten');
+assert(strpos($hookBody, 'return inner.apply(this,arguments);') !== false, 'und unveraendert weiter aufgerufen');
+assert(strpos($hookBody, "strpos(\$Html, 'ipsslOnLanguageChange') !== false") !== false,
+    'und uebersprungen, wenn das Template den Haken schon selbst bedient');
+assert(strpos($hookBody, 'strripos($Html, \'</body>\')') !== false,
+    'ans Ende des Body - der eigene Handler muss vorher definiert sein');
+echo "Test 7 (die Umhüllung ruft den fremden Handler weiter auf) OK\n";
 
 echo "\nAll tests passed.\n";

@@ -32,7 +32,7 @@ Beschreibung des Moduls.
   aktiv" (standardmäßig angehakt, nur mit Pro-Lizenz überhaupt sichtbar)
   gezielt festlegen, dass ein einzelner Eintrag NIE
   übersetzt wird, sondern immer seinen Rohtext zeigt - unabhängig davon,
-  welche Gast-Sprache gerade aktiv ist. Wirkt wie ein dauerhaftes Leeren aller
+  welche Nutzersprache gerade aktiv ist. Wirkt wie ein dauerhaftes Leeren aller
   Zielsprachen-Zellen dieser einen Zeile, ohne sie tatsächlich zu löschen.
   Gedacht für Eigennamen, Marken oder technische Kürzel, die in jeder Sprache
   gleich bleiben sollen (z. B. ein Personenname in einer Präsenz-Anzeige),
@@ -81,7 +81,7 @@ Beschreibung des Moduls.
   selbst neu schreibt, oder eine mehrmals täglich zwischen festen Werten
   wechselnde Begrüßung): der neue Wert wird automatisch als frischer
   Rohtext übernommen und sofort **in alle konfigurierten Zielsprachen**
-  nachübersetzt (nicht nur die gerade aktive) - schaltet ein Gast danach in
+  nachübersetzt (nicht nur die gerade aktive) - schaltet ein Nutzer danach in
   eine andere Sprache, bekommt er also ebenfalls sofort die aktuelle
   Übersetzung zu sehen, nicht den unübersetzten Rohtext oder eine veraltete,
   vor der Änderung gecachte Fassung. Ganz ohne Zutun des anderen
@@ -221,7 +221,7 @@ Beschreibung des Moduls.
   bis zum frühesten Reset-Zeitpunkt: kein einziger weiterer API-Aufruf, bis
   mindestens ein Anbieter wieder verfügbar sein sollte. Sichtbar an drei
   Stellen: ein kleiner roter Hinweis "Übersetzung pausiert bis HH:MM" direkt
-  unter dem Dropdown in der Kachel (live in die jeweils aktive Gast-Sprache
+  unter dem Dropdown in der Kachel (live in die jeweils aktive Nutzersprache
   übersetzt), der Instanz-Status "Aktiv, aber pausiert", und eine detaillierte
   Aufschlüsselung (welcher Anbieter pausiert bis wann) im Panel
   "Übersetzungsanbieter" des Konfigurationsformulars. Ein ungültiger/
@@ -265,7 +265,7 @@ Beschreibung des Moduls.
   Quelle (z. B. ein Wetter-/Sensor-Modul) denselben Wert schreibt, den es
   auch selbst anzeigt (Objekt-ID = Wert-Objekt-ID, der Normalfall ohne
   gesonderte Anzeige-Variable). Symcons WebFront pusht JEDEN
-  Schreibvorgang sofort an verbundene Gast-Browser - inklusive des
+  Schreibvorgang sofort an verbundene Nutzer-Browser - inklusive des
   externen Rohtext-Schreibvorgangs selbst, BEVOR Simple Locale reagieren
   und die Übersetzung zurückschreiben kann. Wie lange dieses Fenster
   offen bleibt, hängt direkt von der Antwortzeit des jeweiligen
@@ -420,7 +420,7 @@ Beschreibung des Moduls.
   Begrüßungsmodus "Automatic" (siehe [Abschnitt 7](#7-visualisierung)) - die
   folgt laut Test **nicht** der Symcon-Konsolensprache, sondern rein
   clientseitig der Spracheinstellung des jeweiligen **Besucher-Browsers**,
-  unabhängig von der in Simple Locale aktiven Sprache. Wählt ein Gast über
+  unabhängig von der in Simple Locale aktiven Sprache. Wählt ein Nutzer über
   die Sprachauswahl-Kachel z. B. Deutsch, sein Browser ist aber auf Englisch
   eingestellt, bleibt diese Anrede englisch - technisch nicht anders lösbar,
   da Simple Locale keinen Einfluss auf diesen clientseitigen Symcon-
@@ -850,7 +850,7 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
    > 3. **Eigene Auswahl statt der eingebauten?** Dann `<!--LANGUAGE_SELECT-->`
    >    weglassen. Das Modul zeichnet die Kachel dann nicht mehr nach (es gäbe ja
    >    nichts nachzuzeichnen), die Statistik-Zähler stehen still, und die
-   >    Gast-Hinweise kommen unverändert an.
+   >    Hinweise an den Nutzer kommen unverändert an.
    >
    > Den `handleMessage`-Block musst du nicht mitliefern - fehlt er, ergänzt ihn
    > das Modul.
@@ -862,6 +862,8 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
    | `<!--LANGUAGE_SELECT-->` | die Sprachauswahl - eigene, falls hinterlegt, sonst die generierte |
    | `<!--WRAPPER_ID-->` | eine pro Instanz eindeutige DOM-ID |
    | `<!--TILE_ICON-->` | das gewählte Symbol, einzeln platzierbar (Build 173) |
+   | `<!--AVAILABLE_LANGUAGES-->` | JSON: alle konfigurierten Sprachen (Build 184) |
+   | `<!--ACTIVE_LANGUAGE-->` | JSON: der Code der aktiven Sprache (Build 184) |
    | `<!--COUNT_TRANSLATIONS-->` | reine Zahl: Übersetzungen/h |
    | `<!--COUNT_SIGNES-->` | reine Zahl: Zeichen/h |
    | `<!--COUNT_CACHE_TRANSLATIONS-->` | Gesamtzahl der durch den Cache gesparten Anfragen |
@@ -921,6 +923,74 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
      `height:100%`): dein Container braucht also keine feste Höhe zu haben.
      Willst du es anders skalieren, sprich die Klasse in deinem CSS an.
 
+     **Das Layout an der Konfiguration ausrichten:
+     `<!--AVAILABLE_LANGUAGES-->` und `<!--ACTIVE_LANGUAGE-->` (Build 184).**
+     Bis dahin musste ein eigenes Template die Sprachcodes fest eintippen - und
+     traf damit regelmäßig neben die tatsächlich konfigurierten Zielsprachen
+     (genau die Fehlerquelle, für die Build 175 den Hinweis an den Nutzer nötig machte).
+     Diese beiden Platzhalter geben dir stattdessen die Konfiguration selbst:
+
+     | Platzhalter | liefert |
+     |---|---|
+     | `<!--AVAILABLE_LANGUAGES-->` | JSON-Liste aller konfigurierten Sprachen: `[{"code":"de","name":"Deutsch","current":true}, …]` - dieselbe Struktur wie `IPSSL_GetAvailableLanguages()` |
+     | `<!--ACTIVE_LANGUAGE-->` | der Code der aktiven Sprache, als JSON-String: `"de"` |
+
+     Beide liefern **immer gültiges JSON**, auch wenn etwas fehlt oder gesperrt
+     ist. Du kannst sie deshalb direkt in eine Zuweisung setzen, ohne
+     Anführungszeichen drumherum:
+
+     ```html
+     <script>
+         const languages = <!--AVAILABLE_LANGUAGES-->;
+         let active = <!--ACTIVE_LANGUAGE-->;
+
+         function render() {
+             document.getElementById("flags").innerHTML = languages.map(l =>
+                 `<span onclick="requestAction('Language', '${l.code}')"
+                        class="${l.code === active ? 'is-active' : ''}"
+                        title="${l.name}">${l.code.toUpperCase()}</span>`
+             ).join("");
+         }
+         render();
+     </script>
+     ```
+
+     `<!--ACTIVE_LANGUAGE-->` ist immer ein **echter Sprachcode**. `ORIGINAL_IMPORT`
+     ist modulintern und erscheint hier nie - ist die Ursprungssprache aktiv,
+     steht deren Code drin.
+
+     Anders als die gleichnamige Funktion `IPSSL_GetAvailableLanguages()` sind
+     **beide Platzhalter an kein Feature gebunden**. Sie brauchen es nicht: an
+     dieser Stelle ist die Sperre bereits gefallen. Eigenes Kachel-HTML wirkt
+     sich überhaupt nur mit `custom_tile` aus - ohne das Feature lässt sich ein
+     Platzhalter also gar nicht erst einschleusen. Der einzige andere Weg in die
+     Kachel ist ein mitgeliefertes Editions-Design, und die schreiben nicht die
+     Anwender. Ein solches Design darf den Platzhalter deshalb ohne Rücksicht
+     auf die Edition des Empfängers benutzen.
+
+     Die Funktion selbst bleibt gesperrt - sie ist der Weg, eine eigene Auswahl
+     per Skript **an der Kachel vorbei** zu bauen, und dort greift keine
+     vorgelagerte Prüfung.
+
+     > **Wichtig - beide frieren beim Laden ein.** Sie werden einmal eingesetzt,
+     > wenn die Kachel gerendert wird. Wechselt der Nutzer danach die Sprache, wird
+     > die Kachel *nicht* neu gebaut, und dein `active` zeigt weiterhin den alten
+     > Stand. Damit deine Hervorhebung mitwandert, definiere
+     > `window.ipsslOnLanguageChange` - das Modul ruft sie bei **jedem**
+     > Sprachwechsel auf, auch bei einem abgelehnten:
+     >
+     > ```js
+     > window.ipsslOnLanguageChange = function (activeLanguage, availableLanguages) {
+     >     active = activeLanguage;
+     >     render();
+     > };
+     > ```
+     >
+     > Die Funktion ist optional - definierst du sie nicht, ändert sich nichts.
+     > Du musst dafür nichts weiter einbauen: die Verdrahtung bringt das Modul
+     > mit, auch wenn dein Template einen eigenen `handleMessage`-Block hat, den
+     > es aus `module.html` übernommen hat.
+
      Dazu kommen **vier Zähler-Platzhalter** für die in
      [Abschnitt 2](#2-bekannte-einschränkungen) beschriebene Nutzungsstatistik.
      Alle vier liefern eine reine, gerundete Ganzzahl ohne Einheit (z. B. "30"
@@ -966,11 +1036,11 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
      Sonderwerts.
 
      > Ein Code, den die Instanz nicht kennt, wird abgelehnt: die aktive Sprache
-     > bleibt stehen, und der Gast bekommt seit Build 175 ein Popup, das genau
+     > bleibt stehen, und der Nutzer bekommt seit Build 175 ein Popup, das genau
      > das sagt. Genau dieser Fall tritt auf, wenn eine eigene Sprachauswahl
      > feste Codes trägt und später die Zielsprachen geändert werden.
 
-     `ORIGINAL_IMPORT` ist seit Build 79 **keine wählbare Gast-Sprache mehr**
+     `ORIGINAL_IMPORT` ist seit Build 79 **keine wählbare Nutzersprache mehr**
      und rein modulintern (Rückfall bei abgelaufener Testphase). In einer
      eigenen Kachel hat der Wert nichts zu suchen.
 
@@ -1013,13 +1083,22 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
    - `IPSSL_SetLanguage(int $InstanzID, string $Sprachcode): void` -
      wechselt die aktive Sprache, mit derselben Logik wie ein Klick im
      eingebauten Dropdown (Testphase-/Rate-Limit-Prüfung inklusive).
+   - `IPSSL_GetCurrentLanguageCode(int $InstanzID): string` - der Code der
+     gerade aktiven Sprache (z. B. `"en"`), um die eigene Anzeige darauf
+     einzustellen: welcher Eintrag hervorgehoben wird, ob überhaupt neu
+     aufgebaut werden muss. Liefert immer einen echten Sprachcode - ist die
+     Ursprungssprache aktiv, steht deren Code drin, nie der modulinterne
+     Wert `ORIGINAL_IMPORT`. **Nicht** an `custom_tile` gebunden, im
+     Gegensatz zu den beiden anderen: der Befehl liest nur, er baut nichts
+     an der Kachel vorbei. Denselben Wert liefert innerhalb einer Vorlage
+     der Platzhalter `<!--ACTIVE_LANGUAGE-->` (siehe oben).
 
 Ohne das Feature `custom_tile` bleiben die Formularfelder aus Weg 1
 ausgegraut UND die eingebaute Kachel aktiv (unabhängig vom gespeicherten
-Wert), UND die beiden Befehle aus Weg 2 werfen bei jedem Aufruf eine
-Exception, statt einfach nichts zu tun - eine selbstgebaute Kachel ließe
-sich sonst komplett kostenlos an der Lizenzprüfung vorbei realisieren, siehe
-[Abschnitt 8](#8-lizenz-und-testversion).
+Wert), UND die beiden **erstgenannten** Befehle aus Weg 2 werfen bei jedem
+Aufruf eine Exception, statt einfach nichts zu tun - eine selbstgebaute
+Kachel ließe sich sonst komplett kostenlos an der Lizenzprüfung vorbei
+realisieren, siehe [Abschnitt 8](#8-lizenz-und-testversion).
 
 ### 8. Lizenz und Testversion
 
@@ -1213,7 +1292,7 @@ Zwei mögliche Antworten, beide **eigenständig** neben dem bestehenden
   Testphase gewährt - der Schlüssel bleibt einfach ungültig (`valid =>
   false, revoked => true` in `GetLicenseInfo()`), fällt aber auf dieselbe
   bereits bestehende "Testphase abgelaufen"-Darstellung zurück wie jeder
-  andere ungültige Schlüssel auch (kein eigenes Gast-Popup nötig).
+  andere ungültige Schlüssel auch (kein eigenes Popup für den Nutzer nötig).
 - `{"active": true, "expiresAt": <Unix-Timestamp>}` - Bestätigung plus das
   aktuell effektive Ablaufdatum laut Shop. Dieser Wert **überschreibt** das
   im Schlüssel selbst signierte `expiresAt` vollständig (siehe
@@ -4415,6 +4494,80 @@ der ursprünglichen Fassung übernommen.
   Durchlauf; die Zahl sinkt von Lauf zu Lauf und verschwindet am Ende;
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
+
+* **Build 184: eigene Kacheln kennen jetzt die Konfiguration -
+  `<!--AVAILABLE_LANGUAGES-->` und `<!--ACTIVE_LANGUAGE-->`.**
+  Bis dahin musste ein eigenes Template die Sprachcodes fest eintippen. Das ging
+  regelmäßig an den tatsächlich konfigurierten Zielsprachen vorbei - genau die
+  Fehlerquelle, für die Build 175 den Gast-Hinweis nötig machte. Beide
+  Platzhalter liefern JSON: eine Liste aus `{code, name, current}` bzw. den Code
+  der aktiven Sprache, siehe [Abschnitt 7](#7-visualisierung).
+
+  Drei Dinge, die beim Einbau auffielen und mitbehoben wurden:
+
+  * Die Sperre saß an der falschen Ebene. `<!--AVAILABLE_LANGUAGES-->` hing
+    zunächst selbst an `custom_tile` und setzte ohne das Feature einen
+    **Klartextsatz** ein - der landet in einem Template aber typischerweise
+    direkt in einer JS-Zuweisung (`var langs = <!--AVAILABLE_LANGUAGES-->;`),
+    also ein Syntaxfehler, der das komplette Skript mitreißt, inklusive einer
+    eigenen `handleMessage()`. Ausgesperrt hätte sie ohnehin niemanden: eigenes
+    Kachel-HTML wirkt sich überhaupt nur mit `custom_tile` aus, ein Anwender
+    ohne das Feature kann den Platzhalter also gar nicht erst einschleusen. Der
+    einzige andere Weg in die Kachel ist ein mitgeliefertes Editions-Design -
+    und genau die wären leer geblieben, obwohl sie nicht von Anwendern stammen.
+    Der Platzhalter ist deshalb ungesperrt; der Aufbau liegt jetzt in
+    `BuildAvailableLanguagesJson()`, und die **Funktion**
+    `IPSSL_GetAvailableLanguages()` bleibt hart gesperrt - sie ist der Weg, eine
+    eigene Auswahl per Skript an der Kachel vorbei zu bauen, wo keine
+    vorgelagerte Prüfung greift.
+  * `ORIGINAL_IMPORT` wäre nach außen gedrungen - der Registrierungs-Default der
+    Property *ist* der Sentinel, und ein Wechsel zurück aufs Original schreibt
+    ihn kurzzeitig hinein. Wird auf die Quellsprache abgebildet, damit genau der
+    Wert, den Build 183 aus dem Beispielcode entfernt hat, nicht durch die
+    Hintertür zurückkommt.
+  * Die beiden Namen standen zunächst mit in der Suchliste von
+    `ApplyTranslationStatsPlaceholders()`. Dort ersetzt `str_replace()` über zwei
+    parallele Arrays - sechs Platzhalter gegen vier Werte, und PHP füllt still
+    mit Leerstring auf. Folgenlos nur, weil beide vorher schon ersetzt sind:
+    toter Code mit scharfer Kante. Zurückgebaut.
+
+  **Live statt eingefroren.** Beide Platzhalter werden beim Rendern eingesetzt,
+  und `GetVisualizationTile()` läuft nur einmal - ein Template hätte nach dem
+  ersten Klick die falsche Flagge hervorgehoben. Deshalb trägt `REFRESH` jetzt
+  zusätzlich `activeLanguage` und `languages` und geht **auch an Vorlagen ohne**
+  `<!--LANGUAGE_SELECT-->`. Der in Build 179/180 gefundene zerstörerische Teil
+  war immer nur das Feld `html`; genau das wird jetzt weggelassen, statt die
+  ganze Nachricht zu verwerfen. Beide Handler prüfen es einzeln, fehlt es, wird
+  nichts gelöscht.
+
+  Abgeholt wird das über eine **optionale** Funktion des Templates,
+  `window.ipsslOnLanguageChange(activeLanguage, availableLanguages)`. Wer sie
+  nicht definiert, merkt keinen Unterschied. Sie erreicht auch ein Template mit
+  **eigenem** `handleMessage`: ein aus einer älteren `module.html` abgeleitetes
+  Template brachte bisher einen Handler ohne den Haken mit und wurde deshalb
+  übersprungen - der wahrscheinlichste Weg, auf dem ein bestehender Pro-Nutzer
+  den neuen Platzhalter benutzt. `EnsureLanguageChangeHook()` legt den Haken
+  darum herum, statt den fremden Handler zu ersetzen; er wird unverändert weiter
+  aufgerufen.
+
+  Die laufende Nummer aus Build 176 gilt jetzt für beide Nachrichtenarten
+  (`tileMessageSequence`): ohne `html` ist eine REFRESH-Nutzlast bei einem
+  **abgelehnten** Wechsel identisch zur vorigen - und eine identische Nutzlast
+  löst in der Kachel gar kein Ereignis aus, weil
+  `UpdateVisualizationValue()` einen Wert setzt, keine Nachricht.
+
+  `<!--ACTIVE_LANGUAGE-->` läuft bewusst über die **öffentliche** Funktion
+  `GetCurrentLanguageCode()` statt über einen eigenen Lesepfad - sonst könnte
+  ein Template etwas anderes anzeigen, als ein Skript daneben ausliest. Sie war
+  bereits vorhanden und ungesperrt; [Abschnitt 7](#7-visualisierung) führt sie
+  jetzt auch bei der komplett eigenständigen Kachel auf, wo sie genauso
+  gebraucht wird.
+
+  Regressionstest `test_config_placeholders.php` (8 Fälle, darunter die
+  Symmetrie: Ladezeit-Wert und Live-Aktualisierung müssen aus derselben Quelle
+  kommen, sonst wäre der Unterschied nur live zu sehen); `test_no_refresh_without_selector.php`
+  und `test_tile_message_handler_injected.php` auf den neuen, engeren Zuschnitt
+  nachgezogen.
 
 * **Build 183: der mitgelieferte Beispielcode für die eigene Sprachauswahl-Kachel
   schickte für Deutsch `ORIGINAL_IMPORT`.**

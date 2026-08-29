@@ -92,7 +92,12 @@ echo "Test 5 (der angezeigte Text bleibt unverändert) OK\n";
 // Test 6: Symmetrie-Check gegen die reale Umsetzung.
 $moduleSource = file_get_contents(dirname(__DIR__) . '/SimpleLocale/module.php');
 assert(strpos($moduleSource, 'private function PushTileAlert(string $Text): void') !== false, 'der gemeinsame Sender muss existieren');
-assert(strpos($moduleSource, '$this->alertSequence++;') !== false, 'er muss die laufende Nummer hochzaehlen');
+assert(strpos($moduleSource, '$this->tileMessageSequence++;') !== false, 'er muss die laufende Nummer hochzaehlen');
+// Build 184: die Nummer heisst nicht mehr alertSequence - REFRESH braucht sie
+// seitdem genauso, weil eine Nutzlast ohne html-Teil zur vorigen identisch
+// sein kann (abgelehnter Wechsel). Ein gemeinsamer Zaehler, zwei Sender.
+assert(substr_count($moduleSource, '$this->tileMessageSequence++;') === 2,
+    'beide Sender muessen dieselbe Nonce-Quelle benutzen');
 assert(substr_count($moduleSource, '$this->PushTileAlert(') === 3,
     'ALLE drei Gast-Popups muessen darueber laufen - Testphase, Sprachwechsel-Limit und unbekannte Sprache');
 
