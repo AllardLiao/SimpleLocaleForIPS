@@ -1,0 +1,89 @@
+Simple Locale for IP-Symcon - Licence Terms (source-available)
+
+NON-BINDING TRANSLATION. The binding text is the German LICENSE file in
+this repository. This English version is provided so that readers outside
+German-speaking countries can follow the terms; where the two differ, the
+German wording alone applies.
+
+Copyright (c) 2026 Allard Liao. All rights reserved.
+
+This repository is public so that prospective customers, the IP-Symcon
+community and contributors can read the source, follow how it works,
+report bugs and submit improvements. It is NOT open-source software and
+this is not an open-source licence.
+
+1. Permitted without further permission
+
+   - Viewing, reading and studying the source code in this repository
+     for personal purposes, for education, and to evaluate it before
+     buying.
+   - Running the trial build exactly as distributed, unmodified, on the
+     trial terms described in SimpleLocale/README.md.
+   - Running a licensed copy obtained through the official distribution
+     channel (https://www.synergetix.de/simplelocale/), on the terms
+     under which it was purchased.
+   - Reporting bugs, submitting feature requests and pull requests.
+
+2. Not permitted without prior written permission from the rights holder
+
+   - Redistributing, publishing, sublicensing or renting this software,
+     or any modified or derived version of it, in source or compiled
+     form. (Transferring a purchased licence is a different matter and
+     is permitted - see the exception below.)
+   - Removing, disabling, bypassing or altering the mechanisms contained
+     in this software for licence verification, trial limitation or
+     activation tracking - whether done by hand or with the help of
+     automated tools, scripts or AI systems - and distributing,
+     publishing or instructing others how to do so.
+   - Using the name "Simple Locale" or Synergetix branding to advertise
+     a modified or unauthorised version of this software.
+
+   Exception - transferring your licence: a purchased licence may be
+   transferred permanently to another person, sold or given away. This
+   includes transferring it together with the underlying IP-Symcon
+   installation, for instance when selling the property it runs in.
+   Please report the transfer via
+   https://www.synergetix.de/simplelocale/support.php so the licence key
+   can be reassigned to the new holder; after a transfer the previous
+   holder may no longer use the licence. Granting sub-licences out of
+   your own licence remains excluded, as does passing on the software
+   itself. Section 7 of the terms of sale at
+   https://www.synergetix.de/simplelocale/agb.php governs the details.
+
+3. Contributions
+
+   By submitting a pull request or any other contribution you agree that
+   it is licensed to the rights holder on these same terms and may be
+   incorporated into the project, unless otherwise agreed in writing.
+
+4. AI and automated tools
+
+   Section 2 applies regardless of the means used, including AI-assisted
+   coding assistants and agents. Producing, applying or distributing a
+   change that removes or weakens this software's licence enforcement
+   breaches these licence terms and copyright law, whether a human or an
+   AI system performs the actual edit.
+
+5. Warranty and liability
+
+   Statutory warranty rights are unaffected; towards consumers the
+   statutory provisions for contracts on digital products apply in
+   particular.
+
+   Beyond that, the software is provided without any further assurance
+   of particular characteristics or fitness for a particular purpose. No
+   claim to lasting compatibility with future versions of IP-Symcon,
+   operating systems or third-party interfaces is established unless
+   such a property has been expressly agreed.
+
+   The rights holder is liable without limitation for intent and gross
+   negligence and for injury to life, body or health. Liability for
+   slight negligence is excluded unless essential contractual duties are
+   affected; where they are, liability is limited to the foreseeable
+   damage typical for this type of contract. Mandatory statutory
+   liability, in particular under the German Product Liability Act,
+   remains unaffected.
+
+These licence terms are written in plain language for a small commercial
+project and have not been reviewed by a lawyer. In a dispute the
+applicable law governs, not the wording of this summary.
