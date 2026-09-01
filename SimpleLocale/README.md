@@ -1222,9 +1222,12 @@ aktivieren" oder einfach nur "Übernehmen" mit einem neuen gültigen Schlüssel)
 wird lokal protokolliert, welcher `IPS_GetLicensee()` (die beim Kauf von
 Symcon selbst hinterlegte E-Mail-Adresse, eindeutig pro Symcon-Installation)
 mit welchem Lizenzschlüssel aktiviert wurde. Taucht derselbe Schlüssel mit
-mehreren unterschiedlichen Licensee-Adressen auf, ist das ein Hinweis auf
-Weiterverkauf/Weitergabe (z. B. ein Schlüssel, der als "gebraucht" mehrfach
-bei Ebay verkauft wird). Die Konstante `LICENSE_ACTIVATION_REPORT_URL` in
+mehreren unterschiedlichen Licensee-Adressen auf, wurde die Lizenz entweder
+weitergegeben oder sie läuft gleichzeitig in mehreren Installationen. Eine
+Weitergabe ist erlaubt (verkauft oder verschenkt, siehe LICENSE und
+Abschnitt 7 der AGB) und wird nach Meldung einfach umgeschrieben; das Signal
+dient dazu, die NICHT gemeldeten Fälle zu erkennen - etwa einen Schlüssel,
+der als "gebraucht" mehrfach bei Ebay verkauft wird. Die Konstante `LICENSE_ACTIVATION_REPORT_URL` in
 `module.php` zeigt auf einen echten Meldeserver-Endpoint (siehe
 Synergetix-Website-Repo, `shop/license-activation-report.php`) - jede
 Aktivierung wird zusätzlich dorthin gemeldet (Lizenzschlüssel-Hash statt
