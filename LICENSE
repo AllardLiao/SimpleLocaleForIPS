@@ -1,73 +1,106 @@
-Simple Locale for IP-Symcon - Source-Available License
+Simple Locale for IP-Symcon - Lizenzbedingungen (Quelltext einsehbar)
 
-Copyright (c) 2026 Allard Liao. All rights reserved.
+Copyright (c) 2026 Allard Liao. Alle Rechte vorbehalten.
 
-This repository is public so that prospective customers, IP-Symcon
-community members, and contributors can review the source code, verify
-how it works, report issues, and submit improvements. It is NOT
-open-source software, and this is not an open-source license.
+Dieses Repository ist öffentlich, damit Kaufinteressenten, die
+IP-Symcon-Community und Mitwirkende den Quelltext einsehen, seine
+Funktionsweise nachvollziehen, Fehler melden und Verbesserungen
+einreichen können. Es handelt sich NICHT um Open-Source-Software und
+nicht um eine Open-Source-Lizenz.
 
-1. Permitted without further permission
+Maßgeblich ist diese deutsche Fassung. Übersetzungen dieser
+Lizenzbedingungen - etwa die Kurzfassungen im Webshop unter
+https://www.synergetix.de/simplelocale/license.php - dienen der
+Verständlichkeit; bei Abweichungen gilt ausschließlich der
+deutsche Wortlaut.
 
-   - Viewing, reading, and studying the source code in this repository
-     for personal, educational, and evaluation purposes.
-   - Running the trial build exactly as distributed, unmodified, subject
-     to the trial terms described in SimpleLocale/README.md.
-   - Running a licensed copy obtained through the official distribution
-     channel (https://www.synergetix.de/simplelocale/), subject to the
-     license terms under which it was purchased.
-   - Submitting bug reports, feature requests, and pull requests.
+1. Ohne weitere Erlaubnis gestattet
 
-2. NOT permitted without prior written permission from the copyright
-   holder
+   - Das Ansehen, Lesen und Studieren des Quelltextes in diesem
+     Repository zu persönlichen Zwecken, zu Bildungszwecken und zur
+     Bewertung vor einem Kauf.
+   - Der Betrieb der Testversion genau so, wie sie ausgeliefert wird,
+     unverändert und nach den in SimpleLocale/README.md beschriebenen
+     Bedingungen der Testphase.
+   - Der Betrieb einer lizenzierten Fassung, die über den offiziellen
+     Vertriebsweg (https://www.synergetix.de/simplelocale/) bezogen
+     wurde, nach den Bedingungen, unter denen sie erworben wurde.
+   - Das Melden von Fehlern, das Einreichen von Funktionswünschen und
+     von Pull Requests.
 
-   - Redistributing, publishing, sublicensing, or renting this software
-     or any modified or derivative version of it, in source or compiled
-     form. (Transferring a purchased license is a separate matter and is
-     permitted - see the exception below.)
-   - Removing, disabling, bypassing, patching, or otherwise
-     circumventing the license verification, trial-limitation, or
-     activation-tracking mechanisms contained in this software - whether
-     done manually or with the assistance of automated tools, scripts,
-     or AI/LLM-based systems - or distributing, publishing, or
-     instructing others how to do so.
-   - Using the name "Simple Locale" or Synergetix's branding to market a
-     modified or unauthorized version of this software.
+2. Ohne vorherige schriftliche Zustimmung des Rechteinhabers nicht
+   gestattet
 
-   Exception - transferring your license: a purchased license may be
-   transferred permanently to another person, whether sold or given away.
-   This includes transferring it together with the underlying IP-Symcon
-   installation, for example when selling the property it runs on.
-   Please register the transfer via
-   https://www.synergetix.de/simplelocale/support.php so the license key
-   can be reassigned to the new holder; after a transfer the previous
-   holder may no longer use the license. Granting sub-licenses out of
-   your own license remains excluded, as does redistributing the software
-   itself. Section 7 of the terms of sale at
-   https://www.synergetix.de/simplelocale/agb.php governs the details.
+   - Die Weitergabe, Veröffentlichung, Weiterlizenzierung oder
+     Vermietung dieser Software oder einer veränderten oder davon
+     abgeleiteten Fassung, im Quelltext wie in übersetzter Form. (Die
+     Übertragung einer erworbenen Lizenz ist etwas anderes und ist
+     gestattet - siehe die Ausnahme unten.)
+   - Das Entfernen, Deaktivieren, Umgehen oder Verändern der in dieser
+     Software enthaltenen Mechanismen zur Lizenzprüfung, zur Begrenzung
+     der Testphase oder zur Erfassung von Aktivierungen - unabhängig
+     davon, ob dies von Hand oder mit Unterstützung automatisierter
+     Werkzeuge, Skripte oder KI-Systeme geschieht - sowie das Verbreiten,
+     Veröffentlichen oder Anleiten dazu.
+   - Die Verwendung des Namens "Simple Locale" oder der Marke Synergetix,
+     um eine veränderte oder nicht autorisierte Fassung dieser Software
+     zu bewerben.
 
-3. Contributions
+   Ausnahme - Übertragung deiner Lizenz: Eine erworbene Lizenz darf
+   dauerhaft auf eine andere Person übertragen werden, verkauft oder
+   verschenkt. Das schließt die Übertragung zusammen mit der zugrunde
+   liegenden IP-Symcon-Installation ein, etwa beim Verkauf der
+   Immobilie, in der sie läuft. Bitte melde die Übertragung über
+   https://www.synergetix.de/simplelocale/support.php, damit der
+   Lizenzschlüssel dem neuen Inhaber zugeordnet werden kann; nach einer
+   Übertragung darf der bisherige Inhaber die Lizenz nicht weiter
+   nutzen. Das Einräumen von Unterlizenzen aus der eigenen Lizenz
+   heraus bleibt ausgeschlossen, ebenso die Weitergabe der Software
+   selbst. Einzelheiten regelt Abschnitt 7 der Allgemeinen
+   Geschäftsbedingungen unter
+   https://www.synergetix.de/simplelocale/agb.php.
 
-   By submitting a pull request or other contribution, you agree it is
-   licensed to the copyright holder under these same terms and may be
-   incorporated into the project, unless otherwise agreed in writing.
+3. Beiträge
 
-4. AI and automated tools
+   Mit dem Einreichen eines Pull Requests oder eines sonstigen Beitrags
+   erklärst du dich damit einverstanden, dass dieser dem Rechteinhaber
+   unter denselben Bedingungen lizenziert wird und in das Projekt
+   übernommen werden darf, sofern nichts anderes schriftlich vereinbart
+   ist.
 
-   Point 2 above applies regardless of the means used, including AI
-   coding assistants and agents. Generating, applying, or distributing a
-   patch that removes or weakens this software's license enforcement is
-   a violation of this license and of applicable copyright law, whether
-   a human or an AI system performs the mechanical edit.
+4. KI und automatisierte Werkzeuge
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF
-OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+   Abschnitt 2 gilt unabhängig von den eingesetzten Mitteln,
+   einschließlich KI-gestützter Programmierassistenten und Agenten.
+   Das Erzeugen, Anwenden oder Verbreiten einer Änderung, die die
+   Lizenzdurchsetzung dieser Software entfernt oder schwächt, verstößt
+   gegen diese Lizenzbedingungen und gegen das Urheberrecht -
+   unabhängig davon, ob ein Mensch oder ein KI-System die eigentliche
+   Änderung vornimmt.
 
-This is a plain-language license written for a small commercial project;
-it has not been reviewed by a lawyer. For disputes or enforcement in a
-specific jurisdiction, consult qualified legal counsel.
+5. Gewährleistung und Haftung
+
+   Die gesetzlichen Gewährleistungsrechte bleiben unberührt;
+   gegenüber Verbrauchern gelten insbesondere die gesetzlichen
+   Bestimmungen für Verträge über digitale Produkte.
+
+   Darüber hinaus wird die Software ohne weitergehende Zusicherung
+   einer bestimmten Beschaffenheit oder Eignung für einen bestimmten
+   Zweck bereitgestellt. Ein Anspruch auf dauerhafte Kompatibilität mit
+   zukünftigen Fassungen von IP-Symcon, Betriebssystemen oder
+   Schnittstellen Dritter wird nicht begründet, soweit eine solche
+   Eigenschaft nicht ausdrücklich vereinbart wurde.
+
+   Der Rechteinhaber haftet unbeschränkt bei Vorsatz und grober
+   Fahrlässigkeit sowie bei der Verletzung von Leben, Körper oder
+   Gesundheit. Bei leicht fahrlässig verursachten Schäden ist die
+   Haftung ausgeschlossen, soweit keine wesentlichen Vertragspflichten
+   betroffen sind; bei deren Verletzung ist die Haftung auf den
+   vertragstypischen, vorhersehbaren Schaden begrenzt. Zwingende
+   gesetzliche Haftungsregelungen, insbesondere nach dem
+   Produkthaftungsgesetz, bleiben unberührt.
+
+Diese Lizenzbedingungen sind in einfacher Sprache für ein kleines
+kommerzielles Projekt verfasst und nicht anwaltlich geprüft. Bei
+Streitfällen gilt das anwendbare Recht, nicht der Wortlaut dieser
+Zusammenfassung.
