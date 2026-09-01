@@ -21,9 +21,10 @@ open-source software, and this is not an open-source license.
 2. NOT permitted without prior written permission from the copyright
    holder
 
-   - Redistributing, publishing, sublicensing, renting, or selling this
-     software or any modified or derivative version of it, in source or
-     compiled form.
+   - Redistributing, publishing, sublicensing, or renting this software
+     or any modified or derivative version of it, in source or compiled
+     form. (Transferring a purchased license is a separate matter and is
+     permitted - see the exception below.)
    - Removing, disabling, bypassing, patching, or otherwise
      circumventing the license verification, trial-limitation, or
      activation-tracking mechanisms contained in this software - whether
@@ -33,12 +34,17 @@ open-source software, and this is not an open-source license.
    - Using the name "Simple Locale" or Synergetix's branding to market a
      modified or unauthorized version of this software.
 
-   Exception: transferring a license together with a genuine change of
-   ownership of the underlying IP-Symcon installation (for example, when
-   selling the property it runs on) is not considered prohibited resale.
-   Please register such a transfer via
+   Exception - transferring your license: a purchased license may be
+   transferred permanently to another person, whether sold or given away.
+   This includes transferring it together with the underlying IP-Symcon
+   installation, for example when selling the property it runs on.
+   Please register the transfer via
    https://www.synergetix.de/simplelocale/support.php so the license key
-   can be properly reassigned to the new owner.
+   can be reassigned to the new holder; after a transfer the previous
+   holder may no longer use the license. Granting sub-licenses out of
+   your own license remains excluded, as does redistributing the software
+   itself. Section 7 of the terms of sale at
+   https://www.synergetix.de/simplelocale/agb.php governs the details.
 
 3. Contributions
 
