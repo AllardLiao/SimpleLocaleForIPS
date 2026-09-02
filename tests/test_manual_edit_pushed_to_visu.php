@@ -34,7 +34,7 @@ function computeActiveLanguageContentFingerprintReplica(array $rowsByProperty, a
     $parts = [];
     foreach ($fieldGroupsByProperty as $property => $fieldGroups) {
         foreach ($rowsByProperty[$property] ?? [] as $row) {
-            $rowSourceLanguage = $row['Quellsprache'] ?? $instanceSourceLanguage;
+            $rowSourceLanguage = $row['Source language'] ?? $instanceSourceLanguage;
             foreach ($fieldGroups as $group) {
                 $parts[] = resolveRowValueReplica($row, $currentLanguage, $group['prefix'] . $currentLanguage, $rowSourceLanguage, $group['raw']);
             }
@@ -54,10 +54,10 @@ $fieldGroups = ['ObjectTexts' => [['raw' => 'ORIGINAL_IMPORT_Text', 'prefix' => 
 // Test 1: THE REPORTED CASE - a manually corrected translation cell (active
 // language unchanged, row source language unchanged) must still trigger
 // ApplyLanguage() via the new content fingerprint, not stay silently stuck.
-$rowsBefore = ['ObjectTexts' => [['ORIGINAL_IMPORT_Text' => 'Guten Tag', 'Quellsprache' => 'de', 'Text_es' => 'Buenos dias (wrong typo)']]];
+$rowsBefore = ['ObjectTexts' => [['ORIGINAL_IMPORT_Text' => 'Guten Tag', 'Source language' => 'de', 'Text_es' => 'Buenos dias (wrong typo)']]];
 $fingerprintBefore = computeActiveLanguageContentFingerprintReplica($rowsBefore, $fieldGroups, 'es', 'de');
 
-$rowsAfterManualFix = ['ObjectTexts' => [['ORIGINAL_IMPORT_Text' => 'Guten Tag', 'Quellsprache' => 'de', 'Text_es' => 'Buenos dias']]];
+$rowsAfterManualFix = ['ObjectTexts' => [['ORIGINAL_IMPORT_Text' => 'Guten Tag', 'Source language' => 'de', 'Text_es' => 'Buenos dias']]];
 $fingerprintAfter = computeActiveLanguageContentFingerprintReplica($rowsAfterManualFix, $fieldGroups, 'es', 'de');
 
 $shouldApply = shouldApplyLanguageReplica(false, $fingerprintAfter !== $fingerprintBefore, 'es', 'es');
@@ -67,16 +67,16 @@ echo "Test 1 (manually correcting the currently active language's cell triggers 
 // Test 2: editing a DIFFERENT language's cell (not the currently active one)
 // must NOT spuriously trigger ApplyLanguage() - no visible effect for the
 // current guest, no need to re-push.
-$rowsBeforeDe = ['ObjectTexts' => [['ORIGINAL_IMPORT_Text' => 'Guten Tag', 'Quellsprache' => 'de', 'Text_es' => 'Buenos dias', 'Text_en' => 'Good day (typo)']]];
+$rowsBeforeDe = ['ObjectTexts' => [['ORIGINAL_IMPORT_Text' => 'Guten Tag', 'Source language' => 'de', 'Text_es' => 'Buenos dias', 'Text_en' => 'Good day (typo)']]];
 $fingerprintBeforeEs = computeActiveLanguageContentFingerprintReplica($rowsBeforeDe, $fieldGroups, 'es', 'de');
-$rowsAfterEnEdit = ['ObjectTexts' => [['ORIGINAL_IMPORT_Text' => 'Guten Tag', 'Quellsprache' => 'de', 'Text_es' => 'Buenos dias', 'Text_en' => 'Good day']]];
+$rowsAfterEnEdit = ['ObjectTexts' => [['ORIGINAL_IMPORT_Text' => 'Guten Tag', 'Source language' => 'de', 'Text_es' => 'Buenos dias', 'Text_en' => 'Good day']]];
 $fingerprintAfterEsUnaffected = computeActiveLanguageContentFingerprintReplica($rowsAfterEnEdit, $fieldGroups, 'es', 'de');
 assert($fingerprintBeforeEs === $fingerprintAfterEsUnaffected, 'Editing a cell for a DIFFERENT (currently inactive) language must not change the active-language fingerprint');
 echo "Test 2 (editing an inactive language's cell does not spuriously trigger a re-push) OK\n";
 
 // Test 3: no content change at all - must NOT trigger ApplyLanguage() via the
 // new condition (still respects the existing two conditions independently).
-$rowsUnchanged = ['ObjectTexts' => [['ORIGINAL_IMPORT_Text' => 'Guten Tag', 'Quellsprache' => 'de', 'Text_es' => 'Buenos dias']]];
+$rowsUnchanged = ['ObjectTexts' => [['ORIGINAL_IMPORT_Text' => 'Guten Tag', 'Source language' => 'de', 'Text_es' => 'Buenos dias']]];
 $fp1 = computeActiveLanguageContentFingerprintReplica($rowsUnchanged, $fieldGroups, 'es', 'de');
 $fp2 = computeActiveLanguageContentFingerprintReplica($rowsUnchanged, $fieldGroups, 'es', 'de');
 $shouldApplyUnchanged = shouldApplyLanguageReplica(false, $fp2 !== $fp1, 'es', 'es');

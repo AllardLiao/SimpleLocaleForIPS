@@ -63,8 +63,8 @@ function computeCheckProviderUpdates(array $results): array
         }
         $updates["ProviderCheck{$prefix}IconLabel.caption"] = $result['succeeded'] ? '✅' : '⚠️';
         $updates["ProviderCheck{$prefix}StatusLabel.caption"] = $result['succeeded']
-            ? 'erfolgreich'
-            : 'fehlgeschlagen - siehe Meldungen-Log für Details';
+            ? 'successful'
+            : 'failed - see the message log for details';
         $updates["ProviderCheck{$prefix}DetailLabel.caption"] = $result['succeeded'] ? ' ("' . $result['translation'] . '")' : '';
         $updates["ProviderCheck{$prefix}PauseClearedLabel.visible"] = $result['succeeded'] && $result['wasPaused'];
     }
@@ -90,7 +90,7 @@ echo "Test 5 (an unchecked provider is explicitly hidden every run, never left s
 // Test 6: the status caption is always ONE of exactly two complete,
 // pre-registered German strings (never composed with the icon or a name) -
 // this is what makes it safely per-viewer translatable.
-assert($updates['ProviderCheckGoogleStatusLabel.caption'] === 'erfolgreich', 'A successful check must use the exact, unmodified registered "erfolgreich" string');
+assert($updates['ProviderCheckGoogleStatusLabel.caption'] === 'successful', 'A successful check must use the exact, unmodified registered "erfolgreich" string');
 assert($updates['ProviderCheckGooglePauseClearedLabel.visible'] === true, 'A provider that succeeded AND was previously paused must show the "pause cleared" label');
 assert($updates['ProviderCheckFreePauseClearedLabel.visible'] === false, 'A provider that succeeded but was NOT previously paused must not show the "pause cleared" label');
 echo "Test 6 (status captions are exact pre-registered strings; pause-cleared label only shows when actually relevant) OK\n";
@@ -100,7 +100,7 @@ echo "Test 6 (status captions are exact pre-registered strings; pause-cleared la
 // string, not composed with anything else.
 $failedResults = [['provider' => 'free', 'succeeded' => false, 'wasPaused' => false, 'translation' => null]];
 $failedUpdates = computeCheckProviderUpdates($failedResults);
-assert($failedUpdates['ProviderCheckFreeStatusLabel.caption'] === 'fehlgeschlagen - siehe Meldungen-Log für Details', 'A failed check must use the exact, unmodified registered failure string');
+assert($failedUpdates['ProviderCheckFreeStatusLabel.caption'] === 'failed - see the message log for details', 'A failed check must use the exact, unmodified registered failure string');
 assert($failedUpdates['ProviderCheckFreeDetailLabel.caption'] === '', 'A failed check must have an empty detail label - no translation to preview');
 echo "Test 7 (a failed check shows the exact failure string with no detail preview) OK\n";
 

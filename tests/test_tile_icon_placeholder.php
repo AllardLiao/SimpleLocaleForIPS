@@ -4,7 +4,7 @@ declare(strict_types=1);
 // ich das Icon in ein eigenes Template eingebunden?").
 //
 // Antwort war: gar nicht. Das Symbol wurde ausschliesslich INNERHALB der
-// generierten Sprachauswahl gebaut (<span class="ipssl-globe">…). Wer eine
+// generierten Sprachauswahl gebaut (<span class="sloc-globe">…). Wer eine
 // eigene Sprachauswahl hinterlegte, ersetzte damit den ganzen Block und verlor
 // das Symbol ersatzlos - es gab keinen Weg, es zurueckzuholen.
 //
@@ -18,7 +18,7 @@ declare(strict_types=1);
 // Repliziert ApplyTilePlaceholders() - nur die Reihenfolge und die Ersetzungen.
 function applyReplica(string $html, string $selectHtml, string $iconHtml): string
 {
-    $html = str_replace('<!--WRAPPER_ID-->', 'ipssl-select-wrapper-42', $html);
+    $html = str_replace('<!--WRAPPER_ID-->', 'sloc-select-wrapper-42', $html);
     $html = str_replace('<!--LANGUAGE_SELECT-->', $selectHtml, $html);
 
     return str_replace('<!--TILE_ICON-->', $iconHtml, $html);
@@ -28,7 +28,7 @@ function applyReplica(string $html, string $selectHtml, string $iconHtml): strin
 function iconReplica(bool $showIcon): string
 {
     return $showIcon
-        ? '<img alt="" class="ipssl-tile-icon" style="max-width:100%;max-height:100%;display:block;" src="data:image/png;base64,AAA">'
+        ? '<img alt="" class="sloc-tile-icon" style="max-width:100%;max-height:100%;display:block;" src="data:image/png;base64,AAA">'
         : '';
 }
 
@@ -36,7 +36,7 @@ function iconReplica(bool $showIcon): string
 // kann das Symbol jetzt setzen, wohin es will.
 $template = '<div class="kopf"><!--TILE_ICON--></div><div class="fuss"><!--LANGUAGE_SELECT--></div>';
 $out = applyReplica($template, '<select id="eigene"></select>', iconReplica(true));
-assert(strpos($out, 'ipssl-tile-icon') !== false, 'DER FIX: das Symbol muss an der Stelle des Platzhalters landen');
+assert(strpos($out, 'sloc-tile-icon') !== false, 'DER FIX: das Symbol muss an der Stelle des Platzhalters landen');
 assert(strpos($out, 'eigene') !== false, 'die eigene Sprachauswahl bleibt unangetastet');
 assert(strpos($out, '<!--TILE_ICON-->') === false, 'der Platzhalter selbst darf nicht stehenbleiben');
 echo "Test 1 (das Symbol landet an der Stelle des Platzhalters) OK\n";
@@ -44,7 +44,7 @@ echo "Test 1 (das Symbol landet an der Stelle des Platzhalters) OK\n";
 // Test 2: die Checkbox "Symbol in der Kachel anzeigen" gilt auch hier - sonst
 // haette der Platzhalter sie stillschweigend uebergangen.
 $aus = applyReplica($template, '', iconReplica(false));
-assert(strpos($aus, 'ipssl-tile-icon') === false, 'bei abgeschalteter Checkbox darf kein Symbol erscheinen');
+assert(strpos($aus, 'sloc-tile-icon') === false, 'bei abgeschalteter Checkbox darf kein Symbol erscheinen');
 assert(strpos($aus, '<!--TILE_ICON-->') === false, 'der Platzhalter muss trotzdem verschwinden, nicht sichtbar bleiben');
 echo "Test 2 (die Checkbox wird respektiert, der Platzhalter verschwindet trotzdem) OK\n";
 
@@ -69,7 +69,7 @@ echo "Test 4 (bestehende Templates bleiben unverändert) OK\n";
 
 // Test 5: mehrfaches Vorkommen wird ersetzt - str_replace, kein einmaliges.
 $doppelt = applyReplica('<!--TILE_ICON--><!--TILE_ICON-->', '', iconReplica(true));
-assert(substr_count($doppelt, 'ipssl-tile-icon') === 2, 'jeder Platzhalter muss ersetzt werden, nicht nur der erste');
+assert(substr_count($doppelt, 'sloc-tile-icon') === 2, 'jeder Platzhalter muss ersetzt werden, nicht nur der erste');
 echo "Test 5 (mehrfaches Vorkommen wird ersetzt) OK\n";
 
 // Test 6: Symmetrie-Check gegen die reale Umsetzung.
@@ -83,7 +83,7 @@ $resolveStart = strpos($moduleSource, 'private function ResolveTileIconHtml');
 $resolve = substr($moduleSource, $resolveStart, 700);
 assert(strpos($resolve, 'ReadPropertyBoolean(self::propertyShowGlobeIcon)') !== false,
     'die Checkbox muss beruecksichtigt werden');
-assert(strpos($resolve, "'max-width:100%;max-height:100%;display:block;', 'ipssl-tile-icon'") !== false,
+assert(strpos($resolve, "'max-width:100%;max-height:100%;display:block;', 'sloc-tile-icon'") !== false,
     'die Platzhalter-Fassung braucht die nicht-kollabierende Angabe und ihre Klasse');
 
 // Die eingebaute Kachel behaelt ihre bisherige Angabe - sonst veraendert sich

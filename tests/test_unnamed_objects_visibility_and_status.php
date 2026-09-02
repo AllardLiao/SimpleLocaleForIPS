@@ -84,13 +84,13 @@ echo "Test 3 (der normale Rescan-Durchlauf ist völlig unberührt, kein zusätzl
 // eine Zielsprache hinzugefuegt) darf den Status NICHT auf "Aktiv" zuruecksetzen,
 // solange die unbenannten Objekte noch anstehen.
 assert(applyChangesStatusReplica(false, false, true, false) === STATUS_UNNAMED_OBJECTS, 'DER BUG: ApplyChanges() darf den Status nicht auf "Aktiv" zuruecksetzen, solange unbenannte Objekte anstehen - Formular (Liste sichtbar) und Statuszeile widersprachen sich sonst offen');
-echo "Test 4 (ein späteres 'Übernehmen' zeigt weiterhin korrekt STATUS_UNNAMED_OBJECTS statt fälschlich 'Aktiv') OK\n";
+echo "Test 4 (ein späteres 'Übernehmen' zeigt weiterhin korrekt STATUS_UNNAMED_OBJECTS statt fälschlich 'Active') OK\n";
 
 // Test 5: sind die unbenannten Objekte abgearbeitet (naechster erfolgreicher Rescan
 // leert das Attribut), meldet der Status wieder ganz normal "Aktiv" - der neue
 // Zweig darf sich nicht dauerhaft festbeissen.
 assert(applyChangesStatusReplica(false, false, false, false) === STATUS_ACTIVE, 'nach einem erfolgreichen Rescan (Attribut geleert) muss der Status wieder normal "Aktiv" melden');
-echo "Test 5 (nach behobenen Benennungen meldet der Status wieder normal 'Aktiv') OK\n";
+echo "Test 5 (nach behobenen Benennungen meldet der Status wieder normal 'Active') OK\n";
 
 // Test 6: die Rangfolge bleibt korrekt - fundamentalere Blocker (fehlender
 // Visualisierungs-Root, abgelaufene Testphase) gewinnen weiterhin gegen die
@@ -103,7 +103,7 @@ echo "Test 6 (die Status-Rangfolge bleibt korrekt: Root/Testphase gewinnen, Anbi
 // Test 7: Symmetrie-Check gegen die reale module.php.
 $moduleSource = file_get_contents(dirname(__DIR__) . '/SimpleLocale/module.php');
 assert(strpos($moduleSource, 'private function ScanRootTree(bool $IsInteractive = false): void') !== false, 'ScanRootTree() muss den neuen $IsInteractive-Parameter tragen');
-assert(strpos($moduleSource, '$this->ScanRootTree(true);') !== false, 'Rescan() (manuell/IPSSL_Rescan) muss ScanRootTree(true) aufrufen');
+assert(strpos($moduleSource, '$this->ScanRootTree(true);') !== false, 'Rescan() (manuell/SLOC_Rescan) muss ScanRootTree(true) aufrufen');
 assert(preg_match('/public function AutoRescan\(\): void\s*\{\s*\$this->ScanRootTree\(\);/', $moduleSource) === 1, 'AutoRescan() muss ScanRootTree() OHNE das Interaktiv-Flag aufrufen - der Hintergrund-Timer darf nie neu laden');
 assert(strpos($moduleSource, 'private function HasPendingUnnamedObjects(): bool') !== false, 'der gemeinsame Helfer HasPendingUnnamedObjects() muss existieren');
 assert(strpos($moduleSource, '} elseif ($this->HasPendingUnnamedObjects()) {') !== false, 'ApplyChanges() muss die anstehenden unbenannten Objekte in seiner Status-Kaskade beruecksichtigen');

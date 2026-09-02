@@ -52,7 +52,7 @@ echo "Test 1 (beide Kataloge werden aus dem Quelltext gelesen) OK\n";
 $fehlend = [];
 foreach ($locale['translations'] as $sprache => $eintraege) {
     foreach ($alleLabels as $label) {
-        $kombination = 'Automatisch (' . $label . ')';
+        $kombination = 'Automatic (' . $label . ')';
         if (!isset($eintraege[$kombination])) {
             $fehlend[] = "$sprache: \"$kombination\"";
         }
@@ -89,9 +89,9 @@ $body = implode("\n", array_filter(
     static fn (string $zeile): bool => strpos(ltrim($zeile), '//') !== 0
 ));
 
-assert(strpos($body, "\$this->Translate('Automatisch')") === false,
+assert(strpos($body, "\$this->Translate('Automatic')") === false,
     'DER BUG: "Automatisch" darf nicht mehr einzeln uebersetzt und danach zusammengesetzt werden');
-assert(strpos($body, "'caption' => 'Automatisch (' . \$Catalog[\$automaticId]['label'] . ')'") !== false,
+assert(strpos($body, "'caption' => 'Automatic (' . \$Catalog[\$automaticId]['label'] . ')'") !== false,
     'DER FIX: die Beschriftung muss als fester, roher deutscher Gesamttext rausgehen');
 assert(strpos($body, "'caption' => \$entry['label']") !== false,
     'auch die einzelnen Eintraege gehen roh raus, damit die Konsole sie matchen kann');
@@ -105,7 +105,7 @@ echo "Test 4 (die reale Umsetzung liefert rohe, vorregistrierte Gesamttexte) OK\
 $erfundenesLabel = 'Weihnachten 2099';
 $deckung = 0;
 foreach ($locale['translations'] as $eintraege) {
-    if (isset($eintraege['Automatisch (' . $erfundenesLabel . ')'])) {
+    if (isset($eintraege['Automatic (' . $erfundenesLabel . ')'])) {
         $deckung++;
     }
 }

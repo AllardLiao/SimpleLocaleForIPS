@@ -116,7 +116,7 @@ $moduleSource = file_get_contents(dirname(__DIR__) . '/SimpleLocale/module.php')
 $funcStart = strpos($moduleSource, 'private function TranslateBatchUncached(');
 $funcEnd = strpos($moduleSource, "\n    }\n", strpos($moduleSource, 'return $result;', $funcStart));
 $funcBody = substr($moduleSource, $funcStart, $funcEnd - $funcStart);
-assert(strpos($funcBody, '$this->FindManualTranslation($manualTranslationsForNodes, $Source, $Target, $node)') !== false, 'TranslateBatchUncached() muss FindManualTranslation() auf Knotenebene aufrufen');
+assert(strpos($funcBody, '$this->FindManualTranslation($manualTranslationsForNodes, $glossaryRowsForNodes, $Source, $Target, $node)') !== false, 'TranslateBatchUncached() muss FindManualTranslation() auf Knotenebene aufrufen');
 assert(strpos($funcBody, '$this->GetCachedTranslation($Source, $Target, $node') !== false, 'TranslateBatchUncached() muss GetCachedTranslation() auf Knotenebene aufrufen');
 assert(strpos($funcBody, '$this->StoreCachedTranslationsBatch($Source, $Target, $freshEntriesForCache') !== false, 'TranslateBatchUncached() muss frisch uebersetzte Knoten gesammelt ueber StoreCachedTranslationsBatch() in den Cache schreiben');
 echo "Test 3 (Cache und Eigene Übersetzungstabelle sind tatsaechlich auf Knotenebene in der realen TranslateBatchUncached() verdrahtet) OK\n";

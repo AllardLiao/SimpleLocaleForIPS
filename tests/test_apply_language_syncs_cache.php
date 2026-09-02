@@ -58,7 +58,7 @@ function syncCurrentLanguageIntoCacheReplica(array $fieldGroupsByProperty, array
     return $changed;
 }
 
-$getRowSourceLanguage = static fn (array $row, string $fallback): string => ($row['Quellsprache'] ?? '') !== '' ? $row['Quellsprache'] : $fallback;
+$getRowSourceLanguage = static fn (array $row, string $fallback): string => ($row['Source language'] ?? '') !== '' ? $row['Source language'] : $fallback;
 $buildKey = static fn (string $s, string $t, string $text): string => "v1|$s|$t|" . hash('sha256', $text);
 $fieldGroups = ['ObjectAutomations' => [['raw' => 'ORIGINAL_IMPORT', 'prefix' => '']]];
 
@@ -67,7 +67,7 @@ $fieldGroups = ['ObjectAutomations' => [['raw' => 'ORIGINAL_IMPORT', 'prefix' =>
 // Cache-Antwort für denselben Rohtext überschreiben.
 $cache = [$buildKey('de', 'es', 'Gehen') => ['v' => 'Andar', 'h' => 3, 't' => 1000]];
 $rows = ['ObjectAutomations' => [
-    ['AutomationID' => 29653, 'ORIGINAL_IMPORT' => 'Gehen', 'Quellsprache' => 'de', 'es' => 'Salir'],
+    ['Automation ID' => 29653, 'ORIGINAL_IMPORT' => 'Gehen', 'Source language' => 'de', 'es' => 'Salir'],
 ]];
 $changed = syncCurrentLanguageIntoCacheReplica($fieldGroups, $rows, $cache, 'es', 'de', $getRowSourceLanguage, $buildKey);
 assert($changed === true, 'eine abweichende manuelle Korrektur muss als Aenderung erkannt werden');
@@ -91,7 +91,7 @@ echo "Test 3 (ein bisher ungecachter Rohtext wird beim Sync neu ergänzt) OK\n";
 // Test 4: die Quellsprache selbst wird niemals gesynct (Language === rowSourceLanguage).
 $cache4 = [];
 $rowsSameLang = ['ObjectAutomations' => [
-    ['AutomationID' => 1, 'ORIGINAL_IMPORT' => 'Gehen', 'Quellsprache' => 'de', 'de' => 'Gehen'],
+    ['Automation ID' => 1, 'ORIGINAL_IMPORT' => 'Gehen', 'Source language' => 'de', 'de' => 'Gehen'],
 ]];
 $changed4 = syncCurrentLanguageIntoCacheReplica($fieldGroups, $rowsSameLang, $cache4, 'de', 'de', $getRowSourceLanguage, $buildKey);
 assert($changed4 === false, 'die Quellsprache selbst darf nie in den Cache gesynct werden - keine echte Uebersetzung');
@@ -100,7 +100,7 @@ echo "Test 4 (die Quellsprache selbst wird nie gesynct, keine unnötigen/falsche
 // Test 5: eine leere Zielzelle (noch nicht übersetzt) wird nicht gesynct.
 $cache5 = [];
 $rowsEmpty = ['ObjectAutomations' => [
-    ['AutomationID' => 1, 'ORIGINAL_IMPORT' => 'Gehen', 'Quellsprache' => 'de', 'es' => ''],
+    ['Automation ID' => 1, 'ORIGINAL_IMPORT' => 'Gehen', 'Source language' => 'de', 'es' => ''],
 ]];
 $changed5 = syncCurrentLanguageIntoCacheReplica($fieldGroups, $rowsEmpty, $cache5, 'es', 'de', $getRowSourceLanguage, $buildKey);
 assert($changed5 === false, 'eine leere Zielzelle darf keinen (falschen) Cache-Eintrag erzeugen');
@@ -116,7 +116,7 @@ echo "Test 5 (eine noch leere Zielzelle wird nicht gesynct) OK\n";
 // getrackte Zeile einen rein numerischen Original-Import-Wert hatte.
 $cache6 = [];
 $rowsNumeric = ['ObjectAutomations' => [
-    ['AutomationID' => 1, 'ORIGINAL_IMPORT' => '15821408', 'Quellsprache' => 'de', 'es' => '15821408'],
+    ['Automation ID' => 1, 'ORIGINAL_IMPORT' => '15821408', 'Source language' => 'de', 'es' => '15821408'],
 ]];
 $changed6 = syncCurrentLanguageIntoCacheReplica($fieldGroups, $rowsNumeric, $cache6, 'es', 'de', $getRowSourceLanguage, $buildKey);
 assert($changed6 === true, 'DER BUG: ein rein numerischer Rohtext darf keinen TypeError auslösen, sondern muss normal gesynct werden');

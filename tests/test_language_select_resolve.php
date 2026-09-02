@@ -14,7 +14,7 @@ function assertTrue(bool $cond, string $msg): void
     echo "OK: $msg\n";
 }
 
-const BUILTIN_SELECT_HTML = '<div class="ipssl-select-row"><select>...</select></div>';
+const BUILTIN_SELECT_HTML = '<div class="sloc-select-row"><select>...</select></div>';
 const DEFAULT_FLAGS_HTML = '<div><span onclick="requestAction(\'Language\', \'ORIGINAL_IMPORT\');">DE</span><span onclick="requestAction(\'Language\', \'en\');">EN</span></div>';
 
 function resolveLanguageSelectHtml(bool $useCustomTile, bool $hasFeature, string $customLanguageSelectHtml): string

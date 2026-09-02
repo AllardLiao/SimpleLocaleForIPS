@@ -1,4 +1,4 @@
-# Simple Locale for IPS (IPSSL)
+# Simple Locale (SLOC)
 
 Mehrsprachigkeit für einzelne Kachel-Visualisierungen in [IP-Symcon](https://www.symcon.de) –
 z. B. eine separate "Gäste"-Oberfläche (Ferienwohnung, Airbnb, Showroom), während andere
@@ -15,7 +15,7 @@ persistent im Modul-Formular gecacht werden:
 | Textart | Quelle | Mechanismus |
 |---|---|---|
 | **Objektnamen** (Kategorie-/Variablen-/Kachelnamen) | Namen aller Objekte im Root-Baum | Wird bei Sprachwechsel per `IPS_SetName` live auf den Objektbaum angewendet |
-| **Eigene Texte** (Popup-/Hinweistexte) | Wert aller String-Variablen im Root-Baum (z. B. eine Variable "Hinweis") | Wird bei Sprachwechsel per `SetValueString` live geschrieben, alternativ per `IPSSL_TranslateText()` abfragbar |
+| **Eigene Texte** (Popup-/Hinweistexte) | Wert aller String-Variablen im Root-Baum (z. B. eine Variable "Hinweis") | Wird bei Sprachwechsel per `SetValueString` live geschrieben, alternativ per `SLOC_TranslateText()` abfragbar |
 
 Übersetzungen sind im Modul-Formular direkt einsehbar und korrigierbar (Google übersetzt
 nicht immer perfekt); ein Rescan (manuell oder per Timer) übersetzt nur neue oder noch

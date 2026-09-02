@@ -27,11 +27,11 @@ $form = json_decode($formJson, true);
 assert($form !== null, 'form.json must parse as valid JSON');
 
 $requiredTranslatableCaptions = [
-    'Seit Inbetriebnahme am', 'Tag(e).', 'Stündlich:', 'Insgesamt:',
-    'Anfrage(n),', 'Zeichen.', 'Durch den Cache eingespart:',
-    'Kostenfreier Anbieter (MyMemory)', 'pausiert bis',
+    'In operation since', 'day(s).', 'Hourly:', 'Total:',
+    'request(s),', 'character(s).', 'Saved by the cache:',
+    'Free provider (MyMemory)', 'paused until',
 ];
-foreach (['en', 'es', 'it', 'fr'] as $lang) {
+foreach (['de', 'es', 'it', 'fr'] as $lang) {
     $block = $locale['translations'][$lang];
     foreach ($requiredTranslatableCaptions as $caption) {
         assert(array_key_exists($caption, $block), "Language '$lang' must have a registered translation for the exact caption '$caption' used in form.json");

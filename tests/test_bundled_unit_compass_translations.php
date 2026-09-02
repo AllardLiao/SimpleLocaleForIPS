@@ -38,7 +38,7 @@ function mergeBundledManualTranslationsReplica(
 
     $existingKeys = [];
     foreach ($existingRows as $row) {
-        if (($row['Quellsprache'] ?? '') === 'de') {
+        if (($row['Source language'] ?? '') === 'de') {
             $existingKeys[(string) ($row['ORIGINAL_IMPORT'] ?? '')] = true;
         }
     }
@@ -49,7 +49,7 @@ function mergeBundledManualTranslationsReplica(
         if (isset($existingKeys[$unit]) || isset($alreadySeeded[$unit])) {
             continue;
         }
-        $row = ['Quellsprache' => 'de', 'ORIGINAL_IMPORT' => $unit];
+        $row = ['Source language' => 'de', 'ORIGINAL_IMPORT' => $unit];
         foreach ($bundledLanguages as $language) {
             $row[$language] = $unitOverrides[$unit][$language] ?? $unit;
         }
@@ -61,7 +61,7 @@ function mergeBundledManualTranslationsReplica(
         if (isset($existingKeys[$germanCompass]) || isset($alreadySeeded[$germanCompass])) {
             continue;
         }
-        $row = ['Quellsprache' => 'de', 'ORIGINAL_IMPORT' => $germanCompass];
+        $row = ['Source language' => 'de', 'ORIGINAL_IMPORT' => $germanCompass];
         foreach ($translationsByLanguage as $language => $translation) {
             $row[$language] = $translation;
         }
@@ -120,7 +120,7 @@ echo "Test 3 (a deliberately deleted bundled row never reappears on a later Resc
 
 // Test 4: an existing row already covering the same German source text (whether
 // user-added or from a prior seed) is never duplicated.
-$existingRow = [['Quellsprache' => 'de', 'ORIGINAL_IMPORT' => 'kg', 'en' => 'kg-custom-value']];
+$existingRow = [['Source language' => 'de', 'ORIGINAL_IMPORT' => 'kg', 'en' => 'kg-custom-value']];
 $noDupe = mergeBundledManualTranslationsReplica($existingRow, [], true, $unitBundle, $compassBundle, $bundledLanguages, $unitOverrides);
 $kgRows = array_filter($noDupe['rows'], fn ($r) => $r['ORIGINAL_IMPORT'] === 'kg');
 assert(count($kgRows) === 1, 'an existing row for the same German source text must never be duplicated');
@@ -139,11 +139,11 @@ $moduleSource = file_get_contents(dirname(__DIR__) . '/SimpleLocale/module.php')
 $constantsSource = file_get_contents(dirname(__DIR__) . '/libs/SimpleLocaleConstants.php');
 assert(strpos($moduleSource, 'private const UNIT_BUNDLED_TRANSLATIONS') !== false, 'the universal units list must exist as a class constant');
 assert(strpos($moduleSource, 'private const COMPASS_BUNDLED_TRANSLATIONS') !== false, 'the per-language compass table must exist as a class constant');
-assert(strpos($moduleSource, 'private function MergeBundledManualTranslations(') !== false, 'the merge function must exist');
-assert(strpos($moduleSource, '$this->MergeBundledManualTranslations($this->DecodeRows(self::propertyManualTranslations))') !== false, 'MergeBundledManualTranslations() must actually be wired into ScanRootTree() against propertyManualTranslations');
-assert(strpos($moduleSource, 'IPS_SetProperty($this->InstanceID, self::propertyManualTranslations, json_encode(array_values($manualTranslations)));') !== false, 'the merged manual translations must actually be persisted back via IPS_SetProperty');
-assert(strpos($constantsSource, "attributeSeededManualTranslationKeys = 'SeededManualTranslationKeys'") !== false, 'the seeded-keys tracking attribute must be declared');
-assert(strpos($moduleSource, 'RegisterAttributeString(self::attributeSeededManualTranslationKeys,') !== false, 'the seeded-keys tracking attribute must actually be registered in Create()');
+assert(strpos($moduleSource, 'private function MergeBundledGlossaryRows(') !== false, 'the merge function must exist');
+assert(strpos($moduleSource, '$this->MergeBundledGlossaryRows($this->DecodeRows(self::propertyGlossary))') !== false, 'MergeBundledManualTranslations() must actually be wired into ScanRootTree() against propertyManualTranslations');
+assert(strpos($moduleSource, 'IPS_SetProperty($this->InstanceID, self::propertyGlossary, json_encode(array_values($glossary)));') !== false, 'the merged manual translations must actually be persisted back via IPS_SetProperty');
+assert(strpos($constantsSource, "attributeSeededGlossaryKeys = 'SeededGlossaryKeys'") !== false, 'the seeded-keys tracking attribute must be declared');
+assert(strpos($moduleSource, 'RegisterAttributeString(self::attributeSeededGlossaryKeys,') !== false, 'the seeded-keys tracking attribute must actually be registered in Create()');
 assert(strpos($moduleSource, "!\$this->HasLicenseFeature('manual_translations')") !== false, 'the merge function must gate on the same manual_translations license feature as the rest of the glossary (Light edition keeps using the live API)');
 echo "Test 6 (the real module.php actually defines and wires in the feature: constants, tracking attribute, ScanRootTree persistence, license gating) OK\n";
 
@@ -151,7 +151,15 @@ echo "Test 6 (the real module.php actually defines and wires in the feature: con
 // and apply the confirmed per-language unit overrides (km/h exceptions, Russian
 // unit localization), not just the replica logic in this test.
 assert(strpos($moduleSource, 'private const UNIT_BUNDLED_LANGUAGE_OVERRIDES') !== false, 'the per-language unit override table must exist as a class constant');
-assert(strpos($moduleSource, "self::UNIT_BUNDLED_LANGUAGE_OVERRIDES[\$unit][\$language] ?? \$unit") !== false, 'the unit-seeding loop must actually consult the override table before falling back to the universal pass-through value');
+// Build 196: die Ausnahme gewinnt weiterhin, aber der Rueckfall ist nicht mehr
+// bedingungslos - ein sprachabhaengiges Kuerzel wird nur in den GEPRUEFTEN
+// Sprachen vorbelegt, sonst bliebe eine Vermutung als Vorgabe stehen.
+assert(strpos($moduleSource, "self::UNIT_BUNDLED_LANGUAGE_OVERRIDES[\$unit][\$language] ?? null") !== false,
+    'die Ausnahmetabelle muss weiterhin zuerst greifen');
+assert(strpos($moduleSource, 'private const UNIT_LANGUAGE_DEPENDENT') !== false,
+    'die sprachabhaengigen Kuerzel muessen als eigene Liste benannt sein');
+assert(strpos($moduleSource, 'if ($international || isset($geprueft[$language])) {') !== false,
+    'SI-Symbole ueberall, sprachabhaengige Kuerzel nur in geprueften Sprachen');
 assert(strpos($moduleSource, "'km/h' => ['es' => 'kph', 'nl' => 'km/u', 'tr' => 'km/sa', 'ru' => 'км/ч']") !== false, 'km/h must carry the confirmed es/nl/tr/ru overrides');
 foreach (['V' => 'В', 'W' => 'Вт', 'kg' => 'кг', 'km' => 'км', 'Hz' => 'Гц', 'kWh' => 'кВт·ч'] as $unit => $expectedRussian) {
     $pattern = '/\'' . preg_quote($unit, '/') . '\'\s*=>\s*\[\'ru\'\s*=>\s*\'' . preg_quote($expectedRussian, '/') . '\'\]/u';

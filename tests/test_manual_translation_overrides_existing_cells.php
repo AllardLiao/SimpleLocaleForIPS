@@ -20,7 +20,7 @@ declare(strict_types=1);
 function findManualTranslationReplica(array $rows, string $sourceLanguage, string $targetLanguage, string $text): ?string
 {
     foreach ($rows as $row) {
-        if (($row['Quellsprache'] ?? '') !== $sourceLanguage || ($row['ORIGINAL_IMPORT'] ?? '') !== $text) {
+        if (($row['Source language'] ?? '') !== $sourceLanguage || ($row['ORIGINAL_IMPORT'] ?? '') !== $text) {
             continue;
         }
         $translation = (string) ($row[$targetLanguage] ?? '');
@@ -39,7 +39,7 @@ function applyManualTranslationOverridesReplica(array $rows, array $fieldGroups,
     }
 
     foreach ($rows as $index => $row) {
-        $rowSourceLanguage = $row['Quellsprache'] ?? $sourceLanguage;
+        $rowSourceLanguage = $row['Source language'] ?? $sourceLanguage;
         foreach ($fieldGroups as $group) {
             $sourceText = (string) ($row[$group['raw']] ?? '');
             if ($sourceText === '') {
@@ -60,18 +60,18 @@ function applyManualTranslationOverridesReplica(array $rows, array $fieldGroups,
 }
 
 $fieldGroups = [['raw' => 'ORIGINAL_IMPORT', 'prefix' => '']];
-$manualTranslations = [['Quellsprache' => 'de', 'ORIGINAL_IMPORT' => 'SSW', 'en' => 'SSW', 'es' => 'SSO']];
+$manualTranslations = [['Source language' => 'de', 'ORIGINAL_IMPORT' => 'SSW', 'en' => 'SSW', 'es' => 'SSO']];
 
 // Test 1: THE REPORTED BUG - a row already (wrongly) auto-translated BEFORE the
 // glossary entry existed must now get overridden with the glossary value.
-$rowsAlreadyWrong = [['ORIGINAL_IMPORT' => 'SSW', 'Quellsprache' => 'de', 'en' => 'week of pregnancy']];
+$rowsAlreadyWrong = [['ORIGINAL_IMPORT' => 'SSW', 'Source language' => 'de', 'en' => 'week of pregnancy']];
 $result1 = applyManualTranslationOverridesReplica($rowsAlreadyWrong, $fieldGroups, 'de', ['en'], $manualTranslations, true);
 assert($result1[0]['en'] === 'SSW', 'THE FIX: an already-filled cell with a wrong automatic translation must be overwritten by a matching glossary entry - the whole point of "always takes priority"');
 echo "Test 1 (an already-wrongly-translated cell is corrected by a matching glossary entry) OK\n";
 
 // Test 2: a cell that already happens to match the glossary value is left alone
 // (no pointless rewrite, though the observable outcome is identical either way).
-$rowsAlreadyCorrect = [['ORIGINAL_IMPORT' => 'SSW', 'Quellsprache' => 'de', 'en' => 'SSW']];
+$rowsAlreadyCorrect = [['ORIGINAL_IMPORT' => 'SSW', 'Source language' => 'de', 'en' => 'SSW']];
 $result2 = applyManualTranslationOverridesReplica($rowsAlreadyCorrect, $fieldGroups, 'de', ['en'], $manualTranslations, true);
 assert($result2[0]['en'] === 'SSW', 'A cell already matching the glossary value stays correct (no-op, but still correct)');
 echo "Test 2 (a cell already matching the glossary value remains correct) OK\n";
@@ -79,7 +79,7 @@ echo "Test 2 (a cell already matching the glossary value remains correct) OK\n";
 // Test 3: a row with NO matching glossary entry keeps its existing (right or
 // wrong) content completely untouched - the override is targeted, not a blanket
 // re-translation of everything.
-$rowsUnrelated = [['ORIGINAL_IMPORT' => 'Cover', 'Quellsprache' => 'de', 'en' => 'Cover']];
+$rowsUnrelated = [['ORIGINAL_IMPORT' => 'Cover', 'Source language' => 'de', 'en' => 'Cover']];
 $result3 = applyManualTranslationOverridesReplica($rowsUnrelated, $fieldGroups, 'de', ['en'], $manualTranslations, true);
 assert($result3[0]['en'] === 'Cover', 'A row with no matching glossary entry must be completely untouched by this pass');
 echo "Test 3 (an unrelated row is untouched - the override only targets matching rows) OK\n";
@@ -94,9 +94,9 @@ echo "Test 4 (no override happens without the manual_translations license featur
 // each checked independently against the glossary.
 $fieldGroupsMulti = [['raw' => 'ORIGINAL_IMPORT', 'prefix' => 'Name_'], ['raw' => 'ORIGINAL_IMPORT_Text', 'prefix' => 'Text_']];
 $manualMulti = [
-    ['Quellsprache' => 'de', 'ORIGINAL_IMPORT' => 'SSW', 'en' => 'SSW'],
+    ['Source language' => 'de', 'ORIGINAL_IMPORT' => 'SSW', 'en' => 'SSW'],
 ];
-$rowsMulti = [['ORIGINAL_IMPORT' => 'SSW', 'ORIGINAL_IMPORT_Text' => 'Wetterlage', 'Quellsprache' => 'de', 'Name_en' => 'week of pregnancy', 'Text_en' => 'weather situation']];
+$rowsMulti = [['ORIGINAL_IMPORT' => 'SSW', 'ORIGINAL_IMPORT_Text' => 'Wetterlage', 'Source language' => 'de', 'Name_en' => 'week of pregnancy', 'Text_en' => 'weather situation']];
 $result5 = applyManualTranslationOverridesReplica($rowsMulti, $fieldGroupsMulti, 'de', ['en'], $manualMulti, true);
 assert($result5[0]['Name_en'] === 'SSW', 'The Name field group must be corrected by its matching glossary entry');
 assert($result5[0]['Text_en'] === 'weather situation', 'The Text field group has no matching glossary entry (different source text) and must remain untouched');

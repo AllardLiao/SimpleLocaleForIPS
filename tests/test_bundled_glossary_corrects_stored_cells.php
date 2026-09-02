@@ -19,7 +19,7 @@ const BUNDLED = ['°C' => ['en' => '°C'], 'SSW' => ['en' => 'SSW']];
 function findManual(array $rows, string $quelle, string $ziel, string $text, bool $hatFeature): ?string
 {
     foreach ($rows as $row) {
-        if (($row['Quellsprache'] ?? '') !== $quelle) { continue; }
+        if (($row['Source language'] ?? '') !== $quelle) { continue; }
         if ((string) ($row['ORIGINAL_IMPORT'] ?? '') !== $text) { continue; }
         $t = (string) ($row[$ziel] ?? '');
         if ($t !== '') { return $t; }

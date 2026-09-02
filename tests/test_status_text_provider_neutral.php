@@ -24,14 +24,14 @@ assert($status203 !== null, 'Status 203 muss definiert sein');
 // nennen. Er gilt fuer JEDEN Ausfall der gesamten Kette.
 assert(stripos($status203['caption'], 'Google') === false, 'DER GEMELDETE FALL: der Status darf Google nicht mehr namentlich nennen - er gilt fuer die ganze Anbieterkette');
 assert(stripos($status203['caption'], 'DeepL') === false, 'ebenso wenig DeepL');
-assert(stripos($status203['caption'], 'API-Key') === false, 'und er darf nicht mehr zum Pruefen eines API-Keys auffordern - ohne bezahlten Anbieter gibt es keinen');
+assert(stripos($status203['caption'], 'API key') === false, 'und er darf nicht mehr zum Pruefen eines API-Keys auffordern - ohne bezahlten Anbieter gibt es keinen');
 echo "Test 1 (der Statustext nennt keinen einzelnen Anbieter mehr) OK\n";
 
 // Test 2: er muss trotzdem etwas AUSSAGEN - ein blosses "Fehler" waere
 // wertlos. Der Nutzer soll wissen, dass es an der Erreichbarkeit lag und wo er
 // nachsieht.
 assert(mb_strlen($status203['caption']) > 30, 'der Text muss aussagekraeftig bleiben, nicht nur "Fehler"');
-assert(mb_stripos($status203['caption'], 'Anbieter') !== false, 'er soll benennen, dass es an den Anbietern lag');
+assert(mb_stripos($status203['caption'], 'provider') !== false, 'er soll benennen, dass es an den Anbietern lag');
 echo "Test 2 (der Text bleibt aussagekräftig) OK\n";
 
 // Test 3: der Status wird erst gesetzt, wenn die GANZE Kette gescheitert ist -

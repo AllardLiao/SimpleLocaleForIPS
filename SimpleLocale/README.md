@@ -784,7 +784,7 @@ eigenen iframe und eigene Overlays können dessen Grenzen nicht überschreiten -
 ein Browser-Dialog dagegen schon.
 
 Für eigene HTMLBox-Popups oder Hinweise außerhalb der live umbenannten
-Objekte liefert `IPSSL_TranslateText()` den Text in der aktuell aktiven
+Objekte liefert `SLOC_TranslateText()` den Text in der aktuell aktiven
 Sprache.
 
 **Eigene Sprachauswahl-Kachel (Pro-Feature `custom_tile`):** Es gibt zwei
@@ -892,13 +892,13 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
      zur Orientierung - dieser Block wird automatisch erzeugt, siehe
      `BuildLanguageSelectHtml()`, solange das zweite Feld unten leer bleibt):
      ```html
-     <div class="ipssl-select-row">
-       <span class="ipssl-globe" aria-hidden="true"><img src="data:image/png;base64,..." alt=""></span>
+     <div class="sloc-select-row">
+       <span class="sloc-globe" aria-hidden="true"><img src="data:image/png;base64,..." alt=""></span>
        <select onchange="requestAction('Language', this.value);">
          <option value="de">Deutsch</option>
          <option value="en" selected>English</option>
        </select>
-       <span class="ipssl-info-icon" aria-hidden="true" onclick="alert('...');">ⓘ</span>
+       <span class="sloc-info-icon" aria-hidden="true" onclick="alert('...');">ⓘ</span>
      </div>
      <!-- + roter Testphase-Hinweis, nur solange ungelizenziert und Testphase läuft -->
      ```
@@ -906,7 +906,7 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
      (`libs/assets/module_icon_48.png`), als Base64-Data-URI eingebettet -
      kein öffentlicher Pfad/Webhook nötig. Für eine eigene Kachel kann hier
      stattdessen jedes beliebige eigene Icon/Emoji stehen, die CSS-Klasse
-     `ipssl-globe` (Name aus historischen Gründen unverändert) liefert
+     `sloc-globe` (Name aus historischen Gründen unverändert) liefert
      bereits einen passenden 32×32px-Kreis als Container.
 
      **Das gewählte Symbol einzeln einsetzen: `<!--TILE_ICON-->` (Build 173).**
@@ -918,7 +918,7 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
      Editions-Symbole. Ist die Checkbox "Symbol in der Kachel anzeigen"
      abgeschaltet, bleibt der Platzhalter leer.
 
-     Das eingesetzte `<img>` trägt die Klasse `ipssl-tile-icon` und eine
+     Das eingesetzte `<img>` trägt die Klasse `sloc-tile-icon` und eine
      Größenangabe, die **nicht kollabiert** (`max-width`/`max-height` statt
      `height:100%`): dein Container braucht also keine feste Höhe zu haben.
      Willst du es anders skalieren, sprich die Klasse in deinem CSS an.
@@ -932,7 +932,7 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
 
      | Platzhalter | liefert |
      |---|---|
-     | `<!--AVAILABLE_LANGUAGES-->` | JSON-Liste aller konfigurierten Sprachen: `[{"code":"de","name":"Deutsch","current":true}, …]` - dieselbe Struktur wie `IPSSL_GetAvailableLanguages()` |
+     | `<!--AVAILABLE_LANGUAGES-->` | JSON-Liste aller konfigurierten Sprachen: `[{"code":"de","name":"Deutsch","current":true}, …]` - dieselbe Struktur wie `SLOC_GetAvailableLanguages()` |
      | `<!--ACTIVE_LANGUAGE-->` | der Code der aktiven Sprache, als JSON-String: `"de"` |
 
      Beide liefern **immer gültiges JSON**, auch wenn etwas fehlt oder gesperrt
@@ -959,7 +959,7 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
      ist modulintern und erscheint hier nie - ist die Ursprungssprache aktiv,
      steht deren Code drin.
 
-     Anders als die gleichnamige Funktion `IPSSL_GetAvailableLanguages()` sind
+     Anders als die gleichnamige Funktion `SLOC_GetAvailableLanguages()` sind
      **beide Platzhalter an kein Feature gebunden**. Sie brauchen es nicht: an
      dieser Stelle ist die Sperre bereits gefallen. Eigenes Kachel-HTML wirkt
      sich überhaupt nur mit `custom_tile` aus - ohne das Feature lässt sich ein
@@ -976,11 +976,11 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
      > wenn die Kachel gerendert wird. Wechselt der Nutzer danach die Sprache, wird
      > die Kachel *nicht* neu gebaut, und dein `active` zeigt weiterhin den alten
      > Stand. Damit deine Hervorhebung mitwandert, definiere
-     > `window.ipsslOnLanguageChange` - das Modul ruft sie bei **jedem**
+     > `window.slocOnLanguageChange` - das Modul ruft sie bei **jedem**
      > Sprachwechsel auf, auch bei einem abgelehnten:
      >
      > ```js
-     > window.ipsslOnLanguageChange = function (activeLanguage, availableLanguages) {
+     > window.slocOnLanguageChange = function (activeLanguage, availableLanguages) {
      >     active = activeLanguage;
      >     render();
      > };
@@ -1074,16 +1074,16 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
 2. **Komplett eigenständige, separat gebaute Kachel** (z. B. eine eigene
    HTMLBox-Instanz, die gar nicht über `GetVisualizationTile()` dieser
    Instanz läuft) - dafür zwei Befehle:
-   - `IPSSL_GetAvailableLanguages(int $InstanzID): string` - liefert die
+   - `SLOC_GetAvailableLanguages(int $InstanzID): string` - liefert die
      wählbaren Sprachen als JSON-Array `[{code, name, current}, ...]`, live
      in die aktuell aktive Sprache übersetzt und alphabetisch sortiert -
      exakt dieselbe Liste wie im eingebauten Dropdown - also ausschließlich
      konfigurierte Sprachcodes, die Scan-Sprache eingeschlossen. Genau diese
-     Werte akzeptiert auch `IPSSL_SetLanguage()`.
-   - `IPSSL_SetLanguage(int $InstanzID, string $Sprachcode): void` -
+     Werte akzeptiert auch `SLOC_SetLanguage()`.
+   - `SLOC_SetLanguage(int $InstanzID, string $Sprachcode): void` -
      wechselt die aktive Sprache, mit derselben Logik wie ein Klick im
      eingebauten Dropdown (Testphase-/Rate-Limit-Prüfung inklusive).
-   - `IPSSL_GetCurrentLanguageCode(int $InstanzID): string` - der Code der
+   - `SLOC_GetCurrentLanguageCode(int $InstanzID): string` - der Code der
      gerade aktiven Sprache (z. B. `"en"`), um die eigene Anzeige darauf
      einzustellen: welcher Eintrag hervorgehoben wird, ob überhaupt neu
      aufgebaut werden muss. Liefert immer einen echten Sprachcode - ist die
@@ -1204,7 +1204,7 @@ Standard-Tier) schaltet zusätzliche Fähigkeiten frei - aktuell:
   frei (siehe [Abschnitt 7](#7-visualisierung)) - den editierbaren
   Kachel-HTML-Code (Property "Eigene Sprachauswahl-Kachel verwenden" +
   Button "Eigenen Kachel-HTML-Code bearbeiten") UND die Befehle
-  `IPSSL_GetAvailableLanguages`/`IPSSL_SetLanguage` in
+  `SLOC_GetAvailableLanguages`/`SLOC_SetLanguage` in
   [Abschnitt 9](#9-php-befehlsreferenz) für eine komplett eigenständige
   Kachel. Ohne dieses Flag bleibt der Button ausgegraut (samt Hinweis "Pro
   Edition erforderlich"), die eingebaute Kachel bleibt immer aktiv, und die
@@ -1386,23 +1386,23 @@ Vor jedem echten Release:
 
 ### 9. PHP-Befehlsreferenz
 
-`string IPSSL_TranslateText(integer $InstanzID, integer $ObjektID);`
+`string SLOC_TranslateText(integer $InstanzID, integer $ObjektID);`
 Liefert den Inhalt der "Eigene Texte"-Zeile für die angegebene Objekt-ID
 (die String-Variable im Root-Baum) in der aktuell aktiven Sprache
 (Fallback: Quelltext), z. B. für Popup-Inhalte in eigenen HTMLBox-Skripten.
 
 Beispiel:
-`IPSSL_TranslateText(12345, 67890);`
+`SLOC_TranslateText(12345, 67890);`
 
-`void IPSSL_Rescan(integer $InstanzID);`
+`void SLOC_Rescan(integer $InstanzID);`
 Liest den konfigurierten Root der Visualisierung neu ein und übersetzt neu
 gefundene oder noch unübersetzte Einträge. Entspricht dem Button
 "Visualisierung neu einlesen" im Modul-Formular.
 
 Beispiel:
-`IPSSL_Rescan(12345);`
+`SLOC_Rescan(12345);`
 
-`string IPSSL_TranslateExternalText(integer $InstanzID, string $Text, string $Quellsprache = "");`
+`string SLOC_TranslateExternalText(integer $InstanzID, string $Text, string $Quellsprache = "");`
 Übersetzt beliebigen Text live in die aktuell aktive Sprache dieser
 Instanz - für Modulentwickler, deren eigenes Modul eine eigene HTML-Kachel
 ausliefert (`GetVisualizationTile()`) statt Text in einer von Simple Locale
@@ -1415,20 +1415,20 @@ abgelaufener Testphase gerade nicht kostenfreie Sprache liefern den Text
 unverändert zurück - nie ein Fehler.
 
 Beispiel (Scan-Sprache dieser Instanz, z. B. Deutsch):
-`IPSSL_TranslateExternalText(12345, 'Guten Tag');`
+`SLOC_TranslateExternalText(12345, 'Guten Tag');`
 
 Beispiel (abweichende, explizit angegebene Quellsprache):
-`IPSSL_TranslateExternalText(12345, 'Good day', 'en');`
+`SLOC_TranslateExternalText(12345, 'Good day', 'en');`
 
-`string IPSSL_GetCurrentLanguageCode(integer $InstanzID);`
+`string SLOC_GetCurrentLanguageCode(integer $InstanzID);`
 Liefert den aktuell aktiven Sprachcode dieser Instanz (z. B. `"en"`) - 
 nützlich, um eigene Inhalte nur bei einem tatsächlichen
 Sprachwechsel neu aufzubauen, statt bei jedem Rendern blind zu übersetzen.
 
 Beispiel:
-`IPSSL_GetCurrentLanguageCode(12345);`
+`SLOC_GetCurrentLanguageCode(12345);`
 
-`string IPSSL_GetAvailableLanguages(integer $InstanzID);`
+`string SLOC_GetAvailableLanguages(integer $InstanzID);`
 Pro-Feature `custom_tile` (siehe [Abschnitt 8](#8-lizenz-und-testversion)) -
 **wirft eine Exception ohne dieses Feature**, statt nur leer/wirkungslos zu
 bleiben: liefert die aktuell wählbaren Sprachen als JSON-Array
@@ -1440,23 +1440,23 @@ anzupassen, siehe dort den Button "Eigenen Kachel-HTML-Code bearbeiten" -
 das braucht diesen Befehl nicht).
 
 Beispiel:
-`IPSSL_GetAvailableLanguages(12345);`
+`SLOC_GetAvailableLanguages(12345);`
 
-`void IPSSL_SetLanguage(integer $InstanzID, string $Sprachcode);`
+`void SLOC_SetLanguage(integer $InstanzID, string $Sprachcode);`
 Pro-Feature `custom_tile` - **wirft eine Exception ohne dieses Feature**:
 wechselt die aktive Sprache von außen, mit derselben Logik wie ein Klick im
 eingebauten Dropdown (Testphase-/Rate-Limit-Prüfung inklusive) - für eine
 komplett eigenständige, selbstgebaute Sprachauswahl-Kachel.
 
 Beispiel:
-`IPSSL_SetLanguage(12345, 'en');`
+`SLOC_SetLanguage(12345, 'en');`
 
 ### 10. Integration für Modulentwickler
 
 Liefert dein eigenes Modul eine eigene HTML-Kachel aus
 (via `GetVisualizationTile()`), lässt sich dessen Text-Inhalt live in die
 gerade aktive Sprache einer Visualisierung mit Simple-Locale-Instanz übersetzen - ganz
-ohne eigenen Google-Account, da `IPSSL_TranslateExternalText()` den
+ohne eigenen Google-Account, da `SLOC_TranslateExternalText()` den
 Google-API-Key der jeweiligen Simple-Locale-Instanz mitverwendet.
 
 Da die meisten Nutzer (noch) keine Simple-Locale-Instanz installiert haben,
@@ -1467,7 +1467,7 @@ zu verdrahten:
 ```php
 private function TranslateViaSimpleLocale(string $Text, string $SourceLanguage): string
 {
-    if (!function_exists('IPSSL_TranslateExternalText')) {
+    if (!function_exists('SLOC_TranslateExternalText')) {
         // Simple Locale ist beim Nutzer nicht installiert - Text unverändert
         // anzeigen, kein Fehler.
         return $Text;
@@ -1481,7 +1481,7 @@ private function TranslateViaSimpleLocale(string $Text, string $SourceLanguage):
 
     // Läuft eine einzelne SimpleLocale-Instanz beim Nutzer (üblicher Fall), reicht die
     // erste gefundene - bei mehreren Instanzen ggf. eine eigene Auswahl anbieten.
-    return IPSSL_TranslateExternalText($instanceIDs[0], $Text, $SourceLanguage);
+    return SLOC_TranslateExternalText($instanceIDs[0], $Text, $SourceLanguage);
 }
 ```
 
@@ -2081,7 +2081,7 @@ der ursprünglichen Fassung übernommen.
   identisch). Fällt auf die alte 🌐-Glyphe zurück, falls die Bilddatei aus
   irgendeinem Grund nicht lesbar ist. Die zugehörige Einstellung heißt
   jetzt "Simple-Locale-Symbol in der Kachel anzeigen" (Property/Attribut-
-  Name `ShowGlobeIcon` und CSS-Klasse `ipssl-globe` bleiben aus
+  Name `ShowGlobeIcon` und CSS-Klasse `sloc-globe` bleiben aus
   Kompatibilitätsgründen unverändert - siehe Abschnitt 7 für eigene,
   darauf aufbauende Kachel-Anpassungen).
 * **Build 78 macht die festen Gast-Oberflächentexte komplett unabhängig von
@@ -2266,10 +2266,10 @@ der ursprünglichen Fassung übernommen.
   das Simple-Locale-Symbol nach Build 82 auf manchen Kacheln sichtbar
   GRÖSSER als das Dropdown, nicht exakt gleich hoch: die Höhenanpassung
   lief über `align-self: stretch`, was das Icon auf die Höhe der GESAMTEN
-  Zeile (`.ipssl-select-row`) skalierte - in der echten Kachel-Darstellung
+  Zeile (`.sloc-select-row`) skalierte - in der echten Kachel-Darstellung
   bekommt diese Zeile aber offenbar mehr Höhe zugewiesen, als das Dropdown
   selbst braucht, wodurch auch das Icon zu groß wurde. Gelöst über eine
-  gemeinsame, feste CSS-Variable (`--ipssl-control-height`), die Dropdown
+  gemeinsame, feste CSS-Variable (`--sloc-control-height`), die Dropdown
   UND Icon jetzt beide explizit auf denselben Wert setzt - unabhängig
   davon, wie viel Höhe die umgebende Zeile tatsächlich bekommt.
 
@@ -2539,7 +2539,7 @@ der ursprünglichen Fassung übernommen.
   nachübersetzten "Eigenen Texte" (siehe `ApplyTrackedVariableUpdate`),
   die nicht über den normalen Rescan-Pfad laufen.
 * **Build 94, rein diagnostisch: temporäres `SendDebug`-Logging (Kategorie
-  `IPSSL_GreetingDiag`) rund um die "Begrüßung" (Modus "Variable").** Live
+  `SLOC_GreetingDiag`) rund um die "Begrüßung" (Modus "Variable").** Live
   gemeldet: nach einem Sprachwechsel in der Gäste-Visu (de → en) und einem
   anschließenden Rescan stand `ORIGINAL_IMPORT` der Begrüßungs-Zeile
   fälschlich auf dem englischen Text, obwohl die Quellsprache weiterhin
@@ -2680,7 +2680,7 @@ der ursprünglichen Fassung übernommen.
   Trennzeichen hätte dort z. B. ein eigenes `parseInt()` stillschweigend
   brechen können.
 * **Build 100, rein diagnostisch: temporäres `SendDebug`-Logging (Kategorie
-  `IPSSL_TranslateGapDiag`) in `FillLanguageColumn()`.** Live gemeldet: nach
+  `SLOC_TranslateGapDiag`) in `FillLanguageColumn()`.** Live gemeldet: nach
   einem vollständigen Rescan blieben viele "Eigene Texte"-Zellen für eine
   einzelne Zielsprache (hier: Spanisch) leer, obwohl weder eine Anbieter-Pause
   aktiv war noch der Rohtext als JSON erkannt wurde (das wäre erwartetes
@@ -2849,8 +2849,8 @@ der ursprünglichen Fassung übernommen.
   übersetzt sie beim Rescan neu, wodurch die manuelle Korrektur überschrieben
   wird - dieselbe Funktion, bei der Build 100/101 bereits einmal eine
   verwandte Lücke fand (dort: Rohtext wurde leer). Neues
-  `SendDebug('IPSSL_NameRevertDiag', ...)` in `FillLanguageColumn()` (ersetzt
-  das in Build 101 entfernte `IPSSL_TranslateGapDiag`) protokolliert für jede
+  `SendDebug('SLOC_NameRevertDiag', ...)` in `FillLanguageColumn()` (ersetzt
+  das in Build 101 entfernte `SLOC_TranslateGapDiag`) protokolliert für jede
   nicht-leere, nicht als JSON erkannte Zeile die vollständige
   Pending/Aktuell-Entscheidung. Rein additiv, keine Verhaltensänderung (volle
   Regressionssuite unverändert grün) - wird entfernt bzw. durch die
@@ -3001,7 +3001,7 @@ der ursprünglichen Fassung übernommen.
   `CLEANUP_RELOAD_DELAY_SECONDS` (5s) verzögerten `ReloadForm()`
   (`ProcessDeferredCleanupReload()`) durch einen ZUSÄTZLICHEN,
   nicht selbst ausgelösten `GetConfigurationForm()`-Aufruf vorzeitig
-  konsumiert - noch nicht bestätigt. Neues `SendDebug('IPSSL_CleanupCountDiag',
+  konsumiert - noch nicht bestätigt. Neues `SendDebug('SLOC_CleanupCountDiag',
   ...)` protokolliert mit `microtime(true)`-Zeitstempeln jeden
   `GetConfigurationForm()`-Aufruf (gelesener Zählerwert, ob zurückgesetzt),
   das Ende von `CleanupOrphanedRows()` (geschriebener Zählerwert) und den
@@ -3056,10 +3056,10 @@ der ursprünglichen Fassung übernommen.
   frisch, jede manuelle Korrektur ist damit verloren. Fix: der gesamte
   Chart-Scan-Block in `WalkTree()` läuft jetzt in einem eigenen
   `try`/`catch (\Throwable $e)` - ein Fehler bei einem einzelnen Chart wird
-  geloggt (`SendDebug('IPSSL_ChartScanError', ...)`) und übersprungen, statt
+  geloggt (`SendDebug('SLOC_ChartScanError', ...)`) und übersprungen, statt
   den kompletten restlichen Baum-Scan (und damit potenziell zahllose andere,
   völlig unbeteiligte Objekte) zu gefährden. Zusätzlich neues
-  `SendDebug('IPSSL_CleanupCountDiag', ...)` in `CleanupOrphanedRows()`:
+  `SendDebug('SLOC_CleanupCountDiag', ...)` in `CleanupOrphanedRows()`:
   protokolliert vor jedem Löschen die Größe des frischen Live-Scans gegen
   die bestehende Property sowie die exakten ObjectIDs jeder tatsächlich zu
   entfernenden "Objektnamen"-Zeile - damit sich ein unvollständiger Scan
@@ -3088,7 +3088,7 @@ der ursprünglichen Fassung übernommen.
   Build 113 geäußerte Verdacht auf massenhaften Datenverlust durch einen
   abgebrochenen `WalkTree()`-Durchlauf ist durch denselben Log NICHT
   bestätigt (in diesem Lauf war `removedCount=0`, kein
-  `IPSSL_ChartScanError` aufgetreten) - bleibt aber vorsorglich abgesichert,
+  `SLOC_ChartScanError` aufgetreten) - bleibt aber vorsorglich abgesichert,
   bis ein Lauf mit tatsächlich zu entfernenden Zeilen das endgültig klärt.
   Regressionstest ergänzt, volle Suite grün.
 * **Build 115 klärt den "N+1"-Zähler bei "Aufräumen" endgültig auf (kein
@@ -3138,8 +3138,8 @@ der ursprünglichen Fassung übernommen.
   (String-Variablen)", in allen vier Sprachen.
 
   Als Nebenaufräumung außerdem entfernt: das komplette temporäre
-  Diagnose-Logging aus Build 111/113 (`IPSSL_CleanupCountDiag`/
-  `IPSSL_ChartScanError`) - beide damit untersuchten Verdachtsfälle sind
+  Diagnose-Logging aus Build 111/113 (`SLOC_CleanupCountDiag`/
+  `SLOC_ChartScanError`) - beide damit untersuchten Verdachtsfälle sind
   jetzt aufgeklärt bzw. abgesichert, die zugehörigen `try`/`catch`-Schutz-
   mechanismen selbst bleiben unverändert bestehen, nur ihr Logging wurde
   entfernt. Regressionstest komplett auf die neue Architektur umgeschrieben
@@ -3986,7 +3986,7 @@ der ursprünglichen Fassung übernommen.
   nie einen Reload, und das gerade frisch geschriebene Attribut wurde nie
   gerendert. `ScanRootTree()` bekommt dafür einen neuen Parameter
   `$IsInteractive`, den ausschließlich der manuelle Weg (`Rescan()`/
-  `IPSSL_Rescan()`) setzt - der Auto-Rescan-Timer läuft bewusst weiterhin ohne,
+  `SLOC_Rescan()`) setzt - der Auto-Rescan-Timer läuft bewusst weiterhin ohne,
   damit der bereits in Build 60 behobene Bug (ein Hintergrund-Rescan reißt dem
   Admin das offene Formular mitten in der Bearbeitung weg und verwirft unsavte
   Änderungen) nicht wieder eingeschleppt wird.
@@ -4038,7 +4038,7 @@ der ursprünglichen Fassung übernommen.
      anbietet, zusätzlich die Quellsprache und der interne Rückfall
      `ORIGINAL_IMPORT`). Ein unbekannter Code wird abgelehnt, die aktive Sprache
      bleibt unverändert stehen, und die Ablehnung landet mit Angabe der
-     konfigurierten Sprachen in der neuen Debug-Kategorie `IPSSL_Language`. Die
+     konfigurierten Sprachen in der neuen Debug-Kategorie `SLOC_Language`. Die
      Prüfung läuft bewusst **vor** der Testphasen- und Rate-Limit-Behandlung,
      sonst könnte ein ungültiger Code an ihr vorbei in die Property gelangen.
   2. **Heilend:** eine Instanz, die bereits in diesem Zustand feststeckt, wäre
@@ -4066,14 +4066,14 @@ der ursprünglichen Fassung übernommen.
   Der Platz unter dem Dropdown ist genau dann ungenutzt, wenn keine der drei
   optionalen Hinweiszeilen (Testphase / Anbieter-Pause / Statistik) angezeigt
   wird. Nur in diesem Fall bekommt die Zeile jetzt die zusätzliche CSS-Klasse
-  `ipssl-compact` und holt sich den Platz per negativem unteren Rand zurück.
+  `sloc-compact` und holt sich den Platz per negativem unteren Rand zurück.
   Sind Hinweise sichtbar, braucht die Kachel die Höhe ohnehin - dann bleibt
   alles unverändert (genau der vom Nutzer benannte Kompromiss: "wenn der User
   die Statistiken sehen will, lässt sich das nicht ändern").
   Bewusst **nur nach unten**: oben reserviert Symcon den Platz für Titel und
   Vergrößern-Symbol der Kachel (siehe den langjährigen Kommentar am Anfang von
   `module.html`) - ein negativer Rand dort würde das Dropdown unter die
-  Titelzeile schieben. Die Höhe der Bedienelemente selbst (`--ipssl-control-height`,
+  Titelzeile schieben. Die Höhe der Bedienelemente selbst (`--sloc-control-height`,
   38px) bleibt ebenfalls unangetastet; verkleinert wird ausschließlich
   ungenutzter Leerraum. Reicht der zurückgewonnene Platz auf einer bestimmten
   Installation nicht ganz, ist der `margin-bottom`-Wert in dieser einen
@@ -4121,7 +4121,7 @@ der ursprünglichen Fassung übernommen.
   erwischen und stillschweigend den falschen Baum übersetzen - deutlich
   schlimmer als ein sauberes `STATUS_ROOT_CATEGORY_MISSING`. Passt kein
   Kandidat, werden die tatsächlich vorhandenen Property-Namen einmal in die neue
-  Debug-Kategorie `IPSSL_Visu` geschrieben, damit sich ein bislang unbekanntes
+  Debug-Kategorie `SLOC_Visu` geschrieben, damit sich ein bislang unbekanntes
   Visualisierungs-Modul ohne Raterei nachtragen lässt.
   Funktionsumfang bei der alten WebFront-Visualisierung: Objektnamen, Eigene
   Texte, Aufzählungen und Charts werden normal übersetzt. Automations,
@@ -4498,6 +4498,382 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 197: `rpm` heißt auf Deutsch `U/min`, auf Französisch `tr/min`.**
+  Der Eintrag stand in allen Sprachen als `rpm` - englisch abgeleitet
+  (revolutions per minute) und damit genau einer der 17 Fälle aus Build 196.
+  Ergänzt für Deutsch, Französisch und Luxemburgisch (wie Deutsch);
+  Englisch/Spanisch/Portugiesisch verwenden `rpm` tatsächlich, dort bleibt es.
+
+  **Zu beachten:** die deutsche Spalte ist zugleich der Wert, über den ein Text
+  mit deutscher Quellsprache gefunden wird. Zeigt eine Visualisierung das Kürzel
+  buchstäblich als `rpm` an - bei Sensoren durchaus üblich, weil sie englische
+  Suffixe liefern -, trifft die Zeile nun nicht mehr. Gewollt ist der Tausch:
+  wer `U/min` anzeigt, wird jetzt geschützt und in andere Sprachen korrekt
+  übersetzt; wer `rpm` anzeigt, trägt es bei Bedarf als eigene Glossar-Zeile
+  nach.
+
+* **Build 196 (Rückfrage beim Testen): "Einheiten sind in jeder Sprache gleich"
+  war zu pauschal - jetzt wird nach Verlässlichkeit vorbelegt.**
+  Auf die Frage, ob `°C` denn auch im Chinesischen so heißt, lautet die ehrliche
+  Antwort: nicht durchgängig. Der Beweis steht im eigenen Code - für Russisch
+  überschreiben wir **65 der 73** Einheiten mit kyrillischen Kürzeln. Wir wussten
+  also längst, dass die Symbole nicht universell sind; Build 195 hat es für alle
+  anderen Sprachen stillschweigend vorausgesetzt.
+
+  Die Trennlinie verläuft zweifach:
+
+  * **56 der 73 sind international genormte SI-Symbole** (`V`, `W`, `Hz`, `Pa`,
+    `m`, `kg`, `J`, `°C` …). Die gelten sprachunabhängig und werden weiterhin
+    für **jede** Sprache vorbelegt - auch für Chinesisch.
+  * **17 sind es nicht** (`psi`, `km/h`, `kn`, `ppm`, `ppb`, `mg/l`, `µg/m³`,
+    `g/m³`, `kB`, `MB`, `GB`, `TB`, `kbps`, `Mbps`, `kcal`, `rpm`, `UV`) -
+    englisch abgeleitet oder sprachabhängig. `rpm` heißt auf Deutsch `U/min`,
+    `kn` (knots) französisch `nd` (nœuds).
+
+  Für die **15 geprüften** Sprachen ändert sich nichts: dort ist die Vorbelegung
+  beim Aufbau des Katalogs durchgesehen worden. Für jede andere Sprache bleiben
+  die 17 Zellen **leer**, statt eine Vermutung als Vorgabe auszuliefern - die
+  restlichen 56 stehen weiterhin.
+
+  Am Konfigurationsformular ändert das nichts: eine Tabelle, dieselben Spalten,
+  nur vorsichtiger vorbelegt.
+
+* **Build 195 (Nutzer-Wunsch): Einheiten für **jede** konfigurierte Sprache, und
+  der Katalog-Schlüssel ist keine Sprache mehr.**
+  Zwei Dinge, die zusammengehören:
+
+  *Einheiten.* Vorbelegt waren sie für eine feste Liste von neun Sprachen. Eine
+  Zielsprache außerhalb davon bekam eine leere Spalte - und `°C` ging dort
+  wieder an den Anbieter, mit demselben Ergebnis wie in Build 158 (`°F`).
+  Einheiten sind aber Symbole und bleiben unverändert: `kWh` ist überall `kWh`.
+  Sie werden jetzt für jede konfigurierte Sprache vorbelegt. **Für
+  Kompassrichtungen gilt das ausdrücklich nicht** - die hängen an den Wörtern
+  der Sprache (deutsch `O` für Ost wird tschechisch `V` für východ) und stehen
+  nur dort, wo wir sie tatsächlich kennen. Alles andere wäre geraten.
+
+  Ergänzt wurden Kompassrichtungen für **Dänisch, Norwegisch, Schwedisch,
+  Tschechisch und Luxemburgisch** - damit sind es 14 Sprachen plus Deutsch.
+
+  *Der Schlüssel.* Bisher diente die deutsche Spalte als Primärschlüssel der
+  Katalogzeilen. Das widersprach der Idee der Tabelle, in der ausdrücklich keine
+  Sprache ausgezeichnet ist - und es ging schief, sobald jemand auf Englisch
+  arbeitet: trägt er eine eigene Zeile ein, deren deutsche Spalte zufällig auf
+  einen bestehenden Katalogeintrag fällt, wären beide nicht mehr auseinander zu
+  halten, und die Nachbefüllung hätte seine Zeile erwischt statt der eigenen.
+
+  Jede mitgelieferte Zeile trägt jetzt einen technischen Katalog-Schlüssel, der
+  keine Sprache ist. Eigene Zeilen haben keinen und werden nie angefasst - egal,
+  was in welcher Sprachspalte steht. Die Spalte steht sichtbar, aber nicht
+  editierbar vorn und zeigt damit auch die Herkunft jeder Zeile.
+
+* **Build 194 (Nutzer-Wunsch): die Sperrfrist zwischen zwei Sprachwechseln ist
+  jetzt frei festlegbar - als Zeitwert aus der Lizenz, `0` = unbegrenzt.**
+  Vorher gab es nur ein Ja/Nein-Feature (`unlimited_language_switch`) und eine
+  fest verdrahtete Konstante von 24 Stunden. In einer **Spezialversion**, die
+  Features einzeln zusammenstellt und kein Tier kennt, ließ sich die Dauer damit
+  gar nicht festlegen - nur an oder aus.
+
+  Neu in der Lizenz-Nutzlast: `switchIntervalMinutes` - **minutengenau**, damit
+  sich auch kurze Fristen abbilden lassen. Das ist ausdrücklich weder
+  `languageLimit` (die **Anzahl** der Sprachen) noch `interval` (der
+  Abo-Zyklus) - beide bleiben unberührt.
+
+  Bereits ausgestellte Schlüssel kennen das Feld nicht. Damit sich keiner von
+  ihnen stillschweigend anders verhält, gilt die Reihenfolge: ausdrücklicher
+  Zeitwert, sonst das alte Ja/Nein-Feature als Altlast-Schreibweise, sonst der
+  bisherige Tag. Ohne gültige Lizenz bleibt es unbegrenzt - die Sperre war nie
+  als Testphasen-Beschränkung gedacht.
+
+  Regressionstest `test_language_switch_interval.php` (7 Fälle).
+
+* **Build 192 (Nutzer-Wunsch): "Übersetzung je Objekt abschaltbar" hat ein
+  eigenes Lizenz-Feature (`disable_single_translations`).**
+  Bis dahin hing der Schalter an `edit_translations` - beide ließen sich also
+  nur gemeinsam vergeben. In einer Spezialversion war er dadurch nicht getrennt
+  festlegbar: wer ihn wollte, musste das komplette Editieren der gescannten
+  Tabellen mitgeben.
+
+  `edit_translations` behält seinen eigentlichen Umfang: die editierbaren Zellen
+  und die Quellsprache je Zeile (in `BuildLanguageColumnSet()` und
+  `BuildRowSourceLanguageColumn()` als Vorgabewert, gut ein Dutzend
+  Aufrufstellen). Der Lizenzblock im Formular zeigt jetzt auch die beiden neuen
+  Features an.
+
+* **Build 191 (live gemeldet): die Glossar-Tabelle blieb bei einer frisch
+  angelegten Instanz leer - der Erklärtext darüber erschien, die Tabelle nicht.**
+  Befüllt wurde das Glossar bis dahin **ausschließlich** in `ScanRootTree()`,
+  also erst beim ersten Rescan. Genau davor schlägt ein Nutzer die Tabelle aber
+  zum ersten Mal auf: Modul installieren, Lizenz eintragen, hinschauen. Die
+  Befüllung läuft jetzt zusätzlich in `ApplyChanges()`, an derselben Stelle wie
+  `EnsureSourceLanguageIsTarget()` - und wie dort nur, wenn sich tatsächlich
+  etwas ändert, sonst wäre es ein `IPS_ApplyChanges()`-Reentry bei jedem
+  Speichern.
+
+  Zweite Absicherung an derselben Stelle: eine Liste **ohne Spalten** rendert
+  Symcon als gar nichts. Solange keine Zielsprache konfiguriert ist, hätte die
+  Tabelle deshalb unsichtbar bleiben können, obwohl der Text darüber steht - die
+  Spalten fallen jetzt notfalls auf die Quellsprache zurück, die immer vorhanden
+  ist.
+
+* **Build 190: auch die DOM-Bezeichner heißen jetzt `sloc` statt `ipssl`.**
+  Beim Präfixwechsel in Build 185 blieben die kleingeschriebenen Bezeichner
+  bewusst stehen - CSS-Klassen (`ipssl-select-row`, `ipssl-globe`,
+  `ipssl-tile-icon`, `ipssl-select-wrapper-<id>` …), der optionale JS-Haken
+  `window.ipsslOnLanguageChange` und die Katalog-ID des mitgelieferten Symbols.
+  Sie sind keine Symcon-Funktionsnamen, und ein Umbenennen bricht jede bereits
+  gebaute eigene Kachel und jedes ausgelieferte Design.
+
+  Auf ausdrücklichen Wunsch fällt das jetzt trotzdem - die betroffenen Designs
+  werden nachgezogen. **Das ist ein Bruch für eigenes Kachel-HTML:** wer
+  `window.ipsslOnLanguageChange` definiert oder die Klassen anspricht, muss auf
+  `sloc…` umstellen. Die Platzhalter selbst (`<!--LANGUAGE_SELECT-->`,
+  `<!--TILE_ICON-->`, `<!--ACTIVE_LANGUAGE-->` …) sind unverändert.
+
+  Mit umgestellt ist die Katalog-ID `ipssl` des mitgelieferten Symbols. Eine
+  gespeicherte alte Auswahl fällt über `ResolveCatalogId()` sauber auf den
+  Standard zurück, es bleibt also nichts kaputt stehen.
+
+  Nach dieser Umstellung trägt der ausgelieferte Code den alten Namen nirgends
+  mehr - die verbliebenen Nennungen stehen ausschließlich in den Changelog- und
+  Begründungskommentaren.
+
+* **Build 189 (Nutzer-Wunsch): das Glossar ist jetzt eine eigene Tabelle - ohne
+  Quellsprache, dafür in jede Richtung gültig.**
+  Bis Build 188 schrieb das Modul **89 mitgelieferte Zeilen** (73 Einheiten +
+  16 Kompassrichtungen) in die "Eigene Übersetzungstabelle" - alle fest auf
+  Quellsprache Deutsch. Das hatte zwei Folgen: das eigene Glossar lag unter
+  Fremdzeilen begraben, und für ein Objekt mit **anderer** Zeilen-Quellsprache
+  griff keine davon. "km/h" hätte je Quellsprache eine eigene Zeile gebraucht.
+
+  Jetzt zwei getrennte Tabellen mit unterschiedlicher Bedeutung:
+
+  * **Eigene Übersetzungen** - unverändert. Eine Quellsprachen-Spalte legt je
+    Zeile die Richtung fest. Nur noch das, was der Admin selbst einträgt.
+  * **Glossar** - mitgelieferte Einheiten und Kompassrichtungen. **Keine**
+    Quellsprachen-Spalte: je Sprache eine Spalte, und jede kann die Quelle sein.
+    Der Eintrag einer Spalte übersetzt sich in den jeder anderen. Ein Begriff
+    braucht deshalb genau eine Zeile, gleich welche Quellsprache ein Teil der
+    Visualisierung verwendet.
+
+  Getroffen wird ausschließlich über die Spalte der **Quellsprache**: "km/h" aus
+  einer deutschen Zeile trifft über die deutsche Spalte, aus einer englischen
+  über die englische. Ein Text, der sich als spanisch ausgibt, trifft nur, wenn
+  die spanische Spalte den Wert trägt. Damit ist die Zuordnung von jeder Spalte
+  in jede andere eindeutig - das ist hier die Bedeutung von "Glossar".
+
+  Die eigenen Übersetzungen behalten **Vorrang**: sie sind die ausdrückliche
+  Festlegung für genau diese Installation. Erst danach das Glossar.
+
+  Bearbeitet werden darf es **ab der Standard-Edition** (Feature `glossary`).
+  Der Nachschlag selbst läuft weiterhin in **jeder** Edition - Einheiten müssen
+  überall richtig behandelt werden, verkauft wird das Bearbeiten (siehe
+  Build 158 für die Begründung: "°C" ging sonst an die API und kam als "°F"
+  zurück, eine Einheitenumrechnung statt einer Übersetzung).
+
+  Der Schutz gegen zurückkehrende gelöschte Zeilen bleibt: wer "SSW" entfernt,
+  weil es in seiner Installation ein Personenkürzel ist, bekommt es nicht wieder
+  vorgeschlagen.
+
+  Regressionstest `test_glossary_separate_table.php` (7 Fälle), die drei
+  bestehenden Glossar-Tests auf die neue Struktur nachgezogen. Dabei ist
+  `attributeSeededManualTranslationKeys` als tot weggefallen.
+
+* **Build 188 (Rückfrage beim Testen): die Regel aus Build 187 war zu grob und
+  behandelte Portugiesisch anders als Englisch.**
+  Auslöser war eine gute Frage zu drei englischen Einträgen ("English",
+  "English (British)", "English (American)"). Die sind korrekt - beim Nachrechnen
+  fiel aber auf, dass dieselbe Lage bei Portugiesisch anders ausging.
+
+  Build 187 strich jede Region, die der Sprache entspricht (`de-de` → `de`).
+  Das traf `DE-DE`/`FR-FR` richtig, aber auch `PT-PT` - und dort ist es falsch:
+  DeepL kennt **kein** einfaches `PT`, europäisches Portugiesisch ist dort keine
+  Dublette, sondern die einzige europäische Fassung. Aus `PT-PT` wurde dadurch
+  `pt`, was den eingebauten Namen "Português" überschrieb und die Variante
+  verschwinden ließ, während Englisch seine beiden Varianten behielt.
+
+  Die Regel prüft jetzt den Kontext: die Eigenregion fällt nur weg, wenn die
+  Basissprache in **derselben** Anbieter-Liste steht. `DE` ist dort, also ist
+  `DE-DE` redundant; `PT` ist es nicht, also bleibt `PT-PT`. Das braucht die
+  ganze Liste und liegt deshalb in `DropRedundantRegionVariants()`;
+  `NormalizeLanguageCode()` bleibt rein syntaktisch (Kleinschreibung + Aliasse).
+
+  Ergebnis an der echten Liste: aus 110 rohen Codes werden 109 interne
+  (`ZH`/`ZH-HANS` fallen über die Alias-Tabelle zusammen), nach der Bereinigung
+  107 - weggefallen sind genau `de-de` und `fr-fr`. Englisch und Portugiesisch
+  stehen jetzt gleich da: Basissprache plus die Varianten, die der Anbieter
+  tatsächlich unterscheidet.
+
+  Regressionstest auf 11 Fälle erweitert, darunter ausdrücklich der Fall, den
+  Build 187 falsch machte: ohne Basissprache in der Liste bleibt die Eigenregion.
+
+* **Build 187 (live gemeldet): trotz Build 186 standen Deutsch und Französisch
+  doppelt in der Sprachauswahl.**
+  Ursache war nicht die Normalisierung, sondern DeepL selbst: die Liste führt die
+  Basissprache **und** ihre gleichnamige Eigenregion als getrennte Einträge -
+  `DE` und `DE-DE` heißen beide "German", `FR` und `FR-FR` beide "French". Zwei
+  Zeilen mit identischem Namen, nicht auseinanderzuhalten.
+
+  Eine Region, die der Sprache selbst entspricht, trägt keine Information:
+  `de-de` **ist** `de`. `NormalizeLanguageCode()` streicht sie deshalb. Fremde
+  Regionen bleiben unangetastet - `de-ch`, `fr-ca`, `pt-br`, `en-gb`, `en-us`,
+  `es-419` und `zh-tw` sind echte, eigene Zielsprachen.
+
+  `PT-PT` fällt dabei bewusst auf `pt`: DeepL kennt gar kein einfaches `PT`,
+  europäisches Portugiesisch ist dort die Basissprache. Bliebe es eigenständig,
+  stünde Portugiesisch wieder zweimal da - einmal als eingebautes `pt`, einmal
+  als `pt-pt`.
+
+  Gegenprobe an der **echten** Liste (110 Zielsprachen, live abgefragt): genau
+  drei Paare werden zusammengeführt - `DE`/`DE-DE`, `FR`/`FR-FR` und
+  `ZH`/`ZH-HANS` -, aus 110 rohen werden 107 interne Codes. Kein vierter Fall,
+  keine Sprache verschwindet.
+
+  Nebenbefund: **DeepL bietet inzwischen 110 Zielsprachen**, nicht mehr die gut
+  30 von früher. Die Annahme "DeepL kann deutlich weniger als Google" stimmt
+  nicht mehr.
+
+  Regressionstest `test_language_code_normalization.php` um drei Fälle erweitert
+  (11 gesamt), darunter die Abgrenzung in beide Richtungen: die Eigenregion muss
+  fallen, eine fremde Region darf es **nicht** - der umgekehrte Fehler wäre der
+  schlimmere, dabei verschwände stillschweigend eine Sprache aus der Auswahl.
+
+* **Build 186 (beim Testen aufgefallen): Google und DeepL lieferten dieselbe
+  Sprache in unterschiedlicher Schreibweise - jetzt gilt intern genau eine.**
+  Google liefert klein und regionslos (`de`, `en`), DeepL groß und für
+  Englisch/Portugiesisch nur mit Region (`DE`, `EN-GB`, `PT-BR`). Beides wurde
+  **wortwörtlich** übernommen und wortwörtlich als `target_lang` weitergereicht.
+  Das hatte zwei Folgen:
+
+  * `GetKnownLanguages()` mischt die eingebaute Liste mit der geholten. Mit einem
+    DeepL-Key standen dadurch **20 der 30 eingebauten Sprachen doppelt** in der
+    Auswahl - einmal `de`, einmal `DE`.
+  * Wer erst nur DeepL einträgt und später einen Google-Key ergänzt, bekommt die
+    Liste plötzlich in der anderen Schreibweise. Die bereits gewählten
+    Zielsprachen kommen darin nicht mehr vor und müssen neu gewählt werden -
+    **ohne dass der Nutzer etwas umgestellt hätte**. Der Hinweis am Dropdown
+    beschrieb das zwar, aber als unvermeidliche Eigenschaft.
+
+  Intern gilt jetzt genau eine Schreibweise: klein, Region mit Bindestrich
+  (`de`, `en-gb`). `NormalizeLanguageCode()` bildet beim Einlesen darauf ab,
+  `LanguageCodeForProvider()` beim Hinausgehen zurück - Google ohne Region
+  (`en`), DeepL groß mit Region (`EN-GB`), MyMemory gemischt (`en-GB`).
+
+  Der Eingriff blieb klein, weil Sprachcodes das Modul an nur **sieben** Stellen
+  berühren: zwei Eingänge (die beiden Sprachlisten) und fünf Ausgänge. Sämtliche
+  Übersetzungsaufrufe laufen durch dieselben drei `TranslateChunk*`-Funktionen,
+  es gibt keinen zweiten Pfad an ihnen vorbei.
+
+  Die Doppelliste verschwindet dabei nicht durch Aufräumen, sondern **von
+  selbst**: beide Quellen liegen jetzt im selben Codesatz, und `$byCode[$code]`
+  fällt zusammen. Ergänzt wurden außerdem die sechs Sprachen, die DeepL kennt und
+  die eingebaute Liste bisher nicht (`bg`, `et`, `lt`, `lv`, `sk`, `sl`) -
+  MyMemory kann sie ebenfalls, sie sind also auch ohne bezahlten Anbieter
+  sinnvoll wählbar. Norwegisch (DeepLs `NB`) wird auf das eingebaute `no`
+  gelegt, sonst stünde es zweimal da.
+
+  Eine Datenmigration gibt es bewusst nicht: verkauft ist noch keine Version,
+  und Sprachcodes sind hier nicht nur Werte, sondern **Spaltennamen** in sieben
+  Listen-Properties. Auf einer gelebten Installation hätte die Umstellung jede
+  Zeile umschlüsseln müssen, samt einer Regel für den Fall, dass `DE` und `de`
+  beide gefüllt sind. Genau dieser Teil entfällt im jetzigen Zeitfenster.
+
+  Regressionstest `test_language_code_normalization.php` (8 Fälle, darunter die
+  strukturelle Zusicherung, dass kein Code mehr roh an eine API geht - ein
+  einziger übersehener Aufruf hätte den Fehler wieder eingeschleppt, sichtbar
+  erst live an einer fehlgeschlagenen Anfrage).
+
+* **Build 185 (Symcon-Review): die Quelltexte des Konfigurationsformulars sind
+  jetzt Englisch, Deutsch ist eine Übersetzung wie jede andere.**
+  Vorher war es umgekehrt - die Texte standen auf Deutsch in `form.json`, und
+  `locale.json` bot `en`/`es`/`it`/`fr` an, aber **kein `de`**. Symcon geht die
+  Sprachliste des Browsers durch und nimmt die erste Sprache, für die eine
+  Sektion existiert. Ein deutscher Browser meldet typischerweise
+  `de-DE, de, en-US, en`: `de` fehlte, also griff `en` - und der deutsche
+  Nutzer sah das Modul auf **Englisch**. Nur wer gar kein Englisch in seiner
+  Browser-Liste führt, sah den unübersetzten Quelltext und damit zufällig das
+  Richtige. Deshalb fiel es hier nie auf.
+
+  Die Umstellung lief mechanisch, nicht von Hand: die englischen Formulierungen
+  existierten ja bereits als Übersetzung. Neuer Quelltext = bisheriger
+  `en`-Wert, neue `de`-Sektion = bisheriger deutscher Schlüssel, `es`/`it`/`fr`
+  auf die englischen Schlüssel umgehängt. Voraussetzung dafür war, dass die
+  Zuordnung eindeutig umkehrbar ist - **keine zwei deutschen Texte teilten
+  sich eine englische Übersetzung**, sonst wäre beim Umschlüsseln stillschweigend
+  eine Zeile verloren gegangen.
+
+  Zwei Dinge brauchten Handarbeit: die zur Laufzeit zusammengesetzten
+  Beschriftungen (`'Automatic (' . Label . ')'` in `BuildCatalogOptions()`,
+  die Pro-Suffixe, die Fortschrittstexte) und `Favorites`, das bisher als
+  einziger Text überhaupt keine Übersetzung hatte.
+
+  Dabei fielen zwei tote `locale.json`-Einträge auf (`Zusatzfunktionen`,
+  `keine`). Sie galten bisher als "in Benutzung", weil der Dead-Code-Test die
+  Schlüssel als Teilzeichenkette suchte und dabei einen **PHP-Kommentar** traf.
+  Mit englischen Schlüsseln griff diese Zufallstreffer-Logik nicht mehr, und
+  beide standen als das da, was sie sind.
+
+* **Build 185 (Symcon-Review): der Store-Name trägt kein "for IP Symcon" mehr,
+  und das Funktions-Präfix heißt `SLOC` statt `IPSSL`.**
+  Symcon lässt "Symcon"/"IPS" im Namen eines Store-Moduls nicht zu - im Store
+  ist der Bezug ohnehin selbstverständlich. Betroffen war nur `library.json`;
+  der Modulname in `module.json` hieß bereits "Simple Locale".
+
+  **Achtung, das ist ein Bruch:** sämtliche öffentlichen Befehle heißen jetzt
+  `SLOC_…` statt `IPSSL_…` - `SLOC_Rescan()`, `SLOC_TranslateText()`,
+  `SLOC_SetLanguage()` und die übrigen aus [Abschnitt 9](#9-php-befehlsreferenz).
+  Bestehende eigene Skripte müssen entsprechend angepasst werden.
+
+  Mit umgestellt sind auch zwei **persistierte** Bezeichner, bei denen das
+  Folgen hat: das Präfix der per `RegisterTimer()` angelegten Timer-Idents und
+  der Name der privaten Variablenprofile aus Build 164, auf die vorhandene
+  Variablen per `IPS_SetVariableCustomProfile` zeigen. Auf einer bereits
+  gelebten Installation bliebe dadurch ein Timer mit totem Callback zurück und
+  ein verwaistes Profil. Zum Zeitpunkt der Umstellung existierten ausschließlich
+  eigene Testinstanzen, die neu angelegt wurden - deshalb bewusst der saubere
+  Schnitt statt eines dauerhaften Altlast-Präfixes.
+
+  Regressionstest `test_function_prefix.php` (6 Fälle, darunter die stille
+  Falle: Symcon speichert den Timer-Callback als Text, ein zum Präfix
+  unpassender Name fällt beim Registrieren nirgends auf und der Timer liefe
+  danach stumm ins Leere).
+
+* **Build 185 (Symcon-Review): `ApplyChanges()` schreibt die eigene Konfiguration
+  nicht mehr nach - die Umstellung der aktiven Sprache läuft über `Migrate()`.**
+  Stand in `CurrentLanguage` noch die interne Pseudo-Sprache `ORIGINAL_IMPORT`,
+  schrieb `ApplyChanges()` sie per `IPS_SetProperty` + `IPS_ApplyChanges` auf die
+  Quellsprache um - ein Reentry in den eigenen Konfigurationslauf, laut Review nur
+  für Ausnahmefälle gedacht. Zuständig ist `Migrate()`.
+
+  Die Stelle war allerdings nicht nur Migration, sondern auch für **brandneue**
+  Instanzen tragend: der Registrierungs-Default war ebenfalls der Sentinel, und
+  der ist seit Build 79 keine Option des Selects mehr - ohne die Normalisierung
+  hätte Symcon das Speichern verweigert (`Current value ... is not available`,
+  siehe Build 142). `Migrate()` läuft bei einer neuen Instanz aber gerade nicht.
+  Deshalb drei Änderungen, die nur zusammen tragen:
+
+  * **`Migrate()`** schreibt den Wert für bestehende Instanzen um und gibt sonst
+    einen leeren String zurück ("keine Änderung nötig").
+  * **Der Registrierungs-Default** ist jetzt die Quellsprache (`'de'`, derselbe
+    Literalwert wie bei `SourceLanguage`) und damit von sich aus gültig:
+    `EnsureSourceLanguageIsTarget()` trägt sie bei jedem `ApplyChanges()` als
+    echten Zielsprachen-Eintrag nach, und Symcon ruft `ApplyChanges()` direkt
+    nach `Create()` auf.
+  * **`RequestAction()`** bildet den Sentinel am Eingang auf die Quellsprache ab,
+    bevor er irgendwohin geschrieben werden kann. Eine eigene Kachel kann ihn
+    schicken - bis Build 183 tat das mitgelieferte Beispiel genau das. Die
+    Sperrfrist verhält sich unverändert: eine Rückkehr auf das Original hat sie
+    nie gestartet, und das bleibt so.
+
+  In `ApplyChanges()` bleibt genau eine Schreibstelle auf `CurrentLanguage`: die
+  Selbstheilung aus Build 142, wenn der Code gar nicht (mehr) unter den
+  Zielsprachen ist. Das ist keine Migration, sondern greift genau dann, wenn der
+  Admin gerade die aktive Zielsprache entfernt hat - und ohne sie ließe sich die
+  Instanz danach nicht mehr speichern.
+
+  Regressionstest `test_migrate_current_language.php` (7 Fälle, darunter die
+  beiden Lücken, die `Migrate()` allein **nicht** schließt: die neue Instanz und
+  die eigene Kachel).
+
 * **Build 184: eigene Kacheln kennen jetzt die Konfiguration -
   `<!--AVAILABLE_LANGUAGES-->` und `<!--ACTIVE_LANGUAGE-->`.**
   Bis dahin musste ein eigenes Template die Sprachcodes fest eintippen. Das ging
@@ -4520,7 +4896,7 @@ der ursprünglichen Fassung übernommen.
     und genau die wären leer geblieben, obwohl sie nicht von Anwendern stammen.
     Der Platzhalter ist deshalb ungesperrt; der Aufbau liegt jetzt in
     `BuildAvailableLanguagesJson()`, und die **Funktion**
-    `IPSSL_GetAvailableLanguages()` bleibt hart gesperrt - sie ist der Weg, eine
+    `SLOC_GetAvailableLanguages()` bleibt hart gesperrt - sie ist der Weg, eine
     eigene Auswahl per Skript an der Kachel vorbei zu bauen, wo keine
     vorgelagerte Prüfung greift.
   * `ORIGINAL_IMPORT` wäre nach außen gedrungen - der Registrierungs-Default der
@@ -4544,7 +4920,7 @@ der ursprünglichen Fassung übernommen.
   nichts gelöscht.
 
   Abgeholt wird das über eine **optionale** Funktion des Templates,
-  `window.ipsslOnLanguageChange(activeLanguage, availableLanguages)`. Wer sie
+  `window.slocOnLanguageChange(activeLanguage, availableLanguages)`. Wer sie
   nicht definiert, merkt keinen Unterschied. Sie erreicht auch ein Template mit
   **eigenem** `handleMessage`: ein aus einer älteren `module.html` abgeleitetes
   Template brachte bisher einen Handler ohne den Haken mit und wurde deshalb
@@ -4847,7 +5223,7 @@ der ursprünglichen Fassung übernommen.
   ein eigenes Template setzen - `<!--TILE_ICON-->`.**
   Die Frage lautete, wie man das Symbol in ein eigenes Template einbindet.
   Antwort war: gar nicht. Es wurde ausschließlich **innerhalb** der generierten
-  Sprachauswahl gebaut (`<span class="ipssl-globe">…`). Wer eine eigene
+  Sprachauswahl gebaut (`<span class="sloc-globe">…`). Wer eine eigene
   Sprachauswahl hinterlegte, ersetzte damit den ganzen Block und verlor das
   Symbol ersatzlos - es gab keinen Weg, es zurückzuholen.
 
@@ -4858,7 +5234,7 @@ der ursprünglichen Fassung übernommen.
 
   Der Platzhalter respektiert die Checkbox "Symbol in der Kachel anzeigen" -
   steht sie aus, bleibt er leer, statt sie zu übergehen. Die eingesetzte
-  Fassung trägt die Klasse `ipssl-tile-icon` und eine Größenangabe, die **nicht
+  Fassung trägt die Klasse `sloc-tile-icon` und eine Größenangabe, die **nicht
   kollabiert**: die eingebaute Kachel setzt das Symbol in einen Rahmen mit fester
   Höhe, wo `height:100%` passt - ein eigenes Template hat diesen Rahmen nicht,
   dort wäre das Symbol unsichtbar geworden. Die eingebaute Kachel behält ihre

@@ -25,11 +25,27 @@ const BUNDLED = [
     'SSW' => ['en' => 'SSW', 'fr' => 'SSO'],
 ];
 
+// Repliziert FindGlossaryTranslation() (Build 189): spaltenbasiert, richtungsfrei.
+function findGlossary(array $rows, string $source, string $target, string $text): ?string
+{
+    foreach ($rows as $row) {
+        if ((string) ($row[$source] ?? '') !== $text) {
+            continue;
+        }
+        $t = (string) ($row[$target] ?? '');
+        if ($t !== '') {
+            return $t;
+        }
+    }
+
+    return null;
+}
+
 // Repliziert FindManualTranslation() NACH dem Fix.
 function findManual(array $rows, string $quelle, string $ziel, string $text, bool $hatFeature): ?string
 {
     foreach ($rows as $row) {
-        if (($row['Quellsprache'] ?? '') !== $quelle) { continue; }
+        if (($row['Source language'] ?? '') !== $quelle) { continue; }
         if ((string) ($row['ORIGINAL_IMPORT'] ?? '') !== $text) { continue; }
         $t = (string) ($row[$ziel] ?? '');
         if ($t !== '') { return $t; }
@@ -57,15 +73,25 @@ assert(findManual([], 'de', 'en', 'SSW', true) === null, 'MIT dem Feature darf e
 echo "Test 2 (mit dem Feature bleibt eine gelöschte Zeile gelöscht) OK\n";
 
 // Test 3: ein eingetragener Wert gewinnt in beiden Faellen ueber den Katalog.
-$eigen = [['Quellsprache' => 'de', 'ORIGINAL_IMPORT' => '°C', 'en' => 'Grad Celsius']];
+$eigen = [['Source language' => 'de', 'ORIGINAL_IMPORT' => '°C', 'en' => 'Grad Celsius']];
 assert(findManual($eigen, 'de', 'en', '°C', true) === 'Grad Celsius', 'der eingetragene Wert gewinnt');
 assert(findManual($eigen, 'de', 'en', '°C', false) === 'Grad Celsius', 'auch ohne Feature gewinnt ein vorhandener Eintrag vor dem Katalog');
 echo "Test 3 (ein eingetragener Wert gewinnt immer vor dem Katalog) OK\n";
 
-// Test 4: der Katalog ist deutschsprachig indiziert - fuer eine andere
-// Quellsprache darf er NICHT greifen, sonst uebersetzte er munter Fremdtexte.
-assert(findManual([], 'en', 'fr', '°C', false) === null, 'der Katalog gilt nur fuer deutsche Quelltexte');
-echo "Test 4 (der Katalog greift nur bei deutscher Quellsprache) OK\n";
+// Test 4 (Build 189 - GEAENDERT): der Katalog war deutschsprachig indiziert und
+// griff fuer eine andere Quellsprache gar nicht. Genau das war die Luecke: ein
+// Objekt mit englischer Zeilen-Quellsprache schickte "°C" an die API und bekam
+// "°F" zurueck. Das Glossar sucht jetzt SPALTENBASIERT - jede Sprachspalte kann
+// die Quelle sein, dieselbe Zeile traegt alle Richtungen.
+$glossarZeilen = [['de' => '°C', 'en' => '°C', 'fr' => '°C']];
+assert(findGlossary($glossarZeilen, 'en', 'fr', '°C') === '°C',
+    'DIE LUECKE: der Treffer darf nicht mehr an deutscher Quellsprache haengen');
+assert(findGlossary($glossarZeilen, 'fr', 'de', '°C') === '°C', 'und er gilt in jede Richtung');
+// Die Abgrenzung: ein Text, der sich als spanisch ausgibt, trifft nur ueber die
+// spanische Spalte - und die gibt es hier nicht.
+assert(findGlossary($glossarZeilen, 'es', 'de', '°C') === null,
+    'ohne Wert in der Quellspalte gibt es keinen Treffer');
+echo "Test 4 (das Glossar trifft aus jeder Sprachspalte, in jede Richtung) OK\n";
 
 // Test 5: ein unbekannter Text faellt weiterhin an die API durch.
 assert(findManual([], 'de', 'en', 'Hauswirtschaftsraum', false) === null, 'unbekannte Texte muessen weiterhin an die API gehen');
@@ -75,26 +101,55 @@ echo "Test 5 (unbekannte Texte gehen weiterhin an die API) OK\n";
 $moduleSource = file_get_contents(dirname(__DIR__) . '/SimpleLocale/module.php');
 $start = strpos($moduleSource, 'private function FindManualTranslation');
 assert($start !== false, 'FindManualTranslation() muss existieren');
-$ende = strpos($moduleSource, "\n    private function FindBundledTranslation", $start);
-assert($ende !== false, 'FindBundledTranslation() muss direkt darauf folgen');
+$ende = strpos($moduleSource, "\n    // Build 186", $start);
+assert($ende !== false, 'das Ende von FindManualTranslation() muss auffindbar sein');
 $body = substr($moduleSource, $start, $ende - $start);
 $body = implode("\n", array_filter(
     explode("\n", $body),
     static fn (string $z): bool => strpos(ltrim($z), '//') !== 0
 ));
 
-assert(strpos($body, "if (\$this->HasLicenseFeature('manual_translations')) {") !== false,
-    'MIT dem Feature muss vor dem Fallback ausgestiegen werden');
-$ausstieg = strpos($body, "HasLicenseFeature('manual_translations')");
-$fallback = strpos($body, 'FindBundledTranslation(');
-assert($ausstieg < $fallback, 'der Ausstieg muss VOR dem Fallback stehen - sonst greift er auch dort, wo die Tabelle massgeblich ist');
+// Build 189: die Entscheidung "gespeicherte Tabelle ODER mitgelieferter Katalog"
+// liegt jetzt in GetGlossaryRowsForLookup(), nicht mehr in FindManualTranslation().
+$lookupStart = (int) strpos($moduleSource, 'private function GetGlossaryRowsForLookup');
+$lookupBody = substr($moduleSource, $lookupStart, 600);
+assert(strpos($lookupBody, "HasLicenseFeature('glossary')") !== false,
+    'MIT dem Feature ist die gespeicherte Tabelle massgeblich');
+assert(strpos($lookupBody, 'BuildBundledGlossaryRows()') !== false,
+    'OHNE das Feature greift der mitgelieferte Katalog direkt - in JEDER Edition');
+// Build 189: die eigenen Uebersetzungen behalten Vorrang - sie sind die
+// ausdrueckliche Festlegung des Admins. Erst danach das Glossar.
+$eigene = strpos($body, '$ManualTranslationRows');
+$glossar = strpos($body, 'FindGlossaryTranslation(');
+assert($eigene !== false && $glossar !== false, 'beide Wege muessen vorkommen');
+assert($eigene < $glossar, 'die eigenen Uebersetzungen muessen VOR dem Glossar geprueft werden');
 
-$bundledStart = strpos($moduleSource, 'private function FindBundledTranslation');
-$bundledBody = substr($moduleSource, $bundledStart, 1600);
-assert(strpos($bundledBody, "if (\$SourceLanguage !== 'de') {") !== false,
-    'der Katalog darf nur fuer deutsche Quelltexte greifen');
-assert(strpos($bundledBody, 'static $bundled = null;') !== false,
-    'die Karte muss gepuffert werden - FindManualTranslation() laeuft je Text, ein Neuaufbau je Aufruf waere Verschwendung');
-echo "Test 6 (die reale Umsetzung steigt mit Feature aus und puffert die Karte) OK\n";
+// Build 189: die frueher hier gepruefte Bindung an 'de' ist bewusst entfallen -
+// sie WAR die Luecke. Stattdessen: die Suche darf keine Sprache mehr auszeichnen.
+$glossarStart = (int) strpos($moduleSource, 'private function FindGlossaryTranslation');
+$glossarBody = substr($moduleSource, $glossarStart, 900);
+assert(strpos($glossarBody, "'de'") === false,
+    'die Glossar-Suche darf keine Sprache fest verdrahten');
+assert(strpos($glossarBody, '$row[$SourceLanguage]') !== false && strpos($glossarBody, '$row[$TargetLanguage]') !== false,
+    'sie muss Quell- UND Zielspalte dynamisch lesen');
+// Build 189: gepuffert wird nicht mehr in der Suche, sondern durch den AUFRUFORT -
+// die Zeilen werden einmal je Durchlauf beschafft, nicht je Text. Frueher stand
+// dafuer ein "static" in der Suche; das ging nur, solange die Quelle rein aus
+// Konstanten kam. Jetzt haengt sie an einer instanzabhaengigen Property, ein
+// static waere dort schlicht falsch.
+$suchen = ['FindGlossaryTranslation', 'FindManualTranslation'];
+foreach ($suchen as $fn) {
+    // An der naechsten Methode begrenzen, nicht auf eine feste Zeichenzahl - ein
+    // festes Fenster ist in dieser Suite schon mehrfach in die Folgefunktion
+    // gelaufen, und die naechste ist hier ausgerechnet GetGlossaryRowsForLookup().
+    $a = (int) strpos($moduleSource, 'private function ' . $fn);
+    $b = (int) strpos($moduleSource, "\n    private function ", $a + 10);
+    $rumpf = substr($moduleSource, $a, $b - $a);
+    assert(strpos($rumpf, 'GetGlossaryRowsForLookup()') === false,
+        "$fn darf die Zeilen NICHT je Text neu beschaffen");
+}
+assert(substr_count($moduleSource, '$this->GetGlossaryRowsForLookup();') === 3,
+    'die drei Uebersetzungswege beschaffen sie je einmal vorab');
+echo "Test 6 (die Glossar-Zeilen werden je Durchlauf einmal beschafft) OK\n";
 
 echo "\nAll tests passed.\n";

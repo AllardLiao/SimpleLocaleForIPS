@@ -55,12 +55,12 @@ echo "Test 2 (EnumerationOptions rows filtered by SourceKey:FieldPath, matching 
 // Test 3: ObjectAutomations rows are keyed by AutomationID.
 $liveAutomationIDs = [5 => true, 7 => true];
 $automationRows = [
-    ['AutomationID' => 5, 'Original import' => 'Gute Nacht'],
-    ['AutomationID' => 7, 'Original import' => 'Kino'],
-    ['AutomationID' => 42, 'Original import' => 'Gelöschte Automation'],
+    ['Automation ID' => 5, 'Original import' => 'Gute Nacht'],
+    ['Automation ID' => 7, 'Original import' => 'Kino'],
+    ['Automation ID' => 42, 'Original import' => 'Gelöschte Automation'],
 ];
 $removed3 = 0;
-$result3 = filterRows($automationRows, fn ($row) => isset($liveAutomationIDs[(int) $row['AutomationID']]), $removed3);
+$result3 = filterRows($automationRows, fn ($row) => isset($liveAutomationIDs[(int) $row['Automation ID']]), $removed3);
 assert(count($result3) === 2 && $removed3 === 1, 'Only automations still present in the tile visualization instance must survive cleanup');
 echo "Test 3 (ObjectAutomations rows filtered by AutomationID) OK\n";
 

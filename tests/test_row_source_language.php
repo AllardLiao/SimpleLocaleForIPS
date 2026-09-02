@@ -10,7 +10,7 @@ declare(strict_types=1);
 // internal bookkeeping field (fieldTranslatedAgainstSourceLanguage) so the same
 // row isn't reconciled again on the next ApplyChanges() pass.
 
-const FIELD_ROW_SOURCE = 'Quellsprache';
+const FIELD_ROW_SOURCE = 'Source language';
 const FIELD_TRANSLATED_AGAINST = 'UebersetztGegen';
 const LANG_ORIGINAL_IMPORT = 'ORIGINAL_IMPORT';
 

@@ -45,14 +45,14 @@ function setPropertyCurrent($instance, string $name, $value): void
 // LICENSE_PUBLIC_KEY in libs/SimpleLocaleConstants.php.
 //
 // Er wird daher zur Laufzeit aus der Umgebung gelesen:
-//     IPSSL_LICENSE_SIGNING_KEY=<base64> php -d zend.assertions=1 ... tests/test_license_features.php
+//     SLOC_LICENSE_SIGNING_KEY=<base64> php -d zend.assertions=1 ... tests/test_license_features.php
 // Fehlt er, ueberspringt sich der Test sauber, statt fehlzuschlagen - die
 // uebrige Suite bleibt dadurch auf jeder Maschine lauffaehig.
 function getSigningKeyOrSkip(): string
 {
-    $b64 = getenv('IPSSL_LICENSE_SIGNING_KEY') ?: '';
+    $b64 = getenv('SLOC_LICENSE_SIGNING_KEY') ?: '';
     if ($b64 === '') {
-        echo "SKIP: Umgebungsvariable IPSSL_LICENSE_SIGNING_KEY nicht gesetzt -\n";
+        echo "SKIP: Umgebungsvariable SLOC_LICENSE_SIGNING_KEY nicht gesetzt -\n";
         echo "      dieser Test braucht den privaten Signierschluessel, der bewusst\n";
         echo "      nicht im Repo liegt (siehe Kommentar oben). Uebrige Suite unberuehrt.\n";
         exit(0);
@@ -60,7 +60,7 @@ function getSigningKeyOrSkip(): string
 
     $key = base64_decode($b64, true);
     if ($key === false || strlen($key) !== SODIUM_CRYPTO_SIGN_SECRETKEYBYTES) {
-        fwrite(STDERR, "IPSSL_LICENSE_SIGNING_KEY ist kein gueltiger Ed25519-Secret-Key (erwartet: base64 von "
+        fwrite(STDERR, "SLOC_LICENSE_SIGNING_KEY ist kein gueltiger Ed25519-Secret-Key (erwartet: base64 von "
             . SODIUM_CRYPTO_SIGN_SECRETKEYBYTES . " Bytes).\n");
         exit(1);
     }

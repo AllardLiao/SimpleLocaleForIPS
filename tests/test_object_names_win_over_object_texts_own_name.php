@@ -88,7 +88,7 @@ echo "Test 3 (the real module.php has removed the dual-write guard, the Name con
 assert(strpos($moduleSource, "'caption' => \$this->Translate('Original-Import (Name)')") === false, 'The "Original-Import (Name)" column must be removed from the Eigene-Texte list');
 $formSource = file_get_contents(dirname(__DIR__) . '/SimpleLocale/form.json');
 assert(strpos($formSource, 'ORIGINAL_IMPORT_Name') === false, 'form.json must no longer declare the ORIGINAL_IMPORT_Name column');
-assert(strpos($formSource, 'Eigene Texte (String-Variablen)') !== false, 'The list caption must be renamed to clarify it only ever contains String variables');
+assert(strpos($formSource, 'Custom texts (string variables)') !== false, 'The list caption must be renamed to clarify it only ever contains String variables');
 echo "Test 4 (the Name column is gone from both the dynamic column builder and the static form.json, and the list is renamed) OK\n";
 
 echo "\nAll tests passed.\n";

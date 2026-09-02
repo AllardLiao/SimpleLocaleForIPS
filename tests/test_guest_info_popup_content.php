@@ -41,13 +41,13 @@ function buildGuestStatsInfoTextReplica(array $stats, bool $showStatsEnabled, ar
     }
 
     $daysSince = max(0, (int) floor((1755700000 - $stats['since']) / 86400));
-    $sincePrefix = $guestCache['statsSincePrefix'] ?? 'Seit Inbetriebnahme am';
-    $daysSuffix = $guestCache['statsDaysSuffix'] ?? 'Tag(e).';
-    $hourlyLabel = $guestCache['statsHourlyLabel'] ?? 'Stündlich:';
-    $requestsUnit = $guestCache['statsRequestsUnit'] ?? 'Anfrage(n),';
-    $charsUnit = $guestCache['statsCharsUnit'] ?? 'Zeichen.';
-    $totalLabel = $guestCache['statsTotalLabel'] ?? 'Insgesamt:';
-    $cacheSavedLabel = $guestCache['statsCacheSavedLabel'] ?? 'Durch den Cache eingespart:';
+    $sincePrefix = $guestCache['statsSincePrefix'] ?? 'In operation since';
+    $daysSuffix = $guestCache['statsDaysSuffix'] ?? 'day(s).';
+    $hourlyLabel = $guestCache['statsHourlyLabel'] ?? 'Hourly:';
+    $requestsUnit = $guestCache['statsRequestsUnit'] ?? 'request(s),';
+    $charsUnit = $guestCache['statsCharsUnit'] ?? 'character(s).';
+    $totalLabel = $guestCache['statsTotalLabel'] ?? 'Total:';
+    $cacheSavedLabel = $guestCache['statsCacheSavedLabel'] ?? 'Saved by the cache:';
 
     return $sincePrefix . ' ' . date('d.m.Y', $stats['since']) . ', ' . $daysSince . ' ' . $daysSuffix . "\n"
         . $hourlyLabel . ' ' . formatStatsCountReplica($stats['requestsPerHour']) . ' ' . $requestsUnit
@@ -93,7 +93,7 @@ function buildGuestPauseInfoTextReplica(?int $globalPauseUntil, array $guestCach
     }
 
     $pausedPrefix = $guestCache['pausedNoticePrefix'] ?? 'Übersetzung pausiert bis';
-    $reassurance = $guestCache['pausedReassurance'] ?? 'Bereits vorhandene Übersetzungen bleiben nutzbar.';
+    $reassurance = $guestCache['pausedReassurance'] ?? 'Existing translations remain usable.';
 
     return $pausedPrefix . ' ' . date('d.m. H:i', $globalPauseUntil) . "\n" . $reassurance;
 }

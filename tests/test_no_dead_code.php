@@ -86,12 +86,12 @@ preg_match_all("/private const (?:TILE_ICON_CATALOG|TILE_TEMPLATE_CATALOG) = \[(
 foreach ($kataloge[1] as $block) {
     preg_match_all("/'label'\s*=>\s*'((?:[^'\\\\]|\\\\.)*)'/", $block, $labels);
     foreach ($labels[1] as $label) {
-        $laufzeit[] = 'Automatisch (' . stripslashes($label) . ')';
+        $laufzeit[] = 'Automatic (' . stripslashes($label) . ')';
     }
 }
 
 $verwaist = [];
-foreach (array_keys($locale['translations']['en'] ?? []) as $schluessel) {
+foreach (array_keys($locale['translations']['de'] ?? []) as $schluessel) {
     if (in_array($schluessel, $laufzeit, true)) {
         continue;
     }
@@ -117,7 +117,7 @@ echo "Test 5 (keine verwaisten Übersetzungen) OK\n";
 
 // Test 6: alle Sprachen tragen denselben Schluesselsatz - eine Sprache, die
 // einen Schluessel nicht kennt, faellt sonst still auf Deutsch zurueck.
-$basis = array_keys($locale['translations']['en'] ?? []);
+$basis = array_keys($locale['translations']['de'] ?? []);
 foreach ($locale['translations'] as $sprache => $eintraege) {
     $fehlt = array_diff($basis, array_keys($eintraege));
     $zuviel = array_diff(array_keys($eintraege), $basis);

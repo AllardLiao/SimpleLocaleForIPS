@@ -130,7 +130,7 @@ assert(strpos($store, "isset(\$previousKeys[\$asset['kind'] . '|' . \$asset['key
     'nur ein ERSTMALS eingetroffenes Design darf die Auswahl setzen');
 assert(strpos($store, "\$asset['scope'] !== 'edition'") !== false, 'und nur ein editionsgebundenes');
 
-foreach (['Aktivierung nicht bestätigt'] as $text) {
+foreach (['Activation not confirmed'] as $text) {
     foreach ($locale['translations'] as $sprache => $eintraege) {
         assert(isset($eintraege[$text]), "\"$text\" fehlt in der Sprache \"$sprache\"");
     }

@@ -52,7 +52,7 @@ function mergeOwnUiTextRowsReplica(array $existingRows, array $definitions): arr
             $row['ORIGINAL_IMPORT'] = $germanText;
             $row['_sourceChanged'] = true; // stand-in for MarkRowSourceChanged
         }
-        $row['Quellsprache'] = 'de';
+        $row['Source language'] = 'de';
         $result[] = $row;
     }
 
@@ -60,15 +60,15 @@ function mergeOwnUiTextRowsReplica(array $existingRows, array $definitions): arr
 }
 
 // Test 1: a brand-new installation (no existing rows) seeds every definition fresh.
-$definitions = ['pausedNoticePrefix' => 'Übersetzung pausiert bis', 'statsHourlyLabel' => 'Stündlich:'];
+$definitions = ['pausedNoticePrefix' => 'Übersetzung pausiert bis', 'statsHourlyLabel' => 'Hourly:'];
 $seeded = mergeOwnUiTextRowsReplica([], $definitions);
 assert(count($seeded) === 2, 'A fresh install must seed exactly one row per definition');
-assert($seeded[0]['ORIGINAL_IMPORT'] === 'Übersetzung pausiert bis' && $seeded[0]['Quellsprache'] === 'de', 'Every seeded row must carry the current German text and always Quellsprache=de');
+assert($seeded[0]['ORIGINAL_IMPORT'] === 'Übersetzung pausiert bis' && $seeded[0]['Source language'] === 'de', 'Every seeded row must carry the current German text and always Quellsprache=de');
 echo "Test 1 (fresh install seeds every own-UI-text definition as a new German-sourced row) OK\n";
 
 // Test 2: an existing, already-translated row is PRESERVED (translations kept)
 // when the German source text has NOT changed.
-$existing = [['Key' => 'pausedNoticePrefix', 'ORIGINAL_IMPORT' => 'Übersetzung pausiert bis', 'en' => 'Translation paused until', 'Quellsprache' => 'de']];
+$existing = [['Key' => 'pausedNoticePrefix', 'ORIGINAL_IMPORT' => 'Übersetzung pausiert bis', 'en' => 'Translation paused until', 'Source language' => 'de']];
 $merged = mergeOwnUiTextRowsReplica($existing, ['pausedNoticePrefix' => 'Übersetzung pausiert bis']);
 assert($merged[0]['en'] === 'Translation paused until', 'An unchanged German source text must NOT touch the existing translation');
 assert(!isset($merged[0]['_sourceChanged']), 'An unchanged German source text must not be flagged as changed');
@@ -78,7 +78,7 @@ echo "Test 2 (existing translations survive a rescan when the German source text
 // rewords a constant), the row is flagged as changed so it gets retranslated -
 // but the OLD translation is not deleted outright (stays as a fallback until the
 // new translation lands, matching the established staleness pattern elsewhere).
-$existingStale = [['Key' => 'pausedNoticePrefix', 'ORIGINAL_IMPORT' => 'Alter Wortlaut', 'en' => 'Old wording', 'Quellsprache' => 'de']];
+$existingStale = [['Key' => 'pausedNoticePrefix', 'ORIGINAL_IMPORT' => 'Alter Wortlaut', 'en' => 'Old wording', 'Source language' => 'de']];
 $mergedChanged = mergeOwnUiTextRowsReplica($existingStale, ['pausedNoticePrefix' => 'Übersetzung pausiert bis']);
 assert($mergedChanged[0]['ORIGINAL_IMPORT'] === 'Übersetzung pausiert bis', 'The row must pick up the NEW German source text from the current code');
 assert($mergedChanged[0]['_sourceChanged'] === true, 'A changed German source text must flag the row so the next FillMissingTranslations pass retranslates it');

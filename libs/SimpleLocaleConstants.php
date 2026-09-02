@@ -304,7 +304,7 @@ trait SimpleLocaleConstants
     // im Konfigurationsformular nur das Auswahlfeld "Aktuell aktive Sprache" umstellt
     // und "Uebernehmen" klickt (ein reines ApplyChanges liest/speichert Properties,
     // loest aber fuer sich genommen keine Umbenennungen aus - das tat bisher nur der
-    // RequestAction-Pfad ueber die Kachel/IPSSL_SetLanguage). ApplyChanges vergleicht
+    // RequestAction-Pfad ueber die Kachel/SLOC_SetLanguage). ApplyChanges vergleicht
     // beide Werte und holt die Umbenennung ueber ApplyLanguage() nach, falls sie noch
     // aussteht - ohne dieses Attribut wuerde der Vergleich sonst immer "gleich" sehen,
     // sobald ApplyLanguage() selbst per IPS_SetProperty+IPS_ApplyChanges erneut in
@@ -510,16 +510,29 @@ trait SimpleLocaleConstants
     // attributeActivationLog.
     private const attributeTranslationCache = 'TranslationCache';
 
-    // Build 133 (Nutzer-Wunsch): JSON-Map der deutschen Quelltexte (Einheiten-
-    // Kuerzel + Kompass-Punkte), die MergeBundledManualTranslations() dem Admin
-    // bereits einmal als Vorschlagszeile in propertyManualTranslations
-    // angeboten hat (Wert ist immer nur `true`, reine Existenzpruefung). Anders
-    // als propertyOwnUiTexts (siehe MergeOwnUiTextRows) sind diese Zeilen fuer
-    // den Admin frei loeschbar - ohne dieses Merkzettel-Attribut wuerde ein
-    // geloeschter Vorschlag (Nutzer-Beispiel: "SSW" kollidiert mit einem
-    // Personen-Kuerzel in seiner Installation) beim naechsten Rescan sofort
-    // wieder auftauchen, statt geloescht zu bleiben.
-    private const attributeSeededManualTranslationKeys = 'SeededManualTranslationKeys';
+
+    // Build 189 (Nutzer-Wunsch): das GLOSSAR - mitgelieferte Einheiten und
+    // Kompassrichtungen, getrennt von den "Eigenen Uebersetzungen".
+    //
+    // Anders als dort gibt es hier KEINE Quellsprachen-Spalte: die Tabelle hat je
+    // Sprache eine Spalte, und JEDE davon kann die Quelle sein. Ein Text mit
+    // deutscher Zeilen-Quellsprache trifft ueber die deutsche Spalte, einer mit
+    // spanischer nur, wenn die spanische Spalte den Wert traegt. Die Zuordnung
+    // von jeder Spalte in jede andere ist eindeutig - das ist die Bedeutung von
+    // "Glossar" hier.
+    //
+    // Damit entfaellt die Dopplung, die vorher noetig war, sobald Teile der
+    // Visualisierung eine andere Quellsprache hatten: "km/h" musste je
+    // Quellsprache eine eigene Zeile bekommen.
+    private const propertyGlossary = 'Glossary';
+
+    // Build 195: technischer Schluessel einer mitgelieferten Glossar-Zeile -
+    // KEINE Sprache. Vorher diente die deutsche Spalte als Schluessel, was der
+    // Idee der Tabelle widersprach (dort ist keine Sprache ausgezeichnet) und
+    // eigene Zeilen mit Katalogzeilen verwechselbar machte. Eigene Zeilen tragen
+    // hier nichts und werden dadurch nie nachbefuellt.
+    private const fieldGlossaryCatalogKey = 'Katalog';
+    private const attributeSeededGlossaryKeys = 'SeededGlossaryKeys';
 
     // Build 152 (Nutzer-Frage: "Wie bekommt der User vom Ausfall eines
     // Anbieters mit?"): Bilanz des LETZTEN Rescan-Durchlaufs als JSON
@@ -655,9 +668,15 @@ trait SimpleLocaleConstants
     // Zellkorrektur.
     private const attributeLastActiveLanguageContentFingerprint = 'LastActiveLanguageContentFingerprint';
 
-    // Timer: Präfix als Salt auf den Namen, falls im jeweiligen IPS-System
-    // bereits ein Timer/Objekt mit demselben Basisnamen existieren sollte.
-    private const timerPrefix = 'IPSSL_TIMER_';
+    // Timer: Präfix als Salt auf den Namen, falls im jeweiligen System bereits ein
+    // Timer/Objekt mit demselben Basisnamen existieren sollte.
+    //
+    // Build 185: mit dem Funktions-Präfix von IPSSL auf SLOC umgestellt. Daraus
+    // entstehen PERSISTIERTE Timer-Idents - auf einer bereits laufenden Instanz
+    // legte das neue Timer an und ließe die alten mit einem Callback zurück, den
+    // es unter dem Namen nicht mehr gibt. Zum Zeitpunkt der Umstellung existierten
+    // ausschließlich eigene Testinstanzen, die neu angelegt wurden.
+    private const timerPrefix = 'SLOC_TIMER_';
     private const timerIdentAutoRescan = 'AutoRescan';
     private const timerIdentTranslationStats = 'TranslationStats';
     private const timerIdentPendingRowUpdateFlush = 'PendingRowUpdateFlush';
@@ -698,6 +717,28 @@ trait SimpleLocaleConstants
     // der Testphase ganz ohne Google/DeepL-Key (nur kostenfreier Anbieter) ueberhaupt
     // keine Zielsprache waehlbar, da BuildTargetLanguageOptions() im Testphase-Build
     // auf genau diese 5 Codes filtert.
+    // Build 186: Anbieter liefern denselben Sprachcode in unterschiedlicher
+    // Schreibweise - Google klein und ohne Region ("de", "en"), DeepL gross und
+    // fuer Englisch/Portugiesisch nur mit Region ("DE", "EN-GB", "PT-BR"). Roh
+    // uebernommen standen dieselben Sprachen dadurch mehrfach in der Auswahl, und
+    // ein Anbieterwechsel entwertete die bereits gewaehlten Zielsprachen.
+    //
+    // Intern gilt daher genau EINE Schreibweise: klein, Region mit Bindestrich
+    // ("de", "en-gb"). NormalizeLanguageCode() bildet darauf ab,
+    // LanguageCodeForProvider() wieder zurueck.
+    //
+    // Hier stehen nur die Faelle, die eine echte Entscheidung brauchen - reine
+    // Gross-/Kleinschreibung erledigt strtolower().
+    private const LANGUAGE_CODE_ALIASES = [
+        // DeepL fuehrt Norwegisch als Bokmaal; eingebaut ist es als "no". Ohne
+        // diese Zeile stuende Norwegisch zweimal in der Auswahl.
+        'nb'      => 'no',
+        // DeepL unterscheidet seit 2024 vereinfachtes/traditionelles Chinesisch,
+        // Google fuehrt "zh" bzw. "zh-tw".
+        'zh-hans' => 'zh',
+        'zh-hant' => 'zh-tw',
+    ];
+
     private const DEFAULT_LANGUAGES = [
         ['code' => 'de', 'name' => 'Deutsch'],
         ['code' => 'en', 'name' => 'English'],
@@ -731,6 +772,14 @@ trait SimpleLocaleConstants
         ['code' => 'zu', 'name' => 'isiZulu'],
         ['code' => 'mi', 'name' => 'Māori'],
         ['code' => 'la', 'name' => 'Latina'],
+        // Build 186: bei DeepL vorhanden, eingebaut bisher nicht - ohne sie
+        // verschwaenden sie aus der Auswahl, sobald die Liste von Google kommt.
+        ['code' => 'bg', 'name' => 'Български'],
+        ['code' => 'et', 'name' => 'Eesti'],
+        ['code' => 'lt', 'name' => 'Lietuvių'],
+        ['code' => 'lv', 'name' => 'Latviešu'],
+        ['code' => 'sk', 'name' => 'Slovenčina'],
+        ['code' => 'sl', 'name' => 'Slovenščina'],
     ];
 
     // Isländisch, Walisisch, Zulu, Maori, Latein - alle von Google Cloud Translate
@@ -770,5 +819,5 @@ trait SimpleLocaleConstants
 class GUIDs
 {
     // --- Modul GUIDs (Instanzen) ---
-    public const IPSSL_SimpleLocale = '{1A2E3892-FE35-9E4E-A3A8-B983B0C41F64}';
+    public const SLOC_SimpleLocale = '{1A2E3892-FE35-9E4E-A3A8-B983B0C41F64}';
 }

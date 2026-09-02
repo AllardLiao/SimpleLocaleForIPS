@@ -77,10 +77,10 @@ echo "Test 4 (Formularelemente und Verdrahtung sind real vorhanden) OK\n";
 // Test 5: die Absage muss in ALLEN Sprachen registriert sein - sonst steht sie
 // bei fremdsprachiger Konsole deutsch da (siehe Build 156).
 $locale = json_decode(file_get_contents(dirname(__DIR__) . '/SimpleLocale/locale.json'), true);
-$absage = 'Die eigene Übersetzungstabelle steht in dieser Edition nicht zur Verfügung.';
+$absage = 'The custom translation table is not available in this edition.';
 foreach ($locale['translations'] as $sprache => $eintraege) {
     assert(isset($eintraege[$absage]), "die Absage fehlt in der Sprache \"$sprache\"");
-    assert(isset($eintraege['Eigene Übersetzungstabelle']), "die Ueberschrift fehlt in der Sprache \"$sprache\"");
+    assert(isset($eintraege['Custom translation table']), "die Ueberschrift fehlt in der Sprache \"$sprache\"");
 }
 echo "Test 5 (Absage und Überschrift sind in allen Sprachen registriert) OK\n";
 

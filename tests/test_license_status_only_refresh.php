@@ -94,14 +94,14 @@ $locale = json_decode(file_get_contents(dirname(__DIR__) . '/SimpleLocale/locale
 $gefunden = false;
 $suche = function ($n) use (&$suche, &$gefunden): void {
     if (is_array($n)) {
-        if (($n['caption'] ?? '') === 'Lizenz aktivieren/aktualisieren') { $gefunden = true; }
+        if (($n['caption'] ?? '') === 'Activate/update license') { $gefunden = true; }
         foreach ($n as $v) { $suche($v); }
     }
 };
 $suche($form);
 assert($gefunden, 'der Knopf muss umbenannt sein');
 foreach ($locale['translations'] as $sprache => $eintraege) {
-    assert(isset($eintraege['Lizenz aktivieren/aktualisieren']), "die neue Beschriftung fehlt in \"$sprache\"");
+    assert(isset($eintraege['Activate/update license']), "die neue Beschriftung fehlt in \"$sprache\"");
     assert(!isset($eintraege['Lizenz aktivieren']), "die alte Beschriftung steht noch in \"$sprache\"");
 }
 echo "Test 5 (der Knopf ist umbenannt, in allen Sprachen) OK\n";

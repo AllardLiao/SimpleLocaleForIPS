@@ -95,7 +95,7 @@ assert(strpos($moduleSource, "\$this->RecordTranslationFailure('tooLong');") !==
 assert(strpos($moduleSource, "\$this->RecordTranslationFailure('unreachable', count(\$Texts));") !== false, 'auch der Totalausfall der Kette muss in die Bilanz - er deckt Google/DeepL ab, die pro Chunk nur ganz oder gar nicht liefern');
 assert(strpos($formJson, 'TranslationFailureUnreachableRow') !== false, 'die Hinweiszeile muss im Formular liegen');
 assert(strpos($formJson, 'TranslationFailureTooLongRow') !== false, 'ebenso die Laengen-Hinweiszeile');
-assert(strpos($formJson, 'Bitte führe einen erneuten Scan durch') !== false, 'der Hinweis muss AUSDRUECKLICH zum erneuten Scan auffordern - eine Formulierung wie "wird nachgeholt" koennte als automatisch missverstanden werden');
+assert(strpos($formJson, 'run another scan') !== false, 'der Hinweis muss AUSDRUECKLICH zum erneuten Scan auffordern - eine Formulierung wie "wird nachgeholt" koennte als automatisch missverstanden werden');
 echo "Test 7 (Attribut, Zähler, Zurücksetzen und beide Hinweiszeilen sind real verdrahtet) OK\n";
 
 // Test 8: BEWUSSTE ENTSCHEIDUNG - die Statuszeile bleibt unberuehrt. Das Modul

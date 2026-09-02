@@ -20,12 +20,12 @@ function ensureReplica(string $html, bool $supportsRefresh = true): string
 {
     if (strpos($html, 'handleMessage') !== false) {
         // Build 184: der eigene Handler bleibt, bekommt aber den Haken
-        // umgelegt - sonst erreichte window.ipsslOnLanguageChange genau die
+        // umgelegt - sonst erreichte window.slocOnLanguageChange genau die
         // Templates nie, die aus einer aelteren module.html stammen.
-        if (strpos($html, 'ipsslOnLanguageChange') !== false) {
+        if (strpos($html, 'slocOnLanguageChange') !== false) {
             return $html;
         }
-        $wrap = '<script>/* wrapper: ipsslOnLanguageChange */</script>';
+        $wrap = '<script>/* wrapper: slocOnLanguageChange */</script>';
         $p = strripos($html, '</body>');
 
         return $p === false ? $html . $wrap : substr($html, 0, $p) . $wrap . substr($html, $p);
@@ -37,7 +37,7 @@ function ensureReplica(string $html, bool $supportsRefresh = true): string
 }
 
 // Test 1: DER GEMELDETE FALL - eine Vorlage ohne Handler bekommt einen.
-$design = '<div class="ipssl-select-row"><span>🇩🇪</span><span>🇨🇿</span></div>';
+$design = '<div class="sloc-select-row"><span>🇩🇪</span><span>🇨🇿</span></div>';
 $out = ensureReplica($design);
 assert(strpos($out, 'handleMessage') !== false, 'DER FIX: eine Vorlage ohne Handler muss einen bekommen');
 assert(strpos($out, '🇨🇿') !== false, 'ihr eigener Inhalt bleibt unangetastet');
@@ -55,8 +55,8 @@ echo "Test 2 (ein eigener Handler bleibt unangetastet) OK\n";
 // Test 2b (Build 184): er bekommt aber den Haken umgelegt - sonst waere
 // <!--ACTIVE_LANGUAGE--> in genau diesen Templates stumm eingefroren. Bringt das
 // Template den Haken schon selbst mit (jede Kopie ab Build 184), passiert nichts.
-assert(strpos($out, 'ipsslOnLanguageChange') !== false, 'der Haken muss ihn trotzdem erreichen');
-$schonAktuell = '<div></div><script>function handleMessage(d){ window.ipsslOnLanguageChange && 0; }</script>';
+assert(strpos($out, 'slocOnLanguageChange') !== false, 'der Haken muss ihn trotzdem erreichen');
+$schonAktuell = '<div></div><script>function handleMessage(d){ window.slocOnLanguageChange && 0; }</script>';
 assert(ensureReplica($schonAktuell) === $schonAktuell, 'ein Template mit eigenem Haken wird nicht doppelt bedient');
 echo "Test 2b (der Haken erreicht auch einen eigenen Handler, aber nie doppelt) OK\n";
 
@@ -94,7 +94,7 @@ assert(strpos($body, '$redraw = $SupportsRefresh') !== false,
 // stehen. Genau die Vorlagen, die kein html bekommen (weil sie ihre Auswahl
 // selbst bauen), sind die, die ihn brauchen - haenge er mit am Neuzeichnen,
 // erreichte er nie eine davon.
-assert(strpos($body, 'window.ipsslOnLanguageChange') !== false,
+assert(strpos($body, 'window.slocOnLanguageChange') !== false,
     'der Haken fuer eigene Vorlagen muss eingesetzt werden');
 assert(strpos($body, '$hook = ') !== false && strpos($body, '$hook') > strpos($body, '$redraw = $SupportsRefresh'),
     'er wird unabhaengig von $SupportsRefresh gebaut');
@@ -115,7 +115,7 @@ echo "Test 5 (die reale Umsetzung ist verdrahtet und bricht nicht ab) OK\n";
 // dort darf nichts ergaenzt werden.
 $tileSource = file_get_contents(dirname(__DIR__) . '/SimpleLocale/module.html');
 assert(strpos($tileSource, 'handleMessage') !== false, 'die eingebaute Kachel behaelt ihren eigenen Handler');
-assert(strpos($tileSource, 'ipsslOnLanguageChange') !== false,
+assert(strpos($tileSource, 'slocOnLanguageChange') !== false,
     'Build 184: sie bedient den Haken selbst - Kopien davon brauchen keine Umhuellung');
 echo "Test 6 (die eingebaute Kachel bleibt unverändert) OK\n";
 
@@ -125,7 +125,7 @@ $hookStart = (int) strpos($moduleSource, 'private function EnsureLanguageChangeH
 $hookBody = substr($moduleSource, $hookStart, (int) strpos($moduleSource, "\n    // Für eigene Kacheln", $hookStart) - $hookStart);
 assert(strpos($hookBody, 'var inner=handleMessage;') !== false, 'der vorhandene Handler wird festgehalten');
 assert(strpos($hookBody, 'return inner.apply(this,arguments);') !== false, 'und unveraendert weiter aufgerufen');
-assert(strpos($hookBody, "strpos(\$Html, 'ipsslOnLanguageChange') !== false") !== false,
+assert(strpos($hookBody, "strpos(\$Html, 'slocOnLanguageChange') !== false") !== false,
     'und uebersprungen, wenn das Template den Haken schon selbst bedient');
 assert(strpos($hookBody, 'strripos($Html, \'</body>\')') !== false,
     'ans Ende des Body - der eigene Handler muss vorher definiert sein');

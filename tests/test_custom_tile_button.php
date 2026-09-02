@@ -16,12 +16,12 @@ function assertTrue(bool $cond, string $msg): void
 
 function computeButtonElement(bool $useCustomTile, bool $hasFeature): array
 {
-    $element = ['visible' => true, 'enabled' => true, 'caption' => 'Eigenen Kachel-HTML-Code bearbeiten'];
+    $element = ['visible' => true, 'enabled' => true, 'caption' => 'Edit custom tile HTML code'];
 
     $element['visible'] = $useCustomTile;
     if (!$hasFeature) {
         $element['enabled'] = false;
-        $element['caption'] = 'Eigenen Kachel-HTML-Code bearbeiten (Pro Edition erforderlich)';
+        $element['caption'] = 'Edit custom tile HTML code (Pro Edition required)';
     }
 
     return $element;
@@ -38,6 +38,6 @@ assertTrue($r['visible'] === true && $r['enabled'] === true, 'UseCustomTile on +
 
 $r = computeButtonElement(true, false);
 assertTrue($r['visible'] === true && $r['enabled'] === false, 'UseCustomTile on + unlicensed -> visible but grayed out (discoverable upsell)');
-assertTrue(str_contains($r['caption'], 'Pro Edition erforderlich'), 'unlicensed caption carries the static Pro-Edition suffix');
+assertTrue(str_contains($r['caption'], 'Pro Edition required'), 'unlicensed caption carries the static Pro-Edition suffix');
 
 echo "\nAll CustomTileHtmlButton visibility simulations passed.\n";

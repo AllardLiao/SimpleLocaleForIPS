@@ -70,11 +70,11 @@ $tilePanel = findByName($form['elements'], 'TileSettingsPanel');
 assert($tilePanel !== null, 'DER BUG: es muss ein ExpansionPanel "TileSettingsPanel" existieren');
 assert($tilePanel['type'] === 'ExpansionPanel', 'TileSettingsPanel muss ein ExpansionPanel sein');
 assert($tilePanel['expanded'] === false, 'TileSettingsPanel muss standardmäßig eingeklappt sein');
-assert($tilePanel['caption'] === 'Kachel-Einstellungen', 'TileSettingsPanel muss die Beschriftung "Kachel-Einstellungen" tragen');
+assert($tilePanel['caption'] === 'Tile settings', 'TileSettingsPanel muss die Beschriftung "Kachel-Einstellungen" tragen');
 foreach (['ShowGlobeIcon', 'ShowInfoIcon', 'ShowTranslationStats', 'UseCustomTile', 'CustomTileHtmlButton'] as $expectedChild) {
     assert(findByName($tilePanel['items'], $expectedChild) !== null, "TileSettingsPanel muss '$expectedChild' enthalten");
 }
-echo "Test 1 (neues, standardmäßig eingeklapptes 'Kachel-Einstellungen'-Panel enthält alle Kachel-Optionen) OK\n";
+echo "Test 1 (neues, standardmäßig eingeklapptes 'Tile settings'-Panel enthält alle Kachel-Optionen) OK\n";
 
 // Test 2: "Automatischer Rescan" muss direkt VOR dem neuen Kachel-Panel stehen
 // (dieselbe Elternebene, unmittelbar davor).
@@ -95,10 +95,10 @@ foreach (['TranslationStatsRow1', 'TranslationStatsRow2', 'TranslationStatsRow3'
     assert(($firstItem['width'] ?? null) !== null, "DER BUG: die erste Spalte von $rowName muss eine feste Breite für das zweispaltige Layout haben");
 }
 $row1 = findByName($form['elements'], 'TranslationStatsRow1');
-assert($row1['items'][0]['caption'] === 'Statistiken', 'DER BUG: die linke Spalte muss in der ersten Statistik-Zeile "Statistiken" zeigen');
+assert($row1['items'][0]['caption'] === 'Statistics', 'DER BUG: die linke Spalte muss in der ersten Statistik-Zeile "Statistiken" zeigen');
 $row2 = findByName($form['elements'], 'TranslationStatsRow2');
 assert($row2['items'][0]['caption'] === '', 'die linke Spalte muss in den folgenden Statistik-Zeilen leer bleiben (kein wiederholtes "Statistiken")');
-echo "Test 3 (Statistiken sind zweispaltig/eingerückt dargestellt, 'Statistiken' erscheint nur einmal links) OK\n";
+echo "Test 3 (Statistiken sind zweispaltig/eingerückt dargestellt, 'Statistics' erscheint nur einmal links) OK\n";
 
 // Test 4: eine kurze Erklärung zur Scan-Sprache mit Verweis auf Abschnitt 7
 // muss direkt nach dem SourceLanguage-Feld stehen.
@@ -106,7 +106,7 @@ $sourceLangIndex = array_search('SourceLanguage', $namesInOrder, true);
 assert($sourceLangIndex !== false, 'SourceLanguage muss in ConfigPanel liegen');
 $nextElement = $configPanel['items'][$sourceLangIndex + 1];
 assert($nextElement['type'] === 'Label', 'DER BUG: direkt nach der Scan-Sprache muss ein erklärender Hinweis-Text stehen');
-assert(strpos($nextElement['caption'], 'Abschnitt 7') !== false, 'die Erklärung zur Scan-Sprache muss auf Abschnitt 7 der Dokumentation verweisen');
+assert(strpos($nextElement['caption'], 'section 7') !== false, 'die Erklärung zur Scan-Sprache muss auf Abschnitt 7 der Dokumentation verweisen');
 assert(strpos($nextElement['caption'], 'Rescan') !== false, 'die Erklärung muss den Zusammenhang mit (Automatischem) Rescan ansprechen');
 echo "Test 4 (kurze Erklärung zur Scan-Sprache mit Verweis auf Abschnitt 7 direkt nach dem Feld) OK\n";
 
@@ -122,10 +122,10 @@ echo "Test 5 (alle neun Übersetzungstabellen sind auf 100% Bildschirmbreite ges
 // (ℹ️) statt als Dauertext haben - kein eigenständiges Label mehr direkt im
 // Aktionsbereich für diese vier Erläuterungen.
 $actionTexts = [
-    'Rescan' => 'Durchsucht den Root der Visualisierung erneut',
-    'CleanupOrphanedRows' => 'Entfernt dauerhaft alle Zeilen',
-    'ClearTranslationCache' => 'Löscht nur den internen Zwischenspeicher',
-    'CheckProviders' => 'Schickt eine einzelne Testanfrage',
+    'Rescan' => 'Rescans the root of the visualization',
+    'CleanupOrphanedRows' => 'Permanently removes every row',
+    'ClearTranslationCache' => 'Only clears the internal cache',
+    'CheckProviders' => 'Sends a single test request',
 ];
 foreach ($actionTexts as $actionKeyword => $expectedTextStart) {
     $found = false;

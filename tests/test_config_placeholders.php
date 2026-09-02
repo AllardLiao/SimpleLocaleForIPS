@@ -59,14 +59,14 @@ echo "Test 2 (die Sperre sitzt eine Ebene hoeher und greift dort) OK\n";
 // Auswahl per Skript AN DER KACHEL VORBEI zu bauen, wo nichts vorgelagert ist.
 assert(strpos($public, "HasLicenseFeature('custom_tile')") !== false
     && strpos($public, 'throw new Exception') !== false,
-    'IPSSL_GetAvailableLanguages muss weiterhin werfen');
+    'SLOC_GetAvailableLanguages muss weiterhin werfen');
 echo "Test 3 (die öffentliche Funktion bleibt gesperrt) OK\n";
 
 // Test 4: DER SENTINEL - ORIGINAL_IMPORT ist modulintern (siehe Build 183) und
 // darf nie in einem Template landen. Der Platzhalter laeuft deshalb ueber die
 // oeffentliche GetCurrentLanguageCode(), die ihn bereits auf die Quellsprache
 // abbildet - und die damit garantiert denselben Wert liefert wie ein Skript,
-// das daneben IPSSL_GetCurrentLanguageCode() aufruft.
+// das daneben SLOC_GetCurrentLanguageCode() aufruft.
 assert(strpos($apply, '$this->GetCurrentLanguageCode()') !== false,
     'DER SENTINEL: der Platzhalter laeuft ueber die oeffentliche Funktion');
 $current = $fenster('public function GetCurrentLanguageCode', 'public function GetAvailableLanguages');

@@ -37,14 +37,14 @@ function splitHtmlIntoTextNodes(string $Html): array
     }
     $doc = new DOMDocument('1.0', 'UTF-8');
     $prevErrors = libxml_use_internal_errors(true);
-    $wrapped = '<?xml encoding="UTF-8"><ipssl-root>' . $Html . '</ipssl-root>';
+    $wrapped = '<?xml encoding="UTF-8"><sloc-root>' . $Html . '</sloc-root>';
     $loaded = @$doc->loadHTML($wrapped, LIBXML_NOERROR | LIBXML_NOWARNING | LIBXML_HTML_NODEFDTD | LIBXML_HTML_NOIMPLIED);
     libxml_clear_errors();
     libxml_use_internal_errors($prevErrors);
     if (!$loaded) {
         return $fallback;
     }
-    $root = $doc->getElementsByTagName('ipssl-root')->item(0);
+    $root = $doc->getElementsByTagName('sloc-root')->item(0);
     if ($root === null) {
         return $fallback;
     }

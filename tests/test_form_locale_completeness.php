@@ -54,7 +54,7 @@ collectCaptions($form['actions'], $captions);
 
 // Legitime Ausnahmen: reine Marken-/Produktnamen (werden nie übersetzt) und
 // das wiederverwendete Info-Symbol (kein Text, keine Übersetzung nötig).
-foreach (['Google Cloud Translate', 'DeepL', 'ℹ️', 'Simple Locale for IPS', 'https://www.synergetix.de/simplelocale/license.php'] as $exempt) {
+foreach (['Google Cloud Translate', 'DeepL', 'ℹ️', 'Simple Locale', 'https://www.synergetix.de/simplelocale/license.php'] as $exempt) {
     unset($captions[$exempt]);
 }
 
@@ -62,10 +62,10 @@ assert(count($captions) > 50, 'Sanity-Check: es sollten deutlich mehr als 50 ver
 
 // Test 1: DER GEMELDETE BUG - "Statistiken" muss jetzt in allen vier Sprachen
 // eine Übersetzung haben.
-foreach (['en', 'es', 'it', 'fr'] as $lang) {
-    assert(isset($locale['translations'][$lang]['Statistiken']), "DER BUG: 'Statistiken' fehlt in der Sprache '$lang'");
+foreach (['de', 'es', 'it', 'fr'] as $lang) {
+    assert(isset($locale['translations'][$lang]['Statistics']), "DER BUG: 'Statistics' fehlt in der Sprache '$lang'");
 }
-echo "Test 1 ('Statistiken' hat jetzt in allen vier Sprachen eine Übersetzung) OK\n";
+echo "Test 1 ('Statistics' hat jetzt in allen vier Sprachen eine Übersetzung) OK\n";
 
 // Test 2: DER ALLGEMEINE FALL - JEDE buchstabenhaltige Beschriftung im
 // gesamten Formular (inkl. Popups, Spalten-Überschriften) muss in allen vier
@@ -73,7 +73,7 @@ echo "Test 1 ('Statistiken' hat jetzt in allen vier Sprachen eine Übersetzung) 
 // von Anfang an gefangen.
 $missing = [];
 foreach (array_keys($captions) as $caption) {
-    foreach (['en', 'es', 'it', 'fr'] as $lang) {
+    foreach (['de', 'es', 'it', 'fr'] as $lang) {
         if (!isset($locale['translations'][$lang][$caption])) {
             $missing[] = "$lang: " . mb_substr($caption, 0, 60, 'UTF-8');
         }
@@ -116,7 +116,7 @@ assert($preferredIndex !== null, 'PreferredPaidProvider muss in TranslationProvi
 $nextItem = $providerPanel['items'][$preferredIndex + 1];
 assert($nextItem['type'] === 'Label', 'DER BUG: direkt nach PreferredPaidProvider muss eine Erklärung zu den Sprachcode-Implikationen stehen');
 assert(strpos($nextItem['caption'], 'EN-GB') !== false, 'die Erklärung muss die konkreten DeepL-Regionscodes (z.B. EN-GB) nennen');
-assert(strpos($nextItem['caption'], 'Abschnitt 7') !== false, 'die Erklärung muss auf Abschnitt 7 der Dokumentation verweisen');
+assert(strpos($nextItem['caption'], 'section 7') !== false, 'die Erklärung muss auf Abschnitt 7 der Dokumentation verweisen');
 echo "Test 3 (Erklärung zu den DeepL-Sprachcode-Implikationen direkt nach 'Bevorzugter Anbieter') OK\n";
 
 // Test 4 (Build 139, Nutzer-Feedback: das Info-Icon "ⓘ" sah in der Konsole

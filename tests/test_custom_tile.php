@@ -35,7 +35,7 @@ function selectTileHtml(bool $useCustomTile, bool $hasFeature, string $customTil
 // Mirrors ApplyTilePlaceholders().
 function applyPlaceholders(string $html, int $instanceId, string $languageSelectHtml): string
 {
-    $html = str_replace('<!--WRAPPER_ID-->', 'ipssl-select-wrapper-' . $instanceId, $html);
+    $html = str_replace('<!--WRAPPER_ID-->', 'sloc-select-wrapper-' . $instanceId, $html);
 
     return str_replace('<!--LANGUAGE_SELECT-->', $languageSelectHtml, $html);
 }
@@ -69,7 +69,7 @@ assertTrue($result === DEFAULT_HTML, 'licensed + enabled but empty field -> fall
 $template = '<div id="<!--WRAPPER_ID-->"><!--LANGUAGE_SELECT--></div>'
     . '<script>document.getElementById("<!--WRAPPER_ID-->");</script>';
 $rendered = applyPlaceholders($template, 42, '<select>...</select>');
-assertTrue(substr_count($rendered, 'ipssl-select-wrapper-42') === 2, 'WRAPPER_ID replaced consistently at both occurrences');
+assertTrue(substr_count($rendered, 'sloc-select-wrapper-42') === 2, 'WRAPPER_ID replaced consistently at both occurrences');
 assertTrue(str_contains($rendered, '<select>...</select>'), 'LANGUAGE_SELECT replaced with rendered dropdown HTML');
 assertTrue(!str_contains($rendered, '<!--WRAPPER_ID-->') && !str_contains($rendered, '<!--LANGUAGE_SELECT-->'), 'no placeholders left unresolved');
 

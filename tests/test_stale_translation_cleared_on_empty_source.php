@@ -63,7 +63,7 @@ echo "Test 3 (a non-empty raw source never triggers the new clearing branch) OK\
 // LooksLikeJson/IsRowLanguageTranslationCurrent pending-check, and the
 // temporary Build 100 diagnostic logging must be gone.
 $moduleSource = file_get_contents(dirname(__DIR__) . '/SimpleLocale/module.php');
-assert(strpos($moduleSource, 'IPSSL_TranslateGapDiag') === false, 'The temporary Build 100 diagnostic logging must be removed now that the mechanism is confirmed and fixed');
+assert(strpos($moduleSource, 'SLOC_TranslateGapDiag') === false, 'The temporary Build 100 diagnostic logging must be removed now that the mechanism is confirmed and fixed');
 assert(strpos($moduleSource, "if (\$fromText === '') {") !== false, 'FillLanguageColumn() must contain the new empty-source handling branch');
 echo "Test 4 (Build 100 diagnostic removed, Build 101 fix present in the real function) OK\n";
 
