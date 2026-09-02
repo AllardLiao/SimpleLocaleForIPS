@@ -525,6 +525,13 @@ trait SimpleLocaleConstants
     // Visualisierung eine andere Quellsprache hatten: "km/h" musste je
     // Quellsprache eine eigene Zeile bekommen.
     private const propertyGlossary = 'Glossary';
+
+    // Build 195: technischer Schluessel einer mitgelieferten Glossar-Zeile -
+    // KEINE Sprache. Vorher diente die deutsche Spalte als Schluessel, was der
+    // Idee der Tabelle widersprach (dort ist keine Sprache ausgezeichnet) und
+    // eigene Zeilen mit Katalogzeilen verwechselbar machte. Eigene Zeilen tragen
+    // hier nichts und werden dadurch nie nachbefuellt.
+    private const fieldGlossaryCatalogKey = 'Katalog';
     private const attributeSeededGlossaryKeys = 'SeededGlossaryKeys';
 
     // Build 152 (Nutzer-Frage: "Wie bekommt der User vom Ausfall eines

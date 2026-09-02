@@ -647,6 +647,12 @@
                     "rowCount": 8,
                     "columns": [
                         {
+                            "caption": "Catalog",
+                            "name": "Katalog",
+                            "width": "110px",
+                            "save": true
+                        },
+                        {
                             "caption": "German",
                             "name": "de",
                             "width": "200px",

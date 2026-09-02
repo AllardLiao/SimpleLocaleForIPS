@@ -3669,25 +3669,28 @@ class SimpleLocale extends IPSModuleStrict
     // ausgebaut - jede zusaetzliche Sprache muesste die Kompass-Kuerzel und ihre
     // sprachspezifische Bedeutung einzeln verifizieren, sonst droht genau die Art
     // von Fehler, die diese Tabelle eigentlich vermeiden soll).
-    private const UNIT_COMPASS_BUNDLED_LANGUAGES = ['en', 'es', 'fr', 'it', 'pt', 'nl', 'pl', 'ru', 'tr'];
+    // Build 195: die Sprachen, fuer die wir KOMPASSRICHTUNGEN mitliefern. Einheiten
+    // haengen nicht mehr an dieser Liste - die werden fuer jede konfigurierte
+    // Sprache vorbelegt (siehe BuildBundledManualTranslationMap).
+    private const UNIT_COMPASS_BUNDLED_LANGUAGES = ['en', 'es', 'fr', 'it', 'pt', 'nl', 'pl', 'ru', 'tr', 'da', 'no', 'sv', 'cs', 'lb'];
 
     private const COMPASS_BUNDLED_TRANSLATIONS = [
-        'N'   => ['en' => 'N',   'es' => 'N',   'fr' => 'N',   'it' => 'N',   'pt' => 'N',   'nl' => 'N',   'pl' => 'N',   'ru' => 'С',   'tr' => 'K'],
-        'NNO' => ['en' => 'NNE', 'es' => 'NNE', 'fr' => 'NNE', 'it' => 'NNE', 'pt' => 'NNE', 'nl' => 'NNO', 'pl' => 'NNE', 'ru' => 'ССВ', 'tr' => 'KKD'],
-        'NO'  => ['en' => 'NE',  'es' => 'NE',  'fr' => 'NE',  'it' => 'NE',  'pt' => 'NE',  'nl' => 'NO',  'pl' => 'NE',  'ru' => 'СВ',  'tr' => 'KD'],
-        'ONO' => ['en' => 'ENE', 'es' => 'ENE', 'fr' => 'ENE', 'it' => 'ENE', 'pt' => 'ENE', 'nl' => 'ONO', 'pl' => 'ENE', 'ru' => 'ВСВ', 'tr' => 'DKD'],
-        'O'   => ['en' => 'E',   'es' => 'E',   'fr' => 'E',   'it' => 'E',   'pt' => 'E',   'nl' => 'O',   'pl' => 'E',   'ru' => 'В',   'tr' => 'D'],
-        'OSO' => ['en' => 'ESE', 'es' => 'ESE', 'fr' => 'ESE', 'it' => 'ESE', 'pt' => 'ESE', 'nl' => 'OZO', 'pl' => 'ESE', 'ru' => 'ВЮВ', 'tr' => 'DGD'],
-        'SO'  => ['en' => 'SE',  'es' => 'SE',  'fr' => 'SE',  'it' => 'SE',  'pt' => 'SE',  'nl' => 'ZO',  'pl' => 'SE',  'ru' => 'ЮВ',  'tr' => 'GD'],
-        'SSO' => ['en' => 'SSE', 'es' => 'SSE', 'fr' => 'SSE', 'it' => 'SSE', 'pt' => 'SSE', 'nl' => 'ZZO', 'pl' => 'SSE', 'ru' => 'ЮЮВ', 'tr' => 'GGD'],
-        'S'   => ['en' => 'S',   'es' => 'S',   'fr' => 'S',   'it' => 'S',   'pt' => 'S',   'nl' => 'Z',   'pl' => 'S',   'ru' => 'Ю',   'tr' => 'G'],
-        'SSW' => ['en' => 'SSW', 'es' => 'SSO', 'fr' => 'SSO', 'it' => 'SSO', 'pt' => 'SSO', 'nl' => 'ZZW', 'pl' => 'SSW', 'ru' => 'ЮЮЗ', 'tr' => 'GGB'],
-        'SW'  => ['en' => 'SW',  'es' => 'SO',  'fr' => 'SO',  'it' => 'SO',  'pt' => 'SO',  'nl' => 'ZW',  'pl' => 'SW',  'ru' => 'ЮЗ',  'tr' => 'GB'],
-        'WSW' => ['en' => 'WSW', 'es' => 'OSO', 'fr' => 'OSO', 'it' => 'OSO', 'pt' => 'OSO', 'nl' => 'WZW', 'pl' => 'WSW', 'ru' => 'ЗЮЗ', 'tr' => 'BGB'],
-        'W'   => ['en' => 'W',   'es' => 'O',   'fr' => 'O',   'it' => 'O',   'pt' => 'O',   'nl' => 'W',   'pl' => 'W',   'ru' => 'З',   'tr' => 'B'],
-        'WNW' => ['en' => 'WNW', 'es' => 'ONO', 'fr' => 'ONO', 'it' => 'ONO', 'pt' => 'ONO', 'nl' => 'WNW', 'pl' => 'WNW', 'ru' => 'ЗСЗ', 'tr' => 'BKB'],
-        'NW'  => ['en' => 'NW',  'es' => 'NO',  'fr' => 'NO',  'it' => 'NO',  'pt' => 'NO',  'nl' => 'NW',  'pl' => 'NW',  'ru' => 'СЗ',  'tr' => 'KB'],
-        'NNW' => ['en' => 'NNW', 'es' => 'NNO', 'fr' => 'NNO', 'it' => 'NNO', 'pt' => 'NNO', 'nl' => 'NNW', 'pl' => 'NNW', 'ru' => 'ССЗ', 'tr' => 'KKB'],
+        'N'   => ['en' => 'N',   'es' => 'N',   'fr' => 'N',   'it' => 'N',   'pt' => 'N',   'nl' => 'N',   'pl' => 'N',   'ru' => 'С',   'tr' => 'K', 'da' => 'N', 'no' => 'N', 'sv' => 'N', 'cs' => 'S', 'lb' => 'N'],
+        'NNO' => ['en' => 'NNE', 'es' => 'NNE', 'fr' => 'NNE', 'it' => 'NNE', 'pt' => 'NNE', 'nl' => 'NNO', 'pl' => 'NNE', 'ru' => 'ССВ', 'tr' => 'KKD', 'da' => 'NNØ', 'no' => 'NNØ', 'sv' => 'NNO', 'cs' => 'SSV', 'lb' => 'NNO'],
+        'NO'  => ['en' => 'NE',  'es' => 'NE',  'fr' => 'NE',  'it' => 'NE',  'pt' => 'NE',  'nl' => 'NO',  'pl' => 'NE',  'ru' => 'СВ',  'tr' => 'KD', 'da' => 'NØ', 'no' => 'NØ', 'sv' => 'NO', 'cs' => 'SV', 'lb' => 'NO'],
+        'ONO' => ['en' => 'ENE', 'es' => 'ENE', 'fr' => 'ENE', 'it' => 'ENE', 'pt' => 'ENE', 'nl' => 'ONO', 'pl' => 'ENE', 'ru' => 'ВСВ', 'tr' => 'DKD', 'da' => 'ØNØ', 'no' => 'ØNØ', 'sv' => 'ONO', 'cs' => 'VSV', 'lb' => 'ONO'],
+        'O'   => ['en' => 'E',   'es' => 'E',   'fr' => 'E',   'it' => 'E',   'pt' => 'E',   'nl' => 'O',   'pl' => 'E',   'ru' => 'В',   'tr' => 'D', 'da' => 'Ø', 'no' => 'Ø', 'sv' => 'O', 'cs' => 'V', 'lb' => 'O'],
+        'OSO' => ['en' => 'ESE', 'es' => 'ESE', 'fr' => 'ESE', 'it' => 'ESE', 'pt' => 'ESE', 'nl' => 'OZO', 'pl' => 'ESE', 'ru' => 'ВЮВ', 'tr' => 'DGD', 'da' => 'ØSØ', 'no' => 'ØSØ', 'sv' => 'OSO', 'cs' => 'VJV', 'lb' => 'OSO'],
+        'SO'  => ['en' => 'SE',  'es' => 'SE',  'fr' => 'SE',  'it' => 'SE',  'pt' => 'SE',  'nl' => 'ZO',  'pl' => 'SE',  'ru' => 'ЮВ',  'tr' => 'GD', 'da' => 'SØ', 'no' => 'SØ', 'sv' => 'SO', 'cs' => 'JV', 'lb' => 'SO'],
+        'SSO' => ['en' => 'SSE', 'es' => 'SSE', 'fr' => 'SSE', 'it' => 'SSE', 'pt' => 'SSE', 'nl' => 'ZZO', 'pl' => 'SSE', 'ru' => 'ЮЮВ', 'tr' => 'GGD', 'da' => 'SSØ', 'no' => 'SSØ', 'sv' => 'SSO', 'cs' => 'JJV', 'lb' => 'SSO'],
+        'S'   => ['en' => 'S',   'es' => 'S',   'fr' => 'S',   'it' => 'S',   'pt' => 'S',   'nl' => 'Z',   'pl' => 'S',   'ru' => 'Ю',   'tr' => 'G', 'da' => 'S', 'no' => 'S', 'sv' => 'S', 'cs' => 'J', 'lb' => 'S'],
+        'SSW' => ['en' => 'SSW', 'es' => 'SSO', 'fr' => 'SSO', 'it' => 'SSO', 'pt' => 'SSO', 'nl' => 'ZZW', 'pl' => 'SSW', 'ru' => 'ЮЮЗ', 'tr' => 'GGB', 'da' => 'SSV', 'no' => 'SSV', 'sv' => 'SSV', 'cs' => 'JJZ', 'lb' => 'SSW'],
+        'SW'  => ['en' => 'SW',  'es' => 'SO',  'fr' => 'SO',  'it' => 'SO',  'pt' => 'SO',  'nl' => 'ZW',  'pl' => 'SW',  'ru' => 'ЮЗ',  'tr' => 'GB', 'da' => 'SV', 'no' => 'SV', 'sv' => 'SV', 'cs' => 'JZ', 'lb' => 'SW'],
+        'WSW' => ['en' => 'WSW', 'es' => 'OSO', 'fr' => 'OSO', 'it' => 'OSO', 'pt' => 'OSO', 'nl' => 'WZW', 'pl' => 'WSW', 'ru' => 'ЗЮЗ', 'tr' => 'BGB', 'da' => 'VSV', 'no' => 'VSV', 'sv' => 'VSV', 'cs' => 'ZJZ', 'lb' => 'WSW'],
+        'W'   => ['en' => 'W',   'es' => 'O',   'fr' => 'O',   'it' => 'O',   'pt' => 'O',   'nl' => 'W',   'pl' => 'W',   'ru' => 'З',   'tr' => 'B', 'da' => 'V', 'no' => 'V', 'sv' => 'V', 'cs' => 'Z', 'lb' => 'W'],
+        'WNW' => ['en' => 'WNW', 'es' => 'ONO', 'fr' => 'ONO', 'it' => 'ONO', 'pt' => 'ONO', 'nl' => 'WNW', 'pl' => 'WNW', 'ru' => 'ЗСЗ', 'tr' => 'BKB', 'da' => 'VNV', 'no' => 'VNV', 'sv' => 'VNV', 'cs' => 'ZSZ', 'lb' => 'WNW'],
+        'NW'  => ['en' => 'NW',  'es' => 'NO',  'fr' => 'NO',  'it' => 'NO',  'pt' => 'NO',  'nl' => 'NW',  'pl' => 'NW',  'ru' => 'СЗ',  'tr' => 'KB', 'da' => 'NV', 'no' => 'NV', 'sv' => 'NV', 'cs' => 'SZ', 'lb' => 'NW'],
+        'NNW' => ['en' => 'NNW', 'es' => 'NNO', 'fr' => 'NNO', 'it' => 'NNO', 'pt' => 'NNO', 'nl' => 'NNW', 'pl' => 'NNW', 'ru' => 'ССЗ', 'tr' => 'KKB', 'da' => 'NNV', 'no' => 'NNV', 'sv' => 'NNV', 'cs' => 'SSZ', 'lb' => 'NNW'],
     ];
 
 
@@ -3700,13 +3703,39 @@ class SimpleLocale extends IPSModuleStrict
     // Spalte und aus einer englischen ueber die englische - dieselbe Zeile, keine
     // Dopplung. Ein Text, der sich als spanisch ausgibt, trifft nur, wenn die
     // spanische Spalte den Wert traegt.
+    // Build 195: die Sprachen, fuer die das Glossar Zellen vorhaelt - die
+    // konfigurierten (Scan-Sprache + Zielsprachen) plus die, fuer die wir
+    // Kompassrichtungen mitliefern. Letztere bleiben drin, auch wenn sie gerade
+    // nicht konfiguriert sind: die Zeilen sind gespeicherte Daten, und eine
+    // spaeter hinzugefuegte Sprache soll ihre Werte vorfinden.
+    private function GetGlossaryLanguages(): array
+    {
+        $sprachen = array_merge(self::UNIT_COMPASS_BUNDLED_LANGUAGES, ['de'], $this->GetSelectableLanguageCodes());
+
+        return array_values(array_unique(array_filter($sprachen, static fn (string $c): bool => $c !== '')));
+    }
+
     private function BuildBundledGlossaryRows(): array
     {
+        // Build 195: jede Zeile traegt einen technischen KATALOG-SCHLUESSEL, der
+        // keine Sprache ist.
+        //
+        // Vorher diente die deutsche Spalte als Schluessel. Das widersprach der
+        // Idee der Tabelle - hier ist ausdruecklich KEINE Sprache ausgezeichnet -
+        // und es ging schief, sobald jemand auf Englisch arbeitet: traegt er eine
+        // eigene Zeile ein, deren deutsche Spalte zufaellig auf einen bestehenden
+        // Katalogeintrag faellt, waeren beide Zeilen nicht mehr auseinanderzuhalten.
+        // Die Nachbefuellung haette dann seine Zeile erwischt statt der eigenen.
+        //
+        // Mit dem Schluessel gilt: Katalogzeilen erkennt das Modul an ihm, eigene
+        // Zeilen haben keinen und werden nie angefasst - egal, was in welcher
+        // Sprachspalte steht.
         $rows = [];
-        foreach ($this->BuildBundledManualTranslationMap() as $germanText => $byLanguage) {
-            // Die deutsche Spalte zuerst - der Katalog ist deutsch indiziert, sie
-            // steht in $byLanguage selbst nicht drin.
-            $rows[] = array_merge(['de' => $germanText], $byLanguage);
+        foreach ($this->BuildBundledManualTranslationMap($this->GetGlossaryLanguages()) as $germanText => $byLanguage) {
+            $rows[] = array_merge(
+                [self::fieldGlossaryCatalogKey => $germanText, 'de' => $germanText],
+                $byLanguage
+            );
         }
 
         return $rows;
@@ -3731,9 +3760,12 @@ class SimpleLocale extends IPSModuleStrict
         }
         $seededChanged = false;
 
+        // Nur Zeilen MIT Katalog-Schluessel kommen als Ziel der Nachbefuellung in
+        // Frage - eigene Zeilen des Admins bleiben unangetastet, auch wenn ihre
+        // Sprachspalten zufaellig mit einem Katalogeintrag uebereinstimmen.
         $vorhanden = [];
         foreach ($ExistingRows as $index => $row) {
-            $key = (string) ($row['de'] ?? '');
+            $key = (string) ($row[self::fieldGlossaryCatalogKey] ?? '');
             if ($key === '') {
                 continue;
             }
@@ -3741,7 +3773,7 @@ class SimpleLocale extends IPSModuleStrict
         }
 
         foreach ($this->BuildBundledGlossaryRows() as $bundledRow) {
-            $key = (string) $bundledRow['de'];
+            $key = (string) $bundledRow[self::fieldGlossaryCatalogKey];
             if (isset($vorhanden[$key])) {
                 $row = $ExistingRows[$vorhanden[$key]];
                 foreach ($bundledRow as $language => $translation) {
@@ -3808,12 +3840,23 @@ class SimpleLocale extends IPSModuleStrict
     // zweimal in der frueheren Befuellung (einmal Einheiten, einmal
     // Kompass) - jetzt einmal, damit Anlegen UND Nachbefuellen garantiert
     // dieselben Werte verwenden.
-    private function BuildBundledManualTranslationMap(): array
+    // Build 195 (Nutzer-Wunsch): $Languages entscheidet, fuer welche Sprachen
+    // EINHEITEN vorbelegt werden - nicht mehr eine feste Liste. Einheiten sind
+    // Symbole und bleiben unveraendert ("kWh" ist ueberall "kWh"), sie lassen sich
+    // deshalb fuer JEDE Sprache vorbelegen. Genau das war die Luecke: eine
+    // Zielsprache ausserhalb der mitgelieferten Neun bekam eine leere Spalte, und
+    // "°C" ging dort wieder an den Anbieter.
+    //
+    // Fuer KOMPASSRICHTUNGEN gilt das ausdruecklich NICHT - die haengen an den
+    // Woertern der jeweiligen Sprache (deutsch "O" fuer Ost wird tschechisch "V"
+    // fuer vychod). Sie werden nur dort eingetragen, wo wir sie tatsaechlich
+    // kennen; alles andere bliebe geraten.
+    private function BuildBundledManualTranslationMap(array $Languages): array
     {
         $map = [];
 
         foreach (self::UNIT_BUNDLED_TRANSLATIONS as $unit) {
-            foreach (self::UNIT_COMPASS_BUNDLED_LANGUAGES as $language) {
+            foreach ($Languages as $language) {
                 // Standardmaessig universell durchgereicht, aber siehe
                 // UNIT_BUNDLED_LANGUAGE_OVERRIDES fuer bestaetigte Ausnahmen
                 // (z.B. Russisch verwendet fast durchgehend kyrillische Kuerzel).
@@ -11403,7 +11446,18 @@ HTML;
             // Quellsprache ist immer da, also mindestens ihre Spalte.
             $languages = $TargetLanguages !== [] ? $TargetLanguages : [$SourceLanguage];
 
-            return $this->BuildLanguageColumnSet('', '', $SourceLanguage, $languages, 'glossary');
+            // Der Katalog-Schluessel steht sichtbar, aber nicht editierbar vorn:
+            // er zeigt, welche Zeilen mitgeliefert sind (und damit nachbefuellt
+            // werden) und welche der Admin selbst angelegt hat - die bleiben leer.
+            $keyColumn = [
+                'caption' => $this->Translate('Catalog'),
+                'name'    => self::fieldGlossaryCatalogKey,
+                'width'   => '110px',
+                'add'     => '',
+                'save'    => true,
+            ];
+
+            return array_merge([$keyColumn], $this->BuildLanguageColumnSet('', '', $SourceLanguage, $languages, 'glossary'));
         }
 
         if ($Kind === 'automations') {

@@ -113,4 +113,31 @@ $suche($form);
 assert($gefunden, 'die Liste "Glossary" steht in form.json');
 echo "Test 7 (Property und Formularliste passen zusammen) OK\n";
 
-echo "\nAlle Tests OK (Build 189: Glossar getrennt von den eigenen Übersetzungen).\n";
+// Test 8 (Build 195): der Schluessel einer Katalogzeile ist KEINE Sprache.
+// Vorher diente die deutsche Spalte dafuer - das widersprach der Idee der
+// Tabelle und machte eigene Zeilen mit Katalogzeilen verwechselbar, sobald
+// jemand auf Englisch arbeitet und seine deutsche Spalte zufaellig trifft.
+$build = $fenster('private function BuildBundledGlossaryRows');
+assert(strpos($build, 'self::fieldGlossaryCatalogKey => $germanText') !== false,
+    'DIE UMSTELLUNG: Katalogzeilen tragen einen technischen Schluessel');
+$merge = $fenster('private function MergeBundledGlossaryRows');
+assert(strpos($merge, "\$row[self::fieldGlossaryCatalogKey]") !== false,
+    'und die Nachbefuellung findet ihre Zeilen darueber');
+assert(strpos($merge, "\$row['de']") === false,
+    'die deutsche Spalte ist nicht mehr der Schluessel');
+echo "Test 8 (der Katalog-Schlüssel ist keine Sprache) OK\n";
+
+// Test 9 (Build 195): EINHEITEN werden fuer jede konfigurierte Sprache
+// vorbelegt - sie sind Symbole und bleiben unveraendert. Genau das war die
+// Luecke: eine Zielsprache ausserhalb der mitgelieferten Neun bekam eine leere
+// Spalte, und "°C" ging dort wieder an den Anbieter.
+$map = $fenster('private function BuildBundledManualTranslationMap');
+assert(strpos($map, 'foreach ($Languages as $language)') !== false,
+    'DIE LUECKE: Einheiten haengen nicht mehr an einer festen Sprachliste');
+// KOMPASSRICHTUNGEN duerfen das ausdruecklich NICHT - sie haengen an den
+// Woertern der Sprache (deutsch "O" wird tschechisch "V").
+assert(strpos($map, 'self::COMPASS_BUNDLED_TRANSLATIONS as $germanCompass => $translationsByLanguage') !== false,
+    'DIE ABGRENZUNG: der Kompass kommt weiter nur aus der gepflegten Tabelle');
+echo "Test 9 (Einheiten für jede Sprache, Kompass nur wo gepflegt) OK\n";
+
+echo "\nAlle Tests OK (Build 195: Glossar getrennt, mit Katalog-Schlüssel).\n";

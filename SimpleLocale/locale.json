@@ -215,7 +215,8 @@
             "German": "Deutsch",
             "Glossary: units and compass directions, supplied with the module. Unlike the table above there is no source language here - every column can be the source, and the entry in one column translates to the entry in any other. A term therefore needs one row only, no matter which source language a part of your visualization uses.": "Glossar: mitgelieferte Einheiten und Kompassrichtungen. Anders als in der Tabelle darüber gibt es hier keine Quellsprache - jede Spalte kann die Quelle sein, und der Eintrag einer Spalte übersetzt sich in den jeder anderen. Ein Begriff braucht deshalb nur eine Zeile, ganz gleich welche Quellsprache ein Teil deiner Visualisierung verwendet.",
             "✓ Glossary - units and compass directions prefilled": "✓ Glossar - Einheiten & Kompass vorbefüllt",
-            "✓ Translation switchable off per object": "✓ Übersetzung je Objekt abschaltbar"
+            "✓ Translation switchable off per object": "✓ Übersetzung je Objekt abschaltbar",
+            "Catalog": "Katalog"
         },
         "es": {
             "Active": "Activo",
@@ -432,7 +433,8 @@
             "German": "Alemán",
             "Glossary: units and compass directions, supplied with the module. Unlike the table above there is no source language here - every column can be the source, and the entry in one column translates to the entry in any other. A term therefore needs one row only, no matter which source language a part of your visualization uses.": "Glosario: unidades y direcciones de la brújula incluidas con el módulo. A diferencia de la tabla anterior, aquí no hay idioma de origen: cualquier columna puede ser el origen, y la entrada de una columna se traduce a la de cualquier otra. Por eso un término solo necesita una fila, sea cual sea el idioma de origen de una parte de tu visualización.",
             "✓ Glossary - units and compass directions prefilled": "✓ Glosario: unidades y direcciones de la brújula predefinidas",
-            "✓ Translation switchable off per object": "✓ Traducción desactivable por objeto"
+            "✓ Translation switchable off per object": "✓ Traducción desactivable por objeto",
+            "Catalog": "Catálogo"
         },
         "it": {
             "Active": "Attivo",
@@ -649,7 +651,8 @@
             "German": "Tedesco",
             "Glossary: units and compass directions, supplied with the module. Unlike the table above there is no source language here - every column can be the source, and the entry in one column translates to the entry in any other. A term therefore needs one row only, no matter which source language a part of your visualization uses.": "Glossario: unità e direzioni della bussola fornite con il modulo. A differenza della tabella sopra, qui non esiste una lingua di origine: ogni colonna può essere l'origine e la voce di una colonna si traduce in quella di qualsiasi altra. Un termine richiede quindi una sola riga, qualunque sia la lingua di origine di una parte della tua visualizzazione.",
             "✓ Glossary - units and compass directions prefilled": "✓ Glossario: unità e direzioni della bussola precompilate",
-            "✓ Translation switchable off per object": "✓ Traduzione disattivabile per singolo oggetto"
+            "✓ Translation switchable off per object": "✓ Traduzione disattivabile per singolo oggetto",
+            "Catalog": "Catalogo"
         },
         "fr": {
             "Active": "Actif",
@@ -866,7 +869,8 @@
             "German": "Allemand",
             "Glossary: units and compass directions, supplied with the module. Unlike the table above there is no source language here - every column can be the source, and the entry in one column translates to the entry in any other. A term therefore needs one row only, no matter which source language a part of your visualization uses.": "Glossaire : unités et directions de boussole fournies avec le module. Contrairement au tableau ci-dessus, il n'y a pas de langue source ici - chaque colonne peut être la source, et l'entrée d'une colonne se traduit dans celle de n'importe quelle autre. Un terme ne nécessite donc qu'une seule ligne, quelle que soit la langue source d'une partie de votre visualisation.",
             "✓ Glossary - units and compass directions prefilled": "✓ Glossaire - unités et directions de boussole préremplies",
-            "✓ Translation switchable off per object": "✓ Traduction désactivable par objet"
+            "✓ Translation switchable off per object": "✓ Traduction désactivable par objet",
+            "Catalog": "Catalogue"
         }
     }
 }

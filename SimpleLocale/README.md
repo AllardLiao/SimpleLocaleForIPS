@@ -4498,6 +4498,34 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 195 (Nutzer-Wunsch): Einheiten für **jede** konfigurierte Sprache, und
+  der Katalog-Schlüssel ist keine Sprache mehr.**
+  Zwei Dinge, die zusammengehören:
+
+  *Einheiten.* Vorbelegt waren sie für eine feste Liste von neun Sprachen. Eine
+  Zielsprache außerhalb davon bekam eine leere Spalte - und `°C` ging dort
+  wieder an den Anbieter, mit demselben Ergebnis wie in Build 158 (`°F`).
+  Einheiten sind aber Symbole und bleiben unverändert: `kWh` ist überall `kWh`.
+  Sie werden jetzt für jede konfigurierte Sprache vorbelegt. **Für
+  Kompassrichtungen gilt das ausdrücklich nicht** - die hängen an den Wörtern
+  der Sprache (deutsch `O` für Ost wird tschechisch `V` für východ) und stehen
+  nur dort, wo wir sie tatsächlich kennen. Alles andere wäre geraten.
+
+  Ergänzt wurden Kompassrichtungen für **Dänisch, Norwegisch, Schwedisch,
+  Tschechisch und Luxemburgisch** - damit sind es 14 Sprachen plus Deutsch.
+
+  *Der Schlüssel.* Bisher diente die deutsche Spalte als Primärschlüssel der
+  Katalogzeilen. Das widersprach der Idee der Tabelle, in der ausdrücklich keine
+  Sprache ausgezeichnet ist - und es ging schief, sobald jemand auf Englisch
+  arbeitet: trägt er eine eigene Zeile ein, deren deutsche Spalte zufällig auf
+  einen bestehenden Katalogeintrag fällt, wären beide nicht mehr auseinander zu
+  halten, und die Nachbefüllung hätte seine Zeile erwischt statt der eigenen.
+
+  Jede mitgelieferte Zeile trägt jetzt einen technischen Katalog-Schlüssel, der
+  keine Sprache ist. Eigene Zeilen haben keinen und werden nie angefasst - egal,
+  was in welcher Sprachspalte steht. Die Spalte steht sichtbar, aber nicht
+  editierbar vorn und zeigt damit auch die Herkunft jeder Zeile.
+
 * **Build 194 (Nutzer-Wunsch): die Sperrfrist zwischen zwei Sprachwechseln ist
   jetzt frei festlegbar - als Zeitwert aus der Lizenz, `0` = unbegrenzt.**
   Vorher gab es nur ein Ja/Nein-Feature (`unlimited_language_switch`) und eine
