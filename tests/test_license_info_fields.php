@@ -31,18 +31,18 @@ function computeLicenseInfoFields(array $licenseInfo): array
     $fields['LanguageLimitRow'] = ['visible' => $rowVisible];
     $fields['AllowedLanguagesRow'] = ['visible' => $rowVisible];
 
-    $fields['TypeValueLabel'] = ['caption' => ($licenseInfo['type'] ?? '') === 'subscription' ? 'Abo' : 'Einmalkauf'];
+    $fields['TypeValueLabel'] = ['caption' => ($licenseInfo['type'] ?? '') === 'subscription' ? 'Subscription' : 'One-time purchase'];
 
     $expiresAt = (int) ($licenseInfo['expiresAt'] ?? 0);
-    $fields['ExpiryConnectorLabel'] = ['caption' => $expiresAt === 0 ? 'läuft nie ab' : 'gültig bis'];
+    $fields['ExpiryConnectorLabel'] = ['caption' => $expiresAt === 0 ? 'never expires' : 'valid until'];
     $fields['ExpiryDateLabel'] = ['caption' => $expiresAt === 0 ? '' : date('d.m.Y', $expiresAt)];
 
     $languageLimit = (int) ($licenseInfo['languageLimit'] ?? 0);
-    $fields['LanguageLimitConnectorLabel'] = ['caption' => $languageLimit === 0 ? 'unbegrenzt' : 'max.'];
+    $fields['LanguageLimitConnectorLabel'] = ['caption' => $languageLimit === 0 ? 'unlimited' : 'max.'];
     $fields['LanguageLimitNumberLabel'] = ['caption' => $languageLimit === 0 ? '' : (string) $languageLimit];
 
     $allowedLanguages = $licenseInfo['allowedLanguages'] ?? [];
-    $fields['AllowedLanguagesValueLabel'] = ['caption' => $allowedLanguages === [] ? 'alle' : implode(', ', $allowedLanguages)];
+    $fields['AllowedLanguagesValueLabel'] = ['caption' => $allowedLanguages === [] ? 'all' : implode(', ', $allowedLanguages)];
 
     $featureMap = [
         'FeatureEditTranslations'        => 'edit_translations',
@@ -61,10 +61,10 @@ function computeLicenseInfoFields(array $licenseInfo): array
 // A fixed, finite set of literal strings this design must ONLY ever produce
 // for translatable captions (mirrors what's now in locale.json).
 const TRANSLATABLE_LITERALS = [
-    'Abo', 'Einmalkauf', 'läuft nie ab', 'gültig bis', 'unbegrenzt', 'max.', 'alle',
-    '✓ Manuelles Editieren von Übersetzungen', '✓ Automatischer Rescan nach Zeitplan',
-    '✓ Google/DeepL als Übersetzungsanbieter', '✓ Unbegrenzter Sprachwechsel',
-    '✓ Eigene Sprachauswahl-Kachel',
+    'Subscription', 'One-time purchase', 'never expires', 'valid until', 'unlimited', 'max.', 'all',
+    '✓ Manual editing of translations', '✓ Automatic scheduled rescan',
+    '✓ Google/DeepL as translation provider', '✓ Unlimited language switching',
+    '✓ Custom language-selection tile',
 ];
 
 // ---- Scenario 1: invalid/no license -> everything hidden ------------------
@@ -88,8 +88,8 @@ $info = [
 ];
 $fields = computeLicenseInfoFields($info);
 assertTrue($fields['EditionLabel']['visible'] === true && $fields['EditionLabel']['caption'] === 'Pro', 'edition heading shown verbatim, untranslated (matches "Simple Locale for IPS" product-name precedent)');
-assertTrue($fields['TypeValueLabel']['caption'] === 'Abo', 'subscription -> "Abo" literal');
-assertTrue($fields['ExpiryConnectorLabel']['caption'] === 'gültig bis', 'has expiry -> "gültig bis" literal');
+assertTrue($fields['TypeValueLabel']['caption'] === 'Subscription', 'subscription -> "Abo" literal');
+assertTrue($fields['ExpiryConnectorLabel']['caption'] === 'valid until', 'has expiry -> "gültig bis" literal');
 assertTrue($fields['ExpiryDateLabel']['caption'] === date('d.m.Y', $expiresAt), 'expiry date rendered as raw, non-translated value');
 assertTrue($fields['LanguageLimitConnectorLabel']['caption'] === 'max.', 'limited -> "max." literal');
 assertTrue($fields['LanguageLimitNumberLabel']['caption'] === '3', 'limit number rendered as raw, non-translated value');
@@ -111,10 +111,10 @@ $info2 = [
 ];
 $fields2 = computeLicenseInfoFields($info2);
 assertTrue($fields2['EditionLabel']['visible'] === false, 'empty edition (pre-edition-field key) -> heading hidden, no empty-string row');
-assertTrue($fields2['TypeValueLabel']['caption'] === 'Einmalkauf', 'one_time -> "Einmalkauf" literal');
-assertTrue($fields2['ExpiryConnectorLabel']['caption'] === 'läuft nie ab' && $fields2['ExpiryDateLabel']['caption'] === '', 'no expiry -> fixed literal, empty date value');
-assertTrue($fields2['LanguageLimitConnectorLabel']['caption'] === 'unbegrenzt' && $fields2['LanguageLimitNumberLabel']['caption'] === '', 'no limit -> fixed literal, empty number value');
-assertTrue($fields2['AllowedLanguagesValueLabel']['caption'] === 'alle', 'no restriction -> fixed literal "alle"');
+assertTrue($fields2['TypeValueLabel']['caption'] === 'One-time purchase', 'one_time -> "Einmalkauf" literal');
+assertTrue($fields2['ExpiryConnectorLabel']['caption'] === 'never expires' && $fields2['ExpiryDateLabel']['caption'] === '', 'no expiry -> fixed literal, empty date value');
+assertTrue($fields2['LanguageLimitConnectorLabel']['caption'] === 'unlimited' && $fields2['LanguageLimitNumberLabel']['caption'] === '', 'no limit -> fixed literal, empty number value');
+assertTrue($fields2['AllowedLanguagesValueLabel']['caption'] === 'all', 'no restriction -> fixed literal "alle"');
 foreach (['FeatureEditTranslations', 'FeatureAutoRescan', 'FeaturePaidProviders', 'FeatureUnlimitedLanguageSwitch', 'FeatureCustomTile'] as $f) {
     assertTrue($fields2[$f]['visible'] === false, "no extra features -> all feature lines hidden ($f)");
 }

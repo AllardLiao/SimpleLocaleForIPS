@@ -22,9 +22,9 @@ function setButtonProgressReplica(string $message): array
 }
 
 // Test 1: a non-empty message must show the bar with that exact caption.
-$shown = setButtonProgressReplica('Verwaiste Einträge werden gesucht…');
+$shown = setButtonProgressReplica('Looking for orphaned entries…');
 assert($shown['visible'] === true, 'A non-empty progress message must make the bar visible');
-assert($shown['caption'] === 'Verwaiste Einträge werden gesucht…', 'The bar caption must be the exact message passed in');
+assert($shown['caption'] === 'Looking for orphaned entries…', 'The bar caption must be the exact message passed in');
 echo "Test 1 (non-empty message shows the progress bar with the right caption) OK\n";
 
 // Test 2: an empty message must hide the bar again (used right before the
@@ -38,7 +38,7 @@ echo "Test 2 (empty message hides the progress bar) OK\n";
 // explicit hide keeps the same "always clear on every exit path" discipline
 // already established for SetRescanProgress/Build 88).
 $cleanupSequence = [
-    setButtonProgressReplica('Verwaiste Einträge werden gesucht…'),
+    setButtonProgressReplica('Looking for orphaned entries…'),
     // ... WalkTree()/array_filter() work happens here ...
     setButtonProgressReplica(''),
 ];
@@ -51,7 +51,7 @@ echo "Test 3 (Cleanup shows then explicitly hides progress around its work) OK\n
 // popup itself is untouched, per the user's explicit "die schon vorhandene
 // Meldung danach" instruction - only the progress indicator is new).
 $checkSequence = [
-    setButtonProgressReplica('Übersetzungsanbieter werden geprüft…'),
+    setButtonProgressReplica('Checking translation providers…'),
     // ... TranslateChunkGoogle/-DeepL/-Free network calls happen here ...
     setButtonProgressReplica(''),
 ];

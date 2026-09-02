@@ -121,7 +121,7 @@ echo "Test 8 (Schlüsselfeld, Hinweis und Vorwarnzeit sind real vorhanden und ve
 // sonst koennte nie ein neuer Schluessel eingetragen werden - der einzige Weg
 // zurueck.
 assert(strpos($moduleSource, "if (\$this->IsTrialLocked()) {\n                        \$element['enabled'] = false;") !== false, 'die Zielsprachen muessen bei abgelaufener Lizenz gesperrt werden');
-assert(strpos($moduleSource, 'Zielsprachen (Lizenz abgelaufen - bitte oben einen gültigen Lizenzschlüssel eintragen)') !== false, 'die Sperre muss den Ausweg nennen (neuen Schluessel eintragen)');
+assert(strpos($moduleSource, 'Target languages (licence expired - please enter a valid licence key above)') !== false, 'die Sperre muss den Ausweg nennen (neuen Schluessel eintragen)');
 // Gegenprobe: das Lizenzfeld selbst darf NICHT mitgesperrt werden.
 $lizenzFeldGesperrt = preg_match('/case self::propertyLicenseKey:.*?\$element\[.enabled.\]\s*=\s*false/s', $moduleSource) === 1;
 assert(!$lizenzFeldGesperrt, 'DER SACKGASSEN-FEHLER: das Lizenzschluessel-Feld darf bei abgelaufener Lizenz niemals gesperrt werden - sonst gaebe es keinen Weg zurueck');

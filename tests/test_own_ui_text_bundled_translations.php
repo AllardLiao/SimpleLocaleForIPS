@@ -6,7 +6,7 @@ declare(strict_types=1);
 // TRIAL_LANGUAGE_CODES, so a fresh install never has to spend provider quota just to
 // translate Simple Locale's OWN interface strings into any of these languages.
 
-$definitions = ['pausedNoticePrefix' => 'Übersetzung pausiert bis', 'statsHourlyLabel' => 'Stündlich:'];
+$definitions = ['pausedNoticePrefix' => 'Übersetzung pausiert bis', 'statsHourlyLabel' => 'Hourly:'];
 $bundled = [
     'en' => ['pausedNoticePrefix' => 'Translation paused until', 'statsHourlyLabel' => 'Hourly:'],
     'nl' => ['pausedNoticePrefix' => 'Vertaling gepauzeerd tot', 'statsHourlyLabel' => 'Per uur:'],
@@ -30,7 +30,7 @@ function mergeOwnUiTextRowsReplica(array $existingRows, array $definitions, arra
             $row['ORIGINAL_IMPORT'] = $germanText;
             $row['_sourceChangedAt'] = 100; // stand-in for MarkRowSourceChanged's timestamp
         }
-        $row['Quellsprache'] = 'de';
+        $row['Source language'] = 'de';
 
         foreach ($bundled as $language => $translationsByKey) {
             if (($row[$language] ?? '') === '' && isset($translationsByKey[$key])) {
@@ -59,7 +59,7 @@ echo "Test 2 (bundled translations are marked current, preventing a wasted live 
 
 // Test 3: an already-machine-translated cell (from a real provider, in a language
 // NOT covered by the bundle) is untouched - bundling only fills EMPTY cells.
-$existingWithRealTranslation = [['Key' => 'pausedNoticePrefix', 'ORIGINAL_IMPORT' => 'Übersetzung pausiert bis', 'fr' => 'Traduction en pause manuel-corrigee', 'Quellsprache' => 'de']];
+$existingWithRealTranslation = [['Key' => 'pausedNoticePrefix', 'ORIGINAL_IMPORT' => 'Übersetzung pausiert bis', 'fr' => 'Traduction en pause manuel-corrigee', 'Source language' => 'de']];
 $merged = mergeOwnUiTextRowsReplica($existingWithRealTranslation, ['pausedNoticePrefix' => 'Übersetzung pausiert bis'], ['fr' => ['pausedNoticePrefix' => 'Traduction en pause jusqu\'à']]);
 assert($merged[0]['fr'] === 'Traduction en pause manuel-corrigee', 'An already-filled cell (from the live provider, or from a bundled seed on a prior run) must never be overwritten by the bundled default');
 echo "Test 3 (an already-filled cell, e.g. a real provider translation, is never overwritten by the bundled default) OK\n";

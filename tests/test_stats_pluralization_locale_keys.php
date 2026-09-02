@@ -29,9 +29,9 @@ declare(strict_types=1);
 $locale = json_decode(file_get_contents(dirname(__DIR__) . '/SimpleLocale/locale.json'), true);
 assert($locale !== null, 'locale.json must parse as valid JSON');
 
-$requiredNewKeys = ['Anfrage(n),'];
+$requiredNewKeys = ['request(s),'];
 $staleOldKeys = ['Anfragen/h', 'Anfragen', 'Anfrage(n)/h', 'Zeichen/h', 'Anfrage(n)', 'Zeichen'];
-$languages = ['en', 'es', 'it', 'fr'];
+$languages = ['de', 'es', 'it', 'fr'];
 
 foreach ($languages as $lang) {
     $block = $locale['translations'][$lang] ?? null;
@@ -49,12 +49,12 @@ foreach ($languages as $lang) {
     // "Zeichen." keeps its German key name (German itself is invariant for
     // singular/plural), but its VALUE in every other language must have
     // been updated away from the old plural-only forms.
-    assert($block['Zeichen.'] !== 'characters.' && $block['Zeichen.'] !== 'caracteres.'
-        && $block['Zeichen.'] !== 'caratteri.' && $block['Zeichen.'] !== 'requêtes.',
-        "Language '$lang' must not still show the old plural-only 'Zeichen.' translation");
+    assert($block['character(s).'] !== 'characters.' && $block['character(s).'] !== 'caracteres.'
+        && $block['character(s).'] !== 'caratteri.' && $block['character(s).'] !== 'requêtes.',
+        "Language '$lang' must not still show the old plural-only 'character(s).' translation");
 }
 
-echo "Test 1 (all 4 languages define the combined-notation, punctuated 'Anfrage(n),' key, every older/retired key form is gone) OK\n";
+echo "Test 1 (all 4 languages define the combined-notation, punctuated 'request(s),' key, every older/retired key form is gone) OK\n";
 
 // Test 2: every new/updated value must actually be usable regardless of
 // count - i.e. it must be a single, non-empty string (not something that
@@ -62,7 +62,7 @@ echo "Test 1 (all 4 languages define the combined-notation, punctuated 'Anfrage(
 // one string, works for count=1 and count=N alike).
 foreach ($languages as $lang) {
     $block = $locale['translations'][$lang];
-    foreach (['Anfrage(n),', 'Zeichen.'] as $key) {
+    foreach (['request(s),', 'character(s).'] as $key) {
         $value = $block[$key];
         assert(is_string($value) && $value !== '', "'$key' in '$lang' must be a single non-empty display string usable for any count");
     }

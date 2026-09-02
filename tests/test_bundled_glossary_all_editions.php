@@ -29,7 +29,7 @@ const BUNDLED = [
 function findManual(array $rows, string $quelle, string $ziel, string $text, bool $hatFeature): ?string
 {
     foreach ($rows as $row) {
-        if (($row['Quellsprache'] ?? '') !== $quelle) { continue; }
+        if (($row['Source language'] ?? '') !== $quelle) { continue; }
         if ((string) ($row['ORIGINAL_IMPORT'] ?? '') !== $text) { continue; }
         $t = (string) ($row[$ziel] ?? '');
         if ($t !== '') { return $t; }
@@ -57,7 +57,7 @@ assert(findManual([], 'de', 'en', 'SSW', true) === null, 'MIT dem Feature darf e
 echo "Test 2 (mit dem Feature bleibt eine gelöschte Zeile gelöscht) OK\n";
 
 // Test 3: ein eingetragener Wert gewinnt in beiden Faellen ueber den Katalog.
-$eigen = [['Quellsprache' => 'de', 'ORIGINAL_IMPORT' => '°C', 'en' => 'Grad Celsius']];
+$eigen = [['Source language' => 'de', 'ORIGINAL_IMPORT' => '°C', 'en' => 'Grad Celsius']];
 assert(findManual($eigen, 'de', 'en', '°C', true) === 'Grad Celsius', 'der eingetragene Wert gewinnt');
 assert(findManual($eigen, 'de', 'en', '°C', false) === 'Grad Celsius', 'auch ohne Feature gewinnt ein vorhandener Eintrag vor dem Katalog');
 echo "Test 3 (ein eingetragener Wert gewinnt immer vor dem Katalog) OK\n";

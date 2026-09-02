@@ -72,7 +72,7 @@ class SimpleLocale extends IPSModuleStrict
     // und (Build 78, Nutzer-Wunsch) um den GRUND der Pause.
     private const PAUSED_NOTICE_PREFIX_TEXT = 'Übersetzung pausiert bis';
     private const PAUSED_POPUP_REASON_TEXT = 'Grund: Alle konfigurierten Übersetzungsanbieter melden aktuell ihr Limit erreicht.';
-    private const PAUSED_POPUP_REASSURANCE_TEXT = 'Bereits vorhandene Übersetzungen bleiben nutzbar.';
+    private const PAUSED_POPUP_REASSURANCE_TEXT = 'Existing translations remain usable.';
 
     // Build 148 (Nutzer-Vorgabe zum Abo-Modell): Hinweise rund um den
     // Lizenzablauf, in der Kachel im selben roten Stil wie der Pause-Hinweis
@@ -101,13 +101,13 @@ class SimpleLocale extends IPSModuleStrict
     // TranslateBatch() live in die Gast-Sprache uebersetzt statt ueber die
     // Konsolen-exakt-Match-Uebersetzung (die nur fuer die Admin-Konsole gilt, nicht
     // fuer Gast-Sprachen).
-    private const STATS_POPUP_SINCE_PREFIX_TEXT = 'Seit Inbetriebnahme am';
-    private const STATS_POPUP_DAYS_SUFFIX_TEXT = 'Tag(e).';
-    private const STATS_POPUP_HOURLY_LABEL_TEXT = 'Stündlich:';
-    private const STATS_POPUP_REQUESTS_UNIT_TEXT = 'Anfrage(n),';
-    private const STATS_POPUP_CHARACTERS_UNIT_TEXT = 'Zeichen.';
-    private const STATS_POPUP_TOTAL_LABEL_TEXT = 'Insgesamt:';
-    private const STATS_POPUP_CACHE_SAVED_LABEL_TEXT = 'Durch den Cache eingespart:';
+    private const STATS_POPUP_SINCE_PREFIX_TEXT = 'In operation since';
+    private const STATS_POPUP_DAYS_SUFFIX_TEXT = 'day(s).';
+    private const STATS_POPUP_HOURLY_LABEL_TEXT = 'Hourly:';
+    private const STATS_POPUP_REQUESTS_UNIT_TEXT = 'request(s),';
+    private const STATS_POPUP_CHARACTERS_UNIT_TEXT = 'character(s).';
+    private const STATS_POPUP_TOTAL_LABEL_TEXT = 'Total:';
+    private const STATS_POPUP_CACHE_SAVED_LABEL_TEXT = 'Saved by the cache:';
 
     // Kurzes "Burst"-Rate-Limit (z.B. Googles "User Rate Limit Exceeded" - zu viele
     // Anfragen pro Sekunde/100 Sekunden, kein Tageskontingent) - erholt sich
@@ -1064,7 +1064,7 @@ class SimpleLocale extends IPSModuleStrict
                     // hilfreichste (sie nennt den Ausweg).
                     if ($this->IsTrialLocked()) {
                         $element['enabled'] = false;
-                        $element['caption'] = 'Zielsprachen (Lizenz abgelaufen - bitte oben einen gültigen Lizenzschlüssel eintragen)';
+                        $element['caption'] = 'Target languages (licence expired - please enter a valid licence key above)';
                     } elseif (!$hasUsableLanguageList) {
                         $element['enabled'] = false;
                         // Statischer, fest formulierter String statt Laufzeit-Konkatenation:
@@ -1073,7 +1073,7 @@ class SimpleLocale extends IPSModuleStrict
                         // propertyUseCustomTile/propertyAutoRescanInterval unten) - ein zur
                         // Laufzeit zusammengesetzter String passt nie zu einem Eintrag und
                         // bleibt daher unübersetzt (unabhängig von der Konsolensprache).
-                        $element['caption'] = 'Zielsprachen (bitte zuerst gültigen API-Key speichern und Formular neu öffnen)';
+                        $element['caption'] = 'Target languages (please save a valid API key first and reopen the form)';
                     } elseif ($limitReached) {
                         $element['enabled'] = false;
                         // Enthält $languageLimit als Variable in EINER Caption, gemeinsam mit
@@ -1087,7 +1087,7 @@ class SimpleLocale extends IPSModuleStrict
                         // Konsolensprache des Betrachters gebundener) Text entsteht - exakt
                         // dieselbe, dokumentierte Einschränkung wie bei BuildTrialInfoText
                         // (siehe README Abschnitt 8).
-                        $element['caption'] = $this->Translate('Zielsprachen') . ' (' . $this->Translate('Sprachlimit dieser Lizenz erreicht, max.') . " $languageLimit)";
+                        $element['caption'] = $this->Translate('Target languages') . ' (' . $this->Translate('Language limit of this license reached, max.') . " $languageLimit)";
                     } else {
                         $element['enabled'] = true;
                     }
@@ -1290,20 +1290,20 @@ class SimpleLocale extends IPSModuleStrict
                 // Systemsprache haengen.
                 case 'ProviderIntroLabel':
                     if (!$this->HasLicenseFeature('paid_providers')) {
-                        $element['caption'] = 'Ohne jede Eingabe unten funktioniert die Übersetzung sofort über den kostenfreien Anbieter (kein Konto nötig). Google oder DeepL sind optional und greifen in dieser Edition als einzelner Rückfall hinter dem kostenfreien Anbieter. Beide bezahlten Anbieter kombiniert und VOR dem kostenfreien versucht - also mehrere Kontingente nacheinander - gibt es ab der Standard Edition.';
+                        $element['caption'] = 'Without entering anything below, translation works right away through the free provider (no account needed). Google or DeepL are optional and act as a single fallback behind the free provider in this edition. Combining both paid providers and trying them BEFORE the free one - several quotas one after another - is available from the Standard edition.';
                     }
                     break;
 
                 case self::propertyPreferredPaidProvider:
                     if (!$this->HasLicenseFeature('paid_providers')) {
-                        $element['caption'] = 'Bevorzugter Anbieter (nur relevant, wenn beide oben eingetragen sind - in dieser Edition wird genau einer davon als Rückfall genutzt)';
+                        $element['caption'] = 'Preferred provider (only relevant if both are entered above - in this edition exactly one of them is used as the fallback)';
                     }
                     break;
 
                 case self::propertyAutoRescanInterval:
                     if (!$this->HasLicenseFeature('auto_rescan')) {
                         $element['enabled'] = false;
-                        $element['caption'] = 'Automatischer Rescan (Minuten, 0 = aus) (Pro Edition erforderlich)';
+                        $element['caption'] = 'Automatic rescan (minutes, 0 = off) (Pro Edition required)';
                     }
                     break;
 
@@ -1315,7 +1315,7 @@ class SimpleLocale extends IPSModuleStrict
                 case self::propertyUseCustomTile:
                     if (!$this->HasLicenseFeature('custom_tile')) {
                         $element['enabled'] = false;
-                        $element['caption'] = 'Eigene Sprachauswahl-Kachel verwenden (Pro Edition erforderlich)';
+                        $element['caption'] = 'Use a custom language-selection tile (Pro Edition required)';
                     }
                     break;
 
@@ -1333,7 +1333,7 @@ class SimpleLocale extends IPSModuleStrict
                     $element['visible'] = $this->ReadPropertyBoolean(self::propertyUseCustomTile);
                     if (!$this->HasLicenseFeature('custom_tile')) {
                         $element['enabled'] = false;
-                        $element['caption'] = 'Eigenen Kachel-HTML-Code bearbeiten (Pro Edition erforderlich)';
+                        $element['caption'] = 'Edit custom tile HTML code (Pro Edition required)';
                     }
                     break;
 
@@ -1487,7 +1487,7 @@ class SimpleLocale extends IPSModuleStrict
                     break;
 
                 case 'LicenseInfoTypeValueLabel':
-                    $element['caption'] = ($licenseInfo['type'] ?? '') === 'subscription' ? 'Abo' : 'Einmalkauf';
+                    $element['caption'] = ($licenseInfo['type'] ?? '') === 'subscription' ? 'Subscription' : 'One-time purchase';
                     break;
 
                 // Build 148: nur bei einem Abo MIT hinterlegtem Zeitraum
@@ -1502,11 +1502,11 @@ class SimpleLocale extends IPSModuleStrict
                     break;
 
                 case 'LicenseInfoIntervalValueLabel':
-                    $element['caption'] = ($licenseInfo['interval'] ?? '') === 'year' ? 'jährlich' : 'monatlich';
+                    $element['caption'] = ($licenseInfo['interval'] ?? '') === 'year' ? 'yearly' : 'monthly';
                     break;
 
                 case 'LicenseInfoExpiryConnectorLabel':
-                    $element['caption'] = (int) ($licenseInfo['expiresAt'] ?? 0) === 0 ? 'läuft nie ab' : 'gültig bis';
+                    $element['caption'] = (int) ($licenseInfo['expiresAt'] ?? 0) === 0 ? 'never expires' : 'valid until';
                     break;
 
                 case 'LicenseInfoExpiryDateLabel':
@@ -1515,7 +1515,7 @@ class SimpleLocale extends IPSModuleStrict
                     break;
 
                 case 'LicenseInfoLanguageLimitConnectorLabel':
-                    $element['caption'] = (int) ($licenseInfo['languageLimit'] ?? 0) === 0 ? 'unbegrenzt' : 'max.';
+                    $element['caption'] = (int) ($licenseInfo['languageLimit'] ?? 0) === 0 ? 'unlimited' : 'max.';
                     break;
 
                 case 'LicenseInfoLanguageLimitNumberLabel':
@@ -1525,7 +1525,7 @@ class SimpleLocale extends IPSModuleStrict
 
                 case 'LicenseInfoAllowedLanguagesValueLabel':
                     $allowedLanguages = $licenseInfo['allowedLanguages'] ?? [];
-                    $element['caption'] = $allowedLanguages === [] ? 'alle' : implode(', ', $allowedLanguages);
+                    $element['caption'] = $allowedLanguages === [] ? 'all' : implode(', ', $allowedLanguages);
                     break;
 
                 case 'LicenseInfoFeatureEditTranslations':
@@ -1804,7 +1804,7 @@ class SimpleLocale extends IPSModuleStrict
         // schneller (keine Uebersetzungs-API-Aufrufe), soll dem Nutzer aber trotzdem
         // sichtbar bestaetigen, dass der Klick tatsaechlich etwas ausloest, auch wenn
         // es nur ein kurzes Aufblitzen ist.
-        $this->SetButtonProgress('CleanupProgressBar', 'Verwaiste Einträge werden gesucht…');
+        $this->SetButtonProgress('CleanupProgressBar', 'Looking for orphaned entries…');
 
         $liveNames = [];
         $liveTexts = [];
@@ -1856,7 +1856,7 @@ class SimpleLocale extends IPSModuleStrict
         $objectAutomations = array_values(array_filter(
             $this->DecodeRows(self::propertyObjectAutomations),
             function (array $row) use ($liveAutomationIDs, &$removedCount): bool {
-                $keep = isset($liveAutomationIDs[(int) ($row['AutomationID'] ?? 0)]);
+                $keep = isset($liveAutomationIDs[(int) ($row['Automation ID'] ?? 0)]);
                 $removedCount += $keep ? 0 : 1;
 
                 return $keep;
@@ -1949,7 +1949,7 @@ class SimpleLocale extends IPSModuleStrict
         // (siehe Schleife unten) koennen spuerbar dauern - dieselbe Live-Rueckmeldung
         // wie beim Rescan, damit der Klick sichtbar etwas ausloest statt scheinbar
         // nichts zu tun, bis das Ergebnis-Popup ganz am Ende erscheint.
-        $this->SetButtonProgress('ProviderCheckProgressBar', 'Übersetzungsanbieter werden geprüft…');
+        $this->SetButtonProgress('ProviderCheckProgressBar', 'Checking translation providers…');
 
         $testText = 'Testabfrage';
 
@@ -2058,7 +2058,7 @@ class SimpleLocale extends IPSModuleStrict
             $this->UpdateFormField(
                 'ProviderCheck' . $prefix . 'StatusLabel',
                 'caption',
-                $result['succeeded'] ? 'erfolgreich' : 'fehlgeschlagen - siehe Meldungen-Log für Details'
+                $result['succeeded'] ? 'successful' : 'failed - see the message log for details'
             );
             $this->UpdateFormField(
                 'ProviderCheck' . $prefix . 'DetailLabel',
@@ -3823,7 +3823,7 @@ class SimpleLocale extends IPSModuleStrict
 
         $rowsByID = [];
         foreach ($this->DecodeRows(self::propertyObjectAutomations) as $row) {
-            $automationID = (int) ($row['AutomationID'] ?? 0);
+            $automationID = (int) ($row['Automation ID'] ?? 0);
             if ($automationID !== 0) {
                 $rowsByID[$automationID] = $row;
             }
@@ -3834,7 +3834,7 @@ class SimpleLocale extends IPSModuleStrict
 
         $changed = false;
         foreach ($liveAutomations as &$entry) {
-            $automationID = (int) ($entry['AutomationID'] ?? 0);
+            $automationID = (int) ($entry['Automation ID'] ?? 0);
             $row = $rowsByID[$automationID] ?? null;
             if ($row === null) {
                 continue;
@@ -5353,7 +5353,7 @@ class SimpleLocale extends IPSModuleStrict
         // Formular soll immer den aktuellen Durchlauf widerspiegeln.
         $this->ResetTranslationFailureReport();
 
-        $this->SetRescanProgress('Baum wird eingelesen…');
+        $this->SetRescanProgress('Reading the tree…');
 
         $scannedNames = [];
         $scannedTexts = [];
@@ -5510,7 +5510,7 @@ class SimpleLocale extends IPSModuleStrict
         // Build 88: Objektnamen/Eigene Texte sind erfahrungsgemaess der groesste
         // (und damit am laengsten laufende) Teil eines Rescans - eigene
         // Fortschritts-Meldung dafuer, siehe SetRescanProgress.
-        $this->SetRescanProgress('Objektnamen und Texte werden übersetzt… (je nach Anzahl der Objekte kann das einige Minuten dauern)');
+        $this->SetRescanProgress('Translating object names and texts… (depending on the number of objects this can take a few minutes)');
 
         $objectNames = $this->FillMissingTranslations($objectNames, [
             ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => true],
@@ -5524,7 +5524,7 @@ class SimpleLocale extends IPSModuleStrict
             ['raw' => self::langOriginalImportText, 'prefix' => self::fieldTextPrefix, 'capitalizeFirst' => false, 'isHtml' => true],
         ], $sourceLanguage, $targetLanguages);
 
-        $this->SetRescanProgress('Weitere Inhalte werden übersetzt… (je nach Anzahl der Objekte kann das einige Minuten dauern)');
+        $this->SetRescanProgress('Translating further content… (depending on the number of objects this can take a few minutes)');
 
         $objectOptions = $this->FillMissingTranslations($objectOptions, [
             ['raw' => self::langOriginalImport, 'prefix' => '', 'capitalizeFirst' => false],
@@ -5560,7 +5560,7 @@ class SimpleLocale extends IPSModuleStrict
         // fuer diese vorbefuellten Zeilen selbst.
         $manualTranslations = $this->MergeBundledManualTranslations($this->DecodeRows(self::propertyManualTranslations));
 
-        $this->SetRescanProgress('Ergebnis wird gespeichert…');
+        $this->SetRescanProgress('Saving results…');
 
         IPS_SetProperty($this->InstanceID, self::propertyObjectNames, json_encode(array_values($objectNames)));
         IPS_SetProperty($this->InstanceID, self::propertyObjectTexts, json_encode(array_values($objectTexts)));
@@ -6242,7 +6242,7 @@ class SimpleLocale extends IPSModuleStrict
             }
             $extra[$objectID] = [
                 'ObjectID'                => $objectID,
-                'Path'                    => $this->Translate('Favoriten'),
+                'Path'                    => $this->Translate('Favorites'),
                 self::langOriginalImport  => IPS_GetName($objectID),
                 self::fieldRowSourceLanguage               => $currentScanSourceLanguage,
                 self::fieldTranslatedAgainstSourceLanguage => $currentScanSourceLanguage,
@@ -6260,7 +6260,7 @@ class SimpleLocale extends IPSModuleStrict
     {
         $webFrontID = $this->ReadPropertyInteger(self::propertyWebFrontVisuInstanceID);
         if ($webFrontID === 0 || !@IPS_ObjectExists($webFrontID)) {
-            return $this->Translate('Begrüßung: keine Kachel-Visualisierungs-Instanz ausgewählt (siehe Feld "Kachel-Visualisierung" oben).');
+            return $this->Translate('Greeting: no tile visualization instance selected (see the "Tile visualization" field above).');
         }
 
         $showGreeting = (int) $this->GetVisuInstanceProperty($webFrontID, 'ShowGreeting', 0);
@@ -6268,13 +6268,13 @@ class SimpleLocale extends IPSModuleStrict
         switch ($showGreeting) {
             case 1:
             case 3:
-                return $this->Translate('Modus "Automatic"/"Static" aktiv - der Begrüßungstext (Feld "Name") wird übersetzt.');
+                return $this->Translate('Mode "Automatic"/"Static" active - the greeting text ("Name" field) is translated.');
 
             case 2:
-                return $this->Translate('Modus "Variable" aktiv - der aktuelle Wert der verknüpften Variable wird übersetzt und bei jeder Änderung der Variable automatisch neu übernommen.');
+                return $this->Translate('Mode "Variable" active - the current value of the linked variable is translated below and automatically re-adopted whenever the variable changes.');
 
             default:
-                return $this->Translate('Begrüßung ist deaktiviert ("Show Greeting" = "None" in der Kachel-Visualisierung).');
+                return $this->Translate('Greeting is disabled ("Show Greeting" = "None" in the tile visualization).');
         }
     }
 
@@ -6509,13 +6509,13 @@ class SimpleLocale extends IPSModuleStrict
 
         $scannedByID = [];
         foreach ($automations as $entry) {
-            $automationID = (int) ($entry['AutomationID'] ?? 0);
+            $automationID = (int) ($entry['Automation ID'] ?? 0);
             $name = (string) ($entry['Name'] ?? '');
             if ($automationID === 0 || $name === '') {
                 continue;
             }
             $scannedByID[$automationID] = [
-                'AutomationID'            => $automationID,
+                'Automation ID'            => $automationID,
                 self::langOriginalImport  => $name,
                 self::fieldRowSourceLanguage               => $currentScanSourceLanguage,
                 self::fieldTranslatedAgainstSourceLanguage => $currentScanSourceLanguage,
@@ -6537,7 +6537,7 @@ class SimpleLocale extends IPSModuleStrict
 
         $result = [];
         foreach ($ExistingRows as $row) {
-            $automationID = (int) ($row['AutomationID'] ?? 0);
+            $automationID = (int) ($row['Automation ID'] ?? 0);
             $fallback = $ScannedByID[$automationID][self::fieldRowSourceLanguage] ?? $instanceSourceLanguage;
             $row = $this->BackfillRowSourceLanguage($row, $fallback);
             unset($ScannedByID[$automationID]);
@@ -10368,8 +10368,8 @@ HTML;
     // HasThemeEntitlement) - im Shop einfach der features-Spalte des Produkts
     // bzw. der Promo-Lizenz hinzufuegen, kein Schema-Umbau noetig.
     private const TILE_ICON_CATALOG = [
-        'ipssl' => ['label' => 'Simple-Locale-Symbol', 'feature' => null, 'file' => 'module_icon_48.png'],
-        'globe' => ['label' => 'Weltkugel', 'feature' => null, 'emoji' => '🌐'],
+        'ipssl' => ['label' => 'Simple Locale icon', 'feature' => null, 'file' => 'module_icon_48.png'],
+        'globe' => ['label' => 'Globe', 'feature' => null, 'emoji' => '🌐'],
     ];
 
     private const TILE_ICON_DEFAULT_ID = 'ipssl';
@@ -10435,7 +10435,7 @@ HTML;
         // Build 156 (live gemeldet, per Screenshot belegt): die Beschriftungen hier
         // gehen BEWUSST roh und deutsch raus, ohne Translate(). Bis Build 155 stand
         // hier eine zur Laufzeit zusammengesetzte Kette
-        // ($this->Translate('Automatisch') . ' (' . $this->Translate($label) . ')') -
+        // ($this->Translate('Automatic') . ' (' . $this->Translate($label) . ')') -
         // und eine so zusammengebaute Zeichenkette matcht NIE einen
         // locale.json-Eintrag. Sie blieb dadurch an die Symcon-SYSTEMSPRACHE
         // gebunden statt an die Konsolensprache des Betrachters: bei englischer
@@ -10451,7 +10451,7 @@ HTML;
         // prueft beides und schlaegt fehl, wenn eine fehlt.
         $automaticId = $this->ResolveAutomaticCatalogId($Catalog, $DefaultId);
         $options = [[
-            'caption' => 'Automatisch (' . $Catalog[$automaticId]['label'] . ')',
+            'caption' => 'Automatic (' . $Catalog[$automaticId]['label'] . ')',
             'value'   => self::CATALOG_AUTOMATIC_ID,
         ]];
 
@@ -11206,7 +11206,7 @@ HTML;
         if ($Kind === 'manual') {
             $editable = $this->HasLicenseFeature('manual_translations');
             $sourceTextColumn = [
-                'caption' => $this->Translate('Quelltext'),
+                'caption' => $this->Translate('Source text'),
                 'name'    => self::langOriginalImport,
                 'width'   => '220px',
                 'add'     => '',
@@ -11224,10 +11224,10 @@ HTML;
 
         if ($Kind === 'automations') {
             $columns = [
-                ['caption' => 'AutomationID', 'name' => 'AutomationID', 'width' => '100px', 'save' => true],
+                ['caption' => 'Automation ID', 'name' => 'Automation ID', 'width' => '100px', 'save' => true],
             ];
             $columns[] = [
-                'caption' => $this->Translate('Original-Import'),
+                'caption' => $this->Translate('Original import'),
                 'name'    => self::langOriginalImport,
                 'width'   => '250px',
                 'save'    => true,
@@ -11244,13 +11244,13 @@ HTML;
         // als Automations) ein normales Objekt im Root-Baum ist.
         if ($Kind === 'charts') {
             $columns = [
-                ['caption' => 'Chart-Objekt-ID', 'name' => 'ChartID', 'width' => '100px', 'save' => true],
-                ['caption' => $this->Translate('Variablen-ID'), 'name' => 'VariableID', 'width' => '90px', 'save' => true],
-                ['caption' => $this->Translate('Pfad'), 'name' => 'Path', 'width' => '200px', 'save' => true],
+                ['caption' => 'Chart object ID', 'name' => 'ChartID', 'width' => '100px', 'save' => true],
+                ['caption' => $this->Translate('Variable ID'), 'name' => 'VariableID', 'width' => '90px', 'save' => true],
+                ['caption' => $this->Translate('Path'), 'name' => 'Path', 'width' => '200px', 'save' => true],
             ];
             $columns[] = $this->BuildRowSourceLanguageColumn($SourceLanguage, $TargetLanguages);
             $columns[] = [
-                'caption' => $this->Translate('Original-Import'),
+                'caption' => $this->Translate('Original import'),
                 'name'    => self::langOriginalImport,
                 'width'   => '200px',
                 'save'    => true,
@@ -11270,13 +11270,13 @@ HTML;
         if ($Kind === 'greeting') {
             $columns = [
                 [
-                    'caption' => $this->Translate('Original-Import'),
+                    'caption' => $this->Translate('Original import'),
                     'name'    => self::langOriginalImport,
                     'width'   => '250px',
                     'save'    => true,
                 ],
                 [
-                    'caption' => 'Wert-Objekt-ID',
+                    'caption' => 'Value object ID',
                     'name'    => 'ValueObjectID',
                     'width'   => '90px',
                     'save'    => true,
@@ -11291,21 +11291,21 @@ HTML;
         $columns = $Kind === 'options'
             ? [
                 [
-                    'caption' => $this->Translate('Profil/Template'),
+                    'caption' => $this->Translate('Profile/template'),
                     'name'    => 'SourceKey',
                     'width'   => '160px',
                     'save'    => true,
                 ],
-                ['caption' => $this->Translate('Pfad'), 'name' => 'Path', 'width' => '200px', 'save' => true],
+                ['caption' => $this->Translate('Path'), 'name' => 'Path', 'width' => '200px', 'save' => true],
             ]
             : [
-                ['caption' => 'Objekt-ID', 'name' => 'ObjectID', 'width' => '80px', 'save' => true],
-                ['caption' => $this->Translate('Pfad'), 'name' => 'Path', 'width' => '200px', 'save' => true],
+                ['caption' => 'Object ID', 'name' => 'ObjectID', 'width' => '80px', 'save' => true],
+                ['caption' => $this->Translate('Path'), 'name' => 'Path', 'width' => '200px', 'save' => true],
             ];
         $columns[] = $this->BuildRowSourceLanguageColumn($SourceLanguage, $TargetLanguages);
 
         if ($Kind === 'texts') {
-            $columns[] = ['caption' => 'Wert-Objekt-ID', 'name' => 'ValueObjectID', 'width' => '90px', 'save' => true];
+            $columns[] = ['caption' => 'Value object ID', 'name' => 'ValueObjectID', 'width' => '90px', 'save' => true];
 
             // Build 115 (Nutzer-Wunsch): keine eigene Namens-Spalte mehr hier - der
             // Objektname kommt ausschließlich aus "Objektnamen" (jedes Objekt hat
@@ -11313,7 +11313,7 @@ HTML;
             // Namens-Kopie war strukturell immer redundant und funktionslos (siehe
             // ApplyLanguage - "Objektnamen" gewann dort schon seit Build 107 immer).
             $columns[] = [
-                'caption' => $this->Translate('Original-Import (Text)'),
+                'caption' => $this->Translate('Original import (text)'),
                 'name'    => self::langOriginalImportText,
                 'width'   => '200px',
                 'save'    => true,
@@ -11325,19 +11325,19 @@ HTML;
             );
         } elseif ($Kind === 'options') {
             $columns[] = [
-                'caption' => $this->Translate('Variablen-IDs'),
+                'caption' => $this->Translate('Variable IDs'),
                 'name'    => 'ValueObjectIDs',
                 'width'   => '120px',
                 'save'    => true,
             ];
             $columns[] = [
-                'caption' => $this->Translate('Feld'),
+                'caption' => $this->Translate('Field'),
                 'name'    => 'FieldPath',
                 'width'   => '120px',
                 'save'    => true,
             ];
             $columns[] = [
-                'caption' => $this->Translate('Original-Import'),
+                'caption' => $this->Translate('Original import'),
                 'name'    => self::langOriginalImport,
                 'width'   => '200px',
                 'save'    => true,
@@ -11347,7 +11347,7 @@ HTML;
         } else {
             // "names" (Objektnamen) - einziger verbleibender Fall, der hier ankommt.
             $columns[] = [
-                'caption' => $this->Translate('Original-Import'),
+                'caption' => $this->Translate('Original import'),
                 'name'    => self::langOriginalImport,
                 'width'   => '200px',
                 'save'    => true,
@@ -11402,7 +11402,7 @@ HTML;
         }
 
         return [
-            'caption' => $this->Translate('Übersetzung aktiv'),
+            'caption' => $this->Translate('Translation active'),
             'name'    => self::fieldTranslationActive,
             'width'   => '130px',
             'add'     => true,
@@ -11439,11 +11439,11 @@ HTML;
     // Spalten in dieser Liste. Editierbar nur mit dem übergebenen Lizenz-Feature
     // (Standard: "edit_translations"/Pro; Build 89 übergibt "manual_translations"
     // für die "Eigene Übersetzungstabelle"), sonst rein informativ (wie die
-    // 'Pfad'-Spalte).
+    // 'Path'-Spalte).
     private function BuildRowSourceLanguageColumn(string $InstanceSourceLanguage, array $TargetLanguages, string $LicenseFeature = 'edit_translations'): array
     {
         $column = [
-            'caption' => $this->Translate('Quellsprache'),
+            'caption' => $this->Translate('Source language'),
             'name'    => self::fieldRowSourceLanguage,
             'width'   => '140px',
             'add'     => $InstanceSourceLanguage,
@@ -11482,7 +11482,7 @@ HTML;
     // gesetzt) nur mit dem übergebenen Lizenz-Feature (siehe HasLicenseFeature) -
     // Standard: "edit_translations"/Pro; Build 89 übergibt "manual_translations"
     // für die "Eigene Übersetzungstabelle" - ohne das jeweilige Feature rein
-    // lesend, wie z.B. die 'Pfad'-Spalte.
+    // lesend, wie z.B. die 'Path'-Spalte.
     private function BuildLanguageColumnSet(string $Prefix, string $Label, string $SourceLanguage, array $TargetLanguages, string $LicenseFeature = 'edit_translations'): array
     {
         $withLabel = function (string $Text) use ($Label): string {
@@ -11568,7 +11568,7 @@ HTML;
     {
         if ($this->GetProviderChain() !== ['free'] && !$this->HasCachedLanguages()) {
             return [[
-                'caption' => $this->Translate('Sprachliste konnte nicht geladen werden - bitte API-Key prüfen'),
+                'caption' => $this->Translate('Language list could not be loaded - please check the API key'),
                 'value'   => '',
             ]];
         }

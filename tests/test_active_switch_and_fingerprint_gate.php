@@ -23,7 +23,7 @@ function computeFingerprint(array $propertiesRows): string
     $parts = [];
     foreach ($propertiesRows as $rows) {
         foreach ($rows as $row) {
-            $parts[] = (string) ($row['Quellsprache'] ?? '');
+            $parts[] = (string) ($row['Source language'] ?? '');
         }
     }
     return md5(implode('|', $parts));
@@ -43,11 +43,11 @@ function applyChangesReconcileGate(array $propertiesRows, string &$storedFingerp
 // ONCE, not on every call.
 $rows = [
     'ObjectNames' => [
-        ['ObjectID' => 1, 'Quellsprache' => 'de'],
-        ['ObjectID' => 2, 'Quellsprache' => 'de'],
+        ['ObjectID' => 1, 'Source language' => 'de'],
+        ['ObjectID' => 2, 'Source language' => 'de'],
     ],
     'ObjectTexts' => [
-        ['ObjectID' => 3, 'Quellsprache' => 'de'],
+        ['ObjectID' => 3, 'Source language' => 'de'],
     ],
 ];
 $storedFingerprint = ''; // fresh attribute default
@@ -60,7 +60,7 @@ echo "Test 1 (50x identical ApplyChanges calls -> reconcile runs exactly once) O
 
 // Test 2: a genuine Quellsprache edit on one row must still trigger exactly
 // one more reconcile pass (the mechanism must not be permanently disabled).
-$rows['ObjectNames'][0]['Quellsprache'] = 'en'; // admin edits row 1's Quellsprache
+$rows['ObjectNames'][0]['Source language'] = 'en'; // admin edits row 1's Quellsprache
 applyChangesReconcileGate($rows, $storedFingerprint, $reconcileCallCount);
 assert($reconcileCallCount === 2, 'A genuine Quellsprache change must still trigger exactly one more reconcile pass');
 // ...and then further repeated calls with the now-stable new state must again

@@ -84,13 +84,13 @@ echo "Test 3 (der normale Rescan-Durchlauf ist völlig unberührt, kein zusätzl
 // eine Zielsprache hinzugefuegt) darf den Status NICHT auf "Aktiv" zuruecksetzen,
 // solange die unbenannten Objekte noch anstehen.
 assert(applyChangesStatusReplica(false, false, true, false) === STATUS_UNNAMED_OBJECTS, 'DER BUG: ApplyChanges() darf den Status nicht auf "Aktiv" zuruecksetzen, solange unbenannte Objekte anstehen - Formular (Liste sichtbar) und Statuszeile widersprachen sich sonst offen');
-echo "Test 4 (ein späteres 'Übernehmen' zeigt weiterhin korrekt STATUS_UNNAMED_OBJECTS statt fälschlich 'Aktiv') OK\n";
+echo "Test 4 (ein späteres 'Übernehmen' zeigt weiterhin korrekt STATUS_UNNAMED_OBJECTS statt fälschlich 'Active') OK\n";
 
 // Test 5: sind die unbenannten Objekte abgearbeitet (naechster erfolgreicher Rescan
 // leert das Attribut), meldet der Status wieder ganz normal "Aktiv" - der neue
 // Zweig darf sich nicht dauerhaft festbeissen.
 assert(applyChangesStatusReplica(false, false, false, false) === STATUS_ACTIVE, 'nach einem erfolgreichen Rescan (Attribut geleert) muss der Status wieder normal "Aktiv" melden');
-echo "Test 5 (nach behobenen Benennungen meldet der Status wieder normal 'Aktiv') OK\n";
+echo "Test 5 (nach behobenen Benennungen meldet der Status wieder normal 'Active') OK\n";
 
 // Test 6: die Rangfolge bleibt korrekt - fundamentalere Blocker (fehlender
 // Visualisierungs-Root, abgelaufene Testphase) gewinnen weiterhin gegen die

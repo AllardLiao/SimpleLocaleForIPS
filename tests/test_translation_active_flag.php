@@ -71,7 +71,7 @@ function backfillTranslationActiveFlagReplica(array $row): array
 
 // Test 1: THE FEATURE - a row with TranslationActive=false must always resolve to
 // its raw source text, no matter which guest language is currently active.
-$deactivatedRow = ['Quellsprache' => 'de', 'ORIGINAL_IMPORT' => 'Sebastian Simon Walter', 'en' => 'Sebastian Simon Walter (should never be shown)', 'TranslationActive' => false];
+$deactivatedRow = ['Source language' => 'de', 'ORIGINAL_IMPORT' => 'Sebastian Simon Walter', 'en' => 'Sebastian Simon Walter (should never be shown)', 'TranslationActive' => false];
 $effectiveEn = getEffectiveSelectedLanguageReplica($deactivatedRow, 'en');
 $resolved = resolveRowValueReplica($deactivatedRow, $effectiveEn, 'en', 'de', 'ORIGINAL_IMPORT');
 assert($resolved === 'Sebastian Simon Walter', 'THE BUG: a row with "Übersetzung aktiv" unchecked must always show its raw source text, even when a target-language cell happens to be filled');
@@ -79,7 +79,7 @@ echo "Test 1 (a deactivated row always resolves to its raw source text, regardle
 
 // Test 2: an ACTIVE row (the default) resolves completely normally - the new
 // mechanism must not interfere with ordinary translation.
-$activeRow = ['Quellsprache' => 'de', 'ORIGINAL_IMPORT' => 'Wohnzimmer', 'en' => 'Living room', 'TranslationActive' => true];
+$activeRow = ['Source language' => 'de', 'ORIGINAL_IMPORT' => 'Wohnzimmer', 'en' => 'Living room', 'TranslationActive' => true];
 $effectiveEnActive = getEffectiveSelectedLanguageReplica($activeRow, 'en');
 assert(resolveRowValueReplica($activeRow, $effectiveEnActive, 'en', 'de', 'ORIGINAL_IMPORT') === 'Living room', 'an active row must continue to resolve to its normal translated cell');
 echo "Test 2 (an active row translates completely normally) OK\n";
@@ -88,7 +88,7 @@ echo "Test 2 (an active row translates completely normally) OK\n";
 // default to "active" (true), both in the resolution logic AND in the backfill
 // helper - a missing checkbox default must never silently disable translation for
 // every pre-existing installation.
-$legacyRow = ['Quellsprache' => 'de', 'ORIGINAL_IMPORT' => 'Küche', 'en' => 'Kitchen'];
+$legacyRow = ['Source language' => 'de', 'ORIGINAL_IMPORT' => 'Küche', 'en' => 'Kitchen'];
 assert(getEffectiveSelectedLanguageReplica($legacyRow, 'en') === 'en', 'THE BUG: a pre-existing row without the TranslationActive field must default to active, not silently stop translating');
 $backfilled = backfillTranslationActiveFlagReplica($legacyRow);
 assert($backfilled['TranslationActive'] === true, 'the backfill helper must explicitly write true into a legacy row missing the field, so the console checkbox visually shows checked instead of misleadingly unchecked');
@@ -97,7 +97,7 @@ echo "Test 3 (a legacy row without the field defaults to active, and gets explic
 // Test 4: the backfill helper must NEVER overwrite a row where the admin has
 // deliberately unchecked the box (field present and false) - array_key_exists,
 // not an emptiness/falsiness check.
-$deliberatelyOff = ['Quellsprache' => 'de', 'ORIGINAL_IMPORT' => 'SSW', 'TranslationActive' => false];
+$deliberatelyOff = ['Source language' => 'de', 'ORIGINAL_IMPORT' => 'SSW', 'TranslationActive' => false];
 $afterBackfill = backfillTranslationActiveFlagReplica($deliberatelyOff);
 assert($afterBackfill['TranslationActive'] === false, 'THE BUG: the backfill helper must never flip an admin-deactivated row back to active - it may only fill in a genuinely MISSING field');
 echo "Test 4 (the backfill helper never overwrites a deliberately deactivated row) OK\n";
@@ -105,7 +105,7 @@ echo "Test 4 (the backfill helper never overwrites a deliberately deactivated ro
 // Test 6 (Build 136): a deactivated "Eigene Texte" row must behave AS IF its
 // translation cells had been deleted - exactly the semantics the user asked for -
 // resolving to the raw variable content regardless of the active guest language.
-$deactivatedTextRow = ['Quellsprache' => 'de', 'ORIGINAL_IMPORT_Text' => '{"musicProvider":"CLOUDPLAYER"}', 'Text_en' => 'this must never be shown', 'TranslationActive' => false];
+$deactivatedTextRow = ['Source language' => 'de', 'ORIGINAL_IMPORT_Text' => '{"musicProvider":"CLOUDPLAYER"}', 'Text_en' => 'this must never be shown', 'TranslationActive' => false];
 $effectiveForText = getEffectiveSelectedLanguageReplica($deactivatedTextRow, 'en');
 assert(resolveRowValueReplica($deactivatedTextRow, $effectiveForText, 'Text_en', 'de', 'ORIGINAL_IMPORT_Text') === '{"musicProvider":"CLOUDPLAYER"}', 'THE FEATURE (136): a deactivated "Eigene Texte" row (e.g. one holding JSON control data for another module) must always resolve to its raw content, exactly as if the translation cells were deleted');
 echo "Test 6 (a deactivated 'Eigene Texte' row resolves to its raw content, matching the user's 'as if the cells were deleted' requirement) OK\n";
@@ -116,8 +116,8 @@ echo "Test 6 (a deactivated 'Eigene Texte' row resolves to its raw content, matc
 // on the SAME variable keeps translating normally - the flag is per-row/per-field,
 // not an all-or-nothing switch for the whole variable.
 $sharedRows = [
-    'Caption' => ['Quellsprache' => 'de', 'ORIGINAL_IMPORT' => 'Anwesend', 'en' => 'Present', 'TranslationActive' => true],
-    'Suffix'  => ['Quellsprache' => 'de', 'ORIGINAL_IMPORT' => 'ProduktCode-XY', 'en' => 'should-never-be-shown', 'TranslationActive' => false],
+    'Caption' => ['Source language' => 'de', 'ORIGINAL_IMPORT' => 'Anwesend', 'en' => 'Present', 'TranslationActive' => true],
+    'Suffix'  => ['Source language' => 'de', 'ORIGINAL_IMPORT' => 'ProduktCode-XY', 'en' => 'should-never-be-shown', 'TranslationActive' => false],
 ];
 $replacements = [];
 foreach ($sharedRows as $fieldPath => $row) {
@@ -180,7 +180,7 @@ function buildTranslationActiveColumnReplica(bool $hasEditTranslationsFeature): 
         return null;
     }
 
-    return ['caption' => 'Übersetzung aktiv', 'name' => 'TranslationActive', 'edit' => ['type' => 'CheckBox']];
+    return ['caption' => 'Translation active', 'name' => 'TranslationActive', 'edit' => ['type' => 'CheckBox']];
 }
 function appendTranslationActiveColumnReplica(array $columns, bool $hasEditTranslationsFeature): array
 {

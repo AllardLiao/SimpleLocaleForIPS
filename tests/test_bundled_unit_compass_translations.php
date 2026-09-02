@@ -38,7 +38,7 @@ function mergeBundledManualTranslationsReplica(
 
     $existingKeys = [];
     foreach ($existingRows as $row) {
-        if (($row['Quellsprache'] ?? '') === 'de') {
+        if (($row['Source language'] ?? '') === 'de') {
             $existingKeys[(string) ($row['ORIGINAL_IMPORT'] ?? '')] = true;
         }
     }
@@ -49,7 +49,7 @@ function mergeBundledManualTranslationsReplica(
         if (isset($existingKeys[$unit]) || isset($alreadySeeded[$unit])) {
             continue;
         }
-        $row = ['Quellsprache' => 'de', 'ORIGINAL_IMPORT' => $unit];
+        $row = ['Source language' => 'de', 'ORIGINAL_IMPORT' => $unit];
         foreach ($bundledLanguages as $language) {
             $row[$language] = $unitOverrides[$unit][$language] ?? $unit;
         }
@@ -61,7 +61,7 @@ function mergeBundledManualTranslationsReplica(
         if (isset($existingKeys[$germanCompass]) || isset($alreadySeeded[$germanCompass])) {
             continue;
         }
-        $row = ['Quellsprache' => 'de', 'ORIGINAL_IMPORT' => $germanCompass];
+        $row = ['Source language' => 'de', 'ORIGINAL_IMPORT' => $germanCompass];
         foreach ($translationsByLanguage as $language => $translation) {
             $row[$language] = $translation;
         }
@@ -120,7 +120,7 @@ echo "Test 3 (a deliberately deleted bundled row never reappears on a later Resc
 
 // Test 4: an existing row already covering the same German source text (whether
 // user-added or from a prior seed) is never duplicated.
-$existingRow = [['Quellsprache' => 'de', 'ORIGINAL_IMPORT' => 'kg', 'en' => 'kg-custom-value']];
+$existingRow = [['Source language' => 'de', 'ORIGINAL_IMPORT' => 'kg', 'en' => 'kg-custom-value']];
 $noDupe = mergeBundledManualTranslationsReplica($existingRow, [], true, $unitBundle, $compassBundle, $bundledLanguages, $unitOverrides);
 $kgRows = array_filter($noDupe['rows'], fn ($r) => $r['ORIGINAL_IMPORT'] === 'kg');
 assert(count($kgRows) === 1, 'an existing row for the same German source text must never be duplicated');

@@ -27,7 +27,7 @@ function mergeReplica(array $rows, array $alreadySeeded, bool $mitBackfill): arr
 {
     $existing = [];
     foreach ($rows as $i => $row) {
-        if (($row['Quellsprache'] ?? '') !== 'de') { continue; }
+        if (($row['Source language'] ?? '') !== 'de') { continue; }
         $text = (string) ($row['ORIGINAL_IMPORT'] ?? '');
         $existing[$text] = true;
         if (!$mitBackfill || !isset(BUNDLED[$text])) { continue; }
@@ -40,7 +40,7 @@ function mergeReplica(array $rows, array $alreadySeeded, bool $mitBackfill): arr
 
     foreach (BUNDLED as $text => $proSprache) {
         if (isset($existing[$text]) || isset($alreadySeeded[$text])) { continue; }
-        $rows[] = ['Quellsprache' => 'de', 'ORIGINAL_IMPORT' => $text] + $proSprache;
+        $rows[] = ['Source language' => 'de', 'ORIGINAL_IMPORT' => $text] + $proSprache;
     }
 
     return $rows;
@@ -50,7 +50,7 @@ function mergeReplica(array $rows, array $alreadySeeded, bool $mitBackfill): arr
 function findManual(array $rows, string $quelle, string $ziel, string $text): ?string
 {
     foreach ($rows as $row) {
-        if (($row['Quellsprache'] ?? '') !== $quelle) { continue; }
+        if (($row['Source language'] ?? '') !== $quelle) { continue; }
         if ((string) ($row['ORIGINAL_IMPORT'] ?? '') !== $text) { continue; }
         $t = (string) ($row[$ziel] ?? '');
         if ($t !== '') { return $t; }
@@ -61,7 +61,7 @@ function findManual(array $rows, string $quelle, string $ziel, string $text): ?s
 
 // Ausgangslage wie live: die Zeile existiert, Englisch kam erst spaeter als
 // Zielsprache dazu und ist deshalb leer.
-$vorher = [['Quellsprache' => 'de', 'ORIGINAL_IMPORT' => '°C', 'fr' => '°C']];
+$vorher = [['Source language' => 'de', 'ORIGINAL_IMPORT' => '°C', 'fr' => '°C']];
 $seeded = ['°C' => true, 'SSW' => true];
 
 // Test 1: DER GEMELDETE FALL - ohne Backfill bleibt die Zelle leer.
@@ -78,7 +78,7 @@ echo "Test 2 (die Zelle wird nachbefüllt und \"°C\" bleibt \"°C\") OK\n";
 
 // Test 3: EIN ADMIN-WERT GEWINNT IMMER - auch wenn er vom Vorschlag abweicht.
 // Sonst wuerde eine bewusste Korrektur bei jedem Rescan wieder ueberschrieben.
-$eigen = [['Quellsprache' => 'de', 'ORIGINAL_IMPORT' => 'SSW', 'en' => 'Sued-Sued-West (Herr Schmidt)']];
+$eigen = [['Source language' => 'de', 'ORIGINAL_IMPORT' => 'SSW', 'en' => 'Sued-Sued-West (Herr Schmidt)']];
 $nachher = mergeReplica($eigen, ['SSW' => true], true);
 assert($nachher[0]['en'] === 'Sued-Sued-West (Herr Schmidt)', 'ein bereits eingetragener Wert darf NIE ueberschrieben werden');
 echo "Test 3 (ein eingetragener Wert wird nie überschrieben) OK\n";
@@ -90,7 +90,7 @@ assert($leer === [], 'DER BESTEHENDE SCHUTZ: einmal geloeschte Vorschlaege duerf
 echo "Test 4 (bewusst gelöschte Vorschlagszeilen kehren nicht zurück) OK\n";
 
 // Test 5: eine unbekannte Zeile des Admins wird nicht angefasst.
-$fremd = [['Quellsprache' => 'de', 'ORIGINAL_IMPORT' => 'Hauswirtschaftsraum']];
+$fremd = [['Source language' => 'de', 'ORIGINAL_IMPORT' => 'Hauswirtschaftsraum']];
 $nachher = mergeReplica($fremd, ['°C' => true, 'SSW' => true], true);
 assert($nachher[0] === $fremd[0], 'Zeilen ausserhalb des Katalogs duerfen unveraendert bleiben');
 echo "Test 5 (eigene Zeilen des Admins bleiben unangetastet) OK\n";

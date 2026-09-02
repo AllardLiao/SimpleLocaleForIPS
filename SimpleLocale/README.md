@@ -4498,6 +4498,36 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 185 (Symcon-Review): die Quelltexte des Konfigurationsformulars sind
+  jetzt Englisch, Deutsch ist eine Übersetzung wie jede andere.**
+  Vorher war es umgekehrt - die Texte standen auf Deutsch in `form.json`, und
+  `locale.json` bot `en`/`es`/`it`/`fr` an, aber **kein `de`**. Symcon geht die
+  Sprachliste des Browsers durch und nimmt die erste Sprache, für die eine
+  Sektion existiert. Ein deutscher Browser meldet typischerweise
+  `de-DE, de, en-US, en`: `de` fehlte, also griff `en` - und der deutsche
+  Nutzer sah das Modul auf **Englisch**. Nur wer gar kein Englisch in seiner
+  Browser-Liste führt, sah den unübersetzten Quelltext und damit zufällig das
+  Richtige. Deshalb fiel es hier nie auf.
+
+  Die Umstellung lief mechanisch, nicht von Hand: die englischen Formulierungen
+  existierten ja bereits als Übersetzung. Neuer Quelltext = bisheriger
+  `en`-Wert, neue `de`-Sektion = bisheriger deutscher Schlüssel, `es`/`it`/`fr`
+  auf die englischen Schlüssel umgehängt. Voraussetzung dafür war, dass die
+  Zuordnung eindeutig umkehrbar ist - **keine zwei deutschen Texte teilten
+  sich eine englische Übersetzung**, sonst wäre beim Umschlüsseln stillschweigend
+  eine Zeile verloren gegangen.
+
+  Zwei Dinge brauchten Handarbeit: die zur Laufzeit zusammengesetzten
+  Beschriftungen (`'Automatic (' . Label . ')'` in `BuildCatalogOptions()`,
+  die Pro-Suffixe, die Fortschrittstexte) und `Favorites`, das bisher als
+  einziger Text überhaupt keine Übersetzung hatte.
+
+  Dabei fielen zwei tote `locale.json`-Einträge auf (`Zusatzfunktionen`,
+  `keine`). Sie galten bisher als "in Benutzung", weil der Dead-Code-Test die
+  Schlüssel als Teilzeichenkette suchte und dabei einen **PHP-Kommentar** traf.
+  Mit englischen Schlüsseln griff diese Zufallstreffer-Logik nicht mehr, und
+  beide standen als das da, was sie sind.
+
 * **Build 185 (Symcon-Review): der Store-Name trägt kein "for IP Symcon" mehr,
   und das Funktions-Präfix heißt `SLOC` statt `IPSSL`.**
   Symcon lässt "Symcon"/"IPS" im Namen eines Store-Moduls nicht zu - im Store

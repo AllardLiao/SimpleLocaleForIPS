@@ -79,24 +79,24 @@ echo "Test 4 (der finale Clear bleibt unbedingt; genau ein ReloadForm() existier
 // einer minutenlangen Wartezeit schlicht falsch und wuerde den Hinweis
 // entwerten.
 $uebersetzungsStufen = [
-    'Objektnamen und Texte werden übersetzt…',
-    'Weitere Inhalte werden übersetzt…',
+    'Translating object names and texts…',
+    'Translating further content…',
 ];
 foreach ($uebersetzungsStufen as $stufe) {
-    assert(strpos($moduleSource, "SetRescanProgress('" . $stufe . " (je nach Anzahl der Objekte kann das einige Minuten dauern)')") !== false, "die Uebersetzungs-Stufe \"$stufe\" muss den Dauer-Hinweis tragen - ohne ihn wirkt ein minutenlanger Erstscan wie ein Haenger");
+    assert(strpos($moduleSource, "SetRescanProgress('" . $stufe . " (depending on the number of objects this can take a few minutes)')") !== false, "die Uebersetzungs-Stufe \"$stufe\" muss den Dauer-Hinweis tragen - ohne ihn wirkt ein minutenlanger Erstscan wie ein Haenger");
 }
 // Gegenprobe: die schnellen Stufen duerfen ihn NICHT tragen.
-foreach (['Baum wird eingelesen…', 'Ergebnis wird gespeichert…'] as $schnelleStufe) {
+foreach (['Reading the tree…', 'Saving results…'] as $schnelleStufe) {
     assert(strpos($moduleSource, "SetRescanProgress('" . $schnelleStufe . "')") !== false, "die schnelle Stufe \"$schnelleStufe\" muss ohne Dauer-Hinweis bleiben - sonst verliert er seine Aussagekraft");
 }
 // Der Hinweistext muss uebersetzt sein, sonst steht er in jeder Konsolensprache
 // auf Deutsch mitten in einer sonst uebersetzten Meldung.
 $localeJson = file_get_contents(dirname(__DIR__) . '/SimpleLocale/locale.json');
 $locale = json_decode($localeJson, true);
-foreach (['en', 'es', 'it', 'fr'] as $lang) {
+foreach (['de', 'es', 'it', 'fr'] as $lang) {
     $treffer = 0;
     foreach ($locale['translations'][$lang] as $key => $value) {
-        if (strpos($key, 'werden übersetzt… (je nach Anzahl') !== false) {
+        if (strpos($key, '… (depending on the number of objects') !== false) {
             $treffer++;
         }
     }

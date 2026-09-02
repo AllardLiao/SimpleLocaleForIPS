@@ -25,8 +25,8 @@ declare(strict_types=1);
 
 // Testkatalog mit allen drei relevanten Faellen.
 const KATALOG = [
-    'ipssl'    => ['label' => 'Simple-Locale-Symbol', 'feature' => null],
-    'globe'    => ['label' => 'Weltkugel',            'feature' => null],
+    'ipssl'    => ['label' => 'Simple Locale icon', 'feature' => null],
+    'globe'    => ['label' => 'Globe',            'feature' => null],
     'xmas2026' => ['label' => 'Weihnachten 2026',     'feature' => 'theme_xmas2026'],
     'nik2026'  => ['label' => 'Nikolaus 2026',        'feature' => 'theme_nikolaus2026'],
 ];

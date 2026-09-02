@@ -52,7 +52,7 @@ function buildGuestPauseInfoTextReplica(?int $globalPauseUntil, array $rowsByKey
     }
     $prefix = $rowsByKey['pausedNoticePrefix'] ?? 'Übersetzung pausiert bis';
     $reason = $rowsByKey['pausedReason'] ?? 'Grund: Alle konfigurierten Übersetzungsanbieter melden aktuell ihr Limit erreicht.';
-    $reassurance = $rowsByKey['pausedReassurance'] ?? 'Bereits vorhandene Übersetzungen bleiben nutzbar.';
+    $reassurance = $rowsByKey['pausedReassurance'] ?? 'Existing translations remain usable.';
 
     return $prefix . ' ' . date('d.m. H:i', $globalPauseUntil) . "\n" . $reason . "\n" . $reassurance;
 }

@@ -14,7 +14,7 @@ declare(strict_types=1);
 function findManualTranslationReplica(array $rows, string $sourceLanguage, string $targetLanguage, string $text): ?string
 {
     foreach ($rows as $row) {
-        $rowSourceLanguage = (string) ($row['Quellsprache'] ?? '');
+        $rowSourceLanguage = (string) ($row['Source language'] ?? '');
         $rowSourceText = (string) ($row['ORIGINAL_IMPORT'] ?? '');
         if ($rowSourceLanguage !== $sourceLanguage || $rowSourceText !== $text) {
             continue;
@@ -51,7 +51,7 @@ function translateBatchReplica(array $texts, string $source, string $target, arr
 
 // Test 1: THE FEATURE - a manual glossary entry is used instead of the provider
 // result, even though the provider WOULD have returned something different.
-$rows = [['Quellsprache' => 'de', 'ORIGINAL_IMPORT' => 'Cover', 'es' => 'Funda']]; // deliberately different from what a provider might say
+$rows = [['Source language' => 'de', 'ORIGINAL_IMPORT' => 'Cover', 'es' => 'Funda']]; // deliberately different from what a provider might say
 $result1 = translateBatchReplica(['Cover'], 'de', 'es', $rows, [], ['Cover' => 'Cubierta'], true);
 assert($result1[0] === 'Funda', 'THE FEATURE: a manual glossary entry must be used instead of the automatic provider result, even when they disagree');
 echo "Test 1 (a manual glossary entry overrides the automatic provider result) OK\n";
@@ -65,7 +65,7 @@ echo "Test 2 (a manual entry outranks the internal auto-cache as well) OK\n";
 // Test 3: PER-CELL override - a glossary row with an EMPTY cell for one specific
 // target language must NOT block that language from being translated normally;
 // only languages the admin actually filled in are overridden.
-$rowsPartial = [['Quellsprache' => 'de', 'ORIGINAL_IMPORT' => 'Cover', 'es' => 'Funda']]; // no 'en' cell filled in
+$rowsPartial = [['Source language' => 'de', 'ORIGINAL_IMPORT' => 'Cover', 'es' => 'Funda']]; // no 'en' cell filled in
 $result3 = translateBatchReplica(['Cover'], 'de', 'en', $rowsPartial, [], ['Cover' => 'Cover'], true);
 assert($result3[0] === 'Cover', 'An empty cell for a specific target language in an otherwise-matching glossary row must fall through to normal automatic translation for THAT language');
 echo "Test 3 (an empty target-language cell in a matching row falls through to normal auto-translation for that language only) OK\n";

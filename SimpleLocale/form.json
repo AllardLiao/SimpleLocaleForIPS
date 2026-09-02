@@ -7,7 +7,7 @@
             "items": [
                 {
                     "type": "Label",
-                    "caption": "Nächste Persistierung extern geänderter Texte und damit Refresh dieses Formulars um"
+                    "caption": "Next persistence of externally changed texts, and with it a refresh of this form, at"
                 },
                 {
                     "type": "Label",
@@ -16,7 +16,7 @@
                 },
                 {
                     "type": "Label",
-                    "caption": "- speichere Deine Änderungen bitte vorher ab."
+                    "caption": "- please save your own changes before then."
                 }
             ]
         },
@@ -25,15 +25,15 @@
             "type": "PopupAlert",
             "visible": false,
             "popup": {
-                "caption": "Ergebnis von \"Aufräumen\"",
+                "caption": "Result of \"Cleanup\"",
                 "closeCaption": "OK",
                 "items": [
                     {
                         "type": "RowLayout",
                         "items": [
-                            {"type": "Label", "caption": "Entfernt:"},
+                            {"type": "Label", "caption": "Removed:"},
                             {"type": "Label", "name": "CleanupResultCountLabel", "caption": ""},
-                            {"type": "Label", "caption": "Zeile(n), die keinem Objekt mehr in der aktuellen Visualisierung zugeordnet werden konnten."}
+                            {"type": "Label", "caption": "row(s) that could no longer be matched to any object in the current visualization."}
                         ]
                     }
                 ]
@@ -42,27 +42,27 @@
         {
             "type": "ExpansionPanel",
             "name": "ConfigPanel",
-            "caption": "Konfiguration",
+            "caption": "Configuration",
             "expanded": true,
             "items": [
                 {
                     "type": "CheckBox",
                     "name": "Active",
-                    "caption": "Aktiv"
+                    "caption": "Active"
                 },
                 {
                     "type": "Label",
-                    "caption": "Notaus-Schalter: deaktiviert sofort jeden Rescan (manuell/automatisch), jede Live-Nachübersetzung und jeden Quellsprachen-Abgleich - z.B. um ein aufgebrauchtes Tageskontingent oder ein Rate-Limit sofort zu stoppen. Bereits vorhandene Übersetzungen bleiben nutzbar, die Sprachumschaltung in der Kachel funktioniert weiter."
+                    "caption": "Emergency stop: immediately disables every rescan (manual/automatic), every live retranslation, and every source-language reconciliation - e.g. to instantly stop a spent daily quota or a rate limit. Existing translations remain usable, language switching in the tile keeps working."
                 },
                 {
                     "type": "RowLayout",
                     "name": "TranslationStatsRow1",
                     "visible": false,
                     "items": [
-                        {"type": "Label", "caption": "Statistiken", "width": "150px"},
-                        {"type": "Label", "caption": "Seit Inbetriebnahme am"},
+                        {"type": "Label", "caption": "Statistics", "width": "150px"},
+                        {"type": "Label", "caption": "In operation since"},
                         {"type": "Label", "name": "TranslationStatsSinceDateLabel", "caption": ""},
-                        {"type": "Label", "caption": "Tag(e)."}
+                        {"type": "Label", "caption": "day(s)."}
                     ]
                 },
                 {
@@ -71,11 +71,11 @@
                     "visible": false,
                     "items": [
                         {"type": "Label", "caption": "", "width": "150px"},
-                        {"type": "Label", "caption": "Stündlich:"},
+                        {"type": "Label", "caption": "Hourly:"},
                         {"type": "Label", "name": "TranslationStatsRequestsPerHourLabel", "caption": ""},
-                        {"type": "Label", "caption": "Anfrage(n),"},
+                        {"type": "Label", "caption": "request(s),"},
                         {"type": "Label", "name": "TranslationStatsCharsPerHourValueLabel", "caption": ""},
-                        {"type": "Label", "caption": "Zeichen."}
+                        {"type": "Label", "caption": "character(s)."}
                     ]
                 },
                 {
@@ -84,11 +84,11 @@
                     "visible": false,
                     "items": [
                         {"type": "Label", "caption": "", "width": "150px"},
-                        {"type": "Label", "caption": "Insgesamt:"},
+                        {"type": "Label", "caption": "Total:"},
                         {"type": "Label", "name": "TranslationStatsTotalRequestsLabel", "caption": ""},
-                        {"type": "Label", "caption": "Anfrage(n),"},
+                        {"type": "Label", "caption": "request(s),"},
                         {"type": "Label", "name": "TranslationStatsTotalCharsLabel", "caption": ""},
-                        {"type": "Label", "caption": "Zeichen."}
+                        {"type": "Label", "caption": "character(s)."}
                     ]
                 },
                 {
@@ -97,26 +97,26 @@
                     "visible": false,
                     "items": [
                         {"type": "Label", "caption": "", "width": "150px"},
-                        {"type": "Label", "caption": "Durch den Cache eingespart:"},
+                        {"type": "Label", "caption": "Saved by the cache:"},
                         {"type": "Label", "name": "TranslationStatsCacheSavedRequestsLabel", "caption": ""},
-                        {"type": "Label", "caption": "Anfrage(n),"},
+                        {"type": "Label", "caption": "request(s),"},
                         {"type": "Label", "name": "TranslationStatsCacheSavedCharsLabel", "caption": ""},
-                        {"type": "Label", "caption": "Zeichen."}
+                        {"type": "Label", "caption": "character(s)."}
                     ]
                 },
                 {
                     "type": "SelectInstance",
                     "name": "WebFrontVisuInstanceID",
-                    "caption": "Kachel-Visualisierung"
+                    "caption": "Tile visualization"
                 },
                 {
                     "type": "Label",
-                    "caption": "Wähle hier deine Kachel-Visualisierungs-Instanz: ihre eigene Startkategorie wird automatisch als Root der Visualisierung übernommen - Namen und Texte innerhalb dieser Kategorie werden übersetzt (siehe Abschnitt \"Übersetzung\" unten). Zusätzlich werden dort frei vergebene Automation-Namen (z.B. \"Gehen\", \"Kommen\") übersetzt und Favoriten erfasst, deren Objekte außerhalb dieser Kategorie liegen. Ohne ausgewählte Instanz bleibt die Übersetzung inaktiv."
+                    "caption": "Select your tile visualization instance here: its own start category is automatically taken over as the root of the visualization - names and texts within that category get translated (see the \"Translation\" section below). It also gets the freely assigned Automation names there (e.g. \"Leaving\", \"Arriving\") translated, and captures Favorites whose objects sit outside that category. Without a selected instance, translation stays inactive."
                 },
                 {
                     "type": "Select",
                     "name": "SourceLanguage",
-                    "caption": "Scan-Sprache",
+                    "caption": "Scan language",
                     "options": [
                         {
                             "caption": "Deutsch",
@@ -126,12 +126,12 @@
                 },
                 {
                     "type": "Label",
-                    "caption": "Nur die Voreinstellung für neu gefundene Objekte - bereits erfasste Zeilen behalten dauerhaft ihre eigene, beim ersten Fund eingefrorene Quellsprache (pro Zeile in \"Übersetzung\" unten änderbar). Wichtig bei laufendem Automatischem Rescan: ein neues Objekt wird immer mit seinem gerade LIVE angezeigten Namen als \"Original\" übernommen - bleibt dabei nicht \"Aktuell aktive Sprache\" = Scan-Sprache aktiv, friert der Rescan den Namen fälschlich in der falschen Sprache ein. Siehe Abschnitt 7 der Dokumentation."
+                    "caption": "Only the default for newly found objects - already-captured rows permanently keep their own source language, frozen at first discovery (changeable per row in \"Translation\" below). Important while Automatic Rescan is running: a new object is always captured with its currently LIVE displayed name as \"Original\" - if \"Currently active language\" isn't set to the scan language at that moment, the rescan freezes the name in the wrong language by mistake. See section 7 of the documentation."
                 },
                 {
                     "type": "Select",
                     "name": "CurrentLanguage",
-                    "caption": "Aktuell aktive Sprache",
+                    "caption": "Currently active language",
                     "options": [
                         {
                             "caption": "Deutsch",
@@ -142,19 +142,19 @@
                 {
                     "type": "NumberSpinner",
                     "name": "AutoRescanInterval",
-                    "caption": "Automatischer Rescan (Minuten, 0 = aus)",
+                    "caption": "Automatic rescan (minutes, 0 = off)",
                     "minimum": 0
                 },
                 {
                     "type": "ExpansionPanel",
                     "name": "TileSettingsPanel",
-                    "caption": "Kachel-Einstellungen",
+                    "caption": "Tile settings",
                     "expanded": false,
                     "items": [
                         {
                             "type": "Select",
                             "name": "TileTemplateId",
-                            "caption": "Kachel-Vorlage",
+                            "caption": "Tile template",
                             "options": []
                         },
                         {
@@ -163,12 +163,12 @@
                                 {
                                     "type": "CheckBox",
                                     "name": "ShowGlobeIcon",
-                                    "caption": "Symbol in der Kachel anzeigen"
+                                    "caption": "Show icon in the tile"
                                 },
                                 {
                                     "type": "Select",
                                     "name": "TileIconId",
-                                    "caption": "Symbol in der Kachel",
+                                    "caption": "Icon in the tile",
                                     "options": []
                                 }
                             ]
@@ -176,48 +176,48 @@
                         {
                             "type": "CheckBox",
                             "name": "ShowInfoIcon",
-                            "caption": "Info-Symbol in der Kachel anzeigen"
+                            "caption": "Show info icon in the tile"
                         },
                         {
                             "type": "CheckBox",
                             "name": "ShowTranslationStats",
-                            "caption": "Übersetzungsstatistik in der Kachel anzeigen"
+                            "caption": "Show translation statistics in the tile"
                         },
                         {
                             "type": "Label",
-                            "caption": "Kleiner Hinweis unter dem Dropdown (\"30 Übersetzungen/h, 500 Zeichen/h\") - rein informativ, aktualisiert sich in bereits offenen Kacheln alle 10 Minuten. Für eigene Kacheln stehen unabhängig von diesem Haken die Platzhalter <!--COUNT_TRANSLATIONS--> und <!--COUNT_SIGNES--> zur Verfügung (liefern nur die Zahl, siehe Abschnitt 7 der Dokumentation)."
+                            "caption": "Small hint under the dropdown (\"30 translations/h, 500 characters/h\") - purely informational, updates in already-open tiles every 10 minutes. Independently of this checkbox, the placeholders <!--COUNT_TRANSLATIONS--> and <!--COUNT_SIGNES--> are available for custom tiles (return just the number, see section 7 of the documentation)."
                         },
                         {
                             "type": "CheckBox",
                             "name": "UseCustomTile",
-                            "caption": "Eigene Sprachauswahl-Kachel verwenden"
+                            "caption": "Use a custom language-selection tile"
                         },
                         {
                             "type": "Label",
-                            "caption": "Aktiviert: diese Instanz liefert statt der eingebauten Optik den HTML-Code aus dem Bearbeiten-Dialog unten aus (Platzhalter werden automatisch gefüllt) - die Instanz bleibt dabei weiterhin selbst als Kachel in der Visualisierung platziert. Siehe Dokumentation Abschnitt 7 für die Platzhalter/Vorgaben."
+                            "caption": "When enabled, this instance delivers the HTML code from the edit dialog below instead of the built-in look (placeholders are filled in automatically) - the instance still stays placed as a tile in the visualization itself. See documentation section 7 for the placeholders/requirements."
                         },
                         {
                             "type": "PopupButton",
                             "name": "CustomTileHtmlButton",
-                            "caption": "Eigenen Kachel-HTML-Code bearbeiten",
+                            "caption": "Edit custom tile HTML code",
                             "popup": {
-                                "caption": "Eigener Kachel-HTML-Code",
+                                "caption": "Custom tile HTML code",
                                 "items": [
                                     {
                                         "type": "ValidationTextBox",
                                         "name": "CustomTileHtml",
-                                        "caption": "HTML-Code",
+                                        "caption": "HTML code",
                                         "multiline": true,
                                         "width": "100%"
                                     },
                                     {
                                         "type": "Label",
-                                        "caption": "Sprachauswahl (ersetzt den Platzhalter <!--LANGUAGE_SELECT--> oben): unten vorbefüllt mit einem funktionierenden Beispiel (zwei Flaggen statt Dropdown, feste Sprachcodes) - direkt anpassbar. Feld leeren, um stattdessen wieder die automatisch generierte Dropdown-Sprachauswahl zu verwenden."
+                                        "caption": "Language selection (replaces the <!--LANGUAGE_SELECT--> placeholder above): pre-filled below with a working example (two flags instead of a dropdown, fixed language codes) - customize directly. Clear the field to use the automatically generated dropdown language selection again instead."
                                     },
                                     {
                                         "type": "ValidationTextBox",
                                         "name": "CustomLanguageSelectHtml",
-                                        "caption": "Sprachauswahl-HTML-Code",
+                                        "caption": "Language selection HTML code",
                                         "multiline": true,
                                         "width": "100%"
                                     }
@@ -226,41 +226,41 @@
                         },
                         {
                             "type": "Label",
-                            "caption": "Alternativ, unabhängig von diesem Feld: eine komplett eigenständige Kachel (z.B. eine separate HTMLBox-Instanz) lässt sich mit SLOC_GetAvailableLanguages()/SLOC_SetLanguage() bauen - siehe Dokumentation Abschnitt 9. Beide Wege benötigen dieselbe Pro Edition."
+                            "caption": "Alternatively, independent of this field: a fully standalone tile (e.g. a separate HTMLBox instance) can be built with SLOC_GetAvailableLanguages()/SLOC_SetLanguage() - see documentation section 9. Both paths require the same Pro Edition."
                         }
                     ]
                 },
                 {
                     "type": "ExpansionPanel",
                     "name": "TranslationProviderPanel",
-                    "caption": "Übersetzungsanbieter",
+                    "caption": "Translation provider",
                     "expanded": false,
                     "items": [
                         {
                             "type": "Label",
                             "name": "ProviderIntroLabel",
-                            "caption": "Ohne jede Eingabe unten funktioniert die Übersetzung sofort über den kostenfreien Anbieter (kein Konto nötig). Google und/oder DeepL sind optional - sind beide eingetragen, wird zuerst der bevorzugte versucht; schlägt ein Anbieter fehl (z.B. Tageskontingent erschöpft), springt die Übersetzung automatisch zum nächsten."
+                            "caption": "With nothing entered below, translation works immediately via the free provider (no account needed). Google and/or DeepL are optional - if both are entered, the preferred one is tried first; if a provider fails (e.g. daily quota exhausted), translation automatically moves on to the next one."
                         },
                         {
                             "type": "RowLayout",
                             "name": "ProviderPauseAllPausedRow",
                             "visible": false,
                             "items": [
-                                {"type": "Label", "caption": "Alle konfigurierten Anbieter melden aktuell ein Rate-Limit/Tageskontingent - keine neuen Übersetzungsversuche bis spätestens", "color": 16711680},
+                                {"type": "Label", "caption": "All configured providers are currently reporting a rate limit/daily quota - no new translation attempts until at latest", "color": 16711680},
                                 {"type": "Label", "name": "ProviderPauseAllPausedUntilLabel", "caption": "", "color": 16711680}
                             ]
                         },
                         {
                             "type": "Label",
                             "name": "ProviderPauseAllPausedFollowupLabel",
-                            "caption": "Bereits vorhandene Übersetzungen bleiben nutzbar.",
+                            "caption": "Existing translations remain usable.",
                             "visible": false,
                             "color": 16711680
                         },
                         {
                             "type": "Label",
                             "name": "ProviderPausePartialLabel",
-                            "caption": "Mindestens ein Anbieter meldet aktuell ein Rate-Limit/Tageskontingent (die übrigen werden normal weiterverwendet):",
+                            "caption": "At least one provider is currently reporting a rate limit/daily quota (the others continue to be used normally):",
                             "visible": false,
                             "color": 16711680
                         },
@@ -270,7 +270,7 @@
                             "visible": false,
                             "items": [
                                 {"type": "Label", "caption": "- Google Cloud Translate:", "color": 16711680},
-                                {"type": "Label", "caption": "voraussichtlich pausiert bis", "color": 16711680},
+                                {"type": "Label", "caption": "likely paused until", "color": 16711680},
                                 {"type": "Label", "name": "ProviderPauseGoogleUntilLabel", "caption": "", "color": 16711680}
                             ]
                         },
@@ -280,14 +280,14 @@
                             "visible": false,
                             "items": [
                                 {"type": "Label", "caption": "- DeepL:", "color": 16711680},
-                                {"type": "Label", "caption": "voraussichtlich pausiert bis", "color": 16711680},
+                                {"type": "Label", "caption": "likely paused until", "color": 16711680},
                                 {"type": "Label", "name": "ProviderPauseDeepLUntilLabel", "caption": "", "color": 16711680}
                             ]
                         },
                         {
                             "type": "Label",
                             "name": "ProviderPauseDeepLFollowupLabel",
-                            "caption": "Hilft das Warten nicht, bei DeepL prüfen oder einen neuen API-Key eintragen - ein automatischer Reset ist dort nicht garantiert.",
+                            "caption": "If waiting doesn't help, check your DeepL account or enter a new API key - an automatic reset is not guaranteed there.",
                             "visible": false,
                             "color": 16711680
                         },
@@ -296,44 +296,44 @@
                             "name": "ProviderPauseFreeRow",
                             "visible": false,
                             "items": [
-                                {"type": "Label", "caption": "- Kostenfreier Anbieter (MyMemory):", "color": 16711680},
-                                {"type": "Label", "caption": "pausiert bis", "color": 16711680},
+                                {"type": "Label", "caption": "- Free provider (MyMemory):", "color": 16711680},
+                                {"type": "Label", "caption": "paused until", "color": 16711680},
                                 {"type": "Label", "name": "ProviderPauseFreeUntilLabel", "caption": "", "color": 16711680}
                             ]
                         },
                         {
                             "type": "PasswordTextBox",
                             "name": "GoogleTranslateAPIKey",
-                            "caption": "Google Cloud Translate API-Key (optional)"
+                            "caption": "Google Cloud Translate API key (optional)"
                         },
                         {
                             "type": "PasswordTextBox",
                             "name": "DeepLAPIKey",
-                            "caption": "DeepL API-Key (optional)"
+                            "caption": "DeepL API key (optional)"
                         },
                         {
                             "type": "Select",
                             "name": "PreferredPaidProvider",
-                            "caption": "Bevorzugter Anbieter (nur relevant, wenn beide oben eingetragen sind)",
+                            "caption": "Preferred provider (only relevant if both are entered above)",
                             "options": [
                                 {
-                                    "caption": "Google zuerst",
+                                    "caption": "Google first",
                                     "value": "google"
                                 },
                                 {
-                                    "caption": "DeepL zuerst",
+                                    "caption": "DeepL first",
                                     "value": "deepl"
                                 }
                             ]
                         },
                         {
                             "type": "Label",
-                            "caption": "Achtung: DeepL verwendet eigene, großgeschriebene Sprachcodes und verlangt für Englisch/Portugiesisch zwingend eine Regionsvariante (EN-GB/EN-US, PT-PT/PT-BR) statt eines einfachen \"EN\"/\"PT\" wie bei Google. Ein Wechsel des bevorzugten Anbieters kann daher bereits gewählte Zielsprachen ungültig machen - betroffene Zeilen in \"Zielsprachen\" unten müssen dann neu ausgewählt werden. Siehe Abschnitt 7 der Dokumentation."
+                            "caption": "Note: DeepL uses its own, uppercase language codes and requires a regional variant for English/Portuguese (EN-GB/EN-US, PT-PT/PT-BR) instead of a plain \"EN\"/\"PT\" like Google. Switching the preferred provider can therefore invalidate already-chosen target languages - affected rows in \"Target languages\" below then need to be re-selected. See section 7 of the documentation."
                         },
                         {
                             "type": "ValidationTextBox",
                             "name": "FreeTranslateContactEmail",
-                            "caption": "Kontakt-E-Mail für den kostenfreien Anbieter (optional, hebt das Tageskontingent von 5.000 auf 50.000 Zeichen)"
+                            "caption": "Contact email for the free provider (optional, raises the daily quota from 5,000 to 50,000 characters)"
                         }
                     ]
                 }
@@ -342,13 +342,13 @@
         {
             "type": "ExpansionPanel",
             "name": "TranslationPanel",
-            "caption": "Übersetzung",
+            "caption": "Translation",
             "expanded": false,
             "items": [
                 {
                     "type": "List",
                     "name": "TargetLanguages",
-                    "caption": "Zielsprachen",
+                    "caption": "Target languages",
                     "width": "100%",
                     "add": true,
                     "delete": true,
@@ -356,7 +356,7 @@
                     "onAdd": "if ($TargetLanguages['code'] == '') { IPS_RequestAction($id, 'ShowApiKeyWarning', true); }",
                     "columns": [
                         {
-                            "caption": "Sprache",
+                            "caption": "Language",
                             "name": "code",
                             "width": "300px",
                             "add": "",
@@ -376,13 +376,13 @@
                 {
                     "type": "Label",
                     "name": "UnnamedObjectsLabel",
-                    "caption": "Folgende Objekte im Root-Baum haben keinen Namen. Bitte zuerst benennen, dann erneut \"Baum neu einlesen\" klicken - erst wenn alle Objekte einen Namen haben, werden Übersetzungen erzeugt.",
+                    "caption": "The following objects in the root tree have no name. Please name them first, then click \"Rescan tree\" again - translations are only generated once every object has a name.",
                     "visible": false
                 },
                 {
                     "type": "List",
                     "name": "UnnamedObjects",
-                    "caption": "Unbenannte Objekte",
+                    "caption": "Unnamed objects",
                     "width": "100%",
                     "add": false,
                     "delete": false,
@@ -390,12 +390,12 @@
                     "visible": false,
                     "columns": [
                         {
-                            "caption": "Objekt-ID",
+                            "caption": "Object ID",
                             "name": "ObjectID",
                             "width": "100px"
                         },
                         {
-                            "caption": "Pfad",
+                            "caption": "Path",
                             "name": "Path",
                             "width": "300px"
                         }
@@ -409,38 +409,38 @@
                     "items": [
                         {
                             "type": "Button",
-                            "caption": "Verknüpfungen automatisch nach ihrem Ziel benennen",
+                            "caption": "Name links automatically after their target",
                             "onClick": "IPS_RequestAction($id, 'NameUnnamedLinks', true);"
                         },
                         {
                             "type": "Label",
-                            "caption": "Betrifft nur Verknüpfungen: sie übernehmen den Namen, den Symcon ohnehin schon anzeigt - in der Visualisierung ändert sich dadurch nichts. Andere Objekte müssen weiterhin selbst benannt werden."
+                            "caption": "Applies to links only: they take on the name Symcon already displays for them - nothing changes in the visualization. Other objects still have to be named yourself."
                         }
                     ]
                 },
                 {
                     "type": "List",
                     "name": "ObjectNames",
-                    "caption": "Objektnamen",
+                    "caption": "Object names",
                     "width": "100%",
                     "add": false,
                     "delete": true,
                     "rowCount": 10,
                     "columns": [
                         {
-                            "caption": "Objekt-ID",
+                            "caption": "Object ID",
                             "name": "ObjectID",
                             "width": "80px",
                             "save": true
                         },
                         {
-                            "caption": "Pfad",
+                            "caption": "Path",
                             "name": "Path",
                             "width": "200px",
                             "save": true
                         },
                         {
-                            "caption": "Original-Import",
+                            "caption": "Original import",
                             "name": "ORIGINAL_IMPORT",
                             "width": "200px",
                             "save": true
@@ -450,32 +450,32 @@
                 {
                     "type": "List",
                     "name": "ObjectTexts",
-                    "caption": "Eigene Texte (String-Variablen)",
+                    "caption": "Custom texts (string variables)",
                     "width": "100%",
                     "add": false,
                     "delete": true,
                     "rowCount": 10,
                     "columns": [
                         {
-                            "caption": "Objekt-ID",
+                            "caption": "Object ID",
                             "name": "ObjectID",
                             "width": "80px",
                             "save": true
                         },
                         {
-                            "caption": "Wert-Objekt-ID",
+                            "caption": "Value object ID",
                             "name": "ValueObjectID",
                             "width": "90px",
                             "save": true
                         },
                         {
-                            "caption": "Pfad",
+                            "caption": "Path",
                             "name": "Path",
                             "width": "200px",
                             "save": true
                         },
                         {
-                            "caption": "Original-Import (Text)",
+                            "caption": "Original import (text)",
                             "name": "ORIGINAL_IMPORT_Text",
                             "width": "200px",
                             "save": true
@@ -485,38 +485,38 @@
                 {
                     "type": "List",
                     "name": "EnumerationOptions",
-                    "caption": "Beschriftungen",
+                    "caption": "Captions",
                     "width": "100%",
                     "add": false,
                     "delete": true,
                     "rowCount": 10,
                     "columns": [
                         {
-                            "caption": "Profil/Template",
+                            "caption": "Profile/template",
                             "name": "SourceKey",
                             "width": "160px",
                             "save": true
                         },
                         {
-                            "caption": "Pfad",
+                            "caption": "Path",
                             "name": "Path",
                             "width": "200px",
                             "save": true
                         },
                         {
-                            "caption": "Variablen-IDs",
+                            "caption": "Variable IDs",
                             "name": "ValueObjectIDs",
                             "width": "120px",
                             "save": true
                         },
                         {
-                            "caption": "Feld",
+                            "caption": "Field",
                             "name": "FieldPath",
                             "width": "120px",
                             "save": true
                         },
                         {
-                            "caption": "Original-Import",
+                            "caption": "Original import",
                             "name": "ORIGINAL_IMPORT",
                             "width": "200px",
                             "save": true
@@ -533,13 +533,13 @@
                     "rowCount": 5,
                     "columns": [
                         {
-                            "caption": "AutomationID",
-                            "name": "AutomationID",
+                            "caption": "Automation ID",
+                            "name": "Automation ID",
                             "width": "100px",
                             "save": true
                         },
                         {
-                            "caption": "Original-Import",
+                            "caption": "Original import",
                             "name": "ORIGINAL_IMPORT",
                             "width": "250px",
                             "save": true
@@ -556,25 +556,25 @@
                     "rowCount": 5,
                     "columns": [
                         {
-                            "caption": "Chart-Objekt-ID",
+                            "caption": "Chart object ID",
                             "name": "ChartID",
                             "width": "100px",
                             "save": true
                         },
                         {
-                            "caption": "Variablen-ID",
+                            "caption": "Variable ID",
                             "name": "VariableID",
                             "width": "90px",
                             "save": true
                         },
                         {
-                            "caption": "Pfad",
+                            "caption": "Path",
                             "name": "Path",
                             "width": "200px",
                             "save": true
                         },
                         {
-                            "caption": "Original-Import",
+                            "caption": "Original import",
                             "name": "ORIGINAL_IMPORT",
                             "width": "200px",
                             "save": true
@@ -584,14 +584,14 @@
                 {
                     "type": "List",
                     "name": "ObjectGreeting",
-                    "caption": "Begrüßung",
+                    "caption": "Greeting",
                     "width": "100%",
                     "add": false,
                     "delete": true,
                     "rowCount": 1,
                     "columns": [
                         {
-                            "caption": "Original-Import",
+                            "caption": "Original import",
                             "name": "ORIGINAL_IMPORT",
                             "width": "250px",
                             "save": true
@@ -601,31 +601,31 @@
                 {
                     "type": "Label",
                     "name": "GreetingModeHint",
-                    "caption": "Begrüßung: keine Kachel-Visualisierungs-Instanz ausgewählt (siehe Feld \"Kachel-Visualisierung\" oben)."
+                    "caption": "Greeting: no tile visualization instance selected (see the \"Tile visualization\" field above)."
                 },
                 {
                     "type": "Label",
                     "name": "ManualTranslationsUnavailableHeading",
-                    "caption": "Eigene Übersetzungstabelle",
+                    "caption": "Custom translation table",
                     "visible": false
                 },
                 {
                     "type": "List",
                     "name": "ManualTranslations",
-                    "caption": "Eigene Übersetzungstabelle",
+                    "caption": "Custom translation table",
                     "width": "100%",
                     "add": true,
                     "delete": true,
                     "rowCount": 8,
                     "columns": [
                         {
-                            "caption": "Quellsprache",
-                            "name": "Quellsprache",
+                            "caption": "Source language",
+                            "name": "Source language",
                             "width": "140px",
                             "save": true
                         },
                         {
-                            "caption": "Quelltext",
+                            "caption": "Source text",
                             "name": "ORIGINAL_IMPORT",
                             "width": "220px",
                             "save": true
@@ -634,12 +634,12 @@
                 },
                 {
                     "type": "Label",
-                    "caption": "Eigenes Glossar, das jeder automatischen Übersetzung vorgezogen wird - über \"Hinzufügen\" eine Zeile anlegen, Quellsprache wählen, Quelltext eintragen und beliebig viele Zielsprachen-Zellen ausfüllen. Trifft der Quelltext einer Zeile hier exakt (zeichengenau) auf den Rohtext irgendeiner anderen Liste in dieser Instanz zu, wird für jede ausgefüllte Zielsprachen-Zelle diese Übersetzung verwendet statt eines Anbieter-Aufrufs - leere Zellen werden weiterhin normal automatisch übersetzt."
+                    "caption": "Your own glossary, taking priority over any automatic translation - use \"Add\" to create a row, choose the source language, enter the source text, and fill in as many target-language cells as you like. If the source text of a row here matches (character-for-character) the raw text of any other row in this instance, that translation is used for every filled-in target-language cell instead of a provider call - empty cells continue to be translated automatically as usual."
                 },
                 {
                     "type": "Label",
                     "name": "ManualTranslationsUnavailableHint",
-                    "caption": "Die eigene Übersetzungstabelle steht in dieser Edition nicht zur Verfügung.",
+                    "caption": "The custom translation table is not available in this edition.",
                     "visible": false
                 }
             ]
@@ -647,13 +647,13 @@
         {
             "type": "ExpansionPanel",
             "name": "LicensePanel",
-            "caption": "Lizenz",
+            "caption": "License",
             "expanded": false,
             "items": [
                 {
                     "type": "Label",
                     "name": "TrialInfoFreshLabel",
-                    "caption": "Testversion - läuft ab, sobald diese Instanz zum ersten Mal übernommen wurde.",
+                    "caption": "Trial version - expires as soon as this instance has been applied for the first time.",
                     "visible": false
                 },
                 {
@@ -661,16 +661,16 @@
                     "name": "TrialInfoRunningRow",
                     "visible": false,
                     "items": [
-                        {"type": "Label", "caption": "Testversion - läuft ab am"},
+                        {"type": "Label", "caption": "Trial version - expires on"},
                         {"type": "Label", "name": "TrialInfoRunningDateDaysLabel", "caption": ""},
-                        {"type": "Label", "caption": "Tag(e) verbleibend"},
+                        {"type": "Label", "caption": "day(s) remaining"},
                         {"type": "Label", "caption": ")."}
                     ]
                 },
                 {
                     "type": "Label",
                     "name": "TrialInfoRunningFeaturesLabel",
-                    "caption": "Bis dahin voller Funktionsumfang, aber nur mit den 5 testweise freigeschalteten Sprachen (Isländisch, Walisisch, Zulu, Maori, Latein).",
+                    "caption": "Full functionality until then, but only with the 5 languages unlocked for testing (Icelandic, Welsh, Zulu, Maori, Latin).",
                     "visible": false
                 },
                 {
@@ -678,14 +678,14 @@
                     "name": "TrialInfoExpiredRow",
                     "visible": false,
                     "items": [
-                        {"type": "Label", "caption": "Testversion abgelaufen am"},
+                        {"type": "Label", "caption": "Trial version expired on"},
                         {"type": "Label", "name": "TrialInfoExpiredDateLabel", "caption": ""}
                     ]
                 },
                 {
                     "type": "Label",
                     "name": "TrialInfoExpiredDetailsLabel",
-                    "caption": "Die Kachel zeigt Anwendern ab jetzt wieder den unbearbeiteten Original-Text, ein weiterer Rescan ist blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.",
+                    "caption": "The tile now shows users the unedited original text again; a further rescan is blocked until a valid license key has been activated.",
                     "visible": false
                 },
                 {
@@ -693,14 +693,14 @@
                     "name": "TrialInfoPurchaseRow",
                     "visible": false,
                     "items": [
-                        {"type": "Label", "caption": "Lizenz erwerben:"},
+                        {"type": "Label", "caption": "Purchase a license:"},
                         {"type": "Label", "name": "TrialInfoPurchaseUrlLabel", "caption": ""}
                     ]
                 },
                 {
                     "type": "PasswordTextBox",
                     "name": "LicenseKey",
-                    "caption": "Lizenzschlüssel",
+                    "caption": "License key",
                     "width": "400px"
                 },
                 {
@@ -717,7 +717,7 @@
                     "items": [
                         {
                             "type": "Label",
-                            "caption": "Typ",
+                            "caption": "Type",
                             "width": "140px"
                         },
                         {
@@ -734,7 +734,7 @@
                     "items": [
                         {
                             "type": "Label",
-                            "caption": "Abozeitraum",
+                            "caption": "Billing period",
                             "width": "140px"
                         },
                         {
@@ -751,7 +751,7 @@
                     "items": [
                         {
                             "type": "Label",
-                            "caption": "Ablauf",
+                            "caption": "Expiry",
                             "width": "140px"
                         },
                         {
@@ -773,7 +773,7 @@
                     "items": [
                         {
                             "type": "Label",
-                            "caption": "Sprachlimit",
+                            "caption": "Language limit",
                             "width": "140px"
                         },
                         {
@@ -795,7 +795,7 @@
                     "items": [
                         {
                             "type": "Label",
-                            "caption": "Erlaubte Sprachen",
+                            "caption": "Allowed languages",
                             "width": "140px"
                         },
                         {
@@ -808,37 +808,37 @@
                 {
                     "type": "Label",
                     "name": "LicenseInfoFeatureEditTranslations",
-                    "caption": "✓ Manuelles Editieren von Übersetzungen",
+                    "caption": "✓ Manual editing of translations",
                     "visible": false
                 },
                 {
                     "type": "Label",
                     "name": "LicenseInfoFeatureManualTranslations",
-                    "caption": "✓ Eigene Übersetzungstabelle",
+                    "caption": "✓ Custom translation table",
                     "visible": false
                 },
                 {
                     "type": "Label",
                     "name": "LicenseInfoFeatureAutoRescan",
-                    "caption": "✓ Automatischer Rescan nach Zeitplan",
+                    "caption": "✓ Automatic scheduled rescan",
                     "visible": false
                 },
                 {
                     "type": "Label",
                     "name": "LicenseInfoFeaturePaidProviders",
-                    "caption": "✓ Google/DeepL als Übersetzungsanbieter",
+                    "caption": "✓ Google/DeepL as translation provider",
                     "visible": false
                 },
                 {
                     "type": "Label",
                     "name": "LicenseInfoFeatureUnlimitedLanguageSwitch",
-                    "caption": "✓ Unbegrenzter Sprachwechsel",
+                    "caption": "✓ Unlimited language switching",
                     "visible": false
                 },
                 {
                     "type": "Label",
                     "name": "LicenseInfoFeatureCustomTile",
-                    "caption": "✓ Eigene Sprachauswahl-Kachel",
+                    "caption": "✓ Custom language-selection tile",
                     "visible": false
                 }
             ]
@@ -847,7 +847,7 @@
     "actions": [
         {
             "type": "Button",
-            "caption": "Lizenz aktivieren/aktualisieren",
+            "caption": "Activate/update license",
             "onClick": "IPS_RequestAction($id, 'ActivateLicense', true);"
         },
         {
@@ -855,7 +855,7 @@
             "items": [
                 {
                     "type": "Button",
-                    "caption": "Visualisierung neu einlesen und fehlende Übersetzungen ergänzen",
+                    "caption": "Rescan visualization and complete missing translations",
                     "onClick": "IPS_RequestAction($id, 'Rescan', true);"
                 },
                 {
@@ -863,11 +863,11 @@
                     "caption": "Information",
                     "width": "110px",
                     "popup": {
-                        "caption": "Visualisierung neu einlesen und fehlende Übersetzungen ergänzen",
+                        "caption": "Rescan visualization and complete missing translations",
                         "items": [
                             {
                                 "type": "Label",
-                                "caption": "Durchsucht den Root der Visualisierung erneut nach neuen/verschobenen Objekten und übersetzt nur noch leere Zellen in Objektnamen, Eigene Texte, Beschriftungen und Charts. Bereits vorhandene Übersetzungen (auch manuell korrigierte) werden dabei nie überschrieben."
+                                "caption": "Rescans the root of the visualization for new/moved objects and only translates empty cells in Object names, Custom texts, Captions and Charts. Existing translations (including manually corrected ones) are never overwritten."
                             }
                         ]
                     }
@@ -888,7 +888,7 @@
             "items": [
                 {"type": "Label", "caption": "⚠"},
                 {"type": "Label", "name": "TranslationFailureUnreachableCountLabel", "caption": ""},
-                {"type": "Label", "caption": "Text(e) konnten beim letzten Durchlauf nicht übersetzt werden, weil der Übersetzungsanbieter vorübergehend nicht erreichbar war. Bereits übersetzte Inhalte sind gespeichert. Bitte führe einen erneuten Scan durch - ggf. nach ein paar Minuten Wartezeit."}
+                {"type": "Label", "caption": "text(s) could not be translated in the last run because the translation provider was temporarily unreachable. Already translated content has been saved. Please run another scan - if necessary after waiting a few minutes."}
             ]
         },
         {
@@ -898,7 +898,7 @@
             "items": [
                 {"type": "Label", "caption": "⚠"},
                 {"type": "Label", "name": "TranslationFailureTooLongCountLabel", "caption": ""},
-                {"type": "Label", "caption": "Text(e) sind für den kostenfreien Anbieter zu lang (Grenze: 500 Byte, Umlaute zählen doppelt). Ein erneuter Scan ändert daran nichts - diese Texte lassen sich nur mit einem Google- oder DeepL-Schlüssel übersetzen."}
+                {"type": "Label", "caption": "text(s) are too long for the free provider (limit: 500 bytes, umlauts count double). Another scan will not change this - these texts can only be translated with a Google or DeepL key."}
             ]
         },
         {
@@ -906,7 +906,7 @@
             "items": [
                 {
                     "type": "Button",
-                    "caption": "Übersetzungen gelöschter Elemente in der Visualisierung entfernen",
+                    "caption": "Remove translations of elements no longer in the visualization",
                     "onClick": "IPS_RequestAction($id, 'CleanupOrphanedRows', true);"
                 },
                 {
@@ -914,11 +914,11 @@
                     "caption": "Information",
                     "width": "110px",
                     "popup": {
-                        "caption": "Übersetzungen gelöschter Elemente in der Visualisierung entfernen",
+                        "caption": "Remove translations of elements no longer in the visualization",
                         "items": [
                             {
                                 "type": "Label",
-                                "caption": "Entfernt dauerhaft alle Zeilen aus Objektnamen, Eigenen Texten, Beschriftungen, Automations und Charts, die bei einem frischen Scan der aktuell konfigurierten Visualisierung nicht mehr gefunden werden - z.B. weil das zugehörige Objekt gelöscht oder aus der Visualisierung entfernt/verschoben wurde. Anders als ein normaler Rescan (der solche Zeilen bewusst unangetastet lässt, siehe oben) werden sie hier komplett gelöscht, nicht nur übersprungen - bereits geleistete Übersetzungsarbeit für diese Zeilen geht dabei verloren (regeneriert sich automatisch, falls das Objekt später wieder auftaucht). Vor dem Klick prüfen, ob die \"Kachel-Visualisierung\"-Auswahl oben wirklich korrekt und vollständig ist - eine versehentlich falsche oder unvollständige Root-Kategorie würde sonst auch noch gültige Übersetzungen unwiederbringlich löschen. \"Begrüßung\" ist von dieser Funktion nicht betroffen (keine aus dem Baum gescannte Liste, sondern eine einzelne, direkt konfigurierte Einstellung)."
+                                "caption": "Permanently removes every row in Object Names, Custom Texts, Captions, Automations and Charts that is no longer found by a fresh scan of the currently configured visualization - e.g. because the underlying object was deleted or removed/moved out of the visualization. Unlike a normal Rescan (which deliberately leaves such rows untouched, see above), they are completely deleted here, not just skipped - any translation work already done for these rows is lost (it regenerates automatically if the object reappears later). Before clicking, check that the \"Tile visualization\" selection above is really correct and complete - an accidentally wrong or incomplete root category would otherwise irrecoverably delete translations that are still valid. \"Greeting\" is not affected by this function (not a list scanned from the tree, but a single, directly configured setting)."
                             }
                         ]
                     }
@@ -937,7 +937,7 @@
             "items": [
                 {
                     "type": "Button",
-                    "caption": "Übersetzungs-Cache leeren",
+                    "caption": "Clear translation cache",
                     "onClick": "IPS_RequestAction($id, 'ClearTranslationCache', true);"
                 },
                 {
@@ -945,11 +945,11 @@
                     "caption": "Information",
                     "width": "110px",
                     "popup": {
-                        "caption": "Übersetzungs-Cache leeren",
+                        "caption": "Clear translation cache",
                         "items": [
                             {
                                 "type": "Label",
-                                "caption": "Löscht nur den internen Zwischenspeicher für wiederkehrende Übersetzungen (spart normalerweise API-Aufrufe für Texte, die schon einmal übersetzt wurden) - nützlich, falls ein Text weiterhin eine veraltete/falsche Übersetzung zeigt. Bereits gespeicherte Übersetzungen in Objektnamen, Eigenen Texten und Beschriftungen bleiben davon unberührt und müssen bei Bedarf weiterhin einzeln im jeweiligen Feld geleert werden, damit sie beim nächsten Rescan/Sprachwechsel neu übersetzt werden."
+                                "caption": "Only clears the internal cache for recurring translations (normally saves API calls for text that's already been translated once) - useful if a text keeps showing an outdated/incorrect translation. Translations already stored in Object names, Custom texts and Captions are unaffected and still need to be cleared individually in their field if needed, so they get retranslated on the next rescan/language switch."
                             }
                         ]
                     }
@@ -961,7 +961,7 @@
             "items": [
                 {
                     "type": "Button",
-                    "caption": "Übersetzungsanbieter prüfen",
+                    "caption": "Check translation providers",
                     "onClick": "IPS_RequestAction($id, 'CheckProviders', true);"
                 },
                 {
@@ -969,11 +969,11 @@
                     "caption": "Information",
                     "width": "110px",
                     "popup": {
-                        "caption": "Übersetzungsanbieter prüfen",
+                        "caption": "Check translation providers",
                         "items": [
                             {
                                 "type": "Label",
-                                "caption": "Schickt eine einzelne Testanfrage (\"Testabfrage\" -> Englisch) an jeden eingerichteten Anbieter (Google/DeepL, falls ein API-Key eingetragen ist, sowie immer MyMemory) und meldet direkt zurück, welcher davon gerade tatsächlich funktioniert. Läuft dabei am Cache vorbei (immer eine echte, frische Anfrage) und beendet eine ggf. laufende Pause sofort, sobald ein Anbieter wieder erfolgreich antwortet - nützlich z.B. direkt nach einem Kontingent-/Abo-Upgrade beim Anbieter, ohne auf das automatische Ende der Pause warten zu müssen."
+                                "caption": "Sends a single test request (\"Testabfrage\" -> English) to every provider that is currently set up (Google/DeepL, if an API key is entered, plus MyMemory always) and reports back directly which of them is actually working right now. Bypasses the cache (always a real, fresh request) and immediately ends a running pause as soon as a provider responds successfully again - useful e.g. right after a quota/subscription upgrade with the provider, without having to wait for the pause to end on its own."
                             }
                         ]
                     }
@@ -992,13 +992,13 @@
             "type": "PopupAlert",
             "visible": false,
             "popup": {
-                "caption": "Ergebnis der Anbieter-Prüfung",
+                "caption": "Provider check result",
                 "closeCaption": "OK",
                 "items": [
                     {
                         "type": "RowLayout",
                         "items": [
-                            {"type": "Label", "caption": "Geprüfte Sprachrichtung:"},
+                            {"type": "Label", "caption": "Language direction tested:"},
                             {"type": "Label", "name": "ProviderCheckPairLabel", "caption": ""}
                         ]
                     },
@@ -1007,7 +1007,7 @@
                         "name": "ProviderCheckFallbackPairRow",
                         "visible": false,
                         "items": [
-                            {"type": "Label", "caption": "Hinweis: Es ist noch keine von der Scan-Sprache abweichende Zielsprache konfiguriert - geprüft wurde deshalb eine Ersatz-Sprachrichtung. Ein Erfolg hier sagt nichts über deine späteren Zielsprachen aus."}
+                            {"type": "Label", "caption": "Note: no target language differing from the scan language is configured yet, so a substitute language direction was tested. A success here says nothing about your later target languages."}
                         ]
                     },
                     {
@@ -1020,7 +1020,7 @@
                             {"type": "Label", "name": "ProviderCheckGoogleIconLabel", "caption": ""},
                             {"type": "Label", "name": "ProviderCheckGoogleStatusLabel", "caption": ""},
                             {"type": "Label", "name": "ProviderCheckGoogleDetailLabel", "caption": ""},
-                            {"type": "Label", "name": "ProviderCheckGooglePauseClearedLabel", "caption": "Pause wurde beendet", "visible": false}
+                            {"type": "Label", "name": "ProviderCheckGooglePauseClearedLabel", "caption": "pause has been ended", "visible": false}
                         ]
                     },
                     {
@@ -1033,7 +1033,7 @@
                             {"type": "Label", "name": "ProviderCheckDeepLIconLabel", "caption": ""},
                             {"type": "Label", "name": "ProviderCheckDeepLStatusLabel", "caption": ""},
                             {"type": "Label", "name": "ProviderCheckDeepLDetailLabel", "caption": ""},
-                            {"type": "Label", "name": "ProviderCheckDeepLPauseClearedLabel", "caption": "Pause wurde beendet", "visible": false}
+                            {"type": "Label", "name": "ProviderCheckDeepLPauseClearedLabel", "caption": "pause has been ended", "visible": false}
                         ]
                     },
                     {
@@ -1041,12 +1041,12 @@
                         "name": "ProviderCheckFreeRow",
                         "visible": false,
                         "items": [
-                            {"type": "Label", "caption": "Kostenfreier Anbieter (MyMemory)"},
+                            {"type": "Label", "caption": "Free provider (MyMemory)"},
                             {"type": "Label", "caption": ":"},
                             {"type": "Label", "name": "ProviderCheckFreeIconLabel", "caption": ""},
                             {"type": "Label", "name": "ProviderCheckFreeStatusLabel", "caption": ""},
                             {"type": "Label", "name": "ProviderCheckFreeDetailLabel", "caption": ""},
-                            {"type": "Label", "name": "ProviderCheckFreePauseClearedLabel", "caption": "Pause wurde beendet", "visible": false}
+                            {"type": "Label", "name": "ProviderCheckFreePauseClearedLabel", "caption": "pause has been ended", "visible": false}
                         ]
                     }
                 ]
@@ -1054,7 +1054,7 @@
         },        
         {
             "type": "ExpansionPanel",
-            "caption": "Produktinformationen",
+            "caption": "Product information",
             "expanded": false,
             "items": [
                 {
@@ -1075,11 +1075,11 @@
                                 },
                                 {
                                     "type": "Label",
-                                    "caption": "Mehrsprachige Kachel-Visualisierungen"
+                                    "caption": "Multilingual tile visualizations"
                                 },
                                 {
                                     "type": "Label",
-                                    "caption": "Simple Locale übersetzt Objektnamen und Texte deiner Visualisierung automatisch – ab Werk ohne Kosten für die Übersetzung, optional mit Google Cloud Translate und/oder DeepL – live umschaltbar, ohne deine Admin-Oberfläche anzufassen.",
+                                    "caption": "Simple Locale automatically translates object names and texts in your visualization – free of charge to translate out of the box, optionally with Google Cloud Translate and/or DeepL – switchable live, without touching your admin interface.",
                                     "width": "460px"
                                 }
                             ]
@@ -1088,16 +1088,16 @@
                 },
                 {
                     "type": "Label",
-                    "caption": "\nLizenz",
+                    "caption": "\nLicense",
                     "bold": true
                 },
                 {
                     "type": "Label",
-                    "caption": "Simple Locale ist proprietäre, kommerzielle Software von Synergetix mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben) - kein Open-Source-Projekt."
+                    "caption": "Simple Locale is proprietary, commercial software by Synergetix with a free trial version (see the \"License\" section above) - not an open-source project."
                 },
                 {
                     "type": "Label",
-                    "caption": "Das Entfernen oder Umgehen der Lizenzprüfung ist auch mit KI-Unterstützung nicht gestattet und verstößt gegen Urheberrecht und Lizenzbedingungen (siehe LICENSE im Repository)."
+                    "caption": "Removing or bypassing the license check is not permitted, even with AI assistance, and violates copyright and license terms (see LICENSE in the repository)."
                 },
                 {
                     "type": "RowLayout",
@@ -1108,7 +1108,7 @@
                         },
                         {
                             "type": "Label",
-                            "caption": "Produktseite: https://www.synergetix.de/simplelocale/\nLizenz erwerben: https://www.synergetix.de/simplelocale/pricing.php\nImpressum: https://www.synergetix.de/impressum.php"
+                            "caption": "Product page: https://www.synergetix.de/simplelocale/\nPurchase a license: https://www.synergetix.de/simplelocale/pricing.php\nImprint: https://www.synergetix.de/impressum.php"
                         }
                     ]
                 }
@@ -1116,12 +1116,12 @@
         },
         {
             "type": "ExpansionPanel",
-            "caption": "Nutzungsbedingungen",
+            "caption": "Terms of usage",
             "expanded": false,
             "items": [
                 {
                     "type": "Label",
-                    "caption": "Für den Kauf einer Lizenz gelten unsere Nutzungsbedingungen (Zahlung, Gewährleistung, Support, anwendbares Recht) sowie die Lizenzbedingungen zum erlaubten Funktionsumfang - Volltext:"
+                    "caption": "Purchasing a license is governed by our terms of usage (payment, warranty, support, governing law) as well as the license terms for the permitted scope of use - full text:"
                 },
                 {
                     "type": "Label",
@@ -1129,7 +1129,7 @@
                 },
                 {
                     "type": "Label",
-                    "caption": "Mit Klick auf \"Lizenz aktivieren/aktualisieren\" oben bestätigst du, dass du diese Nutzungsbedingungen gelesen hast und akzeptierst. Beim Kauf im Shop werden sie zusätzlich vor Zahlungsabschluss per Checkbox abgefragt.",
+                    "caption": "By clicking \"Activate/update license\" above, you confirm that you've read and accept these terms of usage. When purchasing in the shop, they're additionally confirmed via checkbox before payment.",
                     "bold": true
                 }
             ]
@@ -1139,12 +1139,12 @@
             "type": "PopupAlert",
             "visible": false,
             "popup": {
-                "caption": "API-Key fehlt",
+                "caption": "API key missing",
                 "closeCaption": "OK",
                 "items": [
                     {
                         "type": "Label",
-                        "caption": "Bitte zuerst einen Google Cloud Translate API-Key eintragen und über \"Übernehmen\" speichern, bevor Zielsprachen hinzugefügt werden."
+                        "caption": "Please enter a Google Cloud Translate API key first and save it via \"Apply\" before adding target languages."
                     }
                 ]
             }
@@ -1154,12 +1154,12 @@
             "type": "PopupAlert",
             "visible": false,
             "popup": {
-                "caption": "Sprachliste nicht verfügbar",
+                "caption": "Language list unavailable",
                 "closeCaption": "OK",
                 "items": [
                     {
                         "type": "Label",
-                        "caption": "Die Sprachliste konnte nicht von Google geladen werden. Bitte den Google Cloud Translate API-Key prüfen (z.B. Tippfehler, abgelaufen, fehlende Berechtigung)."
+                        "caption": "The language list could not be loaded from Google. Please check the Google Cloud Translate API key (e.g. typo, expired, missing permission)."
                     }
                 ]
             }
@@ -1169,16 +1169,16 @@
             "type": "PopupAlert",
             "visible": false,
             "popup": {
-                "caption": "Aktivierung nicht bestätigt",
+                "caption": "Activation not confirmed",
                 "closeCaption": "OK",
                 "items": [
                     {
                         "type": "Label",
-                        "caption": "Der Lizenzserver war nicht erreichbar - die Aktivierung konnte dort nicht bestätigt werden. Bitte später noch einmal versuchen."
+                        "caption": "The licence server could not be reached, so the activation was not confirmed there. Please try again later."
                     },
                     {
                         "type": "Label",
-                        "caption": "Deine Lizenz ist davon unberührt: sie wurde lokal geprüft und ist gültig. Das Modul arbeitet vollständig weiter, auch wenn der Server längere Zeit nicht erreichbar bleibt."
+                        "caption": "Your licence is unaffected: it was verified locally and is valid. The module keeps working in full, even if the server stays unreachable for a longer time."
                     }
                 ]
             }
@@ -1188,12 +1188,12 @@
             "type": "PopupAlert",
             "visible": false,
             "popup": {
-                "caption": "Lizenz aktiviert",
+                "caption": "License activated",
                 "closeCaption": "OK",
                 "items": [
                     {
                         "type": "Label",
-                        "caption": "Der Lizenzschlüssel ist gültig und wurde übernommen."
+                        "caption": "The license key is valid and has been applied."
                     }
                 ]
             }
@@ -1203,12 +1203,12 @@
             "type": "PopupAlert",
             "visible": false,
             "popup": {
-                "caption": "Lizenz ungültig",
+                "caption": "License invalid",
                 "closeCaption": "OK",
                 "items": [
                     {
                         "type": "Label",
-                        "caption": "Der eingegebene Lizenzschlüssel ist ungültig, manipuliert oder abgelaufen. Bitte prüfen und erneut versuchen."
+                        "caption": "The entered license key is invalid, tampered with, or expired. Please check and try again."
                     }
                 ]
             }
@@ -1218,13 +1218,13 @@
             "type": "PopupAlert",
             "visible": false,
             "popup": {
-                "caption": "Dieser Lizenzschlüssel wurde bereits upgegradet",
+                "caption": "This license key has already been upgraded",
                 "closeCaption": "OK",
                 "items": [
                     {
                         "type": "Label",
                         "name": "LicenseBlockedPopupText",
-                        "caption": "Dieser Lizenzschlüssel wurde bereits gegen eine höherwertige Edition eingetauscht und ist daher nicht mehr gültig. Damit du in Ruhe einen gültigen Schlüssel eintragen kannst, läuft ab jetzt eine neue, volle 30-Tage-Testphase mit allen Pro-Funktionen."
+                        "caption": "This license key has already been exchanged for a higher edition and is therefore no longer valid. To give you time to enter a valid key, a fresh, full 30-day trial with all Pro features starts now."
                     }
                 ]
             }
@@ -1234,15 +1234,15 @@
             "type": "PopupAlert",
             "visible": false,
             "popup": {
-                "caption": "Verknüpfungen benannt",
+                "caption": "Links named",
                 "closeCaption": "OK",
                 "items": [
                     {
                         "type": "RowLayout",
                         "items": [
-                            {"type": "Label", "caption": "Erledigt,"},
+                            {"type": "Label", "caption": "Done,"},
                             {"type": "Label", "name": "LinksNamedCountLabel", "caption": ""},
-                            {"type": "Label", "caption": "Verknüpfung(en) wurden automatisch benannt."}
+                            {"type": "Label", "caption": "link(s) were named automatically."}
                         ]
                     },
                     {
@@ -1251,12 +1251,12 @@
                         "visible": false,
                         "items": [
                             {"type": "Label", "name": "LinksNamedRemainingCountLabel", "caption": ""},
-                            {"type": "Label", "caption": "Objekt(e) konnten nicht automatisch benannt werden (keine Verknüpfung, Ziel fehlt oder selbst unbenannt) - diese bitte weiterhin von Hand benennen."}
+                            {"type": "Label", "caption": "object(s) could not be named automatically (not a link, target missing, or target itself unnamed) - please keep naming those by hand."}
                         ]
                     },
                     {
                         "type": "Label",
-                        "caption": "Bitte führe anschließend einen Rescan durch."
+                        "caption": "Please run a rescan afterwards."
                     }
                 ]
             }
@@ -1266,12 +1266,12 @@
             "type": "PopupAlert",
             "visible": false,
             "popup": {
-                "caption": "Cache geleert",
+                "caption": "Cache cleared",
                 "closeCaption": "OK",
                 "items": [
                     {
                         "type": "Label",
-                        "caption": "Der Übersetzungs-Cache wurde geleert. Bereits gespeicherte Übersetzungen in Objektnamen, Eigenen Texten und Beschriftungen sind davon nicht betroffen."
+                        "caption": "The translation cache has been cleared. Translations already stored in Object names, Custom texts and Captions are not affected."
                     }
                 ]
             }
@@ -1281,32 +1281,32 @@
         {
             "code": 201,
             "icon": "error",
-            "caption": "Root der Visualisierung nicht gesetzt"
+            "caption": "Root of the visualization not set"
         },
         {
             "code": 202,
             "icon": "error",
-            "caption": "Unbenannte Objekte im Root-Baum gefunden - siehe Liste im Formular"
+            "caption": "Unnamed objects found in the root tree - see list in the form"
         },
         {
             "code": 203,
             "icon": "error",
-            "caption": "Übersetzung fehlgeschlagen - kein Anbieter war erreichbar (Details siehe Konfigurationsformular)"
+            "caption": "Translation failed - no provider could be reached (see the configuration form for details)"
         },
         {
             "code": 204,
             "icon": "error",
-            "caption": "Testversion abgelaufen - bitte Lizenzschlüssel eintragen und aktivieren"
+            "caption": "Trial version expired - please enter and activate a license key"
         },
         {
             "code": 104,
             "icon": "inactive",
-            "caption": "Deaktiviert (siehe Haken \"Aktiv\") - kein Rescan, keine Live-Nachübersetzung, kein Quellsprachen-Abgleich"
+            "caption": "Disabled (see \"Active\" checkbox) - no rescan, no live retranslation, no source-language reconciliation"
         },
         {
             "code": 205,
             "icon": "active",
-            "caption": "Aktiv, aber pausiert - alle Übersetzungsanbieter melden ein Rate-Limit/Tageskontingent, siehe Panel \"Übersetzungsanbieter\""
+            "caption": "Active, but paused - all translation providers are reporting a rate limit/daily quota, see the \"Translation providers\" panel"
         }
     ]
 }
