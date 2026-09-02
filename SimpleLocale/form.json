@@ -1070,12 +1070,12 @@
                             "items": [
                                 {
                                     "type": "Label",
-                                    "caption": "Simple Locale for IPS",
+                                    "caption": "Simple Locale",
                                     "bold": true
                                 },
                                 {
                                     "type": "Label",
-                                    "caption": "Mehrsprachige Kachel-Visualisierungen für IP-Symcon"
+                                    "caption": "Mehrsprachige Kachel-Visualisierungen"
                                 },
                                 {
                                     "type": "Label",
@@ -1093,7 +1093,7 @@
                 },
                 {
                     "type": "Label",
-                    "caption": "Simple Locale for IP-Symcon ist proprietäre, kommerzielle Software von Synergetix mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben) - kein Open-Source-Projekt."
+                    "caption": "Simple Locale ist proprietäre, kommerzielle Software von Synergetix mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben) - kein Open-Source-Projekt."
                 },
                 {
                     "type": "Label",

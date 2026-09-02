@@ -54,7 +54,7 @@ collectCaptions($form['actions'], $captions);
 
 // Legitime Ausnahmen: reine Marken-/Produktnamen (werden nie übersetzt) und
 // das wiederverwendete Info-Symbol (kein Text, keine Übersetzung nötig).
-foreach (['Google Cloud Translate', 'DeepL', 'ℹ️', 'Simple Locale for IPS', 'https://www.synergetix.de/simplelocale/license.php'] as $exempt) {
+foreach (['Google Cloud Translate', 'DeepL', 'ℹ️', 'Simple Locale', 'https://www.synergetix.de/simplelocale/license.php'] as $exempt) {
     unset($captions[$exempt]);
 }
 

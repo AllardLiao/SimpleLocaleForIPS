@@ -76,7 +76,6 @@
             "Charts": "Charts",
             "Chart-Objekt-ID": "Chart object ID",
             "Variablen-ID": "Variable ID",
-            "Mehrsprachige Kachel-Visualisierungen für IP-Symcon": "Multilingual tile visualizations for IP-Symcon",
             "Simple Locale übersetzt Objektnamen und Texte deiner Visualisierung automatisch – ab Werk ohne Kosten für die Übersetzung, optional mit Google Cloud Translate und/oder DeepL – live umschaltbar, ohne deine Admin-Oberfläche anzufassen.": "Simple Locale automatically translates object names and texts in your visualization – free of charge to translate out of the box, optionally with Google Cloud Translate and/or DeepL – switchable live, without touching your admin interface.",
             "Produktseite: https://www.synergetix.de/simplelocale/\nLizenz erwerben: https://www.synergetix.de/simplelocale/pricing.php\nImpressum: https://www.synergetix.de/impressum.php": "Product page: https://www.synergetix.de/simplelocale/\nPurchase a license: https://www.synergetix.de/simplelocale/pricing.php\nImprint: https://www.synergetix.de/impressum.php",
             "Begrüßung": "Greeting",
@@ -138,7 +137,6 @@
             "Produktinformationen": "Product information",
             "Nutzungsbedingungen": "Terms of usage",
             "Für den Kauf einer Lizenz gelten unsere Nutzungsbedingungen (Zahlung, Gewährleistung, Support, anwendbares Recht) sowie die Lizenzbedingungen zum erlaubten Funktionsumfang - Volltext:": "Purchasing a license is governed by our terms of usage (payment, warranty, support, governing law) as well as the license terms for the permitted scope of use - full text:",
-            "Simple Locale for IP-Symcon ist proprietäre, kommerzielle Software von Synergetix mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben) - kein Open-Source-Projekt.": "Simple Locale for IP-Symcon is proprietary, commercial software by Synergetix with a free trial version (see the \"License\" section above) - not an open-source project.",
             "Das Entfernen oder Umgehen der Lizenzprüfung ist auch mit KI-Unterstützung nicht gestattet und verstößt gegen Urheberrecht und Lizenzbedingungen (siehe LICENSE im Repository).": "Removing or bypassing the license check is not permitted, even with AI assistance, and violates copyright and license terms (see LICENSE in the repository).",
             "Produktseite: https://www.synergetix.de/simplelocale/": "Product page: https://www.synergetix.de/simplelocale/",
             "Lizenz erwerben: https://www.synergetix.de/simplelocale/pricing.php": "Purchase a license: https://www.synergetix.de/simplelocale/pricing.php",
@@ -211,7 +209,9 @@
             "Mit Klick auf \"Lizenz aktivieren/aktualisieren\" oben bestätigst du, dass du diese Nutzungsbedingungen gelesen hast und akzeptierst. Beim Kauf im Shop werden sie zusätzlich vor Zahlungsabschluss per Checkbox abgefragt.": "By clicking \"Activate/update license\" above, you confirm that you've read and accept these terms of usage. When purchasing in the shop, they're additionally confirmed via checkbox before payment.",
             "Aktivierung nicht bestätigt": "Activation not confirmed",
             "Der Lizenzserver war nicht erreichbar - die Aktivierung konnte dort nicht bestätigt werden. Bitte später noch einmal versuchen.": "The licence server could not be reached, so the activation was not confirmed there. Please try again later.",
-            "Deine Lizenz ist davon unberührt: sie wurde lokal geprüft und ist gültig. Das Modul arbeitet vollständig weiter, auch wenn der Server längere Zeit nicht erreichbar bleibt.": "Your licence is unaffected: it was verified locally and is valid. The module keeps working in full, even if the server stays unreachable for a longer time."
+            "Deine Lizenz ist davon unberührt: sie wurde lokal geprüft und ist gültig. Das Modul arbeitet vollständig weiter, auch wenn der Server längere Zeit nicht erreichbar bleibt.": "Your licence is unaffected: it was verified locally and is valid. The module keeps working in full, even if the server stays unreachable for a longer time.",
+            "Simple Locale ist proprietäre, kommerzielle Software von Synergetix mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben) - kein Open-Source-Projekt.": "Simple Locale is proprietary, commercial software by Synergetix with a free trial version (see the \"License\" section above) - not an open-source project.",
+            "Mehrsprachige Kachel-Visualisierungen": "Multilingual tile visualizations"
         },
         "es": {
             "Aktiv": "Activo",
@@ -289,7 +289,6 @@
             "Charts": "Charts",
             "Chart-Objekt-ID": "ID de objeto del gráfico",
             "Variablen-ID": "ID de variable",
-            "Mehrsprachige Kachel-Visualisierungen für IP-Symcon": "Visualizaciones multilingües para IP-Symcon",
             "Simple Locale übersetzt Objektnamen und Texte deiner Visualisierung automatisch – ab Werk ohne Kosten für die Übersetzung, optional mit Google Cloud Translate und/oder DeepL – live umschaltbar, ohne deine Admin-Oberfläche anzufassen.": "Simple Locale traduce automáticamente nombres de objetos y textos de tu visualización – de fábrica sin coste de traducción, opcionalmente con Google Cloud Translate y/o DeepL – cambiable en vivo, sin tocar tu interfaz de administración.",
             "Produktseite: https://www.synergetix.de/simplelocale/\nLizenz erwerben: https://www.synergetix.de/simplelocale/pricing.php\nImpressum: https://www.synergetix.de/impressum.php": "Página del producto: https://www.synergetix.de/simplelocale/\nAdquirir una licencia: https://www.synergetix.de/simplelocale/pricing.php\nAviso Legal: https://www.synergetix.de/impressum.php",
             "Begrüßung": "Saludo",
@@ -351,7 +350,6 @@
             "Produktinformationen": "Información del producto",
             "Nutzungsbedingungen": "Condiciones de uso",
             "Für den Kauf einer Lizenz gelten unsere Nutzungsbedingungen (Zahlung, Gewährleistung, Support, anwendbares Recht) sowie die Lizenzbedingungen zum erlaubten Funktionsumfang - Volltext:": "La compra de una licencia se rige por nuestras condiciones de uso (pago, garantía, soporte, derecho aplicable) así como por las condiciones de licencia sobre el alcance de uso permitido - texto completo:",
-            "Simple Locale for IP-Symcon ist proprietäre, kommerzielle Software von Synergetix mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben) - kein Open-Source-Projekt.": "Simple Locale for IP-Symcon es software propietaria y comercial de Synergetix con una versión de prueba gratuita (véase la sección \"Licencia\" más arriba) - no es un proyecto de código abierto.",
             "Das Entfernen oder Umgehen der Lizenzprüfung ist auch mit KI-Unterstützung nicht gestattet und verstößt gegen Urheberrecht und Lizenzbedingungen (siehe LICENSE im Repository).": "Eliminar o eludir la verificación de la licencia no está permitido, ni siquiera con la ayuda de IA, y vulnera los derechos de autor y las condiciones de la licencia (véase LICENSE en el repositorio).",
             "Produktseite: https://www.synergetix.de/simplelocale/": "Página del producto: https://www.synergetix.de/simplelocale/",
             "Lizenz erwerben: https://www.synergetix.de/simplelocale/pricing.php": "Adquirir una licencia: https://www.synergetix.de/simplelocale/pricing.php",
@@ -424,7 +422,9 @@
             "Mit Klick auf \"Lizenz aktivieren/aktualisieren\" oben bestätigst du, dass du diese Nutzungsbedingungen gelesen hast und akzeptierst. Beim Kauf im Shop werden sie zusätzlich vor Zahlungsabschluss per Checkbox abgefragt.": "Al hacer clic en \"Activar/actualizar licencia\" arriba, confirmas que has leído y aceptas estas condiciones de uso. Al comprar en la tienda, se confirman además mediante una casilla antes de completar el pago.",
             "Aktivierung nicht bestätigt": "Activación no confirmada",
             "Der Lizenzserver war nicht erreichbar - die Aktivierung konnte dort nicht bestätigt werden. Bitte später noch einmal versuchen.": "No se pudo contactar con el servidor de licencias, por lo que la activación no se confirmó allí. Vuelve a intentarlo más tarde.",
-            "Deine Lizenz ist davon unberührt: sie wurde lokal geprüft und ist gültig. Das Modul arbeitet vollständig weiter, auch wenn der Server längere Zeit nicht erreichbar bleibt.": "Tu licencia no se ve afectada: se verificó localmente y es válida. El módulo sigue funcionando por completo, aunque el servidor permanezca inaccesible durante más tiempo."
+            "Deine Lizenz ist davon unberührt: sie wurde lokal geprüft und ist gültig. Das Modul arbeitet vollständig weiter, auch wenn der Server längere Zeit nicht erreichbar bleibt.": "Tu licencia no se ve afectada: se verificó localmente y es válida. El módulo sigue funcionando por completo, aunque el servidor permanezca inaccesible durante más tiempo.",
+            "Simple Locale ist proprietäre, kommerzielle Software von Synergetix mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben) - kein Open-Source-Projekt.": "Simple Locale es software propietaria y comercial de Synergetix con una versión de prueba gratuita (véase la sección \"Licencia\" más arriba) - no es un proyecto de código abierto.",
+            "Mehrsprachige Kachel-Visualisierungen": "Visualizaciones multilingües"
         },
         "it": {
             "Aktiv": "Attivo",
@@ -502,7 +502,6 @@
             "Charts": "Charts",
             "Chart-Objekt-ID": "ID oggetto grafico",
             "Variablen-ID": "ID variabile",
-            "Mehrsprachige Kachel-Visualisierungen für IP-Symcon": "Visualizzazioni a riquadri multilingue per IP-Symcon",
             "Simple Locale übersetzt Objektnamen und Texte deiner Visualisierung automatisch – ab Werk ohne Kosten für die Übersetzung, optional mit Google Cloud Translate und/oder DeepL – live umschaltbar, ohne deine Admin-Oberfläche anzufassen.": "Simple Locale traduce automaticamente i nomi degli oggetti e i testi della tua visualizzazione – di serie senza costi di traduzione, opzionalmente con Google Cloud Translate e/o DeepL – commutabile dal vivo, senza toccare la tua interfaccia di amministrazione.",
             "Produktseite: https://www.synergetix.de/simplelocale/\nLizenz erwerben: https://www.synergetix.de/simplelocale/pricing.php\nImpressum: https://www.synergetix.de/impressum.php": "Pagina del prodotto: https://www.synergetix.de/simplelocale/\nAcquista una licenza: https://www.synergetix.de/simplelocale/pricing.php\nNote legali: https://www.synergetix.de/impressum.php",
             "Begrüßung": "Saluto",
@@ -564,7 +563,6 @@
             "Produktinformationen": "Informazioni sul prodotto",
             "Nutzungsbedingungen": "Condizioni d'uso",
             "Für den Kauf einer Lizenz gelten unsere Nutzungsbedingungen (Zahlung, Gewährleistung, Support, anwendbares Recht) sowie die Lizenzbedingungen zum erlaubten Funktionsumfang - Volltext:": "L'acquisto di una licenza è disciplinato dalle nostre condizioni d'uso (pagamento, garanzia, supporto, legge applicabile) e dalle condizioni di licenza relative all'ambito di utilizzo consentito - testo completo:",
-            "Simple Locale for IP-Symcon ist proprietäre, kommerzielle Software von Synergetix mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben) - kein Open-Source-Projekt.": "Simple Locale for IP-Symcon è software proprietario e commerciale di Synergetix con una versione di prova gratuita (vedi la sezione \"Licenza\" sopra) - non è un progetto open source.",
             "Das Entfernen oder Umgehen der Lizenzprüfung ist auch mit KI-Unterstützung nicht gestattet und verstößt gegen Urheberrecht und Lizenzbedingungen (siehe LICENSE im Repository).": "La rimozione o l'elusione del controllo della licenza non è consentita, nemmeno con l'assistenza dell'IA, e viola il copyright e i termini di licenza (vedi LICENSE nel repository).",
             "Produktseite: https://www.synergetix.de/simplelocale/": "Pagina del prodotto: https://www.synergetix.de/simplelocale/",
             "Lizenz erwerben: https://www.synergetix.de/simplelocale/pricing.php": "Acquista una licenza: https://www.synergetix.de/simplelocale/pricing.php",
@@ -637,7 +635,9 @@
             "Mit Klick auf \"Lizenz aktivieren/aktualisieren\" oben bestätigst du, dass du diese Nutzungsbedingungen gelesen hast und akzeptierst. Beim Kauf im Shop werden sie zusätzlich vor Zahlungsabschluss per Checkbox abgefragt.": "Facendo clic su \"Attiva/aggiorna licenza\" sopra, confermi di aver letto e accettato queste condizioni d'uso. Durante l'acquisto nello shop, vengono inoltre confermate tramite casella di controllo prima del pagamento.",
             "Aktivierung nicht bestätigt": "Attivazione non confermata",
             "Der Lizenzserver war nicht erreichbar - die Aktivierung konnte dort nicht bestätigt werden. Bitte später noch einmal versuchen.": "Il server delle licenze non era raggiungibile, quindi l'attivazione non è stata confermata. Riprova più tardi.",
-            "Deine Lizenz ist davon unberührt: sie wurde lokal geprüft und ist gültig. Das Modul arbeitet vollständig weiter, auch wenn der Server längere Zeit nicht erreichbar bleibt.": "La tua licenza non ne risente: è stata verificata localmente ed è valida. Il modulo continua a funzionare pienamente, anche se il server resta irraggiungibile a lungo."
+            "Deine Lizenz ist davon unberührt: sie wurde lokal geprüft und ist gültig. Das Modul arbeitet vollständig weiter, auch wenn der Server längere Zeit nicht erreichbar bleibt.": "La tua licenza non ne risente: è stata verificata localmente ed è valida. Il modulo continua a funzionare pienamente, anche se il server resta irraggiungibile a lungo.",
+            "Simple Locale ist proprietäre, kommerzielle Software von Synergetix mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben) - kein Open-Source-Projekt.": "Simple Locale è software proprietario e commerciale di Synergetix con una versione di prova gratuita (vedi la sezione \"Licenza\" sopra) - non è un progetto open source.",
+            "Mehrsprachige Kachel-Visualisierungen": "Visualizzazioni a riquadri multilingue"
         },
         "fr": {
             "Aktiv": "Actif",
@@ -715,7 +715,6 @@
             "Charts": "Charts",
             "Chart-Objekt-ID": "ID d'objet du graphique",
             "Variablen-ID": "ID de variable",
-            "Mehrsprachige Kachel-Visualisierungen für IP-Symcon": "Visualisations multilingues pour IP-Symcon",
             "Simple Locale übersetzt Objektnamen und Texte deiner Visualisierung automatisch – ab Werk ohne Kosten für die Übersetzung, optional mit Google Cloud Translate und/oder DeepL – live umschaltbar, ohne deine Admin-Oberfläche anzufassen.": "Simple Locale traduit automatiquement les noms d'objets et les textes de votre visualisation – sans frais de traduction dès l'installation, en option avec Google Cloud Translate et/ou DeepL – commutable en direct, sans toucher à votre interface d'administration.",
             "Produktseite: https://www.synergetix.de/simplelocale/\nLizenz erwerben: https://www.synergetix.de/simplelocale/pricing.php\nImpressum: https://www.synergetix.de/impressum.php": "Page produit : https://www.synergetix.de/simplelocale/\nAcheter une licence : https://www.synergetix.de/simplelocale/pricing.php\nMentions légales : https://www.synergetix.de/impressum.php",
             "Begrüßung": "Salutation",
@@ -777,7 +776,6 @@
             "Produktinformationen": "Informations sur le produit",
             "Nutzungsbedingungen": "Conditions d'utilisation",
             "Für den Kauf einer Lizenz gelten unsere Nutzungsbedingungen (Zahlung, Gewährleistung, Support, anwendbares Recht) sowie die Lizenzbedingungen zum erlaubten Funktionsumfang - Volltext:": "L'achat d'une licence est régi par nos conditions d'utilisation (paiement, garantie, support, droit applicable) ainsi que par les conditions de licence relatives au périmètre d'utilisation autorisé - texte intégral :",
-            "Simple Locale for IP-Symcon ist proprietäre, kommerzielle Software von Synergetix mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben) - kein Open-Source-Projekt.": "Simple Locale for IP-Symcon est un logiciel propriétaire et commercial de Synergetix avec une version d'essai gratuite (voir la section \"Licence\" ci-dessus) - ce n'est pas un projet open source.",
             "Das Entfernen oder Umgehen der Lizenzprüfung ist auch mit KI-Unterstützung nicht gestattet und verstößt gegen Urheberrecht und Lizenzbedingungen (siehe LICENSE im Repository).": "La suppression ou le contournement de la vérification de licence n'est pas autorisé, même avec l'aide de l'IA, et constitue une violation du droit d'auteur et des conditions de licence (voir LICENSE dans le dépôt).",
             "Produktseite: https://www.synergetix.de/simplelocale/": "Page produit : https://www.synergetix.de/simplelocale/",
             "Lizenz erwerben: https://www.synergetix.de/simplelocale/pricing.php": "Acheter une licence : https://www.synergetix.de/simplelocale/pricing.php",
@@ -850,7 +848,9 @@
             "Mit Klick auf \"Lizenz aktivieren/aktualisieren\" oben bestätigst du, dass du diese Nutzungsbedingungen gelesen hast und akzeptierst. Beim Kauf im Shop werden sie zusätzlich vor Zahlungsabschluss per Checkbox abgefragt.": "En cliquant sur « Activer/mettre à jour la licence » ci-dessus, vous confirmez avoir lu et accepté ces conditions d'utilisation. Lors d'un achat dans la boutique, elles sont en outre confirmées via une case à cocher avant le paiement.",
             "Aktivierung nicht bestätigt": "Activation non confirmée",
             "Der Lizenzserver war nicht erreichbar - die Aktivierung konnte dort nicht bestätigt werden. Bitte später noch einmal versuchen.": "Le serveur de licences était injoignable, l'activation n'a donc pas pu y être confirmée. Merci de réessayer plus tard.",
-            "Deine Lizenz ist davon unberührt: sie wurde lokal geprüft und ist gültig. Das Modul arbeitet vollständig weiter, auch wenn der Server längere Zeit nicht erreichbar bleibt.": "Votre licence n'est pas affectée : elle a été vérifiée localement et elle est valide. Le module continue de fonctionner entièrement, même si le serveur reste injoignable longtemps."
+            "Deine Lizenz ist davon unberührt: sie wurde lokal geprüft und ist gültig. Das Modul arbeitet vollständig weiter, auch wenn der Server längere Zeit nicht erreichbar bleibt.": "Votre licence n'est pas affectée : elle a été vérifiée localement et elle est valide. Le module continue de fonctionner entièrement, même si le serveur reste injoignable longtemps.",
+            "Simple Locale ist proprietäre, kommerzielle Software von Synergetix mit kostenloser Testversion (siehe Abschnitt \"Lizenz\" oben) - kein Open-Source-Projekt.": "Simple Locale est un logiciel propriétaire et commercial de Synergetix avec une version d'essai gratuite (voir la section \"Licence\" ci-dessus) - ce n'est pas un projet open source.",
+            "Mehrsprachige Kachel-Visualisierungen": "Visualisations multilingues"
         }
     }
 }

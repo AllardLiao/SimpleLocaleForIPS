@@ -1,5 +1,5 @@
 <?php
-// Simple Locale for IP-Symcon - Copyright (c) 2026 Allard Liao. All rights
+// Simple Locale - Copyright (c) 2026 Allard Liao. All rights
 // reserved. Proprietary, commercial software - see LICENSE in the repo
 // root for the exact terms.
 //
