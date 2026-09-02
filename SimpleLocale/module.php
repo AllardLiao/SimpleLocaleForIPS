@@ -9522,6 +9522,19 @@ class SimpleLocale extends IPSModuleStrict
     {
         $code = strtolower(str_replace('_', '-', trim($Code)));
 
+        // Build 187 (live gemeldet): DeepL fuehrt die Basissprache UND ihre
+        // gleichnamige Eigenregion als getrennte Eintraege - "DE" und "DE-DE"
+        // heissen beide "German", "FR" und "FR-FR" beide "French". In der Auswahl
+        // standen sie dadurch zweimal untereinander, ohne unterscheidbar zu sein.
+        //
+        // Eine Region, die der Sprache selbst entspricht, traegt keine Information:
+        // "de-de" IST "de". Fremde Regionen bleiben unangetastet - "de-ch",
+        // "fr-ca", "pt-br" und "es-419" sind echte, eigene Zielsprachen.
+        $teile = explode('-', $code, 2);
+        if (count($teile) === 2 && $teile[0] === $teile[1]) {
+            $code = $teile[0];
+        }
+
         return self::LANGUAGE_CODE_ALIASES[$code] ?? $code;
     }
 

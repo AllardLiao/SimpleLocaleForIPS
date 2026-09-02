@@ -4498,6 +4498,37 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 187 (live gemeldet): trotz Build 186 standen Deutsch und Französisch
+  doppelt in der Sprachauswahl.**
+  Ursache war nicht die Normalisierung, sondern DeepL selbst: die Liste führt die
+  Basissprache **und** ihre gleichnamige Eigenregion als getrennte Einträge -
+  `DE` und `DE-DE` heißen beide "German", `FR` und `FR-FR` beide "French". Zwei
+  Zeilen mit identischem Namen, nicht auseinanderzuhalten.
+
+  Eine Region, die der Sprache selbst entspricht, trägt keine Information:
+  `de-de` **ist** `de`. `NormalizeLanguageCode()` streicht sie deshalb. Fremde
+  Regionen bleiben unangetastet - `de-ch`, `fr-ca`, `pt-br`, `en-gb`, `en-us`,
+  `es-419` und `zh-tw` sind echte, eigene Zielsprachen.
+
+  `PT-PT` fällt dabei bewusst auf `pt`: DeepL kennt gar kein einfaches `PT`,
+  europäisches Portugiesisch ist dort die Basissprache. Bliebe es eigenständig,
+  stünde Portugiesisch wieder zweimal da - einmal als eingebautes `pt`, einmal
+  als `pt-pt`.
+
+  Gegenprobe an der **echten** Liste (110 Zielsprachen, live abgefragt): genau
+  drei Paare werden zusammengeführt - `DE`/`DE-DE`, `FR`/`FR-FR` und
+  `ZH`/`ZH-HANS` -, aus 110 rohen werden 107 interne Codes. Kein vierter Fall,
+  keine Sprache verschwindet.
+
+  Nebenbefund: **DeepL bietet inzwischen 110 Zielsprachen**, nicht mehr die gut
+  30 von früher. Die Annahme "DeepL kann deutlich weniger als Google" stimmt
+  nicht mehr.
+
+  Regressionstest `test_language_code_normalization.php` um drei Fälle erweitert
+  (11 gesamt), darunter die Abgrenzung in beide Richtungen: die Eigenregion muss
+  fallen, eine fremde Region darf es **nicht** - der umgekehrte Fehler wäre der
+  schlimmere, dabei verschwände stillschweigend eine Sprache aus der Auswahl.
+
 * **Build 186 (beim Testen aufgefallen): Google und DeepL lieferten dieselbe
   Sprache in unterschiedlicher Schreibweise - jetzt gilt intern genau eine.**
   Google liefert klein und regionslos (`de`, `en`), DeepL groß und für

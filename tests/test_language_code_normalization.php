@@ -25,6 +25,10 @@ const ALIASES = ['nb' => 'no', 'zh-hans' => 'zh', 'zh-hant' => 'zh-tw'];
 function normalize(string $code): string
 {
     $c = strtolower(str_replace('_', '-', trim($code)));
+    $teile = explode('-', $c, 2);
+    if (count($teile) === 2 && $teile[0] === $teile[1]) {
+        $c = $teile[0];
+    }
 
     return ALIASES[$c] ?? $c;
 }
@@ -74,10 +78,15 @@ echo "Test 2 (keine zwei Schreibweisen mehr in der Auswahl) OK\n";
 
 // Test 3: die vier Regionalvarianten bleiben als eigene Sprachen erhalten -
 // sie einfach auf "en"/"pt" zusammenzufalten waere Informationsverlust.
-foreach (['EN-GB' => 'en-gb', 'EN-US' => 'en-us', 'PT-BR' => 'pt-br', 'PT-PT' => 'pt-pt'] as $roh => $intern) {
+foreach (['EN-GB' => 'en-gb', 'EN-US' => 'en-us', 'PT-BR' => 'pt-br', 'FR-CA' => 'fr-ca', 'DE-CH' => 'de-ch'] as $roh => $intern) {
     assert(normalize($roh) === $intern, "Regionalvariante $roh bleibt erhalten");
     assert(normalize($roh) !== normalize(explode('-', $roh)[0]), "$roh faellt nicht mit der regionslosen Form zusammen");
 }
+// PT-PT ist bewusst KEINE eigene Variante: DeepL kennt gar kein einfaches "PT",
+// europaeisches Portugiesisch IST dort die Basissprache. Bliebe es eigenstaendig,
+// stuende Portugiesisch zweimal in der Auswahl - einmal als eingebautes "pt",
+// einmal als "pt-pt". Siehe Test 9.
+assert(normalize('PT-PT') === 'pt', 'PT-PT ist die Basissprache, keine eigene Variante');
 echo "Test 3 (Regionalvarianten bleiben eigene Sprachen) OK\n";
 
 // Test 4: DER RUECKWEG - jeder Anbieter bekommt seine eigene Schreibweise.
@@ -137,4 +146,39 @@ foreach (['de', 'cs', 'uk'] as $trivial) {
 }
 echo "Test 8 (die Alias-Tabelle enthält nur echte Entscheidungen) OK\n";
 
-echo "\nAlle Tests OK (Build 186: einheitliche Sprachcodes).\n";
+// Test 9 (Build 187, live gemeldet): DeepL fuehrt Basissprache UND gleichnamige
+// Eigenregion als getrennte Eintraege - "DE"/"DE-DE" heissen beide "German",
+// "FR"/"FR-FR" beide "French". In der Auswahl standen sie zweimal untereinander
+// und waren nicht unterscheidbar. Eine Region, die der Sprache entspricht,
+// traegt keine Information.
+foreach (['de-de' => 'de', 'fr-fr' => 'fr', 'pt-pt' => 'pt', 'it-it' => 'it'] as $roh => $erwartet) {
+    assert(normalize($roh) === $erwartet, "DER FALL: \"$roh\" ist dieselbe Sprache wie \"$erwartet\"");
+}
+echo "Test 9 (Eigenregion fällt auf die Basissprache) OK\n";
+
+// Test 10: DIE ABGRENZUNG - fremde Regionen sind echte, eigene Zielsprachen und
+// duerfen NICHT zusammenfallen. Der umgekehrte Fehler waere schlimmer: dabei
+// verschwaende stillschweigend eine Sprache aus der Auswahl.
+foreach (['de-ch', 'fr-ca', 'pt-br', 'en-gb', 'en-us', 'es-419'] as $eigenstaendig) {
+    assert(normalize($eigenstaendig) === $eigenstaendig, "\"$eigenstaendig\" muss eine eigene Sprache bleiben");
+    assert(normalize($eigenstaendig) !== explode('-', $eigenstaendig)[0], "\"$eigenstaendig\" darf nicht auf die Basissprache fallen");
+}
+echo "Test 10 (fremde Regionen bleiben eigenständig) OK\n";
+
+// Test 11: DIE PROBE AUFS EXEMPEL - die echte DeepL-Liste (110 Zielsprachen,
+// live abgefragt). Genau drei Paare gehoeren zusammengefuehrt, kein viertes.
+$deeplEcht = explode(' ', 'AF AN AR AS AY AZ BA BE BG BN BR BS CA CS CY DA DE DE-CH DE-DE EL EN-GB EN-US EO ES ES-419 ET EU FA FI FR FR-CA FR-FR GA GL GN GU HA HE HI HR HT HU HY ID IG IS IT JA JV KA KK KO KY LA LB LN LT LV MG MI MK ML MN MR MS MT MY NB NE NL OC OM PA PL PS PT-BR PT-PT QU RO RU SA SK SL SQ SR ST SU SV SW TA TE TG TH TK TL TN TR TS TT UK UR UZ VI WO XH YI ZH ZH-HANS ZH-HANT ZU');
+assert(count($deeplEcht) === 110, 'die reale Liste hat 110 Eintraege');
+$nachCode = [];
+foreach ($deeplEcht as $code) {
+    $nachCode[normalize($code)][] = $code;
+}
+$zusammengefuehrt = array_filter($nachCode, static fn (array $v): bool => count($v) > 1);
+assert(count($zusammengefuehrt) === 3, 'genau drei Paare gehoeren zusammen, gefunden: ' . count($zusammengefuehrt));
+foreach ([['DE', 'DE-DE'], ['FR', 'FR-FR'], ['ZH', 'ZH-HANS']] as $paar) {
+    assert(in_array($paar, array_values($zusammengefuehrt), true), 'erwartetes Paar fehlt: ' . implode('/', $paar));
+}
+assert(count($nachCode) === 107, 'aus 110 rohen werden 107 interne Codes');
+echo "Test 11 (die reale DeepL-Liste ergibt genau drei Zusammenführungen) OK\n";
+
+echo "\nAlle Tests OK (Build 187: einheitliche Sprachcodes).\n";
