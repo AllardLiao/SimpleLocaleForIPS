@@ -4498,6 +4498,43 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 185 (Symcon-Review): `ApplyChanges()` schreibt die eigene Konfiguration
+  nicht mehr nach - die Umstellung der aktiven Sprache läuft über `Migrate()`.**
+  Stand in `CurrentLanguage` noch die interne Pseudo-Sprache `ORIGINAL_IMPORT`,
+  schrieb `ApplyChanges()` sie per `IPS_SetProperty` + `IPS_ApplyChanges` auf die
+  Quellsprache um - ein Reentry in den eigenen Konfigurationslauf, laut Review nur
+  für Ausnahmefälle gedacht. Zuständig ist `Migrate()`.
+
+  Die Stelle war allerdings nicht nur Migration, sondern auch für **brandneue**
+  Instanzen tragend: der Registrierungs-Default war ebenfalls der Sentinel, und
+  der ist seit Build 79 keine Option des Selects mehr - ohne die Normalisierung
+  hätte Symcon das Speichern verweigert (`Current value ... is not available`,
+  siehe Build 142). `Migrate()` läuft bei einer neuen Instanz aber gerade nicht.
+  Deshalb drei Änderungen, die nur zusammen tragen:
+
+  * **`Migrate()`** schreibt den Wert für bestehende Instanzen um und gibt sonst
+    einen leeren String zurück ("keine Änderung nötig").
+  * **Der Registrierungs-Default** ist jetzt die Quellsprache (`'de'`, derselbe
+    Literalwert wie bei `SourceLanguage`) und damit von sich aus gültig:
+    `EnsureSourceLanguageIsTarget()` trägt sie bei jedem `ApplyChanges()` als
+    echten Zielsprachen-Eintrag nach, und Symcon ruft `ApplyChanges()` direkt
+    nach `Create()` auf.
+  * **`RequestAction()`** bildet den Sentinel am Eingang auf die Quellsprache ab,
+    bevor er irgendwohin geschrieben werden kann. Eine eigene Kachel kann ihn
+    schicken - bis Build 183 tat das mitgelieferte Beispiel genau das. Die
+    Sperrfrist verhält sich unverändert: eine Rückkehr auf das Original hat sie
+    nie gestartet, und das bleibt so.
+
+  In `ApplyChanges()` bleibt genau eine Schreibstelle auf `CurrentLanguage`: die
+  Selbstheilung aus Build 142, wenn der Code gar nicht (mehr) unter den
+  Zielsprachen ist. Das ist keine Migration, sondern greift genau dann, wenn der
+  Admin gerade die aktive Zielsprache entfernt hat - und ohne sie ließe sich die
+  Instanz danach nicht mehr speichern.
+
+  Regressionstest `test_migrate_current_language.php` (7 Fälle, darunter die
+  beiden Lücken, die `Migrate()` allein **nicht** schließt: die neue Instanz und
+  die eigene Kachel).
+
 * **Build 184: eigene Kacheln kennen jetzt die Konfiguration -
   `<!--AVAILABLE_LANGUAGES-->` und `<!--ACTIVE_LANGUAGE-->`.**
   Bis dahin musste ein eigenes Template die Sprachcodes fest eintippen. Das ging

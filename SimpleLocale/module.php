@@ -351,13 +351,25 @@ class SimpleLocale extends IPSModuleStrict
         // (siehe GetConfigurationForm). "Language" bleibt unten nur noch als reiner
         // RequestAction-Ident (String) bestehen, ohne zugehöriges Variablenobjekt - die
         // Kachel spricht ihn direkt per requestAction() an (siehe HTML-SDK).
-        // Default bewusst "ORIGINAL_IMPORT", nicht "": Das Select-Formularfeld bietet
-        // nur die Werte aus GetSelectableLanguageCodes() an (Basissprache, gewählte
-        // Zielsprachen, "Original") - "" ist dort nie eine gültige Option. Bei der
-        // allerersten Formularanzeige (vor dem ersten Übernehmen) war der Wert sonst
-        // "", was zu keiner Option passte und einen Fehler auslöste. "ORIGINAL_IMPORT"
-        // ist der einzige Code, der unabhängig von jeder Konfiguration immer gültig ist.
-        $this->RegisterPropertyString(self::propertyCurrentLanguage, self::langOriginalImport);
+        // Startwert ist die Quellsprache. Das Select-Formularfeld bietet nur die
+        // Werte aus GetSelectableLanguageCodes() an - "" ist dort nie gueltig, und
+        // die interne Pseudo-Sprache "ORIGINAL_IMPORT" seit Build 79 ebenso wenig
+        // (siehe BuildCurrentLanguageOptions).
+        //
+        // Build 185: bis dahin stand hier "ORIGINAL_IMPORT", und ApplyChanges musste
+        // den Wert per IPS_SetProperty umschreiben, bevor das Formular zum ersten Mal
+        // gebaut wurde - sonst haette Symcon das Speichern verweigert ("Current value
+        // ... is not available"). Genau dieses Nachschreiben der eigenen Konfiguration
+        // hat Symcon im Review beanstandet. Ein Startwert, der von sich aus gueltig
+        // ist, macht es ueberfluessig: EnsureSourceLanguageIsTarget() traegt die
+        // Quellsprache bei jedem ApplyChanges als echten Zielsprachen-Eintrag nach,
+        // und Symcon ruft ApplyChanges direkt nach Create auf - sie ist also bereits
+        // eine Option, wenn das Formular erscheint. Bestehende Instanzen holt
+        // Migrate() ab (siehe dort).
+        //
+        // Bewusst derselbe Literalwert wie der Default von propertySourceLanguage
+        // weiter oben - die beiden gehoeren zusammen.
+        $this->RegisterPropertyString(self::propertyCurrentLanguage, 'de');
 
         // Dem Admin überlassen, ob Globus- und Info-Symbol in der Kachel angezeigt
         // werden sollen (z.B. falls er ein eigenes, schlankeres Design möchte).
@@ -484,6 +496,41 @@ class SimpleLocale extends IPSModuleStrict
         parent::Destroy();
     }
 
+    // Build 185 (Symcon-Review): der vorgesehene Ort, um die gespeicherte
+    // Konfiguration einer BESTEHENDEN Instanz umzuschreiben. Vorher geschah das in
+    // ApplyChanges per IPS_SetProperty + IPS_ApplyChanges auf die eigene Instanz -
+    // funktionierte, ist aber ein Reentry in den eigenen Konfigurationslauf und
+    // laut Review nur fuer Ausnahmefaelle gedacht.
+    //
+    // Umgeschrieben wird genau ein Wert: propertyCurrentLanguage stand bis Build 79
+    // moeglicherweise auf der internen Pseudo-Sprache "ORIGINAL_IMPORT". Die ist
+    // seither keine Option des Selects mehr (siehe BuildCurrentLanguageOptions) -
+    // eine Instanz mit diesem Wert liesse sich sonst gar nicht mehr speichern
+    // ("Current value ... is not available", siehe Build 142).
+    //
+    // Migrate() laeuft NICHT beim ersten Anlegen einer Instanz - neue Instanzen
+    // starten deshalb direkt mit der Quellsprache als Registrierungs-Default (siehe
+    // Create). Beides zusammen ersetzt die fruehere Normalisierung.
+    public function Migrate(string $JSONData): string
+    {
+        parent::Migrate($JSONData);
+
+        $data = json_decode($JSONData);
+        if (!is_object($data) || !isset($data->configuration)
+            || ($data->configuration->{self::propertyCurrentLanguage} ?? '') !== self::langOriginalImport) {
+            // Leerer String = keine Aenderung noetig, so sieht es die SDK vor.
+            return '';
+        }
+
+        // Die Quellsprache ist der Wert, den "Original" ohnehin liefert
+        // (siehe ResolveRowValue) - fuer den Nutzer aendert sich dadurch nichts
+        // Sichtbares. Fehlt sie wider Erwarten, bleibt es beim Registrierungs-Default.
+        $data->configuration->{self::propertyCurrentLanguage} =
+            $data->configuration->{self::propertySourceLanguage} ?? 'de';
+
+        return json_encode($data);
+    }
+
     public function ApplyChanges(): void
     {
         //Never delete this line!
@@ -537,19 +584,6 @@ class SimpleLocale extends IPSModuleStrict
         // (ggf. bereits auf mehrere Stunden eskalierten) Sperre warten, obwohl das
         // Problem längst behoben ist.
         $this->ClearPauseOnCredentialChange();
-
-        // Build 79 (Nutzer-Wunsch): "ORIGINAL_IMPORT" ist ab jetzt keine waehlbare
-        // Gast-Sprache mehr (siehe GetSelectableLanguageCodes) - eine Instanz, die vor
-        // diesem Update zuletzt auf "Original" stand, wird EINMALIG auf die
-        // tatsaechliche Quellsprache umgeschrieben, damit propertyCurrentLanguage
-        // weiterhin ein echter, in GetSelectableLanguageCodes() enthaltener Code
-        // bleibt. Greift identisch fuer brandneue Instanzen (RegisterPropertyString-
-        // Default ist ebenfalls "ORIGINAL_IMPORT", siehe Create()) wie fuer bereits
-        // bestehende - kein separater Migrationscode noetig.
-        if ($this->ReadPropertyString(self::propertyCurrentLanguage) === self::langOriginalImport) {
-            IPS_SetProperty($this->InstanceID, self::propertyCurrentLanguage, $this->ReadPropertyString(self::propertySourceLanguage));
-            IPS_ApplyChanges($this->InstanceID);
-        }
 
         // Build 79: die Quellsprache ist ab jetzt IMMER ein echter, persistierter
         // Eintrag in propertyTargetLanguages, statt separat ueber die Pseudo-Sprache
@@ -826,6 +860,20 @@ class SimpleLocale extends IPSModuleStrict
 
                     return;
                 }
+                // Build 185: der Sentinel wird hier auf die Quellsprache abgebildet,
+                // BEVOR er irgendwo hin geschrieben werden kann. Er ist modulintern
+                // (siehe Build 183) und keine Option des Konfigurations-Selects -
+                // stuende er in propertyCurrentLanguage, liesse sich die Instanz nicht
+                // mehr speichern. Eine eigene Kachel kann ihn schicken: bis Build 183
+                // tat das mitgelieferte BEISPIEL genau das.
+                //
+                // Vorher faertig geworden ist das die Normalisierung in ApplyChanges;
+                // die ist mit Build 185 entfallen (siehe Migrate).
+                $requestedOriginalImport = $language === self::langOriginalImport;
+                if ($requestedOriginalImport) {
+                    $language = $this->ReadPropertyString(self::propertySourceLanguage);
+                }
+
                 if ($this->IsLanguageBlockedByTrial($language)) {
                     // Statt der gewünschten Sprache zurück auf die Original-Importe
                     // (verhindert dauerhaft eingefrorene/unvollständige Übersetzungen)
@@ -852,8 +900,12 @@ class SimpleLocale extends IPSModuleStrict
                     $this->PushVisualizationUpdate();
                     $this->PushLanguageSwitchLimitAlert($language);
                 } else {
+                    // $requestedOriginalImport statt eines Vergleichs gegen den
+                    // Sentinel: der steht nach der Abbildung oben nicht mehr in
+                    // $language. Bewusst identisches Verhalten wie vorher - eine
+                    // Rueckkehr auf das Original hat die Sperrfrist nie gestartet.
                     $isActualSwitch = $language !== $this->ReadPropertyString(self::propertyCurrentLanguage)
-                        && $language !== self::langOriginalImport;
+                        && !$requestedOriginalImport;
                     $this->ApplyLanguage($language);
                     if ($isActualSwitch) {
                         $this->WriteAttributeInteger(self::attributeLastLanguageSwitchAt, time());
