@@ -72,7 +72,10 @@ echo "Test 3 (der Katalog landet nicht mehr in der eigenen Tabelle) OK\n";
 // Test 4: die Glossar-Tabelle hat KEINE Quellsprachen-Spalte - sonst waere sie
 // nur eine zweite gerichtete Tabelle und die Dopplung bliebe.
 $spalten = $fenster('private function BuildListColumns');
-$glossarZweig = substr($spalten, (int) strpos($spalten, "if (\$Kind === 'glossary')"), 400);
+// Am naechsten Zweig begrenzen, nicht auf eine feste Zeichenzahl - ein festes
+// Fenster ist in dieser Suite schon mehrfach gerissen, sobald Kommentare dazukamen.
+$glossarStart = (int) strpos($spalten, "if (\$Kind === 'glossary')");
+$glossarZweig = substr($spalten, $glossarStart, (int) strpos($spalten, "if (\$Kind === 'automations')") - $glossarStart);
 assert(strpos($glossarZweig, 'BuildRowSourceLanguageColumn') === false,
     'DIE DEFINITION: keine Quellsprachen-Spalte im Glossar');
 assert(strpos($glossarZweig, 'BuildLanguageColumnSet') !== false, 'nur die Sprachspalten');

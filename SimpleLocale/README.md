@@ -4498,6 +4498,22 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 191 (live gemeldet): die Glossar-Tabelle blieb bei einer frisch
+  angelegten Instanz leer - der Erklärtext darüber erschien, die Tabelle nicht.**
+  Befüllt wurde das Glossar bis dahin **ausschließlich** in `ScanRootTree()`,
+  also erst beim ersten Rescan. Genau davor schlägt ein Nutzer die Tabelle aber
+  zum ersten Mal auf: Modul installieren, Lizenz eintragen, hinschauen. Die
+  Befüllung läuft jetzt zusätzlich in `ApplyChanges()`, an derselben Stelle wie
+  `EnsureSourceLanguageIsTarget()` - und wie dort nur, wenn sich tatsächlich
+  etwas ändert, sonst wäre es ein `IPS_ApplyChanges()`-Reentry bei jedem
+  Speichern.
+
+  Zweite Absicherung an derselben Stelle: eine Liste **ohne Spalten** rendert
+  Symcon als gar nichts. Solange keine Zielsprache konfiguriert ist, hätte die
+  Tabelle deshalb unsichtbar bleiben können, obwohl der Text darüber steht - die
+  Spalten fallen jetzt notfalls auf die Quellsprache zurück, die immer vorhanden
+  ist.
+
 * **Build 190: auch die DOM-Bezeichner heißen jetzt `sloc` statt `ipssl`.**
   Beim Präfixwechsel in Build 185 blieben die kleingeschriebenen Bezeichner
   bewusst stehen - CSS-Klassen (`ipssl-select-row`, `ipssl-globe`,

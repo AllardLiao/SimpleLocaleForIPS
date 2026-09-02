@@ -600,6 +600,13 @@ class SimpleLocale extends IPSModuleStrict
         // Zielsprachen an einer lizenzierten Sprachobergrenze vorbei ergaenzt.
         $this->EnsureSourceLanguageIsTarget();
 
+        // Build 191 (live gemeldet): das Glossar wurde bis dahin AUSSCHLIESSLICH in
+        // ScanRootTree() befuellt. Eine frisch angelegte Instanz zeigte die Tabelle
+        // deshalb leer, bis der erste Rescan lief - genau der Zustand, in dem ein
+        // Nutzer sie zum ersten Mal aufschlaegt. Dieselbe Stelle wie
+        // EnsureSourceLanguageIsTarget(): reines No-Op, sobald nichts fehlt.
+        $this->EnsureGlossarySeeded();
+
         // Build 142: Selbstheilung fuer eine Instanz, die bereits in dem in
         // RequestAction beschriebenen Zustand feststeckt - propertyCurrentLanguage
         // haelt einen Code, den das Formular-Select gar nicht (mehr) anbietet, und
@@ -2716,6 +2723,25 @@ class SimpleLocale extends IPSModuleStrict
         }
 
         return in_array($Feature, $info['features'] ?? [], true);
+    }
+
+    // Build 191: traegt fehlende Katalog-Zeilen ins Glossar nach. Schreibt nur,
+    // wenn sich tatsaechlich etwas aendert - sonst waere es ein
+    // IPS_ApplyChanges()-Reentry bei JEDEM Speichern.
+    private function EnsureGlossarySeeded(): void
+    {
+        if (!$this->HasLicenseFeature('glossary')) {
+            return;
+        }
+
+        $vorher = $this->DecodeRows(self::propertyGlossary);
+        $nachher = $this->MergeBundledGlossaryRows($vorher);
+        if ($nachher === $vorher) {
+            return;
+        }
+
+        IPS_SetProperty($this->InstanceID, self::propertyGlossary, json_encode(array_values($nachher)));
+        IPS_ApplyChanges($this->InstanceID);
     }
 
     // Build 79: stellt sicher, dass propertySourceLanguage IMMER als echter Eintrag
@@ -11316,7 +11342,13 @@ HTML;
         // FindGlossaryTranslation). $TargetLanguages enthaelt die Quellsprache
         // bereits, dafuer sorgt EnsureSourceLanguageIsTarget().
         if ($Kind === 'glossary') {
-            return $this->BuildLanguageColumnSet('', '', $SourceLanguage, $TargetLanguages, 'glossary');
+            // Build 191: eine Liste OHNE Spalten rendert Symcon als gar nichts.
+            // Solange noch keine Zielsprache konfiguriert ist, bliebe die Tabelle
+            // damit unsichtbar - obwohl der Erklaertext darueber steht. Die
+            // Quellsprache ist immer da, also mindestens ihre Spalte.
+            $languages = $TargetLanguages !== [] ? $TargetLanguages : [$SourceLanguage];
+
+            return $this->BuildLanguageColumnSet('', '', $SourceLanguage, $languages, 'glossary');
         }
 
         if ($Kind === 'automations') {
