@@ -18,9 +18,9 @@ function applyReplica(string $shell, string $select, string $icon, bool $mitFix)
 {
     if ($mitFix) {
         $html = str_replace('<!--LANGUAGE_SELECT-->', $select, $shell);
-        $html = str_replace('<!--WRAPPER_ID-->', 'ipssl-select-wrapper-42', $html);
+        $html = str_replace('<!--WRAPPER_ID-->', 'sloc-select-wrapper-42', $html);
     } else {
-        $html = str_replace('<!--WRAPPER_ID-->', 'ipssl-select-wrapper-42', $shell);
+        $html = str_replace('<!--WRAPPER_ID-->', 'sloc-select-wrapper-42', $shell);
         $html = str_replace('<!--LANGUAGE_SELECT-->', $select, $html);
     }
 
@@ -47,7 +47,7 @@ echo "Test 2 (nach dem Fix bleibt kein Platzhalter stehen) OK\n";
 
 // Test 3: die HUELLE verhaelt sich unveraendert - ihr Platzhalter wurde ja schon
 // vorher ersetzt, nur eben in anderer Reihenfolge.
-assert(substr_count($nachher, 'ipssl-select-wrapper-42') === 2,
+assert(substr_count($nachher, 'sloc-select-wrapper-42') === 2,
     'beide Vorkommen - Huelle und Sprachauswahl - muessen dieselbe ID tragen');
 echo "Test 3 (die Hülle verhält sich unverändert) OK\n";
 

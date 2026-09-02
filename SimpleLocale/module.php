@@ -7605,7 +7605,7 @@ class SimpleLocale extends IPSModuleStrict
             'UTF-8'
         );
 
-        return '<div class="ipssl-stats-notice" style="font-size:11px; color:#666; text-align:center;">' . $text . '</div>';
+        return '<div class="sloc-stats-notice" style="font-size:11px; color:#666; text-align:center;">' . $text . '</div>';
     }
 
     // Räumt beim Lesen gleich abgelaufene Einträge aus dem RÜCKGABEWERT (nicht aus
@@ -9959,7 +9959,7 @@ class SimpleLocale extends IPSModuleStrict
             return '';
         }
 
-        return $this->BuildAppIconImgHtml('max-width:100%;max-height:100%;display:block;', 'ipssl-tile-icon');
+        return $this->BuildAppIconImgHtml('max-width:100%;max-height:100%;display:block;', 'sloc-tile-icon');
     }
 
     private function ApplyTilePlaceholders(string $Html): string
@@ -9977,7 +9977,7 @@ class SimpleLocale extends IPSModuleStrict
         // funktionierten deshalb in beiden Feldern; jetzt gilt das fuer alle
         // gleichermassen.
         $html = str_replace('<!--LANGUAGE_SELECT-->', $this->ResolveLanguageSelectHtml(), $Html);
-        $html = str_replace('<!--WRAPPER_ID-->', 'ipssl-select-wrapper-' . $this->InstanceID, $html);
+        $html = str_replace('<!--WRAPPER_ID-->', 'sloc-select-wrapper-' . $this->InstanceID, $html);
 
         // Build 173 (Nutzer-Wunsch): das gewaehlte Symbol EINZELN verfuegbar
         // machen. Bis dahin steckte es fest in der generierten Sprachauswahl -
@@ -10058,7 +10058,7 @@ class SimpleLocale extends IPSModuleStrict
     {
         if (strpos($Html, 'handleMessage') !== false) {
             // Build 184: der eigene Handler bleibt unangetastet - aber der Haken
-            // fuer window.ipsslOnLanguageChange muss ihn trotzdem erreichen.
+            // fuer window.slocOnLanguageChange muss ihn trotzdem erreichen.
             //
             // Wer sein Template aus einer AELTEREN module.html abgeleitet hat,
             // bringt einen handleMessage OHNE den Haken mit. Frueher hiesse das:
@@ -10082,7 +10082,7 @@ class SimpleLocale extends IPSModuleStrict
         // Ohne <!--LANGUAGE_SELECT--> gibt es ohnehin nichts sinnvoll
         // nachzuzeichnen - die Vorlage baut ihre Auswahl ja selbst. Die
         // Gast-Hinweise (ALERT) kommen unabhaengig davon immer an.
-        $wrapperId = 'ipssl-select-wrapper-' . $this->InstanceID;
+        $wrapperId = 'sloc-select-wrapper-' . $this->InstanceID;
         $redraw = $SupportsRefresh
             // Fehlt das Ziel-Element trotzdem, wird still uebersprungen statt
             // abgebrochen - die Meldungen sollen davon nie abhaengen.
@@ -10090,7 +10090,7 @@ class SimpleLocale extends IPSModuleStrict
                 . 'var w=document.getElementById(' . json_encode($wrapperId) . ');if(w){w.innerHTML=m.payload.html;}}'
             : '';
         // Build 184: der Haken fuer eigene Vorlagen. Definiert eine Vorlage
-        // window.ipsslOnLanguageChange, bekommt sie bei JEDEM Sprachwechsel die
+        // window.slocOnLanguageChange, bekommt sie bei JEDEM Sprachwechsel die
         // aktive Sprache und die Liste der verfuegbaren - dieselben Daten wie in
         // den Platzhaltern <!--ACTIVE_LANGUAGE-->/<!--AVAILABLE_LANGUAGES-->,
         // die sonst auf dem Stand des Ladezeitpunkts einfrieren wuerden.
@@ -10099,8 +10099,8 @@ class SimpleLocale extends IPSModuleStrict
         // Bewusst ausserhalb der html-Bedingung: er muss auch dann feuern, wenn
         // gar kein html mitkommt - genau der Fall bei einer Vorlage mit eigener
         // Auswahl, also bei jeder, die den Haken ueberhaupt braucht.
-        $hook = 'if(typeof window.ipsslOnLanguageChange==="function"){'
-            . 'try{window.ipsslOnLanguageChange(m.payload.activeLanguage,m.payload.languages);}catch(e){}}';
+        $hook = 'if(typeof window.slocOnLanguageChange==="function"){'
+            . 'try{window.slocOnLanguageChange(m.payload.activeLanguage,m.payload.languages);}catch(e){}}';
         $script = '<script>function handleMessage(data){var m;try{m=JSON.parse(data);}catch(e){return;}'
             . 'if(!m||!m.payload){return;}'
             . 'if(m.action==="REFRESH"){' . $redraw . $hook . '}'
@@ -10113,7 +10113,7 @@ class SimpleLocale extends IPSModuleStrict
             : substr($Html, 0, $position) . $script . substr($Html, $position);
     }
 
-    // Build 184: legt den Haken window.ipsslOnLanguageChange um einen BEREITS
+    // Build 184: legt den Haken window.slocOnLanguageChange um einen BEREITS
     // vorhandenen handleMessage herum, statt ihn zu ersetzen.
     //
     // Der fremde Handler bleibt vollstaendig zustaendig und wird unveraendert
@@ -10125,15 +10125,15 @@ class SimpleLocale extends IPSModuleStrict
     // Kopie der module.html ab Build 184) - sonst liefe er doppelt.
     private function EnsureLanguageChangeHook(string $Html): string
     {
-        if (strpos($Html, 'ipsslOnLanguageChange') !== false) {
+        if (strpos($Html, 'slocOnLanguageChange') !== false) {
             return $Html;
         }
 
         $script = '<script>(function(){if(typeof handleMessage!=="function"){return;}'
             . 'var inner=handleMessage;'
             . 'window.handleMessage=function(data){var m;try{m=JSON.parse(data);}catch(e){m=null;}'
-            . 'if(m&&m.action==="REFRESH"&&m.payload&&typeof window.ipsslOnLanguageChange==="function"){'
-            . 'try{window.ipsslOnLanguageChange(m.payload.activeLanguage,m.payload.languages);}catch(e){}}'
+            . 'if(m&&m.action==="REFRESH"&&m.payload&&typeof window.slocOnLanguageChange==="function"){'
+            . 'try{window.slocOnLanguageChange(m.payload.activeLanguage,m.payload.languages);}catch(e){}}'
             . 'return inner.apply(this,arguments);};})();</script>';
 
         // Ans ENDE des Body - der eigene Handler muss vorher definiert sein,
@@ -10456,11 +10456,11 @@ HTML;
     // HasThemeEntitlement) - im Shop einfach der features-Spalte des Produkts
     // bzw. der Promo-Lizenz hinzufuegen, kein Schema-Umbau noetig.
     private const TILE_ICON_CATALOG = [
-        'ipssl' => ['label' => 'Simple Locale icon', 'feature' => null, 'file' => 'module_icon_48.png'],
+        'sloc' => ['label' => 'Simple Locale icon', 'feature' => null, 'file' => 'module_icon_48.png'],
         'globe' => ['label' => 'Globe', 'feature' => null, 'emoji' => '🌐'],
     ];
 
-    private const TILE_ICON_DEFAULT_ID = 'ipssl';
+    private const TILE_ICON_DEFAULT_ID = 'sloc';
 
     // Build 147: reservierter Wert fuer "automatisch waehlen" - bewusst KEINE
     // Katalog-ID, damit er sich nie mit einem echten Design ueberschneiden kann.
@@ -10784,7 +10784,7 @@ HTML;
     }
 
     // $ImgStyle/$CssClass: Build 173 - die eingebaute Kachel setzt das Symbol in
-    // einen <span class="ipssl-globe"> mit fester Hoehe, dort passt
+    // einen <span class="sloc-globe"> mit fester Hoehe, dort passt
     // "height:100%". Ein EIGENES Template hat diesen Rahmen nicht: dieselbe
     // Angabe liefe dort ins Leere und das Symbol waere unsichtbar. Der
     // Platzhalter <!--TILE_ICON--> bekommt deshalb eine Angabe, die nie
@@ -10861,21 +10861,21 @@ HTML;
         // Build 77: statt der 🌐-Emoji-Glyphe jetzt das eigentliche Simple-Locale-
         // Symbol (siehe BuildAppIconImgHtml), Nutzer-Wunsch fürs Wiedererkennen der
         // Marke direkt in der Gast-Kachel. Property/Attribut-Name (ShowGlobeIcon)
-        // und CSS-Klasse (ipssl-globe, siehe module.html) bleiben bewusst
+        // und CSS-Klasse (sloc-globe, siehe module.html) bleiben bewusst
         // unverändert - eine Umbenennung würde Admins mit bereits eigenem, an diese
         // Klasse gebundenem Kachel-HTML (siehe README Abschnitt 7) ohne Not brechen.
         $globeIconHtml = $this->ReadPropertyBoolean(self::propertyShowGlobeIcon)
-            ? '<span class="ipssl-globe" aria-hidden="true">' . $this->BuildAppIconImgHtml() . '</span>'
+            ? '<span class="sloc-globe" aria-hidden="true">' . $this->BuildAppIconImgHtml() . '</span>'
             : '';
 
         $infoIconHtml = $this->ReadPropertyBoolean(self::propertyShowInfoIcon)
-            ? '<span class="ipssl-info-icon" aria-hidden="true"'
+            ? '<span class="sloc-info-icon" aria-hidden="true"'
                 . ' onclick="alert(' . $this->BuildInfoAlertJs($ownUiTextRows, $currentLanguage) . ');">ⓘ</span>'
             : '';
 
         // Build 143 (Nutzer-Wunsch): die drei optionalen Hinweiszeilen zuerst
         // bauen - steht KEINE davon an, bekommt die Zeile die Zusatzklasse
-        // "ipssl-compact" und holt sich per negativem Rand den ungenutzten Platz
+        // "sloc-compact" und holt sich per negativem Rand den ungenutzten Platz
         // unter dem Dropdown zurueck (siehe module.html). Grund: bei
         // Visualisierungs-Hoehe "1" war die Kachel nur wenige Pixel zu hoch und
         // zeigte deshalb einen Scrollbalken. Sind Hinweise sichtbar, braucht die
@@ -10885,7 +10885,7 @@ HTML;
             . $this->BuildPausedNoticeHtml($ownUiTextRows, $currentLanguage)
             . $this->BuildTranslationStatsNoticeHtml($ownUiTextRows, $currentLanguage);
 
-        $rowClass = $noticesHtml === '' ? 'ipssl-select-row ipssl-compact' : 'ipssl-select-row';
+        $rowClass = $noticesHtml === '' ? 'sloc-select-row sloc-compact' : 'sloc-select-row';
 
         return '<div class="' . $rowClass . '">'
             . $globeIconHtml
@@ -10919,7 +10919,7 @@ HTML;
         $prefix = $this->GetOwnUiText($OwnUiTextRows, 'trialNoticePrefix', $Language, self::TRIAL_NOTICE_PREFIX_TEXT);
         $text = htmlspecialchars($prefix . ' ' . date('d.m.Y', $expiresAt), ENT_QUOTES, 'UTF-8');
 
-        return '<div class="ipssl-trial-notice" style="font-size:11px; color:#c0392b; text-align:center;">' . $text . '</div>';
+        return '<div class="sloc-trial-notice" style="font-size:11px; color:#c0392b; text-align:center;">' . $text . '</div>';
     }
 
     // Kleiner roter Hinweis unter dem Dropdown, solange ALLE konfigurierten
@@ -10986,7 +10986,7 @@ HTML;
         // Doppelpunkt sonst weiter (siehe GetOwnUiText).
         $renewLabel = rtrim($renew, ': ');
 
-        return '<div class="ipssl-license-notice" style="font-size:11px; color:#c0392b; text-align:center;">'
+        return '<div class="sloc-license-notice" style="font-size:11px; color:#c0392b; text-align:center;">'
             . htmlspecialchars($text, ENT_QUOTES, 'UTF-8')
             . ' <a href="' . htmlspecialchars(self::LICENSE_PURCHASE_URL, ENT_QUOTES, 'UTF-8') . '"'
             . ' target="_blank" rel="noopener"'
@@ -11011,7 +11011,7 @@ HTML;
         // "Übersetzungsanbieter" (siehe BuildProviderPauseStatusText).
         $text = htmlspecialchars($prefix . ' ' . date('d.m. H:i', $pausedUntil), ENT_QUOTES, 'UTF-8');
 
-        return '<div class="ipssl-paused-notice" style="font-size:11px; color:#c0392b; text-align:center;">' . $text . '</div>';
+        return '<div class="sloc-paused-notice" style="font-size:11px; color:#c0392b; text-align:center;">' . $text . '</div>';
     }
 
     // Sortiert $Codes anhand von $Names (ObjectID-Code => angezeigter Name) alphabetisch
@@ -11037,7 +11037,7 @@ HTML;
     }
 
     // alert() ist ein Browser-Chrome-Dialog, kein DOM-Element - anders als jedes per
-    // CSS positionierte <div> (siehe .ipssl-select-row) ist er nicht an die Box des
+    // CSS positionierte <div> (siehe .sloc-select-row) ist er nicht an die Box des
     // eigenen iframes gebunden und kann daher unabhängig von der Kachelgröße immer
     // vollständig angezeigt werden. Achtung: manche eingebetteten WebViews (v.a.
     // native Mobile-Apps) unterdrücken window.alert() aus eingebettetem Fremd-Content

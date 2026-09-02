@@ -892,13 +892,13 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
      zur Orientierung - dieser Block wird automatisch erzeugt, siehe
      `BuildLanguageSelectHtml()`, solange das zweite Feld unten leer bleibt):
      ```html
-     <div class="ipssl-select-row">
-       <span class="ipssl-globe" aria-hidden="true"><img src="data:image/png;base64,..." alt=""></span>
+     <div class="sloc-select-row">
+       <span class="sloc-globe" aria-hidden="true"><img src="data:image/png;base64,..." alt=""></span>
        <select onchange="requestAction('Language', this.value);">
          <option value="de">Deutsch</option>
          <option value="en" selected>English</option>
        </select>
-       <span class="ipssl-info-icon" aria-hidden="true" onclick="alert('...');">ⓘ</span>
+       <span class="sloc-info-icon" aria-hidden="true" onclick="alert('...');">ⓘ</span>
      </div>
      <!-- + roter Testphase-Hinweis, nur solange ungelizenziert und Testphase läuft -->
      ```
@@ -906,7 +906,7 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
      (`libs/assets/module_icon_48.png`), als Base64-Data-URI eingebettet -
      kein öffentlicher Pfad/Webhook nötig. Für eine eigene Kachel kann hier
      stattdessen jedes beliebige eigene Icon/Emoji stehen, die CSS-Klasse
-     `ipssl-globe` (Name aus historischen Gründen unverändert) liefert
+     `sloc-globe` (Name aus historischen Gründen unverändert) liefert
      bereits einen passenden 32×32px-Kreis als Container.
 
      **Das gewählte Symbol einzeln einsetzen: `<!--TILE_ICON-->` (Build 173).**
@@ -918,7 +918,7 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
      Editions-Symbole. Ist die Checkbox "Symbol in der Kachel anzeigen"
      abgeschaltet, bleibt der Platzhalter leer.
 
-     Das eingesetzte `<img>` trägt die Klasse `ipssl-tile-icon` und eine
+     Das eingesetzte `<img>` trägt die Klasse `sloc-tile-icon` und eine
      Größenangabe, die **nicht kollabiert** (`max-width`/`max-height` statt
      `height:100%`): dein Container braucht also keine feste Höhe zu haben.
      Willst du es anders skalieren, sprich die Klasse in deinem CSS an.
@@ -976,11 +976,11 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
      > wenn die Kachel gerendert wird. Wechselt der Nutzer danach die Sprache, wird
      > die Kachel *nicht* neu gebaut, und dein `active` zeigt weiterhin den alten
      > Stand. Damit deine Hervorhebung mitwandert, definiere
-     > `window.ipsslOnLanguageChange` - das Modul ruft sie bei **jedem**
+     > `window.slocOnLanguageChange` - das Modul ruft sie bei **jedem**
      > Sprachwechsel auf, auch bei einem abgelehnten:
      >
      > ```js
-     > window.ipsslOnLanguageChange = function (activeLanguage, availableLanguages) {
+     > window.slocOnLanguageChange = function (activeLanguage, availableLanguages) {
      >     active = activeLanguage;
      >     render();
      > };
@@ -2081,7 +2081,7 @@ der ursprünglichen Fassung übernommen.
   identisch). Fällt auf die alte 🌐-Glyphe zurück, falls die Bilddatei aus
   irgendeinem Grund nicht lesbar ist. Die zugehörige Einstellung heißt
   jetzt "Simple-Locale-Symbol in der Kachel anzeigen" (Property/Attribut-
-  Name `ShowGlobeIcon` und CSS-Klasse `ipssl-globe` bleiben aus
+  Name `ShowGlobeIcon` und CSS-Klasse `sloc-globe` bleiben aus
   Kompatibilitätsgründen unverändert - siehe Abschnitt 7 für eigene,
   darauf aufbauende Kachel-Anpassungen).
 * **Build 78 macht die festen Gast-Oberflächentexte komplett unabhängig von
@@ -2266,10 +2266,10 @@ der ursprünglichen Fassung übernommen.
   das Simple-Locale-Symbol nach Build 82 auf manchen Kacheln sichtbar
   GRÖSSER als das Dropdown, nicht exakt gleich hoch: die Höhenanpassung
   lief über `align-self: stretch`, was das Icon auf die Höhe der GESAMTEN
-  Zeile (`.ipssl-select-row`) skalierte - in der echten Kachel-Darstellung
+  Zeile (`.sloc-select-row`) skalierte - in der echten Kachel-Darstellung
   bekommt diese Zeile aber offenbar mehr Höhe zugewiesen, als das Dropdown
   selbst braucht, wodurch auch das Icon zu groß wurde. Gelöst über eine
-  gemeinsame, feste CSS-Variable (`--ipssl-control-height`), die Dropdown
+  gemeinsame, feste CSS-Variable (`--sloc-control-height`), die Dropdown
   UND Icon jetzt beide explizit auf denselben Wert setzt - unabhängig
   davon, wie viel Höhe die umgebende Zeile tatsächlich bekommt.
 
@@ -4066,14 +4066,14 @@ der ursprünglichen Fassung übernommen.
   Der Platz unter dem Dropdown ist genau dann ungenutzt, wenn keine der drei
   optionalen Hinweiszeilen (Testphase / Anbieter-Pause / Statistik) angezeigt
   wird. Nur in diesem Fall bekommt die Zeile jetzt die zusätzliche CSS-Klasse
-  `ipssl-compact` und holt sich den Platz per negativem unteren Rand zurück.
+  `sloc-compact` und holt sich den Platz per negativem unteren Rand zurück.
   Sind Hinweise sichtbar, braucht die Kachel die Höhe ohnehin - dann bleibt
   alles unverändert (genau der vom Nutzer benannte Kompromiss: "wenn der User
   die Statistiken sehen will, lässt sich das nicht ändern").
   Bewusst **nur nach unten**: oben reserviert Symcon den Platz für Titel und
   Vergrößern-Symbol der Kachel (siehe den langjährigen Kommentar am Anfang von
   `module.html`) - ein negativer Rand dort würde das Dropdown unter die
-  Titelzeile schieben. Die Höhe der Bedienelemente selbst (`--ipssl-control-height`,
+  Titelzeile schieben. Die Höhe der Bedienelemente selbst (`--sloc-control-height`,
   38px) bleibt ebenfalls unangetastet; verkleinert wird ausschließlich
   ungenutzter Leerraum. Reicht der zurückgewonnene Platz auf einer bestimmten
   Installation nicht ganz, ist der `margin-bottom`-Wert in dieser einen
@@ -4498,6 +4498,28 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 190: auch die DOM-Bezeichner heißen jetzt `sloc` statt `ipssl`.**
+  Beim Präfixwechsel in Build 185 blieben die kleingeschriebenen Bezeichner
+  bewusst stehen - CSS-Klassen (`ipssl-select-row`, `ipssl-globe`,
+  `ipssl-tile-icon`, `ipssl-select-wrapper-<id>` …), der optionale JS-Haken
+  `window.ipsslOnLanguageChange` und die Katalog-ID des mitgelieferten Symbols.
+  Sie sind keine Symcon-Funktionsnamen, und ein Umbenennen bricht jede bereits
+  gebaute eigene Kachel und jedes ausgelieferte Design.
+
+  Auf ausdrücklichen Wunsch fällt das jetzt trotzdem - die betroffenen Designs
+  werden nachgezogen. **Das ist ein Bruch für eigenes Kachel-HTML:** wer
+  `window.ipsslOnLanguageChange` definiert oder die Klassen anspricht, muss auf
+  `sloc…` umstellen. Die Platzhalter selbst (`<!--LANGUAGE_SELECT-->`,
+  `<!--TILE_ICON-->`, `<!--ACTIVE_LANGUAGE-->` …) sind unverändert.
+
+  Mit umgestellt ist die Katalog-ID `ipssl` des mitgelieferten Symbols. Eine
+  gespeicherte alte Auswahl fällt über `ResolveCatalogId()` sauber auf den
+  Standard zurück, es bleibt also nichts kaputt stehen.
+
+  Nach dieser Umstellung trägt der ausgelieferte Code den alten Namen nirgends
+  mehr - die verbliebenen Nennungen stehen ausschließlich in den Changelog- und
+  Begründungskommentaren.
+
 * **Build 189 (Nutzer-Wunsch): das Glossar ist jetzt eine eigene Tabelle - ohne
   Quellsprache, dafür in jede Richtung gültig.**
   Bis Build 188 schrieb das Modul **89 mitgelieferte Zeilen** (73 Einheiten +
@@ -4781,7 +4803,7 @@ der ursprünglichen Fassung übernommen.
   nichts gelöscht.
 
   Abgeholt wird das über eine **optionale** Funktion des Templates,
-  `window.ipsslOnLanguageChange(activeLanguage, availableLanguages)`. Wer sie
+  `window.slocOnLanguageChange(activeLanguage, availableLanguages)`. Wer sie
   nicht definiert, merkt keinen Unterschied. Sie erreicht auch ein Template mit
   **eigenem** `handleMessage`: ein aus einer älteren `module.html` abgeleitetes
   Template brachte bisher einen Handler ohne den Haken mit und wurde deshalb
@@ -5084,7 +5106,7 @@ der ursprünglichen Fassung übernommen.
   ein eigenes Template setzen - `<!--TILE_ICON-->`.**
   Die Frage lautete, wie man das Symbol in ein eigenes Template einbindet.
   Antwort war: gar nicht. Es wurde ausschließlich **innerhalb** der generierten
-  Sprachauswahl gebaut (`<span class="ipssl-globe">…`). Wer eine eigene
+  Sprachauswahl gebaut (`<span class="sloc-globe">…`). Wer eine eigene
   Sprachauswahl hinterlegte, ersetzte damit den ganzen Block und verlor das
   Symbol ersatzlos - es gab keinen Weg, es zurückzuholen.
 
@@ -5095,7 +5117,7 @@ der ursprünglichen Fassung übernommen.
 
   Der Platzhalter respektiert die Checkbox "Symbol in der Kachel anzeigen" -
   steht sie aus, bleibt er leer, statt sie zu übergehen. Die eingesetzte
-  Fassung trägt die Klasse `ipssl-tile-icon` und eine Größenangabe, die **nicht
+  Fassung trägt die Klasse `sloc-tile-icon` und eine Größenangabe, die **nicht
   kollabiert**: die eingebaute Kachel setzt das Symbol in einen Rahmen mit fester
   Höhe, wo `height:100%` passt - ein eigenes Template hat diesen Rahmen nicht,
   dort wäre das Symbol unsichtbar geworden. Die eingebaute Kachel behält ihre

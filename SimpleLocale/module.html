@@ -9,16 +9,16 @@
            überschreiben nur bei echtem Bedarf, dann bewusst nur links/rechts (siehe
            offizielles Symcon-Beispielmodul "DuckCounters"), nie oben/unten. */
 
-        /* --ipssl-control-height: EINZIGE Quelle fuer die Hoehe von Dropdown UND
+        /* --sloc-control-height: EINZIGE Quelle fuer die Hoehe von Dropdown UND
            Icon - bewusst NICHT ueber align-self:stretch/height:100% relativ zur
            Zeile geloest (erster Versuch, siehe Git-Historie): in der echten Kachel
-           bekommt .ipssl-select-row selbst mehr Hoehe zugewiesen, als das Dropdown
+           bekommt .sloc-select-row selbst mehr Hoehe zugewiesen, als das Dropdown
            tatsaechlich braucht (vermutlich durch die umgebende WebFront-Kachel-
            Darstellung) - das Icon wurde dadurch sichtbar groesser als das
            Dropdown, obwohl es exakt auf die (zu grosse) Zeilenhoehe gestreckt war.
            Ein fester, gemeinsamer Wert fuer beide Elemente ist immun dagegen. */
-        .ipssl-select-row {
-            --ipssl-control-height: 38px;
+        .sloc-select-row {
+            --sloc-control-height: 38px;
             display: flex;
             align-items: center;
             gap: 10px;
@@ -38,29 +38,29 @@
            schieben. Reicht der zurueckgewonnene Platz nicht, ist -8px hier der
            Stellwert (nicht die Hoehe der Bedienelemente, die soll gleich
            bleiben). */
-        .ipssl-select-row.ipssl-compact {
+        .sloc-select-row.sloc-compact {
             margin-bottom: -8px;
         }
 
-        .ipssl-select-row .ipssl-globe {
+        .sloc-select-row .sloc-globe {
             flex: none;
-            height: var(--ipssl-control-height);
+            height: var(--sloc-control-height);
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 18px;
         }
 
-        .ipssl-select-row .ipssl-globe img {
+        .sloc-select-row .sloc-globe img {
             height: 100%;
             width: auto;
             display: block;
         }
 
-        .ipssl-select-row select {
+        .sloc-select-row select {
             flex: 1;
             min-width: 0;
-            height: var(--ipssl-control-height);
+            height: var(--sloc-control-height);
             box-sizing: border-box;
             padding: 0 10px;
             font-size: 15px;
@@ -72,12 +72,12 @@
             cursor: pointer;
         }
 
-        .ipssl-select-row select:focus {
+        .sloc-select-row select:focus {
             outline: none;
             border-color: rgba(0, 0, 0, 0.35);
         }
 
-        .ipssl-select-row .ipssl-info-icon {
+        .sloc-select-row .sloc-info-icon {
             flex: none;
             display: flex;
             align-items: center;
@@ -91,7 +91,7 @@
             user-select: none;
         }
 
-        .ipssl-select-row .ipssl-info-icon:hover {
+        .sloc-select-row .sloc-info-icon:hover {
             background: rgba(0, 0, 0, 0.06);
             color: rgba(0, 0, 0, 0.7);
         }
@@ -125,14 +125,14 @@
                 }
 
                 // Baust Du Deine eigene Kachel auf Basis dieser Datei, definiere
-                // window.ipsslOnLanguageChange - dann bekommst Du bei jedem
+                // window.slocOnLanguageChange - dann bekommst Du bei jedem
                 // Sprachwechsel die aktive Sprache und die Liste der
                 // verfuegbaren. Die Platzhalter <!--ACTIVE_LANGUAGE--> und
                 // <!--AVAILABLE_LANGUAGES--> liefern denselben Stand, aber nur
                 // einmal beim Laden.
-                if (typeof window.ipsslOnLanguageChange === "function") {
+                if (typeof window.slocOnLanguageChange === "function") {
                     try {
-                        window.ipsslOnLanguageChange(message.payload.activeLanguage, message.payload.languages);
+                        window.slocOnLanguageChange(message.payload.activeLanguage, message.payload.languages);
                     } catch (e) {
                         // Ein Fehler in eigenem Code darf die Kachel nicht mitreissen.
                     }

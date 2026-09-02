@@ -18,7 +18,7 @@ function splitHtmlIntoTextNodes(string $Html): array
     $prevErrors = libxml_use_internal_errors(true);
     // mb_convert_encoding trick so DOMDocument doesn't mangle multi-byte UTF-8
     // (well-known PHP DOMDocument quirk with loadHTML + UTF-8).
-    $wrapped = '<?xml encoding="UTF-8"><ipssl-root>' . $Html . '</ipssl-root>';
+    $wrapped = '<?xml encoding="UTF-8"><sloc-root>' . $Html . '</sloc-root>';
     $loaded = $doc->loadHTML($wrapped, LIBXML_NOERROR | LIBXML_NOWARNING | LIBXML_HTML_NODEFDTD | LIBXML_HTML_NOIMPLIED);
     libxml_clear_errors();
     libxml_use_internal_errors($prevErrors);
@@ -27,7 +27,7 @@ function splitHtmlIntoTextNodes(string $Html): array
         return ['nodes' => [], 'reassemble' => fn () => $Html];
     }
 
-    $root = $doc->getElementsByTagName('ipssl-root')->item(0);
+    $root = $doc->getElementsByTagName('sloc-root')->item(0);
     if ($root === null) {
         return ['nodes' => [], 'reassemble' => fn () => $Html];
     }

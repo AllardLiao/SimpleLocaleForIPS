@@ -25,12 +25,12 @@ declare(strict_types=1);
 
 // Testkatalog mit allen drei relevanten Faellen.
 const KATALOG = [
-    'ipssl'    => ['label' => 'Simple Locale icon', 'feature' => null],
+    'sloc'    => ['label' => 'Simple Locale icon', 'feature' => null],
     'globe'    => ['label' => 'Globe',            'feature' => null],
     'xmas2026' => ['label' => 'Weihnachten 2026',     'feature' => 'theme_xmas2026'],
     'nik2026'  => ['label' => 'Nikolaus 2026',        'feature' => 'theme_nikolaus2026'],
 ];
-const STANDARD_ID = 'ipssl';
+const STANDARD_ID = 'sloc';
 
 // Repliziert HasThemeEntitlement().
 function hatBerechtigung(?string $feature, array $lizenz): bool
@@ -105,7 +105,7 @@ echo "Test 1 (jede Sonder-Edition sieht ausschließlich ihr eigenes Design) OK\n
 // waehlbar - in jeder Edition und auch in der Testphase.
 foreach (['Testphase' => $testphase, 'Standard' => $standard, 'Xmas' => $xmas] as $name => $lizenz) {
     $auswahl = waehlbareIds($lizenz);
-    assert(in_array('ipssl', $auswahl, true), "Auslieferungssymbol muss in '$name' waehlbar sein");
+    assert(in_array('sloc', $auswahl, true), "Auslieferungssymbol muss in '$name' waehlbar sein");
     assert(in_array('globe', $auswahl, true), "die Weltkugel muss als Auslieferungszustand in '$name' waehlbar sein");
 }
 echo "Test 2 (die Auslieferungszustände sind in jeder Edition wählbar, auch in der Testphase) OK\n";
@@ -115,13 +115,13 @@ echo "Test 2 (die Auslieferungszustände sind in jeder Edition wählbar, auch in
 // Testinstanz Zugriff auf jedes jemals ausgelieferte Sonder-Design und der
 // ganze Wiedererkennungswert waere hinfaellig.
 $testAuswahl = waehlbareIds($testphase);
-assert($testAuswahl === ['ipssl', 'globe'], 'DIE FALLE: in der Testphase duerfen NUR die Auslieferungszustaende waehlbar sein, keine Saison-Designs - gefunden: ' . implode(', ', $testAuswahl));
+assert($testAuswahl === ['sloc', 'globe'], 'DIE FALLE: in der Testphase duerfen NUR die Auslieferungszustaende waehlbar sein, keine Saison-Designs - gefunden: ' . implode(', ', $testAuswahl));
 echo "Test 3 (die Testphase bekommt trotz 'alle Features frei' KEIN Saison-Design) OK\n";
 
 // Test 4: ZURUECKSETZBAR - der Standard ist immer erreichbar, und eine
 // unbekannte ID (Vorlage aus einer neueren Modulversion) faellt sauber darauf
 // zurueck statt ins Leere zu laufen.
-assert(aufloesen('ipssl', $xmas) === 'ipssl', 'der Auslieferungszustand muss jederzeit waehlbar bleiben (Zuruecksetzen)');
+assert(aufloesen('sloc', $xmas) === 'sloc', 'der Auslieferungszustand muss jederzeit waehlbar bleiben (Zuruecksetzen)');
 assert(aufloesen('gibtesnicht', $xmas) === STANDARD_ID, 'eine unbekannte ID muss sauber auf den Standard zurueckfallen');
 echo "Test 4 (auf Standard zurücksetzbar; unbekannte IDs fallen sauber zurück) OK\n";
 
@@ -181,7 +181,7 @@ echo "Test 9 (eine Sonder-Edition zeigt ihr Design von sich aus, ohne manuelle A
 // Test 10: eine AUSDRUECKLICHE Wahl schlaegt die Automatik. Wer trotz
 // Xmas-Lizenz bewusst das neutrale Symbol will, muss es behalten duerfen -
 // sonst waere die Auswahl wertlos.
-assert(aufloesen('ipssl', $xmas) === 'ipssl', 'DER FALLSTRICK: eine ausdrueckliche Wahl des neutralen Zustands darf nicht von der Automatik ueberschrieben werden');
+assert(aufloesen('sloc', $xmas) === 'sloc', 'DER FALLSTRICK: eine ausdrueckliche Wahl des neutralen Zustands darf nicht von der Automatik ueberschrieben werden');
 assert(aufloesen('globe', $xmas) === 'globe', 'dasselbe fuer jede andere ausdrueckliche Wahl');
 echo "Test 10 (eine ausdrückliche Wahl schlägt die Automatik und bleibt bestehen) OK\n";
 
