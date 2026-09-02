@@ -328,7 +328,7 @@
                         },
                         {
                             "type": "Label",
-                            "caption": "Note: DeepL uses its own, uppercase language codes and requires a regional variant for English/Portuguese (EN-GB/EN-US, PT-PT/PT-BR) instead of a plain \"EN\"/\"PT\" like Google. Switching the preferred provider can therefore invalidate already-chosen target languages - affected rows in \"Target languages\" below then need to be re-selected. See section 7 of the documentation."
+                            "caption": "Note: the providers use different spellings for the same language - Google lowercase and without a region (\"en\"), DeepL uppercase and with one (\"EN-GB\"). The module converts between them, so switching the preferred provider leaves your chosen target languages untouched. Only a regional variant is lost when Google answers, since Google does not know regions: \"en-gb\" is then translated as \"en\". See section 7 of the documentation."
                         },
                         {
                             "type": "ValidationTextBox",
