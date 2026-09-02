@@ -2562,15 +2562,16 @@ class SimpleLocale extends IPSModuleStrict
 
         // Build 193 (Nutzer-Wunsch): die Sperrfrist zwischen zwei Sprachwechseln
         // kommt jetzt als ZEITWERT aus der Lizenz, nicht mehr als Ja/Nein-Feature.
-        // 0 = unbegrenzt. Hat nichts mit languageLimit zu tun, das ist die ANZAHL
-        // der Sprachen; und nichts mit 'interval', das ist der Abo-Zyklus.
+        // Angabe in MINUTEN, 0 = unbegrenzt. Hat nichts mit languageLimit zu tun,
+        // das ist die ANZAHL der Sprachen; und nichts mit 'interval', das ist der
+        // Abo-Zyklus.
         //
         // Fehlt das Feld (alle bis Build 192 ausgestellten Schluessel), gilt -1 als
         // "nicht gesetzt" - GetLanguageSwitchIntervalSeconds() faellt dann auf das
         // bisherige Verhalten zurueck, damit ein bestehender Schluessel sich nicht
         // stillschweigend anders verhaelt.
-        $payload['switchIntervalHours'] = isset($payload['switchIntervalHours'])
-            ? max(0, (int) $payload['switchIntervalHours'])
+        $payload['switchIntervalMinutes'] = isset($payload['switchIntervalMinutes'])
+            ? max(0, (int) $payload['switchIntervalMinutes'])
             : -1;
 
         // Build 148 (Nutzer-Vorgabe zum Abo-Modell): Abrechnungszeitraum eines
@@ -2625,7 +2626,7 @@ class SimpleLocale extends IPSModuleStrict
             'features'         => $payload['features'],
             'edition'          => $payload['edition'],
             'interval'         => $payload['interval'],
-            'switchIntervalHours' => $payload['switchIntervalHours'],
+            'switchIntervalMinutes' => $payload['switchIntervalMinutes'],
         ];
         if ($expiresAt !== 0 && $expiresAt < time()) {
             return ['valid' => false, 'expired' => true] + $common;
@@ -10432,9 +10433,11 @@ HTML;
             return 0;
         }
 
-        $hours = (int) ($info['switchIntervalHours'] ?? -1);
-        if ($hours >= 0) {
-            return $hours * 3600;
+        // Minutengenau, damit sich auch kurze Fristen abbilden lassen (z.B. 30
+        // Minuten in einer Ferienwohnung) - eine Stundenangabe waere dafuer zu grob.
+        $minuten = (int) ($info['switchIntervalMinutes'] ?? -1);
+        if ($minuten >= 0) {
+            return $minuten * 60;
         }
 
         if (in_array('unlimited_language_switch', $info['features'] ?? [], true)) {

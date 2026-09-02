@@ -4498,14 +4498,15 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
-* **Build 193 (Nutzer-Wunsch): die Sperrfrist zwischen zwei Sprachwechseln ist
+* **Build 194 (Nutzer-Wunsch): die Sperrfrist zwischen zwei Sprachwechseln ist
   jetzt frei festlegbar - als Zeitwert aus der Lizenz, `0` = unbegrenzt.**
   Vorher gab es nur ein Ja/Nein-Feature (`unlimited_language_switch`) und eine
   fest verdrahtete Konstante von 24 Stunden. In einer **Spezialversion**, die
   Features einzeln zusammenstellt und kein Tier kennt, ließ sich die Dauer damit
   gar nicht festlegen - nur an oder aus.
 
-  Neu in der Lizenz-Nutzlast: `switchIntervalHours`. Das ist ausdrücklich weder
+  Neu in der Lizenz-Nutzlast: `switchIntervalMinutes` - **minutengenau**, damit
+  sich auch kurze Fristen abbilden lassen. Das ist ausdrücklich weder
   `languageLimit` (die **Anzahl** der Sprachen) noch `interval` (der
   Abo-Zyklus) - beide bleiben unberührt.
 
