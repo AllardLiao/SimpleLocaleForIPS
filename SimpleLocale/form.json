@@ -226,7 +226,7 @@
                         },
                         {
                             "type": "Label",
-                            "caption": "Alternativ, unabhängig von diesem Feld: eine komplett eigenständige Kachel (z.B. eine separate HTMLBox-Instanz) lässt sich mit IPSSL_GetAvailableLanguages()/IPSSL_SetLanguage() bauen - siehe Dokumentation Abschnitt 9. Beide Wege benötigen dieselbe Pro Edition."
+                            "caption": "Alternativ, unabhängig von diesem Feld: eine komplett eigenständige Kachel (z.B. eine separate HTMLBox-Instanz) lässt sich mit SLOC_GetAvailableLanguages()/SLOC_SetLanguage() bauen - siehe Dokumentation Abschnitt 9. Beide Wege benötigen dieselbe Pro Edition."
                         }
                     ]
                 },

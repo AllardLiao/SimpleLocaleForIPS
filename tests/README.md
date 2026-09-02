@@ -54,7 +54,7 @@ Dieser eine Test faellt in zwei Punkten aus dem Rahmen:
 Der Schluessel wird daher aus der Umgebung gelesen:
 
 ```bash
-IPSSL_LICENSE_SIGNING_KEY='<base64-secret-key>' \
+SLOC_LICENSE_SIGNING_KEY='<base64-secret-key>' \
   php -d zend.assertions=1 -d assert.exception=1 tests/test_license_features.php
 ```
 

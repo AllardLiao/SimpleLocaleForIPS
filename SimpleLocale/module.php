@@ -469,25 +469,25 @@ class SimpleLocale extends IPSModuleStrict
         // aus wie Migrationen, sind es aber nicht - sie tragen ebenso frisch
         // gescannte und von Hand angelegte Zeilen und bleiben deshalb.
 
-        // IPSSL_AutoRescan(), NICHT IPSSL_Rescan() - siehe Kommentar dort (kein
+        // SLOC_AutoRescan(), NICHT SLOC_Rescan() - siehe Kommentar dort (kein
         // ReloadForm(), damit ein offenes Konfigurationsformular während der
         // Bearbeitung nicht mitten drin neu geladen wird).
-        $this->RegisterTimer($this->GetAutoRescanTimerIdent(), 0, 'IPSSL_AutoRescan($_IPS[\'TARGET\']);');
+        $this->RegisterTimer($this->GetAutoRescanTimerIdent(), 0, 'SLOC_AutoRescan($_IPS[\'TARGET\']);');
         // Aktualisiert nur die guest-facing Statistik-Anzeige in bereits offenen
         // Kacheln (siehe RefreshTranslationStatsTile/propertyShowTranslationStats) -
         // rührt NIE das Konfigurationsformular an, komplett unabhängig vom
         // Auto-Rescan-Timer.
-        $this->RegisterTimer($this->GetTranslationStatsTimerIdent(), 0, 'IPSSL_RefreshTranslationStatsTile($_IPS[\'TARGET\']);');
+        $this->RegisterTimer($this->GetTranslationStatsTimerIdent(), 0, 'SLOC_RefreshTranslationStatsTile($_IPS[\'TARGET\']);');
         // Build 71: einmaliger (ReloadForm-freier) Debounce-Flush fuer gepufferte
         // VM_UPDATE-Zeilenaenderungen, siehe BufferPendingTrackedRowUpdate/
         // ProcessPendingRowUpdateFlush - ruehrt das Konfigurationsformular nie direkt
         // an, schreibt nur die betroffene(n) Property(s).
-        $this->RegisterTimer($this->GetPendingRowUpdateFlushTimerIdent(), 0, 'IPSSL_ProcessPendingRowUpdateFlush($_IPS[\'TARGET\']);');
+        $this->RegisterTimer($this->GetPendingRowUpdateFlushTimerIdent(), 0, 'SLOC_ProcessPendingRowUpdateFlush($_IPS[\'TARGET\']);');
         // Taegliche Lizenz-Statuspruefung (Widerruf/Ablaufverlaengerung ohne neuen
         // Schluessel, siehe CheckLicenseStatus/GetLicenseInfo) - Intervall wird erst in
         // ApplyChanges() gesetzt (nur waehrend IS_TRIAL_BUILD, wie die bestehende
         // Aktivierungsmeldung).
-        $this->RegisterTimer($this->GetLicenseCheckTimerIdent(), 0, 'IPSSL_CheckLicenseStatus($_IPS[\'TARGET\']);');
+        $this->RegisterTimer($this->GetLicenseCheckTimerIdent(), 0, 'SLOC_CheckLicenseStatus($_IPS[\'TARGET\']);');
     }
 
     public function Destroy(): void
@@ -615,7 +615,7 @@ class SimpleLocale extends IPSModuleStrict
         if (!$this->IsSelectableGuestLanguage($currentLanguageForValidation)) {
             $fallbackLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
             $this->SendDebug(
-                'IPSSL_Language',
+                'SLOC_Language',
                 sprintf(
                     'Aktive Sprache "%s" ist nicht (mehr) unter den konfigurierten Zielsprachen (%s) - '
                         . 'auf die Quellsprache "%s" zurueckgesetzt, damit sich die Instanz wieder speichern laesst.',
@@ -678,7 +678,7 @@ class SimpleLocale extends IPSModuleStrict
         // HasLicenseFeature) - ohne "auto_rescan" bleibt der Timer aus, unabhängig
         // vom gespeicherten Property-Wert (der selbst nicht zurückgesetzt wird, damit
         // er bei erneuter Lizenzierung sofort wieder greift). Manueller Rescan per
-        // Button/IPSSL_Rescan bleibt davon unberührt und für alle Editionen nutzbar.
+        // Button/SLOC_Rescan bleibt davon unberührt und für alle Editionen nutzbar.
         $interval = $this->HasLicenseFeature('auto_rescan') ? $this->ReadPropertyInteger(self::propertyAutoRescanInterval) : 0;
         $this->SetTimerInterval($this->GetAutoRescanTimerIdent(), $interval > 0 ? $interval * 60 * 1000 : 0);
 
@@ -716,7 +716,7 @@ class SimpleLocale extends IPSModuleStrict
         // RequestAction) - dieser Pfad ruft sonst NUR ApplyChanges() auf, das fuer
         // sich genommen keine Kachel-/Objektnamen/-werte anfasst (das tat bisher
         // ausschliesslich ApplyLanguage(), erreichbar nur ueber die Kachel selbst
-        // oder IPSSL_SetLanguage()). Vergleich gegen attributeLastAppliedLanguage
+        // oder SLOC_SetLanguage()). Vergleich gegen attributeLastAppliedLanguage
         // statt direkt gegen den vorherigen Property-Wert, weil ApplyLanguage()
         // selbst per IPS_SetProperty+IPS_ApplyChanges erneut hier hineinlaeuft -
         // das Attribut wird dabei VOR diesem Reentry gesetzt (siehe dort), sodass
@@ -837,7 +837,7 @@ class SimpleLocale extends IPSModuleStrict
                 // Property zu lassen.
                 if (!$this->IsSelectableGuestLanguage($language)) {
                     $this->SendDebug(
-                        'IPSSL_Language',
+                        'SLOC_Language',
                         sprintf(
                             'Sprachwechsel auf "%s" abgelehnt - nicht in den konfigurierten Zielsprachen (%s). '
                                 . 'Typische Ursache: eigene Sprachauswahl-Kachel mit fest eingetragenen Sprachcodes.',
@@ -1557,8 +1557,8 @@ class SimpleLocale extends IPSModuleStrict
     }
 
     // Symcon registriert öffentliche Methoden automatisch als globale Funktion
-    // "<prefix>_<Methodenname>" (Prefix "IPSSL" aus module.json) - daher genügt
-    // hier die public-Methode, ein eigenes "function IPSSL_..." ist nicht nötig.
+    // "<prefix>_<Methodenname>" (Prefix "SLOC" aus module.json) - daher genügt
+    // hier die public-Methode, ein eigenes "function SLOC_..." ist nicht nötig.
     public function TranslateText(int $ObjectID): string
     {
         $currentLanguage = $this->ReadPropertyString(self::propertyCurrentLanguage);
@@ -1644,7 +1644,7 @@ class SimpleLocale extends IPSModuleStrict
     public function GetAvailableLanguages(): string
     {
         if (!$this->HasLicenseFeature('custom_tile')) {
-            throw new Exception('IPSSL_GetAvailableLanguages benoetigt die Pro Edition (Feature "custom_tile").');
+            throw new Exception('SLOC_GetAvailableLanguages benoetigt die Pro Edition (Feature "custom_tile").');
         }
 
         return $this->BuildAvailableLanguagesJson();
@@ -1700,13 +1700,13 @@ class SimpleLocale extends IPSModuleStrict
     public function SetLanguage(string $LanguageCode): void
     {
         if (!$this->HasLicenseFeature('custom_tile')) {
-            throw new Exception('IPSSL_SetLanguage benoetigt die Pro Edition (Feature "custom_tile").');
+            throw new Exception('SLOC_SetLanguage benoetigt die Pro Edition (Feature "custom_tile").');
         }
 
         $this->RequestAction(self::identLanguage, $LanguageCode);
     }
 
-    // Manuell ausgelöst (Formular-Button oder IPSSL_Rescan()) - der Admin hat den
+    // Manuell ausgelöst (Formular-Button oder SLOC_Rescan()) - der Admin hat den
     // Rescan selbst angestoßen und sieht die aktualisierte Liste bereits über
     // Symcons automatischen Konsolen-Reload nach dem RequestAction (siehe Build
     // 116/ScanRootTree - kein eigener ReloadForm()-Aufruf mehr nötig).
@@ -1925,7 +1925,7 @@ class SimpleLocale extends IPSModuleStrict
     {
         $this->WriteAttributeString(self::attributeTranslationCache, '{}');
         $this->UpdateFormField('CacheClearedPopup', 'visible', true);
-        $this->SendDebug('IPSSL_Debug', 'ClearTranslationCache: Cache geleert', 0);
+        $this->SendDebug('SLOC_Debug', 'ClearTranslationCache: Cache geleert', 0);
     }
 
     // Button "Übersetzungsanbieter prüfen": schickt EINE einzelne, minimale
@@ -2668,7 +2668,7 @@ class SimpleLocale extends IPSModuleStrict
     //     IsLanguageSwitchRateLimited.
     //   - "custom_tile" schaltet den editierbaren Kachel-HTML-Code frei (Property
     //     UseCustomTile/CustomTileHtml, siehe GetVisualizationTile) UND die
-    //     öffentlichen Funktionen IPSSL_GetAvailableLanguages/IPSSL_SetLanguage
+    //     öffentlichen Funktionen SLOC_GetAvailableLanguages/SLOC_SetLanguage
     //     für eine komplett eigenständige, separat gebaute Kachel - beide Wege
     //     werfen ohne dieses Feature eine Exception bzw. bleiben wirkungslos.
     //   - "manual_translations" (Build 89, ab Standard-Lizenz) schaltet die "Eigene
@@ -4167,6 +4167,13 @@ class SimpleLocale extends IPSModuleStrict
     // Build 164: Name des privaten Profils, das fuer EINE Variable geforkt wird.
     // Enthaelt Instanz- UND Variablen-ID, ist also eindeutig und laesst sich beim
     // Zurueckstellen zielsicher wieder loeschen.
+    //
+    // Build 185: bewusst weiterhin "IPSSL.", obwohl das Funktions-Praefix jetzt
+    // SLOC lautet. Das hier ist kein Anzeigename, sondern der PERSISTIERTE Name
+    // eines angelegten Variablenprofils - bestehende Instanzen referenzieren ihn
+    // aus IPS_SetVariableCustomProfile heraus. Ein Umbenennen wuerde die
+    // vorhandenen Profile verwaisen lassen und das Zurueckstellen auf das
+    // Original ins Leere laufen lassen.
     private function GetForkedProfileName(int $ValueObjectID): string
     {
         return 'IPSSL.' . $this->InstanceID . '.' . $ValueObjectID;
@@ -5223,7 +5230,7 @@ class SimpleLocale extends IPSModuleStrict
         // ohne Raterei nachtragen laesst (Kandidatenliste oben ergaenzen).
         if ($properties !== []) {
             $this->SendDebug(
-                'IPSSL_Visu',
+                'SLOC_Visu',
                 sprintf(
                     'Keine bekannte Startkategorie-Property in Instanz %d gefunden. Vorhandene Properties: %s',
                     $VisuInstanceID,
@@ -5287,7 +5294,7 @@ class SimpleLocale extends IPSModuleStrict
     // werden).
     //
     // Build 141 (live gemeldeter Bug): $IsInteractive unterscheidet den manuellen
-    // Rescan-Button/IPSSL_Rescan() vom Hintergrund-Timer - gebraucht wird das NUR
+    // Rescan-Button/SLOC_Rescan() vom Hintergrund-Timer - gebraucht wird das NUR
     // im Abbruch-Fall "unbenannte Objekte" weiter unten. Grund: die oben
     // beschriebene Build-116-Annahme ("die Konsole laedt nach jedem RequestAction
     // ohnehin selbst neu") stimmt nur, WEIL der normale Durchlauf am Ende
@@ -6682,7 +6689,7 @@ class SimpleLocale extends IPSModuleStrict
             if ($valueObjectID !== 0) {
                 if (isset($seenValueObjectIDs[$valueObjectID])) {
                     $this->SendDebug(
-                        'IPSSL_Debug',
+                        'SLOC_Debug',
                         'DeduplicateTextRowsByValueObjectID: dropping duplicate row for ValueObjectID=' . $valueObjectID
                             . ' (ObjectID=' . ($row['ObjectID'] ?? '?') . '), already covered by an earlier row',
                         0
@@ -8039,7 +8046,7 @@ class SimpleLocale extends IPSModuleStrict
     // ist immer noch besser als eine dauerhaft blockierte Instanz.
     private function GetTranslationCacheSemaphoreIdent(): string
     {
-        return 'IPSSL_TranslationCache_' . $this->InstanceID;
+        return 'SLOC_TranslationCache_' . $this->InstanceID;
     }
 
     private function GetCachedTranslation(string $SourceLanguage, string $TargetLanguage, string $SourceText): ?string
@@ -9925,7 +9932,7 @@ class SimpleLocale extends IPSModuleStrict
         // in einem Template nichts verloren (siehe Build 183), und ein
         // Sprachwechsel zurueck aufs Original schreibt ihn kurzzeitig hinein.
         // Bewusst ueber die OEFFENTLICHE Funktion, nicht ueber einen eigenen
-        // Lesepfad: der Platzhalter und IPSSL_GetCurrentLanguageCode() muessen
+        // Lesepfad: der Platzhalter und SLOC_GetCurrentLanguageCode() muessen
         // denselben Wert liefern, sonst zeigt ein Template etwas anderes an, als
         // ein Skript daneben ausliest. Sie bildet den modulinternen Sentinel
         // ORIGINAL_IMPORT bereits auf die Quellsprache ab (siehe
@@ -10141,7 +10148,7 @@ class SimpleLocale extends IPSModuleStrict
 
      Ein Klick auf eine Flagge, deren Code nicht konfiguriert ist, wird
      abgelehnt: die aktive Sprache bleibt stehen, und der Gast bekommt einen
-     Hinweis in der Kachel (siehe auch Debug-Kategorie "IPSSL_Language"). -->
+     Hinweis in der Kachel (siehe auch Debug-Kategorie "SLOC_Language"). -->
 <div style="display:flex; align-items:center; gap:10px;">
     <span style="opacity:0.6; font-size:13px;">Custom tile example:</span>
     <span onclick="requestAction('Language', 'de');" style="cursor:pointer; font-size:24px;" title="Deutsch">🇩🇪</span>

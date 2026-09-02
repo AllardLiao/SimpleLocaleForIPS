@@ -304,7 +304,7 @@ trait SimpleLocaleConstants
     // im Konfigurationsformular nur das Auswahlfeld "Aktuell aktive Sprache" umstellt
     // und "Uebernehmen" klickt (ein reines ApplyChanges liest/speichert Properties,
     // loest aber fuer sich genommen keine Umbenennungen aus - das tat bisher nur der
-    // RequestAction-Pfad ueber die Kachel/IPSSL_SetLanguage). ApplyChanges vergleicht
+    // RequestAction-Pfad ueber die Kachel/SLOC_SetLanguage). ApplyChanges vergleicht
     // beide Werte und holt die Umbenennung ueber ApplyLanguage() nach, falls sie noch
     // aussteht - ohne dieses Attribut wuerde der Vergleich sonst immer "gleich" sehen,
     // sobald ApplyLanguage() selbst per IPS_SetProperty+IPS_ApplyChanges erneut in
@@ -655,8 +655,14 @@ trait SimpleLocaleConstants
     // Zellkorrektur.
     private const attributeLastActiveLanguageContentFingerprint = 'LastActiveLanguageContentFingerprint';
 
-    // Timer: Präfix als Salt auf den Namen, falls im jeweiligen IPS-System
-    // bereits ein Timer/Objekt mit demselben Basisnamen existieren sollte.
+    // Timer: Präfix als Salt auf den Namen, falls im jeweiligen System bereits ein
+    // Timer/Objekt mit demselben Basisnamen existieren sollte.
+    //
+    // Build 185: bewusst weiterhin "IPSSL_TIMER_", obwohl das Funktions-Präfix
+    // jetzt SLOC lautet. Daraus entstehen die per RegisterTimer() angelegten,
+    // PERSISTIERTEN Timer-Idents - ein Umbenennen legte auf jeder bestehenden
+    // Installation neue Timer an und ließe die alten als verwaiste Objekte
+    // zurück. Der Wert ist nirgends sichtbar, er ist reines Salz.
     private const timerPrefix = 'IPSSL_TIMER_';
     private const timerIdentAutoRescan = 'AutoRescan';
     private const timerIdentTranslationStats = 'TranslationStats';
@@ -770,5 +776,5 @@ trait SimpleLocaleConstants
 class GUIDs
 {
     // --- Modul GUIDs (Instanzen) ---
-    public const IPSSL_SimpleLocale = '{1A2E3892-FE35-9E4E-A3A8-B983B0C41F64}';
+    public const SLOC_SimpleLocale = '{1A2E3892-FE35-9E4E-A3A8-B983B0C41F64}';
 }

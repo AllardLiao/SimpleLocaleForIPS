@@ -103,7 +103,7 @@ echo "Test 6 (die Status-Rangfolge bleibt korrekt: Root/Testphase gewinnen, Anbi
 // Test 7: Symmetrie-Check gegen die reale module.php.
 $moduleSource = file_get_contents(dirname(__DIR__) . '/SimpleLocale/module.php');
 assert(strpos($moduleSource, 'private function ScanRootTree(bool $IsInteractive = false): void') !== false, 'ScanRootTree() muss den neuen $IsInteractive-Parameter tragen');
-assert(strpos($moduleSource, '$this->ScanRootTree(true);') !== false, 'Rescan() (manuell/IPSSL_Rescan) muss ScanRootTree(true) aufrufen');
+assert(strpos($moduleSource, '$this->ScanRootTree(true);') !== false, 'Rescan() (manuell/SLOC_Rescan) muss ScanRootTree(true) aufrufen');
 assert(preg_match('/public function AutoRescan\(\): void\s*\{\s*\$this->ScanRootTree\(\);/', $moduleSource) === 1, 'AutoRescan() muss ScanRootTree() OHNE das Interaktiv-Flag aufrufen - der Hintergrund-Timer darf nie neu laden');
 assert(strpos($moduleSource, 'private function HasPendingUnnamedObjects(): bool') !== false, 'der gemeinsame Helfer HasPendingUnnamedObjects() muss existieren');
 assert(strpos($moduleSource, '} elseif ($this->HasPendingUnnamedObjects()) {') !== false, 'ApplyChanges() muss die anstehenden unbenannten Objekte in seiner Status-Kaskade beruecksichtigen');

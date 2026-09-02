@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 // Standalone replica test for build 95 (2026-08-21): live-confirmed bug via
-// debug log (IPSSL_GreetingDiag, Build 94 diagnostic instrumentation).
+// debug log (SLOC_GreetingDiag, Build 94 diagnostic instrumentation).
 //
 // Sequence, confirmed by the actual log dump:
 //   1. Guest switches guest visu language de -> en. ApplyGreetingLanguage()

@@ -784,7 +784,7 @@ eigenen iframe und eigene Overlays können dessen Grenzen nicht überschreiten -
 ein Browser-Dialog dagegen schon.
 
 Für eigene HTMLBox-Popups oder Hinweise außerhalb der live umbenannten
-Objekte liefert `IPSSL_TranslateText()` den Text in der aktuell aktiven
+Objekte liefert `SLOC_TranslateText()` den Text in der aktuell aktiven
 Sprache.
 
 **Eigene Sprachauswahl-Kachel (Pro-Feature `custom_tile`):** Es gibt zwei
@@ -932,7 +932,7 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
 
      | Platzhalter | liefert |
      |---|---|
-     | `<!--AVAILABLE_LANGUAGES-->` | JSON-Liste aller konfigurierten Sprachen: `[{"code":"de","name":"Deutsch","current":true}, …]` - dieselbe Struktur wie `IPSSL_GetAvailableLanguages()` |
+     | `<!--AVAILABLE_LANGUAGES-->` | JSON-Liste aller konfigurierten Sprachen: `[{"code":"de","name":"Deutsch","current":true}, …]` - dieselbe Struktur wie `SLOC_GetAvailableLanguages()` |
      | `<!--ACTIVE_LANGUAGE-->` | der Code der aktiven Sprache, als JSON-String: `"de"` |
 
      Beide liefern **immer gültiges JSON**, auch wenn etwas fehlt oder gesperrt
@@ -959,7 +959,7 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
      ist modulintern und erscheint hier nie - ist die Ursprungssprache aktiv,
      steht deren Code drin.
 
-     Anders als die gleichnamige Funktion `IPSSL_GetAvailableLanguages()` sind
+     Anders als die gleichnamige Funktion `SLOC_GetAvailableLanguages()` sind
      **beide Platzhalter an kein Feature gebunden**. Sie brauchen es nicht: an
      dieser Stelle ist die Sperre bereits gefallen. Eigenes Kachel-HTML wirkt
      sich überhaupt nur mit `custom_tile` aus - ohne das Feature lässt sich ein
@@ -1074,16 +1074,16 @@ gesperrt** (nicht nur ausgegraut im Formular, siehe unten):
 2. **Komplett eigenständige, separat gebaute Kachel** (z. B. eine eigene
    HTMLBox-Instanz, die gar nicht über `GetVisualizationTile()` dieser
    Instanz läuft) - dafür zwei Befehle:
-   - `IPSSL_GetAvailableLanguages(int $InstanzID): string` - liefert die
+   - `SLOC_GetAvailableLanguages(int $InstanzID): string` - liefert die
      wählbaren Sprachen als JSON-Array `[{code, name, current}, ...]`, live
      in die aktuell aktive Sprache übersetzt und alphabetisch sortiert -
      exakt dieselbe Liste wie im eingebauten Dropdown - also ausschließlich
      konfigurierte Sprachcodes, die Scan-Sprache eingeschlossen. Genau diese
-     Werte akzeptiert auch `IPSSL_SetLanguage()`.
-   - `IPSSL_SetLanguage(int $InstanzID, string $Sprachcode): void` -
+     Werte akzeptiert auch `SLOC_SetLanguage()`.
+   - `SLOC_SetLanguage(int $InstanzID, string $Sprachcode): void` -
      wechselt die aktive Sprache, mit derselben Logik wie ein Klick im
      eingebauten Dropdown (Testphase-/Rate-Limit-Prüfung inklusive).
-   - `IPSSL_GetCurrentLanguageCode(int $InstanzID): string` - der Code der
+   - `SLOC_GetCurrentLanguageCode(int $InstanzID): string` - der Code der
      gerade aktiven Sprache (z. B. `"en"`), um die eigene Anzeige darauf
      einzustellen: welcher Eintrag hervorgehoben wird, ob überhaupt neu
      aufgebaut werden muss. Liefert immer einen echten Sprachcode - ist die
@@ -1204,7 +1204,7 @@ Standard-Tier) schaltet zusätzliche Fähigkeiten frei - aktuell:
   frei (siehe [Abschnitt 7](#7-visualisierung)) - den editierbaren
   Kachel-HTML-Code (Property "Eigene Sprachauswahl-Kachel verwenden" +
   Button "Eigenen Kachel-HTML-Code bearbeiten") UND die Befehle
-  `IPSSL_GetAvailableLanguages`/`IPSSL_SetLanguage` in
+  `SLOC_GetAvailableLanguages`/`SLOC_SetLanguage` in
   [Abschnitt 9](#9-php-befehlsreferenz) für eine komplett eigenständige
   Kachel. Ohne dieses Flag bleibt der Button ausgegraut (samt Hinweis "Pro
   Edition erforderlich"), die eingebaute Kachel bleibt immer aktiv, und die
@@ -1386,23 +1386,23 @@ Vor jedem echten Release:
 
 ### 9. PHP-Befehlsreferenz
 
-`string IPSSL_TranslateText(integer $InstanzID, integer $ObjektID);`
+`string SLOC_TranslateText(integer $InstanzID, integer $ObjektID);`
 Liefert den Inhalt der "Eigene Texte"-Zeile für die angegebene Objekt-ID
 (die String-Variable im Root-Baum) in der aktuell aktiven Sprache
 (Fallback: Quelltext), z. B. für Popup-Inhalte in eigenen HTMLBox-Skripten.
 
 Beispiel:
-`IPSSL_TranslateText(12345, 67890);`
+`SLOC_TranslateText(12345, 67890);`
 
-`void IPSSL_Rescan(integer $InstanzID);`
+`void SLOC_Rescan(integer $InstanzID);`
 Liest den konfigurierten Root der Visualisierung neu ein und übersetzt neu
 gefundene oder noch unübersetzte Einträge. Entspricht dem Button
 "Visualisierung neu einlesen" im Modul-Formular.
 
 Beispiel:
-`IPSSL_Rescan(12345);`
+`SLOC_Rescan(12345);`
 
-`string IPSSL_TranslateExternalText(integer $InstanzID, string $Text, string $Quellsprache = "");`
+`string SLOC_TranslateExternalText(integer $InstanzID, string $Text, string $Quellsprache = "");`
 Übersetzt beliebigen Text live in die aktuell aktive Sprache dieser
 Instanz - für Modulentwickler, deren eigenes Modul eine eigene HTML-Kachel
 ausliefert (`GetVisualizationTile()`) statt Text in einer von Simple Locale
@@ -1415,20 +1415,20 @@ abgelaufener Testphase gerade nicht kostenfreie Sprache liefern den Text
 unverändert zurück - nie ein Fehler.
 
 Beispiel (Scan-Sprache dieser Instanz, z. B. Deutsch):
-`IPSSL_TranslateExternalText(12345, 'Guten Tag');`
+`SLOC_TranslateExternalText(12345, 'Guten Tag');`
 
 Beispiel (abweichende, explizit angegebene Quellsprache):
-`IPSSL_TranslateExternalText(12345, 'Good day', 'en');`
+`SLOC_TranslateExternalText(12345, 'Good day', 'en');`
 
-`string IPSSL_GetCurrentLanguageCode(integer $InstanzID);`
+`string SLOC_GetCurrentLanguageCode(integer $InstanzID);`
 Liefert den aktuell aktiven Sprachcode dieser Instanz (z. B. `"en"`) - 
 nützlich, um eigene Inhalte nur bei einem tatsächlichen
 Sprachwechsel neu aufzubauen, statt bei jedem Rendern blind zu übersetzen.
 
 Beispiel:
-`IPSSL_GetCurrentLanguageCode(12345);`
+`SLOC_GetCurrentLanguageCode(12345);`
 
-`string IPSSL_GetAvailableLanguages(integer $InstanzID);`
+`string SLOC_GetAvailableLanguages(integer $InstanzID);`
 Pro-Feature `custom_tile` (siehe [Abschnitt 8](#8-lizenz-und-testversion)) -
 **wirft eine Exception ohne dieses Feature**, statt nur leer/wirkungslos zu
 bleiben: liefert die aktuell wählbaren Sprachen als JSON-Array
@@ -1440,23 +1440,23 @@ anzupassen, siehe dort den Button "Eigenen Kachel-HTML-Code bearbeiten" -
 das braucht diesen Befehl nicht).
 
 Beispiel:
-`IPSSL_GetAvailableLanguages(12345);`
+`SLOC_GetAvailableLanguages(12345);`
 
-`void IPSSL_SetLanguage(integer $InstanzID, string $Sprachcode);`
+`void SLOC_SetLanguage(integer $InstanzID, string $Sprachcode);`
 Pro-Feature `custom_tile` - **wirft eine Exception ohne dieses Feature**:
 wechselt die aktive Sprache von außen, mit derselben Logik wie ein Klick im
 eingebauten Dropdown (Testphase-/Rate-Limit-Prüfung inklusive) - für eine
 komplett eigenständige, selbstgebaute Sprachauswahl-Kachel.
 
 Beispiel:
-`IPSSL_SetLanguage(12345, 'en');`
+`SLOC_SetLanguage(12345, 'en');`
 
 ### 10. Integration für Modulentwickler
 
 Liefert dein eigenes Modul eine eigene HTML-Kachel aus
 (via `GetVisualizationTile()`), lässt sich dessen Text-Inhalt live in die
 gerade aktive Sprache einer Visualisierung mit Simple-Locale-Instanz übersetzen - ganz
-ohne eigenen Google-Account, da `IPSSL_TranslateExternalText()` den
+ohne eigenen Google-Account, da `SLOC_TranslateExternalText()` den
 Google-API-Key der jeweiligen Simple-Locale-Instanz mitverwendet.
 
 Da die meisten Nutzer (noch) keine Simple-Locale-Instanz installiert haben,
@@ -1467,7 +1467,7 @@ zu verdrahten:
 ```php
 private function TranslateViaSimpleLocale(string $Text, string $SourceLanguage): string
 {
-    if (!function_exists('IPSSL_TranslateExternalText')) {
+    if (!function_exists('SLOC_TranslateExternalText')) {
         // Simple Locale ist beim Nutzer nicht installiert - Text unverändert
         // anzeigen, kein Fehler.
         return $Text;
@@ -1481,7 +1481,7 @@ private function TranslateViaSimpleLocale(string $Text, string $SourceLanguage):
 
     // Läuft eine einzelne SimpleLocale-Instanz beim Nutzer (üblicher Fall), reicht die
     // erste gefundene - bei mehreren Instanzen ggf. eine eigene Auswahl anbieten.
-    return IPSSL_TranslateExternalText($instanceIDs[0], $Text, $SourceLanguage);
+    return SLOC_TranslateExternalText($instanceIDs[0], $Text, $SourceLanguage);
 }
 ```
 
@@ -2539,7 +2539,7 @@ der ursprünglichen Fassung übernommen.
   nachübersetzten "Eigenen Texte" (siehe `ApplyTrackedVariableUpdate`),
   die nicht über den normalen Rescan-Pfad laufen.
 * **Build 94, rein diagnostisch: temporäres `SendDebug`-Logging (Kategorie
-  `IPSSL_GreetingDiag`) rund um die "Begrüßung" (Modus "Variable").** Live
+  `SLOC_GreetingDiag`) rund um die "Begrüßung" (Modus "Variable").** Live
   gemeldet: nach einem Sprachwechsel in der Gäste-Visu (de → en) und einem
   anschließenden Rescan stand `ORIGINAL_IMPORT` der Begrüßungs-Zeile
   fälschlich auf dem englischen Text, obwohl die Quellsprache weiterhin
@@ -2680,7 +2680,7 @@ der ursprünglichen Fassung übernommen.
   Trennzeichen hätte dort z. B. ein eigenes `parseInt()` stillschweigend
   brechen können.
 * **Build 100, rein diagnostisch: temporäres `SendDebug`-Logging (Kategorie
-  `IPSSL_TranslateGapDiag`) in `FillLanguageColumn()`.** Live gemeldet: nach
+  `SLOC_TranslateGapDiag`) in `FillLanguageColumn()`.** Live gemeldet: nach
   einem vollständigen Rescan blieben viele "Eigene Texte"-Zellen für eine
   einzelne Zielsprache (hier: Spanisch) leer, obwohl weder eine Anbieter-Pause
   aktiv war noch der Rohtext als JSON erkannt wurde (das wäre erwartetes
@@ -2849,8 +2849,8 @@ der ursprünglichen Fassung übernommen.
   übersetzt sie beim Rescan neu, wodurch die manuelle Korrektur überschrieben
   wird - dieselbe Funktion, bei der Build 100/101 bereits einmal eine
   verwandte Lücke fand (dort: Rohtext wurde leer). Neues
-  `SendDebug('IPSSL_NameRevertDiag', ...)` in `FillLanguageColumn()` (ersetzt
-  das in Build 101 entfernte `IPSSL_TranslateGapDiag`) protokolliert für jede
+  `SendDebug('SLOC_NameRevertDiag', ...)` in `FillLanguageColumn()` (ersetzt
+  das in Build 101 entfernte `SLOC_TranslateGapDiag`) protokolliert für jede
   nicht-leere, nicht als JSON erkannte Zeile die vollständige
   Pending/Aktuell-Entscheidung. Rein additiv, keine Verhaltensänderung (volle
   Regressionssuite unverändert grün) - wird entfernt bzw. durch die
@@ -3001,7 +3001,7 @@ der ursprünglichen Fassung übernommen.
   `CLEANUP_RELOAD_DELAY_SECONDS` (5s) verzögerten `ReloadForm()`
   (`ProcessDeferredCleanupReload()`) durch einen ZUSÄTZLICHEN,
   nicht selbst ausgelösten `GetConfigurationForm()`-Aufruf vorzeitig
-  konsumiert - noch nicht bestätigt. Neues `SendDebug('IPSSL_CleanupCountDiag',
+  konsumiert - noch nicht bestätigt. Neues `SendDebug('SLOC_CleanupCountDiag',
   ...)` protokolliert mit `microtime(true)`-Zeitstempeln jeden
   `GetConfigurationForm()`-Aufruf (gelesener Zählerwert, ob zurückgesetzt),
   das Ende von `CleanupOrphanedRows()` (geschriebener Zählerwert) und den
@@ -3056,10 +3056,10 @@ der ursprünglichen Fassung übernommen.
   frisch, jede manuelle Korrektur ist damit verloren. Fix: der gesamte
   Chart-Scan-Block in `WalkTree()` läuft jetzt in einem eigenen
   `try`/`catch (\Throwable $e)` - ein Fehler bei einem einzelnen Chart wird
-  geloggt (`SendDebug('IPSSL_ChartScanError', ...)`) und übersprungen, statt
+  geloggt (`SendDebug('SLOC_ChartScanError', ...)`) und übersprungen, statt
   den kompletten restlichen Baum-Scan (und damit potenziell zahllose andere,
   völlig unbeteiligte Objekte) zu gefährden. Zusätzlich neues
-  `SendDebug('IPSSL_CleanupCountDiag', ...)` in `CleanupOrphanedRows()`:
+  `SendDebug('SLOC_CleanupCountDiag', ...)` in `CleanupOrphanedRows()`:
   protokolliert vor jedem Löschen die Größe des frischen Live-Scans gegen
   die bestehende Property sowie die exakten ObjectIDs jeder tatsächlich zu
   entfernenden "Objektnamen"-Zeile - damit sich ein unvollständiger Scan
@@ -3088,7 +3088,7 @@ der ursprünglichen Fassung übernommen.
   Build 113 geäußerte Verdacht auf massenhaften Datenverlust durch einen
   abgebrochenen `WalkTree()`-Durchlauf ist durch denselben Log NICHT
   bestätigt (in diesem Lauf war `removedCount=0`, kein
-  `IPSSL_ChartScanError` aufgetreten) - bleibt aber vorsorglich abgesichert,
+  `SLOC_ChartScanError` aufgetreten) - bleibt aber vorsorglich abgesichert,
   bis ein Lauf mit tatsächlich zu entfernenden Zeilen das endgültig klärt.
   Regressionstest ergänzt, volle Suite grün.
 * **Build 115 klärt den "N+1"-Zähler bei "Aufräumen" endgültig auf (kein
@@ -3138,8 +3138,8 @@ der ursprünglichen Fassung übernommen.
   (String-Variablen)", in allen vier Sprachen.
 
   Als Nebenaufräumung außerdem entfernt: das komplette temporäre
-  Diagnose-Logging aus Build 111/113 (`IPSSL_CleanupCountDiag`/
-  `IPSSL_ChartScanError`) - beide damit untersuchten Verdachtsfälle sind
+  Diagnose-Logging aus Build 111/113 (`SLOC_CleanupCountDiag`/
+  `SLOC_ChartScanError`) - beide damit untersuchten Verdachtsfälle sind
   jetzt aufgeklärt bzw. abgesichert, die zugehörigen `try`/`catch`-Schutz-
   mechanismen selbst bleiben unverändert bestehen, nur ihr Logging wurde
   entfernt. Regressionstest komplett auf die neue Architektur umgeschrieben
@@ -3986,7 +3986,7 @@ der ursprünglichen Fassung übernommen.
   nie einen Reload, und das gerade frisch geschriebene Attribut wurde nie
   gerendert. `ScanRootTree()` bekommt dafür einen neuen Parameter
   `$IsInteractive`, den ausschließlich der manuelle Weg (`Rescan()`/
-  `IPSSL_Rescan()`) setzt - der Auto-Rescan-Timer läuft bewusst weiterhin ohne,
+  `SLOC_Rescan()`) setzt - der Auto-Rescan-Timer läuft bewusst weiterhin ohne,
   damit der bereits in Build 60 behobene Bug (ein Hintergrund-Rescan reißt dem
   Admin das offene Formular mitten in der Bearbeitung weg und verwirft unsavte
   Änderungen) nicht wieder eingeschleppt wird.
@@ -4038,7 +4038,7 @@ der ursprünglichen Fassung übernommen.
      anbietet, zusätzlich die Quellsprache und der interne Rückfall
      `ORIGINAL_IMPORT`). Ein unbekannter Code wird abgelehnt, die aktive Sprache
      bleibt unverändert stehen, und die Ablehnung landet mit Angabe der
-     konfigurierten Sprachen in der neuen Debug-Kategorie `IPSSL_Language`. Die
+     konfigurierten Sprachen in der neuen Debug-Kategorie `SLOC_Language`. Die
      Prüfung läuft bewusst **vor** der Testphasen- und Rate-Limit-Behandlung,
      sonst könnte ein ungültiger Code an ihr vorbei in die Property gelangen.
   2. **Heilend:** eine Instanz, die bereits in diesem Zustand feststeckt, wäre
@@ -4121,7 +4121,7 @@ der ursprünglichen Fassung übernommen.
   erwischen und stillschweigend den falschen Baum übersetzen - deutlich
   schlimmer als ein sauberes `STATUS_ROOT_CATEGORY_MISSING`. Passt kein
   Kandidat, werden die tatsächlich vorhandenen Property-Namen einmal in die neue
-  Debug-Kategorie `IPSSL_Visu` geschrieben, damit sich ein bislang unbekanntes
+  Debug-Kategorie `SLOC_Visu` geschrieben, damit sich ein bislang unbekanntes
   Visualisierungs-Modul ohne Raterei nachtragen lässt.
   Funktionsumfang bei der alten WebFront-Visualisierung: Objektnamen, Eigene
   Texte, Aufzählungen und Charts werden normal übersetzt. Automations,
@@ -4498,6 +4498,35 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 185 (Symcon-Review): der Store-Name trägt kein "for IP Symcon" mehr,
+  und das Funktions-Präfix heißt `SLOC` statt `IPSSL`.**
+  Symcon lässt "Symcon"/"IPS" im Namen eines Store-Moduls nicht zu - im Store
+  ist der Bezug ohnehin selbstverständlich. Betroffen war nur `library.json`;
+  der Modulname in `module.json` hieß bereits "Simple Locale".
+
+  **Achtung, das ist ein Bruch:** sämtliche öffentlichen Befehle heißen jetzt
+  `SLOC_…` statt `IPSSL_…` - `SLOC_Rescan()`, `SLOC_TranslateText()`,
+  `SLOC_SetLanguage()` und die übrigen aus [Abschnitt 9](#9-php-befehlsreferenz).
+  Bestehende eigene Skripte müssen entsprechend angepasst werden.
+
+  **Zwei Stellen behalten `IPSSL` bewusst**, weil dort keine Anzeigenamen stehen,
+  sondern **persistierte Bezeichner**:
+
+  * `timerPrefix` (`IPSSL_TIMER_`) bildet die per `RegisterTimer()` angelegten
+    Timer-Idents. Umbenannt legte jede bestehende Installation neue Timer an und
+    ließe die alten als verwaiste Objekte zurück.
+  * `GetForkedProfileName()` bildet den Namen des privaten Variablenprofils aus
+    Build 164, auf das vorhandene Variablen per `IPS_SetVariableCustomProfile`
+    zeigen. Umbenannt verwaisen die Profile, und das Zurückstellen auf das
+    Original liefe ins Leere.
+
+  Beide sind im Code begründet, damit sie beim nächsten Mal nicht doch
+  mitgenommen werden. Regressionstest
+  `test_prefix_rename_keeps_persisted_ids.php` (6 Fälle, darunter die Zusicherung,
+  dass die Timer-Callbacks zum aktuellen Präfix passen - sonst riefe Symcon eine
+  Funktion auf, die es unter dem Namen nicht gibt, und der Timer liefe stumm ins
+  Leere).
+
 * **Build 185 (Symcon-Review): `ApplyChanges()` schreibt die eigene Konfiguration
   nicht mehr nach - die Umstellung der aktiven Sprache läuft über `Migrate()`.**
   Stand in `CurrentLanguage` noch die interne Pseudo-Sprache `ORIGINAL_IMPORT`,
@@ -4557,7 +4586,7 @@ der ursprünglichen Fassung übernommen.
     und genau die wären leer geblieben, obwohl sie nicht von Anwendern stammen.
     Der Platzhalter ist deshalb ungesperrt; der Aufbau liegt jetzt in
     `BuildAvailableLanguagesJson()`, und die **Funktion**
-    `IPSSL_GetAvailableLanguages()` bleibt hart gesperrt - sie ist der Weg, eine
+    `SLOC_GetAvailableLanguages()` bleibt hart gesperrt - sie ist der Weg, eine
     eigene Auswahl per Skript an der Kachel vorbei zu bauen, wo keine
     vorgelagerte Prüfung greift.
   * `ORIGINAL_IMPORT` wäre nach außen gedrungen - der Registrierungs-Default der
