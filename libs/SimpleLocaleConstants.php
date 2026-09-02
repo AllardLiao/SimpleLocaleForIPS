@@ -704,6 +704,28 @@ trait SimpleLocaleConstants
     // der Testphase ganz ohne Google/DeepL-Key (nur kostenfreier Anbieter) ueberhaupt
     // keine Zielsprache waehlbar, da BuildTargetLanguageOptions() im Testphase-Build
     // auf genau diese 5 Codes filtert.
+    // Build 186: Anbieter liefern denselben Sprachcode in unterschiedlicher
+    // Schreibweise - Google klein und ohne Region ("de", "en"), DeepL gross und
+    // fuer Englisch/Portugiesisch nur mit Region ("DE", "EN-GB", "PT-BR"). Roh
+    // uebernommen standen dieselben Sprachen dadurch mehrfach in der Auswahl, und
+    // ein Anbieterwechsel entwertete die bereits gewaehlten Zielsprachen.
+    //
+    // Intern gilt daher genau EINE Schreibweise: klein, Region mit Bindestrich
+    // ("de", "en-gb"). NormalizeLanguageCode() bildet darauf ab,
+    // LanguageCodeForProvider() wieder zurueck.
+    //
+    // Hier stehen nur die Faelle, die eine echte Entscheidung brauchen - reine
+    // Gross-/Kleinschreibung erledigt strtolower().
+    private const LANGUAGE_CODE_ALIASES = [
+        // DeepL fuehrt Norwegisch als Bokmaal; eingebaut ist es als "no". Ohne
+        // diese Zeile stuende Norwegisch zweimal in der Auswahl.
+        'nb'      => 'no',
+        // DeepL unterscheidet seit 2024 vereinfachtes/traditionelles Chinesisch,
+        // Google fuehrt "zh" bzw. "zh-tw".
+        'zh-hans' => 'zh',
+        'zh-hant' => 'zh-tw',
+    ];
+
     private const DEFAULT_LANGUAGES = [
         ['code' => 'de', 'name' => 'Deutsch'],
         ['code' => 'en', 'name' => 'English'],
@@ -737,6 +759,14 @@ trait SimpleLocaleConstants
         ['code' => 'zu', 'name' => 'isiZulu'],
         ['code' => 'mi', 'name' => 'Māori'],
         ['code' => 'la', 'name' => 'Latina'],
+        // Build 186: bei DeepL vorhanden, eingebaut bisher nicht - ohne sie
+        // verschwaenden sie aus der Auswahl, sobald die Liste von Google kommt.
+        ['code' => 'bg', 'name' => 'Български'],
+        ['code' => 'et', 'name' => 'Eesti'],
+        ['code' => 'lt', 'name' => 'Lietuvių'],
+        ['code' => 'lv', 'name' => 'Latviešu'],
+        ['code' => 'sk', 'name' => 'Slovenčina'],
+        ['code' => 'sl', 'name' => 'Slovenščina'],
     ];
 
     // Isländisch, Walisisch, Zulu, Maori, Latein - alle von Google Cloud Translate

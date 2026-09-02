@@ -4498,6 +4498,51 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 186 (beim Testen aufgefallen): Google und DeepL lieferten dieselbe
+  Sprache in unterschiedlicher Schreibweise - jetzt gilt intern genau eine.**
+  Google liefert klein und regionslos (`de`, `en`), DeepL groß und für
+  Englisch/Portugiesisch nur mit Region (`DE`, `EN-GB`, `PT-BR`). Beides wurde
+  **wortwörtlich** übernommen und wortwörtlich als `target_lang` weitergereicht.
+  Das hatte zwei Folgen:
+
+  * `GetKnownLanguages()` mischt die eingebaute Liste mit der geholten. Mit einem
+    DeepL-Key standen dadurch **20 der 30 eingebauten Sprachen doppelt** in der
+    Auswahl - einmal `de`, einmal `DE`.
+  * Wer erst nur DeepL einträgt und später einen Google-Key ergänzt, bekommt die
+    Liste plötzlich in der anderen Schreibweise. Die bereits gewählten
+    Zielsprachen kommen darin nicht mehr vor und müssen neu gewählt werden -
+    **ohne dass der Nutzer etwas umgestellt hätte**. Der Hinweis am Dropdown
+    beschrieb das zwar, aber als unvermeidliche Eigenschaft.
+
+  Intern gilt jetzt genau eine Schreibweise: klein, Region mit Bindestrich
+  (`de`, `en-gb`). `NormalizeLanguageCode()` bildet beim Einlesen darauf ab,
+  `LanguageCodeForProvider()` beim Hinausgehen zurück - Google ohne Region
+  (`en`), DeepL groß mit Region (`EN-GB`), MyMemory gemischt (`en-GB`).
+
+  Der Eingriff blieb klein, weil Sprachcodes das Modul an nur **sieben** Stellen
+  berühren: zwei Eingänge (die beiden Sprachlisten) und fünf Ausgänge. Sämtliche
+  Übersetzungsaufrufe laufen durch dieselben drei `TranslateChunk*`-Funktionen,
+  es gibt keinen zweiten Pfad an ihnen vorbei.
+
+  Die Doppelliste verschwindet dabei nicht durch Aufräumen, sondern **von
+  selbst**: beide Quellen liegen jetzt im selben Codesatz, und `$byCode[$code]`
+  fällt zusammen. Ergänzt wurden außerdem die sechs Sprachen, die DeepL kennt und
+  die eingebaute Liste bisher nicht (`bg`, `et`, `lt`, `lv`, `sk`, `sl`) -
+  MyMemory kann sie ebenfalls, sie sind also auch ohne bezahlten Anbieter
+  sinnvoll wählbar. Norwegisch (DeepLs `NB`) wird auf das eingebaute `no`
+  gelegt, sonst stünde es zweimal da.
+
+  Eine Datenmigration gibt es bewusst nicht: verkauft ist noch keine Version,
+  und Sprachcodes sind hier nicht nur Werte, sondern **Spaltennamen** in sieben
+  Listen-Properties. Auf einer gelebten Installation hätte die Umstellung jede
+  Zeile umschlüsseln müssen, samt einer Regel für den Fall, dass `DE` und `de`
+  beide gefüllt sind. Genau dieser Teil entfällt im jetzigen Zeitfenster.
+
+  Regressionstest `test_language_code_normalization.php` (8 Fälle, darunter die
+  strukturelle Zusicherung, dass kein Code mehr roh an eine API geht - ein
+  einziger übersehener Aufruf hätte den Fehler wieder eingeschleppt, sichtbar
+  erst live an einer fehlgeschlagenen Anfrage).
+
 * **Build 185 (Symcon-Review): die Quelltexte des Konfigurationsformulars sind
   jetzt Englisch, Deutsch ist eine Übersetzung wie jede andere.**
   Vorher war es umgekehrt - die Texte standen auf Deutsch in `form.json`, und

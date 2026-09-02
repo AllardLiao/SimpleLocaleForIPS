@@ -9042,8 +9042,8 @@ class SimpleLocale extends IPSModuleStrict
     {
         $body = [
             'q'      => $Texts,
-            'source' => $Source,
-            'target' => $Target,
+            'source' => $this->LanguageCodeForProvider($Source, 'google'),
+            'target' => $this->LanguageCodeForProvider($Target, 'google'),
             // Build 74: nur noch bei ECHTEN HTML-Inhalten (siehe $IsHtml, "Eigene
             // Texte" kann vollständige HTMLBox-Widgets enthalten) "html" statt "text" -
             // Google übersetzt dann nur den Text zwischen Tags, nicht die Tags/
@@ -9111,8 +9111,8 @@ class SimpleLocale extends IPSModuleStrict
     {
         $body = [
             'text'        => $Texts,
-            'source_lang' => $Source,
-            'target_lang' => $Target,
+            'source_lang' => $this->LanguageCodeForProvider($Source, 'deepl'),
+            'target_lang' => $this->LanguageCodeForProvider($Target, 'deepl'),
         ];
         // Build 74: "tag_handling": "html" nur noch bei ECHTEN HTML-Inhalten (siehe
         // $IsHtml) setzen, analog zu "format" bei Google (siehe TranslateChunkGoogle) -
@@ -9346,7 +9346,9 @@ class SimpleLocale extends IPSModuleStrict
         $email = $this->ReadPropertyString(self::propertyFreeTranslateContactEmail);
         $url = 'https://api.mymemory.translated.net/get'
             . '?q=' . urlencode($Text)
-            . '&langpair=' . urlencode($Source . '|' . $Target)
+            . '&langpair=' . urlencode(
+                $this->LanguageCodeForProvider($Source, 'free') . '|' . $this->LanguageCodeForProvider($Target, 'free')
+            )
             . ($email !== '' ? '&de=' . urlencode($email) : '');
 
         $this->SendDebug('FreeTranslate_Request', $DebugContext . ' | ' . $url, 0);
@@ -9509,6 +9511,42 @@ class SimpleLocale extends IPSModuleStrict
     // eigenen Sprachlisten-Endpunkt und liefert daher immer null; GetKnownLanguages
     // faellt in dem Fall automatisch auf die statische DEFAULT_LANGUAGES-Liste
     // zurueck.
+    // Build 186: Anbieter-Schreibweise -> interne Schreibweise.
+    //
+    // Intern gilt genau eine Form: klein, Region mit Bindestrich ("de", "en-gb").
+    // Ohne das standen dieselben Sprachen mehrfach in der Auswahl (Googles "de"
+    // neben DeepLs "DE"), und ein Anbieterwechsel entwertete die bereits
+    // gewaehlten Zielsprachen - die gespeicherten Codes kamen in der Liste des
+    // neuen Anbieters schlicht nicht mehr vor.
+    private function NormalizeLanguageCode(string $Code): string
+    {
+        $code = strtolower(str_replace('_', '-', trim($Code)));
+
+        return self::LANGUAGE_CODE_ALIASES[$code] ?? $code;
+    }
+
+    // Interne Schreibweise -> Schreibweise des jeweiligen Anbieters. Gegenstueck
+    // zu NormalizeLanguageCode(); angewendet an jeder Stelle, an der ein Code das
+    // Modul verlaesst.
+    private function LanguageCodeForProvider(string $Code, string $Provider): string
+    {
+        $code = $this->NormalizeLanguageCode($Code);
+
+        return match ($Provider) {
+            // Google kennt nur die Sprache, keine Region - "en-gb" waere dort ein
+            // unbekannter Code und die Anfrage schluege fehl.
+            'google' => explode('-', $code)[0],
+            // DeepL erwartet Grossschreibung, Region eingeschlossen ("EN-GB").
+            // Ein regionsloses "EN" akzeptiert DeepL weiterhin; wer die
+            // Unterscheidung will, waehlt "en-gb"/"en-us" ausdruecklich.
+            'deepl'  => strtoupper($code),
+            // MyMemory: Sprache klein, Region gross ("en-GB").
+            default  => str_contains($code, '-')
+                ? explode('-', $code)[0] . '-' . strtoupper(explode('-', $code)[1])
+                : $code,
+        };
+    }
+
     private function FetchLanguageNames(string $Target): ?array
     {
         // Wie TranslateChunk(): Notaus-Schalter UND ein aktuell pausierter Anbieter
@@ -9544,7 +9582,7 @@ class SimpleLocale extends IPSModuleStrict
     {
         $url = 'https://translation.googleapis.com/language/translate/v2/languages'
             . '?key=' . urlencode($ApiKey)
-            . '&target=' . urlencode($Target);
+            . '&target=' . urlencode($this->LanguageCodeForProvider($Target, 'google'));
 
         $response = $this->CallGoogleTranslateAPI($url, null);
         if ($response === null) {
@@ -9557,9 +9595,11 @@ class SimpleLocale extends IPSModuleStrict
             return null;
         }
 
+        // Build 186: auf die interne Schreibweise bringen - sonst haengt der
+        // gespeicherte Code am gerade antwortenden Anbieter.
         $names = [];
         foreach ($languages as $entry) {
-            $code = $entry['language'] ?? '';
+            $code = $this->NormalizeLanguageCode((string) ($entry['language'] ?? ''));
             if ($code !== '') {
                 $names[$code] = $entry['name'] ?? $code;
             }
@@ -9589,9 +9629,10 @@ class SimpleLocale extends IPSModuleStrict
             return null;
         }
 
+        // Build 186: DeepL liefert "DE"/"EN-GB" - intern gilt "de"/"en-gb".
         $names = [];
         foreach ($decoded as $entry) {
-            $code = $entry['language'] ?? '';
+            $code = $this->NormalizeLanguageCode((string) ($entry['language'] ?? ''));
             if ($code !== '') {
                 $names[$code] = $entry['name'] ?? $code;
             }
