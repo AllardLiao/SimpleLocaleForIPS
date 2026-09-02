@@ -140,4 +140,20 @@ assert(strpos($map, 'self::COMPASS_BUNDLED_TRANSLATIONS as $germanCompass => $tr
     'DIE ABGRENZUNG: der Kompass kommt weiter nur aus der gepflegten Tabelle');
 echo "Test 9 (Einheiten für jede Sprache, Kompass nur wo gepflegt) OK\n";
 
-echo "\nAlle Tests OK (Build 195: Glossar getrennt, mit Katalog-Schlüssel).\n";
+// Test 10 (Build 196): nicht jede Einheit ist sprachunabhaengig. Genau 17 der
+// 73 sind englisch abgeleitet oder sprachabhaengig ("rpm" ist deutsch "U/min",
+// "kn" franzoesisch "nd"). Fuer eine NICHT gepruefte Sprache - Chinesisch,
+// Japanisch, Griechisch - waere das Durchreichen des Symbols eine Vermutung.
+// Der Beweis, dass Symbole nicht universell sind, steht im eigenen Code: fuer
+// Russisch ueberschreiben wir 65 der 73.
+$map = $fenster('private function BuildBundledManualTranslationMap');
+assert(strpos($map, 'UNIT_LANGUAGE_DEPENDENT') !== false,
+    'DIE ABGRENZUNG: die sprachabhaengigen Kuerzel sind benannt');
+assert(strpos($map, 'if ($international || isset($geprueft[$language])) {') !== false,
+    'SI-Symbole ueberall, sprachabhaengige Kuerzel nur in geprueften Sprachen');
+// Und die Gegenrichtung: in den geprueften Sprachen aendert sich NICHTS.
+assert(strpos($map, "array_merge(self::UNIT_COMPASS_BUNDLED_LANGUAGES, ['de'])") !== false,
+    'die geprueften Sprachen umfassen Deutsch und die Kompass-Sprachen');
+echo "Test 10 (sprachabhängige Kürzel nur in geprüften Sprachen) OK\n";
+
+echo "\nAlle Tests OK (Build 196: Glossar getrennt, Vorbelegung nach Verlässlichkeit).\n";

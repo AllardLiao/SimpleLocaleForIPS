@@ -3672,6 +3672,24 @@ class SimpleLocale extends IPSModuleStrict
     // Build 195: die Sprachen, fuer die wir KOMPASSRICHTUNGEN mitliefern. Einheiten
     // haengen nicht mehr an dieser Liste - die werden fuer jede konfigurierte
     // Sprache vorbelegt (siehe BuildBundledManualTranslationMap).
+    // Build 196: Einheiten, die NICHT international genormt sind - englisch
+    // abgeleitete oder sprachabhaengige Kuerzel. "rpm" heisst auf Deutsch
+    // "U/min", "kn" (knots) franzoesisch "nd" (noeuds), "kcal"/"psi"/"kbps"
+    // folgen englischen Woertern.
+    //
+    // Fuer sie wird das Symbol NUR in den geprueften Sprachen vorbelegt (siehe
+    // UNIT_COMPASS_BUNDLED_LANGUAGES). In einer Sprache, die wir nicht geprueft
+    // haben - Chinesisch, Japanisch, Griechisch, ... - bleibt die Zelle leer,
+    // statt eine Vermutung als Vorgabe auszuliefern.
+    //
+    // Alles Uebrige sind SI-Symbole (V, W, Hz, Pa, m, kg, J, °C, ...). Die sind
+    // international festgelegt und gelten sprachunabhaengig - sie werden weiterhin
+    // fuer JEDE Sprache vorbelegt.
+    private const UNIT_LANGUAGE_DEPENDENT = [
+        'psi', 'km/h', 'kn', 'ppm', 'ppb', 'mg/l', 'µg/m³', 'g/m³',
+        'kB', 'MB', 'GB', 'TB', 'kbps', 'Mbps', 'kcal', 'rpm', 'UV',
+    ];
+
     private const UNIT_COMPASS_BUNDLED_LANGUAGES = ['en', 'es', 'fr', 'it', 'pt', 'nl', 'pl', 'ru', 'tr', 'da', 'no', 'sv', 'cs', 'lb'];
 
     private const COMPASS_BUNDLED_TRANSLATIONS = [
@@ -3855,12 +3873,28 @@ class SimpleLocale extends IPSModuleStrict
     {
         $map = [];
 
+        // Build 196: die geprueften Sprachen - fuer sie ist die Vorbelegung beim
+        // Aufbau des Katalogs durchgesehen worden, dort bleibt es beim bisherigen
+        // Verhalten.
+        $geprueft = array_flip(array_merge(self::UNIT_COMPASS_BUNDLED_LANGUAGES, ['de']));
+
         foreach (self::UNIT_BUNDLED_TRANSLATIONS as $unit) {
+            $international = !in_array($unit, self::UNIT_LANGUAGE_DEPENDENT, true);
             foreach ($Languages as $language) {
-                // Standardmaessig universell durchgereicht, aber siehe
-                // UNIT_BUNDLED_LANGUAGE_OVERRIDES fuer bestaetigte Ausnahmen
-                // (z.B. Russisch verwendet fast durchgehend kyrillische Kuerzel).
-                $map[$unit][$language] = self::UNIT_BUNDLED_LANGUAGE_OVERRIDES[$unit][$language] ?? $unit;
+                // Bestaetigte Ausnahme gewinnt immer (z.B. Russisch verwendet fast
+                // durchgehend kyrillische Kuerzel).
+                $override = self::UNIT_BUNDLED_LANGUAGE_OVERRIDES[$unit][$language] ?? null;
+                if ($override !== null) {
+                    $map[$unit][$language] = $override;
+                    continue;
+                }
+
+                // Ein SI-Symbol gilt sprachunabhaengig, das darf ueberall stehen.
+                // Ein sprachabhaengiges Kuerzel nur dort, wo wir hingesehen haben -
+                // sonst bliebe die Zelle besser leer als falsch vorbelegt.
+                if ($international || isset($geprueft[$language])) {
+                    $map[$unit][$language] = $unit;
+                }
             }
         }
 

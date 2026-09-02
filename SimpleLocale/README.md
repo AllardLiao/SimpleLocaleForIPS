@@ -4498,6 +4498,32 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 196 (Rückfrage beim Testen): "Einheiten sind in jeder Sprache gleich"
+  war zu pauschal - jetzt wird nach Verlässlichkeit vorbelegt.**
+  Auf die Frage, ob `°C` denn auch im Chinesischen so heißt, lautet die ehrliche
+  Antwort: nicht durchgängig. Der Beweis steht im eigenen Code - für Russisch
+  überschreiben wir **65 der 73** Einheiten mit kyrillischen Kürzeln. Wir wussten
+  also längst, dass die Symbole nicht universell sind; Build 195 hat es für alle
+  anderen Sprachen stillschweigend vorausgesetzt.
+
+  Die Trennlinie verläuft zweifach:
+
+  * **56 der 73 sind international genormte SI-Symbole** (`V`, `W`, `Hz`, `Pa`,
+    `m`, `kg`, `J`, `°C` …). Die gelten sprachunabhängig und werden weiterhin
+    für **jede** Sprache vorbelegt - auch für Chinesisch.
+  * **17 sind es nicht** (`psi`, `km/h`, `kn`, `ppm`, `ppb`, `mg/l`, `µg/m³`,
+    `g/m³`, `kB`, `MB`, `GB`, `TB`, `kbps`, `Mbps`, `kcal`, `rpm`, `UV`) -
+    englisch abgeleitet oder sprachabhängig. `rpm` heißt auf Deutsch `U/min`,
+    `kn` (knots) französisch `nd` (nœuds).
+
+  Für die **15 geprüften** Sprachen ändert sich nichts: dort ist die Vorbelegung
+  beim Aufbau des Katalogs durchgesehen worden. Für jede andere Sprache bleiben
+  die 17 Zellen **leer**, statt eine Vermutung als Vorgabe auszuliefern - die
+  restlichen 56 stehen weiterhin.
+
+  Am Konfigurationsformular ändert das nichts: eine Tabelle, dieselben Spalten,
+  nur vorsichtiger vorbelegt.
+
 * **Build 195 (Nutzer-Wunsch): Einheiten für **jede** konfigurierte Sprache, und
   der Katalog-Schlüssel ist keine Sprache mehr.**
   Zwei Dinge, die zusammengehören:

@@ -151,7 +151,15 @@ echo "Test 6 (the real module.php actually defines and wires in the feature: con
 // and apply the confirmed per-language unit overrides (km/h exceptions, Russian
 // unit localization), not just the replica logic in this test.
 assert(strpos($moduleSource, 'private const UNIT_BUNDLED_LANGUAGE_OVERRIDES') !== false, 'the per-language unit override table must exist as a class constant');
-assert(strpos($moduleSource, "self::UNIT_BUNDLED_LANGUAGE_OVERRIDES[\$unit][\$language] ?? \$unit") !== false, 'the unit-seeding loop must actually consult the override table before falling back to the universal pass-through value');
+// Build 196: die Ausnahme gewinnt weiterhin, aber der Rueckfall ist nicht mehr
+// bedingungslos - ein sprachabhaengiges Kuerzel wird nur in den GEPRUEFTEN
+// Sprachen vorbelegt, sonst bliebe eine Vermutung als Vorgabe stehen.
+assert(strpos($moduleSource, "self::UNIT_BUNDLED_LANGUAGE_OVERRIDES[\$unit][\$language] ?? null") !== false,
+    'die Ausnahmetabelle muss weiterhin zuerst greifen');
+assert(strpos($moduleSource, 'private const UNIT_LANGUAGE_DEPENDENT') !== false,
+    'die sprachabhaengigen Kuerzel muessen als eigene Liste benannt sein');
+assert(strpos($moduleSource, 'if ($international || isset($geprueft[$language])) {') !== false,
+    'SI-Symbole ueberall, sprachabhaengige Kuerzel nur in geprueften Sprachen');
 assert(strpos($moduleSource, "'km/h' => ['es' => 'kph', 'nl' => 'km/u', 'tr' => 'km/sa', 'ru' => 'км/ч']") !== false, 'km/h must carry the confirmed es/nl/tr/ru overrides');
 foreach (['V' => 'В', 'W' => 'Вт', 'kg' => 'кг', 'km' => 'км', 'Hz' => 'Гц', 'kWh' => 'кВт·ч'] as $unit => $expectedRussian) {
     $pattern = '/\'' . preg_quote($unit, '/') . '\'\s*=>\s*\[\'ru\'\s*=>\s*\'' . preg_quote($expectedRussian, '/') . '\'\]/u';
