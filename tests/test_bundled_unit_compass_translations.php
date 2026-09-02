@@ -139,11 +139,11 @@ $moduleSource = file_get_contents(dirname(__DIR__) . '/SimpleLocale/module.php')
 $constantsSource = file_get_contents(dirname(__DIR__) . '/libs/SimpleLocaleConstants.php');
 assert(strpos($moduleSource, 'private const UNIT_BUNDLED_TRANSLATIONS') !== false, 'the universal units list must exist as a class constant');
 assert(strpos($moduleSource, 'private const COMPASS_BUNDLED_TRANSLATIONS') !== false, 'the per-language compass table must exist as a class constant');
-assert(strpos($moduleSource, 'private function MergeBundledManualTranslations(') !== false, 'the merge function must exist');
-assert(strpos($moduleSource, '$this->MergeBundledManualTranslations($this->DecodeRows(self::propertyManualTranslations))') !== false, 'MergeBundledManualTranslations() must actually be wired into ScanRootTree() against propertyManualTranslations');
-assert(strpos($moduleSource, 'IPS_SetProperty($this->InstanceID, self::propertyManualTranslations, json_encode(array_values($manualTranslations)));') !== false, 'the merged manual translations must actually be persisted back via IPS_SetProperty');
-assert(strpos($constantsSource, "attributeSeededManualTranslationKeys = 'SeededManualTranslationKeys'") !== false, 'the seeded-keys tracking attribute must be declared');
-assert(strpos($moduleSource, 'RegisterAttributeString(self::attributeSeededManualTranslationKeys,') !== false, 'the seeded-keys tracking attribute must actually be registered in Create()');
+assert(strpos($moduleSource, 'private function MergeBundledGlossaryRows(') !== false, 'the merge function must exist');
+assert(strpos($moduleSource, '$this->MergeBundledGlossaryRows($this->DecodeRows(self::propertyGlossary))') !== false, 'MergeBundledManualTranslations() must actually be wired into ScanRootTree() against propertyManualTranslations');
+assert(strpos($moduleSource, 'IPS_SetProperty($this->InstanceID, self::propertyGlossary, json_encode(array_values($glossary)));') !== false, 'the merged manual translations must actually be persisted back via IPS_SetProperty');
+assert(strpos($constantsSource, "attributeSeededGlossaryKeys = 'SeededGlossaryKeys'") !== false, 'the seeded-keys tracking attribute must be declared');
+assert(strpos($moduleSource, 'RegisterAttributeString(self::attributeSeededGlossaryKeys,') !== false, 'the seeded-keys tracking attribute must actually be registered in Create()');
 assert(strpos($moduleSource, "!\$this->HasLicenseFeature('manual_translations')") !== false, 'the merge function must gate on the same manual_translations license feature as the rest of the glossary (Light edition keeps using the live API)');
 echo "Test 6 (the real module.php actually defines and wires in the feature: constants, tracking attribute, ScanRootTree persistence, license gating) OK\n";
 

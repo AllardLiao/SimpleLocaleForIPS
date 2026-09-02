@@ -510,16 +510,22 @@ trait SimpleLocaleConstants
     // attributeActivationLog.
     private const attributeTranslationCache = 'TranslationCache';
 
-    // Build 133 (Nutzer-Wunsch): JSON-Map der deutschen Quelltexte (Einheiten-
-    // Kuerzel + Kompass-Punkte), die MergeBundledManualTranslations() dem Admin
-    // bereits einmal als Vorschlagszeile in propertyManualTranslations
-    // angeboten hat (Wert ist immer nur `true`, reine Existenzpruefung). Anders
-    // als propertyOwnUiTexts (siehe MergeOwnUiTextRows) sind diese Zeilen fuer
-    // den Admin frei loeschbar - ohne dieses Merkzettel-Attribut wuerde ein
-    // geloeschter Vorschlag (Nutzer-Beispiel: "SSW" kollidiert mit einem
-    // Personen-Kuerzel in seiner Installation) beim naechsten Rescan sofort
-    // wieder auftauchen, statt geloescht zu bleiben.
-    private const attributeSeededManualTranslationKeys = 'SeededManualTranslationKeys';
+
+    // Build 189 (Nutzer-Wunsch): das GLOSSAR - mitgelieferte Einheiten und
+    // Kompassrichtungen, getrennt von den "Eigenen Uebersetzungen".
+    //
+    // Anders als dort gibt es hier KEINE Quellsprachen-Spalte: die Tabelle hat je
+    // Sprache eine Spalte, und JEDE davon kann die Quelle sein. Ein Text mit
+    // deutscher Zeilen-Quellsprache trifft ueber die deutsche Spalte, einer mit
+    // spanischer nur, wenn die spanische Spalte den Wert traegt. Die Zuordnung
+    // von jeder Spalte in jede andere ist eindeutig - das ist die Bedeutung von
+    // "Glossar" hier.
+    //
+    // Damit entfaellt die Dopplung, die vorher noetig war, sobald Teile der
+    // Visualisierung eine andere Quellsprache hatten: "km/h" musste je
+    // Quellsprache eine eigene Zeile bekommen.
+    private const propertyGlossary = 'Glossary';
+    private const attributeSeededGlossaryKeys = 'SeededGlossaryKeys';
 
     // Build 152 (Nutzer-Frage: "Wie bekommt der User vom Ausfall eines
     // Anbieters mit?"): Bilanz des LETZTEN Rescan-Durchlaufs als JSON

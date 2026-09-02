@@ -342,6 +342,9 @@ class SimpleLocale extends IPSModuleStrict
         $this->RegisterPropertyString(self::propertyObjectGreeting, '[]');
         $this->RegisterPropertyString(self::propertyOwnUiTexts, '[]');
         $this->RegisterPropertyString(self::propertyManualTranslations, '[]');
+        // Build 189: das Glossar (mitgelieferte Einheiten/Kompassrichtungen) -
+        // eigene Tabelle, siehe MergeBundledGlossaryRows/FindGlossaryTranslation.
+        $this->RegisterPropertyString(self::propertyGlossary, '[]');
 
         // Bewusst eine Property statt Variable/Profil für die aktive Sprache: Profile
         // sind in Symcon immer global, nicht instanzgebunden - bei mehreren Instanzen
@@ -403,7 +406,7 @@ class SimpleLocale extends IPSModuleStrict
         $this->RegisterAttributeInteger(self::attributeAvailableLanguagesFetchedAt, 0);
         $this->RegisterAttributeString(self::attributeGuestLanguageNamesCache, '{}');
         $this->RegisterAttributeString(self::attributeTranslationCache, '{}');
-        $this->RegisterAttributeString(self::attributeSeededManualTranslationKeys, '{}');
+        $this->RegisterAttributeString(self::attributeSeededGlossaryKeys, '{}');
         $this->RegisterAttributeString(self::attributeLastRunTranslationFailures, '{}');
         $this->RegisterAttributeString(self::attributeUnnamedObjects, '[]');
         $this->RegisterAttributeInteger(self::attributeLastCleanupRemovedCount, -1);
@@ -1134,6 +1137,23 @@ class SimpleLocale extends IPSModuleStrict
                 case 'ManualTranslationsUnavailableHeading':
                 case 'ManualTranslationsUnavailableHint':
                     $element['visible'] = !$this->HasLicenseFeature('manual_translations');
+                    break;
+
+                // Build 189: das Glossar. Ohne das Feature verschwindet die Tabelle
+                // ganz - der Nachschlag im mitgelieferten Katalog laeuft trotzdem
+                // weiter (siehe GetGlossaryRowsForLookup), Einheiten werden also in
+                // JEDER Edition richtig behandelt. Verkauft wird das Bearbeiten,
+                // nicht die korrekte Behandlung von Einheiten.
+                case 'GlossaryHint':
+                case self::propertyGlossary:
+                    if (!$this->HasLicenseFeature('glossary')) {
+                        $element['visible'] = false;
+                        break;
+                    }
+                    if ($element['type'] === 'List') {
+                        $element['columns'] = $this->BuildListColumns($sourceLanguage, $targetLanguages, 'glossary');
+                        $element['values'] = $this->DecodeRows(self::propertyGlossary);
+                    }
                     break;
 
                 case self::propertyManualTranslations:
@@ -3457,7 +3477,7 @@ class SimpleLocale extends IPSModuleStrict
     // übersetzt, bei gleichbleibendem Zahlenwert also eine falsche Anzeige).
     // Bewusst NICHT als unsichtbare interne Tabelle umgesetzt (erste Idee),
     // sondern als vorbefüllte Zeilen in der bereits vorhandenen "Eigene
-    // Übersetzungstabelle" (siehe MergeBundledManualTranslations) - sichtbar
+    // Glossar-Tabelle" (siehe MergeBundledGlossaryRows) - sichtbar
     // und vom Nutzer jederzeit löschbar, falls eine dieser kurzen
     // Zeichenketten in seiner Installation zufällig etwas anderes bedeutet
     // (Nutzer-Beispiel: "SSW" als Kürzel für einen Personennamen statt
@@ -3621,91 +3641,122 @@ class SimpleLocale extends IPSModuleStrict
         'NNW' => ['en' => 'NNW', 'es' => 'NNO', 'fr' => 'NNO', 'it' => 'NNO', 'pt' => 'NNO', 'nl' => 'NNW', 'pl' => 'NNW', 'ru' => 'ССЗ', 'tr' => 'KKB'],
     ];
 
-    // Build 133: fuegt fehlende Einheiten-/Kompass-Vorschlagszeilen zur "Eigenen
-    // Uebersetzungstabelle" hinzu - NUR ab Standard-Lizenz (manual_translations,
-    // siehe HasLicenseFeature), Light ruft fuer diese Faelle bewusst weiterhin
-    // ganz normal die API. Anders als MergeOwnUiTextRows() werden Zeilen HIER
-    // NIE zwangsweise neu erzeugt, wenn der Nutzer sie einmal geloescht hat -
-    // attributeSeededManualTranslationKeys merkt sich, welche Vorschlaege
-    // schon einmal angeboten wurden, damit eine bewusste Loeschung (z.B. weil
-    // "SSW" in dieser Installation ein Personen-Kuerzel ist, keine
-    // Windrichtung) dauerhaft geloescht bleibt statt beim naechsten Rescan
-    // zurueckzukehren.
-    private function MergeBundledManualTranslations(array $ExistingRows): array
+
+    // Build 189: die mitgelieferten Glossar-Zeilen. Eine Zeile je Begriff, mit
+    // einer Spalte JE SPRACHE - die deutsche Ausgangsform eingeschlossen.
+    //
+    // Genau darin liegt der Unterschied zu den "Eigenen Uebersetzungen": dort
+    // legt eine Quellsprachen-Spalte die Richtung fest, hier kann JEDE Spalte die
+    // Quelle sein. "km/h" trifft aus einer deutschen Zeile ueber die deutsche
+    // Spalte und aus einer englischen ueber die englische - dieselbe Zeile, keine
+    // Dopplung. Ein Text, der sich als spanisch ausgibt, trifft nur, wenn die
+    // spanische Spalte den Wert traegt.
+    private function BuildBundledGlossaryRows(): array
     {
-        if (!$this->HasLicenseFeature('manual_translations')) {
+        $rows = [];
+        foreach ($this->BuildBundledManualTranslationMap() as $germanText => $byLanguage) {
+            // Die deutsche Spalte zuerst - der Katalog ist deutsch indiziert, sie
+            // steht in $byLanguage selbst nicht drin.
+            $rows[] = array_merge(['de' => $germanText], $byLanguage);
+        }
+
+        return $rows;
+    }
+
+    // Build 189: fuellt die Glossar-Tabelle mit dem mitgelieferten Katalog auf.
+    // Aufbau bewusst parallel zur frueheren Befuellung der "Eigenen
+    // Uebersetzungen" (siehe Build 157): nur LEERE Zellen werden ergaenzt, ein
+    // eingetragener Wert gewinnt immer, und eine einmal geloeschte Zeile bleibt
+    // geloescht (attributeSeededGlossaryKeys merkt sich, was schon angeboten
+    // wurde). Der dokumentierte Fall dahinter: "SSW" ist in mancher Installation
+    // ein Personenkuerzel und keine Windrichtung.
+    private function MergeBundledGlossaryRows(array $ExistingRows): array
+    {
+        if (!$this->HasLicenseFeature('glossary')) {
             return $ExistingRows;
         }
 
-        $bundled = $this->BuildBundledManualTranslationMap();
-
-        $alreadySeeded = json_decode($this->ReadAttributeString(self::attributeSeededManualTranslationKeys), true);
+        $alreadySeeded = json_decode($this->ReadAttributeString(self::attributeSeededGlossaryKeys), true);
         if (!is_array($alreadySeeded)) {
             $alreadySeeded = [];
         }
         $seededChanged = false;
 
-        // Build 157 (live gemeldet): BESTEHENDE Vorschlagszeilen nachbefuellen.
-        // Bis Build 156 wurde eine Zeile, die es schon gab, komplett uebersprungen -
-        // kam eine Zielsprache erst SPAETER dazu, blieb ihre Spalte damit dauerhaft
-        // leer. Und eine leere Zelle gilt in FindManualTranslation() als "kein
-        // Treffer", der Text ging also ganz normal an die API. Live sichtbar an
-        // einem Einheiten-Suffix: "°C" wurde nach Englisch zu "°F" - eine
-        // Einheitenumrechnung, keine Uebersetzung.
-        //
-        // Nur LEERE Zellen werden gefuellt. Ein vom Admin eingetragener Wert
-        // gewinnt immer, auch wenn er vom mitgelieferten Vorschlag abweicht.
-        $existingKeys = [];
+        $vorhanden = [];
         foreach ($ExistingRows as $index => $row) {
-            if (($row[self::fieldRowSourceLanguage] ?? '') !== 'de') {
+            $key = (string) ($row['de'] ?? '');
+            if ($key === '') {
                 continue;
             }
-            $sourceText = (string) ($row[self::langOriginalImport] ?? '');
-            $existingKeys[$sourceText] = true;
-            if (!isset($bundled[$sourceText])) {
-                continue;
-            }
-            foreach ($bundled[$sourceText] as $language => $translation) {
-                if ((string) ($row[$language] ?? '') !== '') {
-                    continue;
-                }
-                $row[$language] = $translation;
-                $this->MarkRowLanguageTranslated($row, $language);
-            }
-            $ExistingRows[$index] = $row;
+            $vorhanden[$key] = $index;
         }
 
-        $result = $ExistingRows;
-
-        // Neue Zeilen werden NIE zwangsweise wieder erzeugt, wenn der Nutzer sie
-        // einmal geloescht hat - attributeSeededManualTranslationKeys merkt sich,
-        // welche Vorschlaege schon einmal angeboten wurden, damit eine bewusste
-        // Loeschung (z.B. weil "SSW" in dieser Installation ein Personen-Kuerzel
-        // ist, keine Windrichtung) dauerhaft geloescht bleibt.
-        foreach ($bundled as $sourceText => $translationsByLanguage) {
-            if (isset($existingKeys[$sourceText]) || isset($alreadySeeded[$sourceText])) {
+        foreach ($this->BuildBundledGlossaryRows() as $bundledRow) {
+            $key = (string) $bundledRow['de'];
+            if (isset($vorhanden[$key])) {
+                $row = $ExistingRows[$vorhanden[$key]];
+                foreach ($bundledRow as $language => $translation) {
+                    if ((string) ($row[$language] ?? '') === '') {
+                        $row[$language] = $translation;
+                    }
+                }
+                $ExistingRows[$vorhanden[$key]] = $row;
                 continue;
             }
-            $row = [self::fieldRowSourceLanguage => 'de', self::langOriginalImport => $sourceText];
-            foreach ($translationsByLanguage as $language => $translation) {
-                $row[$language] = $translation;
-                $this->MarkRowLanguageTranslated($row, $language);
+            if (isset($alreadySeeded[$key])) {
+                continue;
             }
-            $result[] = $row;
-            $alreadySeeded[$sourceText] = true;
+            $ExistingRows[] = $bundledRow;
+            $alreadySeeded[$key] = true;
             $seededChanged = true;
         }
 
         if ($seededChanged) {
-            $this->WriteAttributeString(self::attributeSeededManualTranslationKeys, json_encode($alreadySeeded));
+            $this->WriteAttributeString(self::attributeSeededGlossaryKeys, json_encode($alreadySeeded));
         }
 
-        return $result;
+        return $ExistingRows;
+    }
+
+    // Build 189: die spaltenbasierte Suche. Trifft der Text die Spalte der
+    // Quellsprache, liefert die Spalte der Zielsprache das Ergebnis - in jede
+    // Richtung, ohne dass eine Zeile die Richtung festlegen muesste.
+    private function FindGlossaryTranslation(array $GlossaryRows, string $SourceLanguage, string $TargetLanguage, string $Text): ?string
+    {
+        if ($SourceLanguage === '' || $TargetLanguage === '' || $Text === '') {
+            return null;
+        }
+
+        foreach ($GlossaryRows as $row) {
+            if ((string) ($row[$SourceLanguage] ?? '') !== $Text) {
+                continue;
+            }
+            $translation = (string) ($row[$TargetLanguage] ?? '');
+            if ($translation !== '') {
+                return $translation;
+            }
+        }
+
+        return null;
+    }
+
+    // Build 189: MIT dem Feature ist die gespeicherte Tabelle massgeblich - eine
+    // bewusst geloeschte Zeile muss geloescht BLEIBEN, ein Rueckfall auf den
+    // Katalog wuerde die Loeschung wirkungslos machen. OHNE das Feature ist die
+    // Tabelle unsichtbar und unbearbeitbar; dort greift der Katalog direkt, damit
+    // Einheiten in JEDER Edition richtig behandelt werden (siehe Build 158: "°C"
+    // ging sonst an die API und kam als "°F" zurueck - eine Einheitenumrechnung,
+    // keine Uebersetzung).
+    private function GetGlossaryRowsForLookup(): array
+    {
+        return $this->HasLicenseFeature('glossary')
+            ? $this->DecodeRows(self::propertyGlossary)
+            : $this->BuildBundledGlossaryRows();
     }
 
     // Build 157: die mitgelieferten Vorschlaege als eine einzige Zuordnung
     // Quelltext => [Sprache => Uebersetzung]. Vorher steckte diese Ableitung
-    // zweimal in MergeBundledManualTranslations (einmal Einheiten, einmal
+    // zweimal in der frueheren Befuellung (einmal Einheiten, einmal
     // Kompass) - jetzt einmal, damit Anlegen UND Nachbefuellen garantiert
     // dieselben Werte verwenden.
     private function BuildBundledManualTranslationMap(): array
@@ -5552,13 +5603,15 @@ class SimpleLocale extends IPSModuleStrict
             $targetLanguages
         );
 
-        // Build 133: Einheiten-/Kompass-Vorschlagszeilen (siehe
-        // MergeBundledManualTranslations) - anders als propertyOwnUiTexts oben
-        // bewusst OHNE FillMissingTranslations()-Durchlauf: die "Eigene
-        // Uebersetzungstabelle" ist strukturell durchgehend admin-gepflegt, kein
-        // Zellwert darin wird jemals automatisch (nach)uebersetzt, das gilt auch
-        // fuer diese vorbefuellten Zeilen selbst.
-        $manualTranslations = $this->MergeBundledManualTranslations($this->DecodeRows(self::propertyManualTranslations));
+        // Build 189: die Einheiten-/Kompass-Zeilen wandern in die eigene
+        // GLOSSAR-Tabelle. Die "Eigenen Uebersetzungen" bleiben dadurch das, was
+        // ihr Name sagt - bis Build 188 lagen dort 89 mitgelieferte Zeilen und
+        // begruben das, was der Admin selbst eingetragen hatte.
+        //
+        // Bewusst OHNE FillMissingTranslations()-Durchlauf: beide Tabellen sind
+        // strukturell admin-gepflegt, kein Zellwert darin wird jemals automatisch
+        // (nach)uebersetzt - das gilt auch fuer die vorbefuellten Zeilen selbst.
+        $glossary = $this->MergeBundledGlossaryRows($this->DecodeRows(self::propertyGlossary));
 
         $this->SetRescanProgress('Saving results…');
 
@@ -5569,7 +5622,7 @@ class SimpleLocale extends IPSModuleStrict
         IPS_SetProperty($this->InstanceID, self::propertyObjectCharts, json_encode(array_values($objectCharts)));
         IPS_SetProperty($this->InstanceID, self::propertyObjectGreeting, json_encode(array_values($objectGreeting)));
         IPS_SetProperty($this->InstanceID, self::propertyOwnUiTexts, json_encode(array_values($ownUiTexts)));
-        IPS_SetProperty($this->InstanceID, self::propertyManualTranslations, json_encode(array_values($manualTranslations)));
+        IPS_SetProperty($this->InstanceID, self::propertyGlossary, json_encode(array_values($glossary)));
         IPS_ApplyChanges($this->InstanceID);
 
         // Build 88: unabhaengig davon geleert, ob ein Reload folgt - ein Hintergrund-
@@ -6860,6 +6913,9 @@ class SimpleLocale extends IPSModuleStrict
         $manualTranslations = $hasManualTranslations
             ? $this->DecodeRows(self::propertyManualTranslations)
             : [];
+        // Build 189: einmal je Durchlauf beschafft, nicht je Text - siehe
+        // GetGlossaryRowsForLookup fuer die Feature-Abhaengigkeit.
+        $glossaryRows = $this->GetGlossaryRowsForLookup();
         // Nur eine Abkuerzung fuer den haeufigen Fall "Feature vorhanden, Tabelle
         // leer": dann gibt es nichts zu pruefen. Ohne das Feature darf hier NICHT
         // abgekuerzt werden - die leere Liste ist dort der Normalfall, der Katalog
@@ -6876,7 +6932,7 @@ class SimpleLocale extends IPSModuleStrict
                     continue;
                 }
                 foreach ($TargetLanguages as $language) {
-                    $manual = $this->FindManualTranslation($manualTranslations, $rowSourceLanguage, $language, $sourceText);
+                    $manual = $this->FindManualTranslation($manualTranslations, $glossaryRows, $rowSourceLanguage, $language, $sourceText);
                     if ($manual === null) {
                         continue;
                     }
@@ -7807,7 +7863,7 @@ class SimpleLocale extends IPSModuleStrict
     // exakter (nicht getrimmter) String-Vergleich - ein Leerzeichen-Unterschied
     // soll den Admin nicht durch einen scheinbar wirkungslosen Glossar-Eintrag
     // verwirren, sondern sichtbar zum Nicht-Treffer fuehren.
-    private function FindManualTranslation(array $ManualTranslationRows, string $SourceLanguage, string $TargetLanguage, string $Text): ?string
+    private function FindManualTranslation(array $ManualTranslationRows, array $GlossaryRows, string $SourceLanguage, string $TargetLanguage, string $Text): ?string
     {
         foreach ($ManualTranslationRows as $row) {
             $rowSourceLanguage = (string) ($row[self::fieldRowSourceLanguage] ?? '');
@@ -7821,55 +7877,18 @@ class SimpleLocale extends IPSModuleStrict
             }
         }
 
-        // Build 158 (Nutzer-Entscheidung): die MITGELIEFERTE Nachschlagetabelle
-        // (Einheiten, Kompassrichtungen) greift in JEDER Edition - aber nur dort,
-        // wo es die editierbare Tabelle gar nicht gibt.
+        // Build 189: danach das GLOSSAR (mitgelieferte Einheiten und
+        // Kompassrichtungen, siehe FindGlossaryTranslation). Die eigenen
+        // Uebersetzungen oben behalten bewusst Vorrang - sie sind die
+        // ausdrueckliche Festlegung des Admins fuer genau diese Installation.
         //
-        // Grund: bis Build 157 hing beides an einem einzigen Flag. Eine Edition
-        // ohne "manual_translations" schickte damit auch "°C" ganz normal an die
-        // API - und die lieferte auf Englisch "°F" zurueck. Eine Einheiten-
-        // umrechnung als Uebersetzung ist in jeder Edition schlicht falsch, und
-        // dem Kunden ist nicht vermittelbar, dass das an seiner Edition liegt.
-        //
-        // Verkauft wird die EDITIERBARE Tabelle, nicht die korrekte Behandlung von
-        // Einheiten. Ohne das Feature bleibt sie unsichtbar und unbearbeitbar, der
-        // interne Lookup greift trotzdem - das kostet nichts und spart sogar
-        // Kontingent.
-        //
-        // MIT dem Feature bleibt bewusst alles beim Alten: dort ist die Tabelle
-        // massgeblich, und eine bewusst geloeschte Zeile (z.B. weil "SSW" in dieser
-        // Installation ein Personen-Kuerzel ist, keine Windrichtung) muss geloescht
-        // BLEIBEN. Ein Fallback wuerde genau diese Loeschung wirkungslos machen.
-        if ($this->HasLicenseFeature('manual_translations')) {
-            return null;
-        }
-
-        return $this->FindBundledTranslation($SourceLanguage, $TargetLanguage, $Text);
+        // Das Glossar sucht spaltenbasiert und damit unabhaengig davon, welche
+        // Quellsprache eine Zeile traegt. Bis Build 188 war der Katalog fest
+        // deutsch indiziert: fuer einen Text mit englischer Zeilen-Quellsprache
+        // griff er gar nicht, "°C" ging an die API und kam als "°F" zurueck.
+        return $this->FindGlossaryTranslation($GlossaryRows, $SourceLanguage, $TargetLanguage, $Text);
     }
 
-    // Build 158: Nachschlagen im mitgelieferten Katalog, unabhaengig von der
-    // gespeicherten Tabelle. Der Katalog ist durchgehend deutschsprachig
-    // indiziert (siehe MergeBundledManualTranslations), greift also nur fuer
-    // Zeilen mit deutscher Quellsprache.
-    private function FindBundledTranslation(string $SourceLanguage, string $TargetLanguage, string $Text): ?string
-    {
-        if ($SourceLanguage !== 'de') {
-            return null;
-        }
-
-        // Die Karte ist eine reine Ableitung zweier Konstanten und aendert sich zur
-        // Laufzeit nie - einmal bauen genuegt. Ohne diesen Puffer entstuende sie bei
-        // jedem einzelnen zu uebersetzenden Text neu (rund 90 Eintraege x 9
-        // Sprachen), und FindManualTranslation() laeuft je Text.
-        static $bundled = null;
-        if ($bundled === null) {
-            $bundled = $this->BuildBundledManualTranslationMap();
-        }
-
-        $translation = (string) ($bundled[$Text][$TargetLanguage] ?? '');
-
-        return $translation !== '' ? $translation : null;
-    }
 
     // Uebersetzt (Quelle, Ziel, Text) IMMER zuerst gegen den lokalen Cache
     // (attributeTranslationCache, siehe GetCachedTranslation/StoreCachedTranslation)
@@ -7898,6 +7917,7 @@ class SimpleLocale extends IPSModuleStrict
         $manualTranslations = $this->HasLicenseFeature('manual_translations')
             ? $this->DecodeRows(self::propertyManualTranslations)
             : [];
+        $glossaryRows = $this->GetGlossaryRowsForLookup();
 
         $results = [];
         $freshIndexes = [];
@@ -7930,7 +7950,7 @@ class SimpleLocale extends IPSModuleStrict
         $textToFreshPosition = [];
         $duplicateFreshPositions = [];
         foreach ($Texts as $i => $text) {
-            $manual = $this->FindManualTranslation($manualTranslations, $Source, $Target, $text);
+            $manual = $this->FindManualTranslation($manualTranslations, $glossaryRows, $Source, $Target, $text);
             if ($manual !== null) {
                 $results[$i] = $manual;
                 continue;
@@ -8504,11 +8524,12 @@ class SimpleLocale extends IPSModuleStrict
         $manualTranslationsForNodes = $this->HasLicenseFeature('manual_translations')
             ? $this->DecodeRows(self::propertyManualTranslations)
             : [];
+        $glossaryRowsForNodes = $this->GetGlossaryRowsForLookup();
 
         $translatedByText = [];
         $freshNodes = [];
         foreach ($uniqueTranslatable as $node) {
-            $manual = $this->FindManualTranslation($manualTranslationsForNodes, $Source, $Target, $node);
+            $manual = $this->FindManualTranslation($manualTranslationsForNodes, $glossaryRowsForNodes, $Source, $Target, $node);
             if ($manual !== null) {
                 $translatedByText[$node] = $manual;
                 continue;
@@ -11287,6 +11308,15 @@ HTML;
                 [$this->BuildRowSourceLanguageColumn($SourceLanguage, $TargetLanguages, 'manual_translations'), $sourceTextColumn],
                 $this->BuildLanguageColumnSet('', '', $SourceLanguage, $TargetLanguages, 'manual_translations')
             );
+        }
+
+        // Build 189: das Glossar hat KEINE Quellsprachen- und keine
+        // "Quelltext"-Spalte - nur je eine Spalte pro Sprache. Welche davon die
+        // Quelle ist, entscheidet der zu uebersetzende Text selbst (siehe
+        // FindGlossaryTranslation). $TargetLanguages enthaelt die Quellsprache
+        // bereits, dafuer sorgt EnsureSourceLanguageIsTarget().
+        if ($Kind === 'glossary') {
+            return $this->BuildLanguageColumnSet('', '', $SourceLanguage, $TargetLanguages, 'glossary');
         }
 
         if ($Kind === 'automations') {

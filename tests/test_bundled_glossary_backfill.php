@@ -97,8 +97,8 @@ echo "Test 5 (eigene Zeilen des Admins bleiben unangetastet) OK\n";
 
 // Test 6: Symmetrie-Check gegen die reale module.php.
 $moduleSource = file_get_contents(dirname(__DIR__) . '/SimpleLocale/module.php');
-$start = strpos($moduleSource, 'private function MergeBundledManualTranslations');
-assert($start !== false, 'MergeBundledManualTranslations() muss existieren');
+$start = strpos($moduleSource, 'private function MergeBundledGlossaryRows');
+assert($start !== false, 'MergeBundledGlossaryRows() muss existieren');
 $ende = strpos($moduleSource, "\n    private function BuildBundledManualTranslationMap", $start);
 $body = substr($moduleSource, $start, $ende - $start);
 $body = implode("\n", array_filter(
@@ -106,11 +106,13 @@ $body = implode("\n", array_filter(
     static fn (string $z): bool => strpos(ltrim($z), '//') !== 0
 ));
 
-assert(strpos($body, 'BuildBundledManualTranslationMap()') !== false,
+// Build 189: beide Wege gehen ueber BuildBundledGlossaryRows(), das seinerseits
+// BuildBundledManualTranslationMap() benutzt - eine Quelle, kein zweiter Aufbau.
+assert(strpos($body, 'BuildBundledGlossaryRows()') !== false,
     'Anlegen und Nachbefuellen muessen aus DERSELBEN Quelle speisen');
-assert(strpos($body, "if ((string) (\$row[\$language] ?? '') !== '') {") !== false,
+assert(strpos($body, "if ((string) (\$row[\$language] ?? '') === '') {") !== false,
     'DER FIX: nur LEERE Zellen duerfen befuellt werden - ein Admin-Wert gewinnt');
-assert(strpos($body, 'isset($alreadySeeded[$sourceText])') !== false,
+assert(strpos($body, 'isset($alreadySeeded[$key])') !== false,
     'der Schutz gegen zurueckkehrende geloeschte Zeilen muss erhalten bleiben');
 
 // Und die Gegenseite: eine leere Zelle darf weiterhin als "kein Treffer" gelten -

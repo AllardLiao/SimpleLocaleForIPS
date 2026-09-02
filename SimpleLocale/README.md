@@ -4498,6 +4498,47 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 189 (Nutzer-Wunsch): das Glossar ist jetzt eine eigene Tabelle - ohne
+  Quellsprache, dafür in jede Richtung gültig.**
+  Bis Build 188 schrieb das Modul **89 mitgelieferte Zeilen** (73 Einheiten +
+  16 Kompassrichtungen) in die "Eigene Übersetzungstabelle" - alle fest auf
+  Quellsprache Deutsch. Das hatte zwei Folgen: das eigene Glossar lag unter
+  Fremdzeilen begraben, und für ein Objekt mit **anderer** Zeilen-Quellsprache
+  griff keine davon. "km/h" hätte je Quellsprache eine eigene Zeile gebraucht.
+
+  Jetzt zwei getrennte Tabellen mit unterschiedlicher Bedeutung:
+
+  * **Eigene Übersetzungen** - unverändert. Eine Quellsprachen-Spalte legt je
+    Zeile die Richtung fest. Nur noch das, was der Admin selbst einträgt.
+  * **Glossar** - mitgelieferte Einheiten und Kompassrichtungen. **Keine**
+    Quellsprachen-Spalte: je Sprache eine Spalte, und jede kann die Quelle sein.
+    Der Eintrag einer Spalte übersetzt sich in den jeder anderen. Ein Begriff
+    braucht deshalb genau eine Zeile, gleich welche Quellsprache ein Teil der
+    Visualisierung verwendet.
+
+  Getroffen wird ausschließlich über die Spalte der **Quellsprache**: "km/h" aus
+  einer deutschen Zeile trifft über die deutsche Spalte, aus einer englischen
+  über die englische. Ein Text, der sich als spanisch ausgibt, trifft nur, wenn
+  die spanische Spalte den Wert trägt. Damit ist die Zuordnung von jeder Spalte
+  in jede andere eindeutig - das ist hier die Bedeutung von "Glossar".
+
+  Die eigenen Übersetzungen behalten **Vorrang**: sie sind die ausdrückliche
+  Festlegung für genau diese Installation. Erst danach das Glossar.
+
+  Bearbeitet werden darf es **ab der Standard-Edition** (Feature `glossary`).
+  Der Nachschlag selbst läuft weiterhin in **jeder** Edition - Einheiten müssen
+  überall richtig behandelt werden, verkauft wird das Bearbeiten (siehe
+  Build 158 für die Begründung: "°C" ging sonst an die API und kam als "°F"
+  zurück, eine Einheitenumrechnung statt einer Übersetzung).
+
+  Der Schutz gegen zurückkehrende gelöschte Zeilen bleibt: wer "SSW" entfernt,
+  weil es in seiner Installation ein Personenkürzel ist, bekommt es nicht wieder
+  vorgeschlagen.
+
+  Regressionstest `test_glossary_separate_table.php` (7 Fälle), die drei
+  bestehenden Glossar-Tests auf die neue Struktur nachgezogen. Dabei ist
+  `attributeSeededManualTranslationKeys` als tot weggefallen.
+
 * **Build 188 (Rückfrage beim Testen): die Regel aus Build 187 war zu grob und
   behandelte Portugiesisch anders als Englisch.**
   Auslöser war eine gute Frage zu drei englischen Einträgen ("English",

@@ -634,6 +634,28 @@
                 },
                 {
                     "type": "Label",
+                    "name": "GlossaryHint",
+                    "caption": "Glossary: units and compass directions, supplied with the module. Unlike the table above there is no source language here - every column can be the source, and the entry in one column translates to the entry in any other. A term therefore needs one row only, no matter which source language a part of your visualization uses."
+                },
+                {
+                    "type": "List",
+                    "name": "Glossary",
+                    "caption": "Glossary",
+                    "width": "100%",
+                    "add": true,
+                    "delete": true,
+                    "rowCount": 8,
+                    "columns": [
+                        {
+                            "caption": "German",
+                            "name": "de",
+                            "width": "200px",
+                            "save": true
+                        }
+                    ]
+                },
+                {
+                    "type": "Label",
                     "caption": "Your own glossary, taking priority over any automatic translation - use \"Add\" to create a row, choose the source language, enter the source text, and fill in as many target-language cells as you like. If the source text of a row here matches (character-for-character) the raw text of any other row in this instance, that translation is used for every filled-in target-language cell instead of a provider call - empty cells continue to be translated automatically as usual."
                 },
                 {
