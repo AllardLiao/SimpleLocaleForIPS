@@ -4498,6 +4498,34 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 188 (Rückfrage beim Testen): die Regel aus Build 187 war zu grob und
+  behandelte Portugiesisch anders als Englisch.**
+  Auslöser war eine gute Frage zu drei englischen Einträgen ("English",
+  "English (British)", "English (American)"). Die sind korrekt - beim Nachrechnen
+  fiel aber auf, dass dieselbe Lage bei Portugiesisch anders ausging.
+
+  Build 187 strich jede Region, die der Sprache entspricht (`de-de` → `de`).
+  Das traf `DE-DE`/`FR-FR` richtig, aber auch `PT-PT` - und dort ist es falsch:
+  DeepL kennt **kein** einfaches `PT`, europäisches Portugiesisch ist dort keine
+  Dublette, sondern die einzige europäische Fassung. Aus `PT-PT` wurde dadurch
+  `pt`, was den eingebauten Namen "Português" überschrieb und die Variante
+  verschwinden ließ, während Englisch seine beiden Varianten behielt.
+
+  Die Regel prüft jetzt den Kontext: die Eigenregion fällt nur weg, wenn die
+  Basissprache in **derselben** Anbieter-Liste steht. `DE` ist dort, also ist
+  `DE-DE` redundant; `PT` ist es nicht, also bleibt `PT-PT`. Das braucht die
+  ganze Liste und liegt deshalb in `DropRedundantRegionVariants()`;
+  `NormalizeLanguageCode()` bleibt rein syntaktisch (Kleinschreibung + Aliasse).
+
+  Ergebnis an der echten Liste: aus 110 rohen Codes werden 109 interne
+  (`ZH`/`ZH-HANS` fallen über die Alias-Tabelle zusammen), nach der Bereinigung
+  107 - weggefallen sind genau `de-de` und `fr-fr`. Englisch und Portugiesisch
+  stehen jetzt gleich da: Basissprache plus die Varianten, die der Anbieter
+  tatsächlich unterscheidet.
+
+  Regressionstest auf 11 Fälle erweitert, darunter ausdrücklich der Fall, den
+  Build 187 falsch machte: ohne Basissprache in der Liste bleibt die Eigenregion.
+
 * **Build 187 (live gemeldet): trotz Build 186 standen Deutsch und Französisch
   doppelt in der Sprachauswahl.**
   Ursache war nicht die Normalisierung, sondern DeepL selbst: die Liste führt die

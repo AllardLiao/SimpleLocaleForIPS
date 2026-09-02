@@ -25,12 +25,19 @@ const ALIASES = ['nb' => 'no', 'zh-hans' => 'zh', 'zh-hant' => 'zh-tw'];
 function normalize(string $code): string
 {
     $c = strtolower(str_replace('_', '-', trim($code)));
-    $teile = explode('-', $c, 2);
-    if (count($teile) === 2 && $teile[0] === $teile[1]) {
-        $c = $teile[0];
-    }
 
     return ALIASES[$c] ?? $c;
+}
+
+// Repliziert DropRedundantRegionVariants(): die Eigenregion faellt nur, wenn die
+// Basissprache in DERSELBEN Anbieter-Liste steht.
+function dropRedundant(array $codes): array
+{
+    $vorhanden = array_flip($codes);
+    return array_values(array_filter($codes, static function (string $c) use ($vorhanden): bool {
+        $t = explode('-', $c, 2);
+        return !(count($t) === 2 && $t[0] === $t[1] && isset($vorhanden[$t[0]]));
+    }));
 }
 
 function forProvider(string $code, string $provider): string
@@ -82,11 +89,11 @@ foreach (['EN-GB' => 'en-gb', 'EN-US' => 'en-us', 'PT-BR' => 'pt-br', 'FR-CA' =>
     assert(normalize($roh) === $intern, "Regionalvariante $roh bleibt erhalten");
     assert(normalize($roh) !== normalize(explode('-', $roh)[0]), "$roh faellt nicht mit der regionslosen Form zusammen");
 }
-// PT-PT ist bewusst KEINE eigene Variante: DeepL kennt gar kein einfaches "PT",
-// europaeisches Portugiesisch IST dort die Basissprache. Bliebe es eigenstaendig,
-// stuende Portugiesisch zweimal in der Auswahl - einmal als eingebautes "pt",
-// einmal als "pt-pt". Siehe Test 9.
-assert(normalize('PT-PT') === 'pt', 'PT-PT ist die Basissprache, keine eigene Variante');
+// PT-PT bleibt eigenstaendig: DeepL kennt kein einfaches "PT", die Eigenregion
+// ist dort also NICHT redundant. Build 187 hatte sie pauschal gestrichen und
+// Portugiesisch damit anders behandelt als Englisch - siehe Test 9/10.
+assert(normalize('PT-PT') === 'pt-pt', 'PT-PT bleibt eine eigene Variante');
+assert(dropRedundant(['pt-pt', 'pt-br']) === ['pt-pt', 'pt-br'], 'ohne "pt" in der Liste faellt nichts weg');
 echo "Test 3 (Regionalvarianten bleiben eigene Sprachen) OK\n";
 
 // Test 4: DER RUECKWEG - jeder Anbieter bekommt seine eigene Schreibweise.
@@ -146,39 +153,42 @@ foreach (['de', 'cs', 'uk'] as $trivial) {
 }
 echo "Test 8 (die Alias-Tabelle enthält nur echte Entscheidungen) OK\n";
 
-// Test 9 (Build 187, live gemeldet): DeepL fuehrt Basissprache UND gleichnamige
-// Eigenregion als getrennte Eintraege - "DE"/"DE-DE" heissen beide "German",
-// "FR"/"FR-FR" beide "French". In der Auswahl standen sie zweimal untereinander
-// und waren nicht unterscheidbar. Eine Region, die der Sprache entspricht,
-// traegt keine Information.
-foreach (['de-de' => 'de', 'fr-fr' => 'fr', 'pt-pt' => 'pt', 'it-it' => 'it'] as $roh => $erwartet) {
-    assert(normalize($roh) === $erwartet, "DER FALL: \"$roh\" ist dieselbe Sprache wie \"$erwartet\"");
-}
-echo "Test 9 (Eigenregion fällt auf die Basissprache) OK\n";
+// Test 9 (Build 188, live gemeldet): DeepL fuehrt die Basissprache UND ihre
+// gleichnamige Eigenregion getrennt - "DE"/"DE-DE" heissen beide "German",
+// "FR"/"FR-FR" beide "French". Steht die Basissprache in derselben Liste, ist
+// die Eigenregion redundant und faellt weg.
+assert(dropRedundant(['de', 'de-de', 'de-ch']) === ['de', 'de-ch'], 'DER FALL: "de-de" faellt neben "de" weg');
+assert(dropRedundant(['fr', 'fr-fr', 'fr-ca']) === ['fr', 'fr-ca'], 'und "fr-fr" neben "fr"');
+echo "Test 9 (redundante Eigenregion fällt weg) OK\n";
 
-// Test 10: DIE ABGRENZUNG - fremde Regionen sind echte, eigene Zielsprachen und
-// duerfen NICHT zusammenfallen. Der umgekehrte Fehler waere schlimmer: dabei
-// verschwaende stillschweigend eine Sprache aus der Auswahl.
+// Test 10: DIE ABGRENZUNG in beide Richtungen. Fremde Regionen sind eigene
+// Zielsprachen und duerfen NIE fallen - der umgekehrte Fehler waere schlimmer,
+// dabei verschwaende stillschweigend eine Sprache aus der Auswahl. Und ohne
+// Basissprache in der Liste ist auch die Eigenregion nicht redundant.
 foreach (['de-ch', 'fr-ca', 'pt-br', 'en-gb', 'en-us', 'es-419'] as $eigenstaendig) {
     assert(normalize($eigenstaendig) === $eigenstaendig, "\"$eigenstaendig\" muss eine eigene Sprache bleiben");
-    assert(normalize($eigenstaendig) !== explode('-', $eigenstaendig)[0], "\"$eigenstaendig\" darf nicht auf die Basissprache fallen");
+    assert(dropRedundant([$eigenstaendig]) === [$eigenstaendig], "\"$eigenstaendig\" darf nie wegfallen");
 }
-echo "Test 10 (fremde Regionen bleiben eigenständig) OK\n";
+assert(dropRedundant(['pt-pt', 'pt-br']) === ['pt-pt', 'pt-br'],
+    'DIE ABGRENZUNG: ohne "pt" in der Liste bleibt "pt-pt" - genau der Fall, den Build 187 falsch machte');
+echo "Test 10 (fremde Regionen und basislose Eigenregionen bleiben) OK\n";
 
 // Test 11: DIE PROBE AUFS EXEMPEL - die echte DeepL-Liste (110 Zielsprachen,
-// live abgefragt). Genau drei Paare gehoeren zusammengefuehrt, kein viertes.
+// live abgefragt).
 $deeplEcht = explode(' ', 'AF AN AR AS AY AZ BA BE BG BN BR BS CA CS CY DA DE DE-CH DE-DE EL EN-GB EN-US EO ES ES-419 ET EU FA FI FR FR-CA FR-FR GA GL GN GU HA HE HI HR HT HU HY ID IG IS IT JA JV KA KK KO KY LA LB LN LT LV MG MI MK ML MN MR MS MT MY NB NE NL OC OM PA PL PS PT-BR PT-PT QU RO RU SA SK SL SQ SR ST SU SV SW TA TE TG TH TK TL TN TR TS TT UK UR UZ VI WO XH YI ZH ZH-HANS ZH-HANT ZU');
 assert(count($deeplEcht) === 110, 'die reale Liste hat 110 Eintraege');
-$nachCode = [];
-foreach ($deeplEcht as $code) {
-    $nachCode[normalize($code)][] = $code;
+$intern = array_values(array_unique(array_map('normalize', $deeplEcht)));
+$bereinigt = dropRedundant($intern);
+$entfernt = array_values(array_diff($intern, $bereinigt));
+sort($entfernt);
+assert($entfernt === ['de-de', 'fr-fr'], 'genau diese Eigenregionen fallen weg: ' . implode(', ', $entfernt));
+// ZH/ZH-HANS fallen bereits ueber die Alias-Tabelle zusammen, nicht ueber diese Regel.
+assert(count($intern) === 109 && count($bereinigt) === 107,
+    'aus 110 rohen werden 109 interne (ZH/ZH-HANS fallen ueber die Alias-Tabelle zusammen), '
+        . 'nach der Bereinigung 107 - gefunden: ' . count($intern) . '/' . count($bereinigt));
+foreach (['pt-pt', 'pt-br', 'en-gb', 'en-us', 'de-ch', 'fr-ca', 'es-419', 'zh-tw'] as $bleibt) {
+    assert(in_array($bleibt, $bereinigt, true), "\"$bleibt\" muss erhalten bleiben");
 }
-$zusammengefuehrt = array_filter($nachCode, static fn (array $v): bool => count($v) > 1);
-assert(count($zusammengefuehrt) === 3, 'genau drei Paare gehoeren zusammen, gefunden: ' . count($zusammengefuehrt));
-foreach ([['DE', 'DE-DE'], ['FR', 'FR-FR'], ['ZH', 'ZH-HANS']] as $paar) {
-    assert(in_array($paar, array_values($zusammengefuehrt), true), 'erwartetes Paar fehlt: ' . implode('/', $paar));
-}
-assert(count($nachCode) === 107, 'aus 110 rohen werden 107 interne Codes');
-echo "Test 11 (die reale DeepL-Liste ergibt genau drei Zusammenführungen) OK\n";
+echo "Test 11 (die reale DeepL-Liste verliert genau zwei redundante Einträge) OK\n";
 
-echo "\nAlle Tests OK (Build 187: einheitliche Sprachcodes).\n";
+echo "\nAlle Tests OK (Build 188: einheitliche Sprachcodes).\n";

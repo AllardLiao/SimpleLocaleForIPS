@@ -9511,6 +9511,32 @@ class SimpleLocale extends IPSModuleStrict
     // eigenen Sprachlisten-Endpunkt und liefert daher immer null; GetKnownLanguages
     // faellt in dem Fall automatisch auf die statische DEFAULT_LANGUAGES-Liste
     // zurueck.
+    // Build 188 (live gemeldet): DeepL fuehrt die Basissprache UND ihre
+    // gleichnamige Eigenregion als getrennte Eintraege - "DE" neben "DE-DE",
+    // "FR" neben "FR-FR", beide jeweils mit identischem Namen. In der Auswahl
+    // standen sie zweimal untereinander, ohne unterscheidbar zu sein.
+    //
+    // Weggelassen wird die Eigenregion nur, wenn die Basissprache in DERSELBEN
+    // Liste steht - dann ist sie tatsaechlich redundant. Build 187 hat sie
+    // pauschal gestrichen, und das war zu grob: DeepL kennt kein einfaches "PT",
+    // dort ist "PT-PT" die einzige europaeische Fassung. Pauschal gestrichen
+    // wurde daraus "pt", was den eingebauten Namen ueberschrieb und Portugiesisch
+    // anders behandelte als Englisch (das seine Varianten behielt).
+    //
+    // Diese Pruefung braucht die ganze Liste und gehoert deshalb hierher, nicht
+    // in NormalizeLanguageCode() - das bleibt rein syntaktisch.
+    private function DropRedundantRegionVariants(array $Names): array
+    {
+        foreach (array_keys($Names) as $code) {
+            $teile = explode('-', (string) $code, 2);
+            if (count($teile) === 2 && $teile[0] === $teile[1] && isset($Names[$teile[0]])) {
+                unset($Names[$code]);
+            }
+        }
+
+        return $Names;
+    }
+
     // Build 186: Anbieter-Schreibweise -> interne Schreibweise.
     //
     // Intern gilt genau eine Form: klein, Region mit Bindestrich ("de", "en-gb").
@@ -9521,19 +9547,6 @@ class SimpleLocale extends IPSModuleStrict
     private function NormalizeLanguageCode(string $Code): string
     {
         $code = strtolower(str_replace('_', '-', trim($Code)));
-
-        // Build 187 (live gemeldet): DeepL fuehrt die Basissprache UND ihre
-        // gleichnamige Eigenregion als getrennte Eintraege - "DE" und "DE-DE"
-        // heissen beide "German", "FR" und "FR-FR" beide "French". In der Auswahl
-        // standen sie dadurch zweimal untereinander, ohne unterscheidbar zu sein.
-        //
-        // Eine Region, die der Sprache selbst entspricht, traegt keine Information:
-        // "de-de" IST "de". Fremde Regionen bleiben unangetastet - "de-ch",
-        // "fr-ca", "pt-br" und "es-419" sind echte, eigene Zielsprachen.
-        $teile = explode('-', $code, 2);
-        if (count($teile) === 2 && $teile[0] === $teile[1]) {
-            $code = $teile[0];
-        }
 
         return self::LANGUAGE_CODE_ALIASES[$code] ?? $code;
     }
@@ -9618,7 +9631,7 @@ class SimpleLocale extends IPSModuleStrict
             }
         }
 
-        return $names;
+        return $this->DropRedundantRegionVariants($names);
     }
 
     // DeepL liefert ausschliesslich englische Namen (kein "?target="-Parameter wie
@@ -9651,7 +9664,7 @@ class SimpleLocale extends IPSModuleStrict
             }
         }
 
-        return $names;
+        return $this->DropRedundantRegionVariants($names);
     }
 
     // Gemeinsamer HTTP-Client für die Google Cloud Translate API (GET ohne Body, POST
