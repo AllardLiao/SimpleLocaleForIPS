@@ -862,6 +862,18 @@
                     "name": "LicenseInfoFeatureCustomTile",
                     "caption": "✓ Custom language-selection tile",
                     "visible": false
+                },
+                {
+                    "type": "Label",
+                    "name": "LicenseInfoFeatureGlossary",
+                    "caption": "✓ Glossary - units and compass directions prefilled",
+                    "visible": false
+                },
+                {
+                    "type": "Label",
+                    "name": "LicenseInfoFeatureDisableSingleTranslations",
+                    "caption": "✓ Translation switchable off per object",
+                    "visible": false
                 }
             ]
         }

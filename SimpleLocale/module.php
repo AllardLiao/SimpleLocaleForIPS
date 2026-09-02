@@ -1578,6 +1578,14 @@ class SimpleLocale extends IPSModuleStrict
                 case 'LicenseInfoFeatureCustomTile':
                     $element['visible'] = $licenseValid && in_array('custom_tile', $licenseInfo['features'] ?? [], true);
                     break;
+
+                case 'LicenseInfoFeatureGlossary':
+                    $element['visible'] = $licenseValid && in_array('glossary', $licenseInfo['features'] ?? [], true);
+                    break;
+
+                case 'LicenseInfoFeatureDisableSingleTranslations':
+                    $element['visible'] = $licenseValid && in_array('disable_single_translations', $licenseInfo['features'] ?? [], true);
+                    break;
             }
         }
         unset($element);
@@ -2552,6 +2560,19 @@ class SimpleLocale extends IPSModuleStrict
         // slips_guess_edition_label() auf der Website-Seite.
         $payload['edition'] = is_string($payload['edition'] ?? null) ? $payload['edition'] : '';
 
+        // Build 193 (Nutzer-Wunsch): die Sperrfrist zwischen zwei Sprachwechseln
+        // kommt jetzt als ZEITWERT aus der Lizenz, nicht mehr als Ja/Nein-Feature.
+        // 0 = unbegrenzt. Hat nichts mit languageLimit zu tun, das ist die ANZAHL
+        // der Sprachen; und nichts mit 'interval', das ist der Abo-Zyklus.
+        //
+        // Fehlt das Feld (alle bis Build 192 ausgestellten Schluessel), gilt -1 als
+        // "nicht gesetzt" - GetLanguageSwitchIntervalSeconds() faellt dann auf das
+        // bisherige Verhalten zurueck, damit ein bestehender Schluessel sich nicht
+        // stillschweigend anders verhaelt.
+        $payload['switchIntervalHours'] = isset($payload['switchIntervalHours'])
+            ? max(0, (int) $payload['switchIntervalHours'])
+            : -1;
+
         // Build 148 (Nutzer-Vorgabe zum Abo-Modell): Abrechnungszeitraum eines
         // Abos, rein informativ fuers Lizenz-Panel ("Abozeitraum: monatlich").
         // Laesst sich nicht aus expiresAt ableiten (ein Jahresabo kurz vor
@@ -2604,6 +2625,7 @@ class SimpleLocale extends IPSModuleStrict
             'features'         => $payload['features'],
             'edition'          => $payload['edition'],
             'interval'         => $payload['interval'],
+            'switchIntervalHours' => $payload['switchIntervalHours'],
         ];
         if ($expiresAt !== 0 && $expiresAt < time()) {
             return ['valid' => false, 'expired' => true] + $common;
@@ -10391,11 +10413,41 @@ HTML;
     // erlaubt - Original bleibt so immer als Ausweg erreichbar, analog
     // IsLanguageBlockedByTrial. Während der Testphase (keine/noch keine Lizenz)
     // bleibt der Sprachwechsel bewusst immer uneingeschränkt, siehe HasLicenseFeature.
-    private const languageSwitchMinIntervalSeconds = 86400;
+    // Rueckfall, wenn die Lizenz keinen eigenen Wert mitbringt (alle bis Build 192
+    // ausgestellten Schluessel) - das bisherige Verhalten: ein Wechsel pro Tag.
+    private const languageSwitchDefaultIntervalSeconds = 86400;
+
+    // Build 193: die Sperrfrist in Sekunden, 0 = unbegrenzt.
+    //
+    // Ohne gueltige Lizenz (Testphase) bleibt es wie bisher unbegrenzt - die
+    // Sperre war nie als Testphasen-Beschraenkung gedacht.
+    //
+    // Reihenfolge danach: erst der ausdrueckliche Zeitwert aus der Lizenz, dann
+    // das alte Ja/Nein-Feature als Altlast-Schreibweise fuer bereits ausgestellte
+    // Schluessel, zuletzt der Standard.
+    private function GetLanguageSwitchIntervalSeconds(): int
+    {
+        $info = $this->GetLicenseInfo();
+        if (!($info['valid'] ?? false)) {
+            return 0;
+        }
+
+        $hours = (int) ($info['switchIntervalHours'] ?? -1);
+        if ($hours >= 0) {
+            return $hours * 3600;
+        }
+
+        if (in_array('unlimited_language_switch', $info['features'] ?? [], true)) {
+            return 0;
+        }
+
+        return self::languageSwitchDefaultIntervalSeconds;
+    }
 
     private function IsLanguageSwitchRateLimited(string $Language): bool
     {
-        if ($this->HasLicenseFeature('unlimited_language_switch')) {
+        $intervall = $this->GetLanguageSwitchIntervalSeconds();
+        if ($intervall === 0) {
             return false;
         }
 
@@ -10407,7 +10459,7 @@ HTML;
 
         $lastSwitchAt = $this->ReadAttributeInteger(self::attributeLastLanguageSwitchAt);
 
-        return $lastSwitchAt !== 0 && (time() - $lastSwitchAt) < self::languageSwitchMinIntervalSeconds;
+        return $lastSwitchAt !== 0 && (time() - $lastSwitchAt) < $intervall;
     }
 
     // Aufbau bewusst identisch zu PushTrialExpiredAlert - kein Reset auf Original,
@@ -11508,8 +11560,8 @@ HTML;
     // Mehrheit der Zeilen normal uebersetzt werden soll - der Admin schaltet
     // gezielt EINZELNE Ausnahmen ab, nicht umgekehrt.
     //
-    // Build 138 (Nutzer-Wunsch): NUR ab Pro-Lizenz ("edit_translations", siehe
-    // HasLicenseFeature) überhaupt eingeblendet - anders als
+    // Build 138 (Nutzer-Wunsch): nur mit Lizenz-Feature überhaupt eingeblendet -
+    // anders als
     // BuildRowSourceLanguageColumn/BuildLanguageColumnSet (dort bleibt eine
     // Spalte OHNE das Feature sichtbar, nur nicht editierbar) wird die Spalte
     // hier bei fehlendem Feature komplett WEGGELASSEN, nicht nur schreibgeschützt
@@ -11524,9 +11576,18 @@ HTML;
     // Downgrade von Pro) bleibt dadurch wirksam/konsistent, und die bereits
     // VOR dieser Checkbox bestehende automatische JSON-Ausnahme (Build 84)
     // bleibt unabhaengig von der Lizenz weiterhin fuer alle Editionen aktiv.
+    //
+    // Build 192 (Nutzer-Wunsch): eigenes Feature statt "edit_translations". Beide
+    // hingen bis dahin an einem Schluessel, liessen sich also nur gemeinsam
+    // vergeben. In einer Spezialversion, die Features einzeln zusammenstellt und
+    // kein "Tier" kennt, war der Schalter dadurch gar nicht getrennt festlegbar -
+    // wer ihn wollte, musste das komplette Editieren der gescannten Tabellen
+    // mitgeben. "edit_translations" behaelt seinen eigentlichen Umfang: die
+    // editierbaren Zellen und die Quellsprache je Zeile (siehe
+    // BuildLanguageColumnSet/BuildRowSourceLanguageColumn, dort als Default).
     private function BuildTranslationActiveColumn(): ?array
     {
-        if (!$this->HasLicenseFeature('edit_translations')) {
+        if (!$this->HasLicenseFeature('disable_single_translations')) {
             return null;
         }
 

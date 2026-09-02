@@ -4498,6 +4498,38 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 193 (Nutzer-Wunsch): die Sperrfrist zwischen zwei Sprachwechseln ist
+  jetzt frei festlegbar - als Zeitwert aus der Lizenz, `0` = unbegrenzt.**
+  Vorher gab es nur ein Ja/Nein-Feature (`unlimited_language_switch`) und eine
+  fest verdrahtete Konstante von 24 Stunden. In einer **Spezialversion**, die
+  Features einzeln zusammenstellt und kein Tier kennt, ließ sich die Dauer damit
+  gar nicht festlegen - nur an oder aus.
+
+  Neu in der Lizenz-Nutzlast: `switchIntervalHours`. Das ist ausdrücklich weder
+  `languageLimit` (die **Anzahl** der Sprachen) noch `interval` (der
+  Abo-Zyklus) - beide bleiben unberührt.
+
+  Bereits ausgestellte Schlüssel kennen das Feld nicht. Damit sich keiner von
+  ihnen stillschweigend anders verhält, gilt die Reihenfolge: ausdrücklicher
+  Zeitwert, sonst das alte Ja/Nein-Feature als Altlast-Schreibweise, sonst der
+  bisherige Tag. Ohne gültige Lizenz bleibt es unbegrenzt - die Sperre war nie
+  als Testphasen-Beschränkung gedacht.
+
+  Regressionstest `test_language_switch_interval.php` (7 Fälle).
+
+* **Build 192 (Nutzer-Wunsch): "Übersetzung je Objekt abschaltbar" hat ein
+  eigenes Lizenz-Feature (`disable_single_translations`).**
+  Bis dahin hing der Schalter an `edit_translations` - beide ließen sich also
+  nur gemeinsam vergeben. In einer Spezialversion war er dadurch nicht getrennt
+  festlegbar: wer ihn wollte, musste das komplette Editieren der gescannten
+  Tabellen mitgeben.
+
+  `edit_translations` behält seinen eigentlichen Umfang: die editierbaren Zellen
+  und die Quellsprache je Zeile (in `BuildLanguageColumnSet()` und
+  `BuildRowSourceLanguageColumn()` als Vorgabewert, gut ein Dutzend
+  Aufrufstellen). Der Lizenzblock im Formular zeigt jetzt auch die beiden neuen
+  Features an.
+
 * **Build 191 (live gemeldet): die Glossar-Tabelle blieb bei einer frisch
   angelegten Instanz leer - der Erklärtext darüber erschien, die Tabelle nicht.**
   Befüllt wurde das Glossar bis dahin **ausschließlich** in `ScanRootTree()`,

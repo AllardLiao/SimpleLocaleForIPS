@@ -191,9 +191,9 @@ function appendTranslationActiveColumnReplica(array $columns, bool $hasEditTrans
 
     return $columns;
 }
-assert(appendTranslationActiveColumnReplica(['ObjectID'], false) === ['ObjectID'], 'THE BUG: without the Pro feature "edit_translations", the checkbox column must be omitted entirely from the column list, not merely present-but-readonly');
+assert(appendTranslationActiveColumnReplica(['ObjectID'], false) === ['ObjectID'], 'THE BUG: without the feature "disable_single_translations", the checkbox column must be omitted entirely from the column list, not merely present-but-readonly');
 assert(count(appendTranslationActiveColumnReplica(['ObjectID'], true)) === 2, 'with the Pro feature, the checkbox column must be appended normally');
-echo "Test 12 (the checkbox column is completely hidden without the Pro feature 'edit_translations', not just read-only) OK\n";
+echo "Test 12 (the checkbox column is completely hidden without the feature 'disable_single_translations', not just read-only) OK\n";
 
 // Test 13 (Build 138): the runtime resolution/backfill/auto-deactivation logic
 // must NOT be license-gated - only the form column itself. This matters for a
@@ -228,7 +228,14 @@ assert(substr_count($moduleSource, 'AutoDeactivateTranslationForJsonContent($row
 assert(strpos($moduleSource, "\$Rows[\$RowIndex][self::fieldTranslationActive] ?? true") !== false, 'the live VM_UPDATE path (ApplyTrackedVariableUpdate, shared by Eigene Texte and Begrüßung-in-Variable-mode) must also respect the flag before calling the translation API');
 $buildColFnStart = strpos($moduleSource, 'private function BuildTranslationActiveColumn(): ?array');
 $buildColFnBody = substr($moduleSource, $buildColFnStart, 300);
-assert(strpos($buildColFnBody, "HasLicenseFeature('edit_translations')") !== false, 'THE BUG (138): BuildTranslationActiveColumn() must gate on the Pro feature "edit_translations", the same feature already used for manual translation editing');
+// Build 192: eigenes Feature statt "edit_translations". Beide hingen an einem
+// Schluessel und liessen sich nur gemeinsam vergeben - in einer Spezialversion,
+// die Features einzeln zusammenstellt, war der Schalter dadurch gar nicht
+// getrennt festlegbar.
+assert(strpos($buildColFnBody, "HasLicenseFeature('disable_single_translations')") !== false,
+    'BuildTranslationActiveColumn() muss an seinem EIGENEN Feature haengen');
+assert(strpos($buildColFnBody, "HasLicenseFeature('edit_translations')") === false,
+    'und nicht mehr an edit_translations - sonst waere die Trennung wirkungslos');
 echo "Test 14 (the real module.php wires the checkbox, its resolution logic, and the new JSON auto-deactivation into all 6 requested tables with the correct raw field per table, and gates only the column's visibility on the Pro feature) OK\n";
 
 echo "\nAll tests passed.\n";
