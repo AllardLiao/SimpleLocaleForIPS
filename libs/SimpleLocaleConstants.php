@@ -658,12 +658,12 @@ trait SimpleLocaleConstants
     // Timer: Präfix als Salt auf den Namen, falls im jeweiligen System bereits ein
     // Timer/Objekt mit demselben Basisnamen existieren sollte.
     //
-    // Build 185: bewusst weiterhin "IPSSL_TIMER_", obwohl das Funktions-Präfix
-    // jetzt SLOC lautet. Daraus entstehen die per RegisterTimer() angelegten,
-    // PERSISTIERTEN Timer-Idents - ein Umbenennen legte auf jeder bestehenden
-    // Installation neue Timer an und ließe die alten als verwaiste Objekte
-    // zurück. Der Wert ist nirgends sichtbar, er ist reines Salz.
-    private const timerPrefix = 'IPSSL_TIMER_';
+    // Build 185: mit dem Funktions-Präfix von IPSSL auf SLOC umgestellt. Daraus
+    // entstehen PERSISTIERTE Timer-Idents - auf einer bereits laufenden Instanz
+    // legte das neue Timer an und ließe die alten mit einem Callback zurück, den
+    // es unter dem Namen nicht mehr gibt. Zum Zeitpunkt der Umstellung existierten
+    // ausschließlich eigene Testinstanzen, die neu angelegt wurden.
+    private const timerPrefix = 'SLOC_TIMER_';
     private const timerIdentAutoRescan = 'AutoRescan';
     private const timerIdentTranslationStats = 'TranslationStats';
     private const timerIdentPendingRowUpdateFlush = 'PendingRowUpdateFlush';

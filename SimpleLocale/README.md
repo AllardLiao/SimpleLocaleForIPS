@@ -4509,23 +4509,19 @@ der ursprünglichen Fassung übernommen.
   `SLOC_SetLanguage()` und die übrigen aus [Abschnitt 9](#9-php-befehlsreferenz).
   Bestehende eigene Skripte müssen entsprechend angepasst werden.
 
-  **Zwei Stellen behalten `IPSSL` bewusst**, weil dort keine Anzeigenamen stehen,
-  sondern **persistierte Bezeichner**:
+  Mit umgestellt sind auch zwei **persistierte** Bezeichner, bei denen das
+  Folgen hat: das Präfix der per `RegisterTimer()` angelegten Timer-Idents und
+  der Name der privaten Variablenprofile aus Build 164, auf die vorhandene
+  Variablen per `IPS_SetVariableCustomProfile` zeigen. Auf einer bereits
+  gelebten Installation bliebe dadurch ein Timer mit totem Callback zurück und
+  ein verwaistes Profil. Zum Zeitpunkt der Umstellung existierten ausschließlich
+  eigene Testinstanzen, die neu angelegt wurden - deshalb bewusst der saubere
+  Schnitt statt eines dauerhaften Altlast-Präfixes.
 
-  * `timerPrefix` (`IPSSL_TIMER_`) bildet die per `RegisterTimer()` angelegten
-    Timer-Idents. Umbenannt legte jede bestehende Installation neue Timer an und
-    ließe die alten als verwaiste Objekte zurück.
-  * `GetForkedProfileName()` bildet den Namen des privaten Variablenprofils aus
-    Build 164, auf das vorhandene Variablen per `IPS_SetVariableCustomProfile`
-    zeigen. Umbenannt verwaisen die Profile, und das Zurückstellen auf das
-    Original liefe ins Leere.
-
-  Beide sind im Code begründet, damit sie beim nächsten Mal nicht doch
-  mitgenommen werden. Regressionstest
-  `test_prefix_rename_keeps_persisted_ids.php` (6 Fälle, darunter die Zusicherung,
-  dass die Timer-Callbacks zum aktuellen Präfix passen - sonst riefe Symcon eine
-  Funktion auf, die es unter dem Namen nicht gibt, und der Timer liefe stumm ins
-  Leere).
+  Regressionstest `test_function_prefix.php` (6 Fälle, darunter die stille
+  Falle: Symcon speichert den Timer-Callback als Text, ein zum Präfix
+  unpassender Name fällt beim Registrieren nirgends auf und der Timer liefe
+  danach stumm ins Leere).
 
 * **Build 185 (Symcon-Review): `ApplyChanges()` schreibt die eigene Konfiguration
   nicht mehr nach - die Umstellung der aktiven Sprache läuft über `Migrate()`.**

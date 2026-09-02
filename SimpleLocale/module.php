@@ -4168,15 +4168,14 @@ class SimpleLocale extends IPSModuleStrict
     // Enthaelt Instanz- UND Variablen-ID, ist also eindeutig und laesst sich beim
     // Zurueckstellen zielsicher wieder loeschen.
     //
-    // Build 185: bewusst weiterhin "IPSSL.", obwohl das Funktions-Praefix jetzt
-    // SLOC lautet. Das hier ist kein Anzeigename, sondern der PERSISTIERTE Name
-    // eines angelegten Variablenprofils - bestehende Instanzen referenzieren ihn
-    // aus IPS_SetVariableCustomProfile heraus. Ein Umbenennen wuerde die
-    // vorhandenen Profile verwaisen lassen und das Zurueckstellen auf das
-    // Original ins Leere laufen lassen.
+    // Build 185: mit dem Funktions-Praefix von IPSSL auf SLOC umgestellt. Der Name
+    // ist PERSISTIERT - auf einer bereits laufenden Instanz bliebe das alte Profil
+    // als verwaistes Objekt zurueck, weil das Loeschen beim Zurueckstellen ueber
+    // genau diesen Namen laeuft. Zum Zeitpunkt der Umstellung existierten
+    // ausschliesslich eigene Testinstanzen, die neu angelegt wurden.
     private function GetForkedProfileName(int $ValueObjectID): string
     {
-        return 'IPSSL.' . $this->InstanceID . '.' . $ValueObjectID;
+        return 'SLOC.' . $this->InstanceID . '.' . $ValueObjectID;
     }
 
     private function ReadEnumerationProfileBackups(): array
