@@ -3649,7 +3649,11 @@ class SimpleLocale extends IPSModuleStrict
         'J'    => ['ru' => 'Дж'],
         'kJ'   => ['ru' => 'кДж'],
         'kcal' => ['ru' => 'ккал'],
-        'rpm'  => ['ru' => 'об/мин'],
+        // Build 197: 'rpm' ist englisch abgeleitet (revolutions per minute) - im
+        // Deutschen 'U/min', im Franzoesischen 'tr/min', luxemburgisch wie deutsch.
+        // Englisch/Spanisch/Portugiesisch verwenden 'rpm' tatsaechlich, dort bleibt
+        // es beim Durchreichen.
+        'rpm'   => ['ru' => 'об/мин', 'de' => 'U/min', 'fr' => 'tr/min', 'lb' => 'U/min'],
         'UV'   => ['ru' => 'УФ'],
     ];
 

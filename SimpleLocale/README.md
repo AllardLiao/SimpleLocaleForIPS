@@ -4498,6 +4498,20 @@ der ursprünglichen Fassung übernommen.
   Symmetrie-Checks inklusive der bewussten Nicht-Änderung von Statuszeile und
   Kachel).
 
+* **Build 197: `rpm` heißt auf Deutsch `U/min`, auf Französisch `tr/min`.**
+  Der Eintrag stand in allen Sprachen als `rpm` - englisch abgeleitet
+  (revolutions per minute) und damit genau einer der 17 Fälle aus Build 196.
+  Ergänzt für Deutsch, Französisch und Luxemburgisch (wie Deutsch);
+  Englisch/Spanisch/Portugiesisch verwenden `rpm` tatsächlich, dort bleibt es.
+
+  **Zu beachten:** die deutsche Spalte ist zugleich der Wert, über den ein Text
+  mit deutscher Quellsprache gefunden wird. Zeigt eine Visualisierung das Kürzel
+  buchstäblich als `rpm` an - bei Sensoren durchaus üblich, weil sie englische
+  Suffixe liefern -, trifft die Zeile nun nicht mehr. Gewollt ist der Tausch:
+  wer `U/min` anzeigt, wird jetzt geschützt und in andere Sprachen korrekt
+  übersetzt; wer `rpm` anzeigt, trägt es bei Bedarf als eigene Glossar-Zeile
+  nach.
+
 * **Build 196 (Rückfrage beim Testen): "Einheiten sind in jeder Sprache gleich"
   war zu pauschal - jetzt wird nach Verlässlichkeit vorbelegt.**
   Auf die Frage, ob `°C` denn auch im Chinesischen so heißt, lautet die ehrliche
