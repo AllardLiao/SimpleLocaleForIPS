@@ -9,6 +9,24 @@ Build 53 bis Build 107 - ausgelagert aus Abschnitt 2, das dadurch als reine,
 aktuelle Liste bestehen bleibt. Jeder Eintrag ist unverändert (verbatim) aus
 der ursprünglichen Fassung übernommen.
 
+* **Build 198: der Change-Log steht in einer eigenen Datei, die Dokumentation
+  ist von Build-Archäologie befreit.**
+  Mit 145 Einträgen über 4.400 Zeilen war er dreimal so lang wie die
+  Dokumentation, an die er angehängt war - und uneinheitlich sortiert: die
+  neueren Einträge standen als absteigender Block **über** den älteren, weshalb
+  die Datei scheinbar bei Build 154 endete. Jetzt hier, durchgehend neueste
+  zuerst; alle Einträge unverändert übernommen.
+
+  In den Doku-Abschnitten steckten außerdem zwanzig "seit Build N"-Marken und
+  einige "ein Fehler hat X aufgedeckt, deshalb Y"-Passagen. Wer die Anleitung
+  liest, will wissen **wie etwas funktioniert**, nicht mit welchem Build es kam -
+  diese Stellen sind ins Präsens umgeschrieben. Inhaltlich wurde nichts
+  entfernt, nur die Historie, und genau dafür gibt es diese Datei.
+
+  Zwei Build-Nummern haben übrigens keinen eigenen Eintrag: **56** (aus
+  frühester Zeit) und **193** (ging in den gemeinsamen Eintrag zu 192 ein und
+  wurde beim Wechsel von Stunden auf Minuten zu 194 umnummeriert).
+
 * **Build 197: `rpm` heißt auf Deutsch `U/min`, auf Französisch `tr/min`.**
   Der Eintrag stand in allen Sprachen als `rpm` - englisch abgeleitet
   (revolutions per minute) und damit genau einer der 17 Fälle aus Build 196.
