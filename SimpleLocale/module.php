@@ -1952,7 +1952,7 @@ class SimpleLocale extends IPSModuleStrict
         $objectAutomations = array_values(array_filter(
             $this->DecodeRows(self::propertyObjectAutomations),
             function (array $row) use ($liveAutomationIDs, &$removedCount): bool {
-                $keep = isset($liveAutomationIDs[(int) ($row['Automation ID'] ?? 0)]);
+                $keep = isset($liveAutomationIDs[(int) ($row['AutomationID'] ?? 0)]);
                 $removedCount += $keep ? 0 : 1;
 
                 return $keep;
@@ -4117,7 +4117,7 @@ class SimpleLocale extends IPSModuleStrict
 
         $rowsByID = [];
         foreach ($this->DecodeRows(self::propertyObjectAutomations) as $row) {
-            $automationID = (int) ($row['Automation ID'] ?? 0);
+            $automationID = (int) ($row['AutomationID'] ?? 0);
             if ($automationID !== 0) {
                 $rowsByID[$automationID] = $row;
             }
@@ -4128,7 +4128,7 @@ class SimpleLocale extends IPSModuleStrict
 
         $changed = false;
         foreach ($liveAutomations as &$entry) {
-            $automationID = (int) ($entry['Automation ID'] ?? 0);
+            $automationID = (int) ($entry['AutomationID'] ?? 0);
             $row = $rowsByID[$automationID] ?? null;
             if ($row === null) {
                 continue;
@@ -6867,13 +6867,13 @@ class SimpleLocale extends IPSModuleStrict
 
         $scannedByID = [];
         foreach ($automations as $entry) {
-            $automationID = (int) ($entry['Automation ID'] ?? 0);
+            $automationID = (int) ($entry['AutomationID'] ?? 0);
             $name = (string) ($entry['Name'] ?? '');
             if ($automationID === 0 || $name === '') {
                 continue;
             }
             $scannedByID[$automationID] = [
-                'Automation ID'            => $automationID,
+                'AutomationID'            => $automationID,
                 self::langOriginalImport  => $name,
                 self::fieldRowSourceLanguage               => $currentScanSourceLanguage,
                 self::fieldTranslatedAgainstSourceLanguage => $currentScanSourceLanguage,
@@ -6895,7 +6895,7 @@ class SimpleLocale extends IPSModuleStrict
 
         $result = [];
         foreach ($ExistingRows as $row) {
-            $automationID = (int) ($row['Automation ID'] ?? 0);
+            $automationID = (int) ($row['AutomationID'] ?? 0);
             $fallback = $ScannedByID[$automationID][self::fieldRowSourceLanguage] ?? $instanceSourceLanguage;
             $row = $this->BackfillRowSourceLanguage($row, $fallback);
             unset($ScannedByID[$automationID]);
@@ -11675,7 +11675,7 @@ HTML;
 
         if ($Kind === 'automations') {
             $columns = [
-                ['caption' => 'Automation ID', 'name' => 'Automation ID', 'width' => '100px', 'save' => true],
+                ['caption' => 'Automation ID', 'name' => 'AutomationID', 'width' => '100px', 'save' => true],
             ];
             $columns[] = [
                 'caption' => $this->Translate('Original import'),

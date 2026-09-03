@@ -546,7 +546,7 @@
                     "columns": [
                         {
                             "caption": "Automation ID",
-                            "name": "Automation ID",
+                            "name": "AutomationID",
                             "width": "100px",
                             "save": true
                         },
