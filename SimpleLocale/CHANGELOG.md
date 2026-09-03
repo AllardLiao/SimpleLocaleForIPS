@@ -29,7 +29,8 @@ der ursprünglichen Fassung übernommen.
 
   Zwei Einschränkungen, die in der Sache liegen: Symcon kennt für den Knopf nur
   "da" oder "nicht da" - ein sichtbarer, aber grauer Knopf ist im List-Element
-  nicht vorgesehen. Und der Zähler ist bewusst transient: bei zwei gleichzeitig
+  nicht vorgesehen. (Dass `UpdateFormField` das Attribut `add` zur Laufzeit
+  annimmt, ist nicht dokumentiert, aber live bestätigt.) Und der Zähler ist bewusst transient: bei zwei gleichzeitig
   offenen Formularen derselben Instanz laufen die Stände auseinander. Der Schaden
   bleibt begrenzt, weil beim Speichern ohnehin korrekt gekürzt und gemeldet wird
   - der Zähler steuert nur, ob der Knopf angeboten wird.

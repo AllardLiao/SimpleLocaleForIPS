@@ -5335,6 +5335,10 @@ class SimpleLocale extends IPSModuleStrict
     // Symcon kennt fuer den Knopf nur "da" oder "nicht da" - ein sichtbarer, aber
     // grauer Knopf ist nicht vorgesehen (siehe Doku zum List-Element, Attribut
     // "add").
+    //
+    // Dass UpdateFormField das Attribut "add" zur Laufzeit ueberhaupt annimmt,
+    // steht NICHT in der Doku - live geprueft und bestaetigt (02.09.2026). Nicht
+    // erneut untersuchen.
     private function ApplyTargetLanguageCountDelta(int $Delta): void
     {
         $count = max(0, $this->ReadAttributeInteger(self::attributeFormTargetLanguageCount) + $Delta);
