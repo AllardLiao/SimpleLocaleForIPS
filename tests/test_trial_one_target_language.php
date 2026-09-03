@@ -131,4 +131,27 @@ assert(strpos($module, "\$grund = (\$this->GetLicenseInfo()['valid'] ?? false)")
     'die Unterscheidung haengt an einer gueltigen Lizenz');
 echo "Test 9 (der Hinweis spricht in der Testphase nicht von einer Lizenz) OK\n";
 
-echo "\nAlle Tests OK (Build 201: Testphase mit einer echten Zielsprache).\n";
+// Test 10 (Build 202, live gemeldet): bei erreichtem Limit darf NUR das
+// Hinzufuegen wegfallen, nicht die ganze Liste. Mit 'enabled' => false liess
+// sich die bereits gewaehlte Zielsprache weder aendern noch loeschen - der
+// Nutzer sass auf seiner ersten Wahl fest, obwohl sie laut Zusage jederzeit
+// wechselbar ist. Umgestellt wird sie einfach in der Zeile.
+$populate = substr($module, (int) strpos($module, 'private function PopulateFormElements'), 40000);
+$zweig = substr($populate, (int) strpos($populate, 'elseif ($limitReached)'), 900);
+assert(strpos($zweig, "\$element['add'] = false;") !== false,
+    'DER BLOCKER: nur der Hinzufuegen-Knopf faellt weg');
+assert(strpos($zweig, "\$element['enabled'] = false;") === false,
+    'die Liste selbst muss bedienbar bleiben');
+echo "Test 10 (bei erreichtem Limit bleibt die Zeile änderbar) OK\n";
+
+// Test 11: eine Kuerzung beim Speichern darf nicht stillschweigend passieren.
+// Der ausgeblendete Knopf wird erst beim naechsten Formularaufbau neu bewertet -
+// wer das Formular oeffnet, solange Platz ist, kann darin beliebig viele Zeilen
+// anlegen und verlor sie beim Speichern kommentarlos.
+$enforce = $fenster('private function EnforceLicensedLanguageLimit');
+assert(strpos($enforce, '$entfernt = count($rows) - count($filtered);') !== false,
+    'die Zahl der entfernten Zeilen muss ermittelt werden');
+assert(strpos($enforce, 'LogTranslateMessage(') !== false, 'und gemeldet werden');
+echo "Test 11 (eine Kürzung wird gemeldet, nicht verschwiegen) OK\n";
+
+echo "\nAlle Tests OK (Build 202: Testphase mit einer echten Zielsprache).\n";

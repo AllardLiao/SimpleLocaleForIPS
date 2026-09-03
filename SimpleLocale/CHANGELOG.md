@@ -9,6 +9,22 @@ Build 53 bis Build 107 - ausgelagert aus Abschnitt 2, das dadurch als reine,
 aktuelle Liste bestehen bleibt. Jeder Eintrag ist unverändert (verbatim) aus
 der ursprünglichen Fassung übernommen.
 
+* **Build 202 (live gemeldet): bei erreichtem Sprachlimit ließ sich die bereits
+  gewählte Zielsprache weder ändern noch löschen.**
+  Die Sperre setzte `enabled = false` auf die **ganze** Liste. Damit saß der
+  Nutzer auf seiner ersten Wahl fest - und das widerspricht direkt der Zusage,
+  die Zielsprache sei in der Testphase jederzeit wechselbar. Jetzt fällt nur der
+  "Hinzufügen"-Knopf weg (`add = false`, was Symcon ausblendet - deaktiviert
+  bietet es dort nicht an). Die Zeile selbst bleibt bedienbar, und der Wechsel
+  läuft ohnehin natürlicher über das Umstellen der Zeile als über Löschen und
+  Neuanlegen.
+
+  Zweitens wird eine **Kürzung beim Speichern jetzt gemeldet**. Der ausgeblendete
+  Knopf wird erst beim nächsten Formularaufbau neu bewertet: wer das Formular
+  öffnet, solange noch Platz ist, kann darin beliebig viele Zeilen anlegen - und
+  verlor sie beim Speichern kommentarlos. Das Meldungs-Log nennt jetzt Anzahl und
+  Grund.
+
 * **Build 201 (live gemeldet): das Zielsprachen-Feld meldete "Sprachlimit dieser
   Lizenz erreicht, max. 1" - in der Testphase, in der es gar keine Lizenz gibt.**
   Zwei Fehler an einer Stelle:

@@ -1093,7 +1093,14 @@ class SimpleLocale extends IPSModuleStrict
                         // bleibt daher unübersetzt (unabhängig von der Konsolensprache).
                         $element['caption'] = 'Target languages (please save a valid API key first and reopen the form)';
                     } elseif ($limitReached) {
-                        $element['enabled'] = false;
+                        // Build 202 (live gemeldet): NUR das Hinzufuegen sperren, nicht
+                        // die ganze Liste. Mit 'enabled' => false liess sich die bereits
+                        // gewaehlte Zielsprache weder aendern noch loeschen - der Nutzer
+                        // sass auf seiner ersten Wahl fest. Genau das widerspricht der
+                        // Zusage, die Zielsprache sei in der Testphase jederzeit
+                        // wechselbar: sie wird schlicht in der Zeile umgestellt, ganz ohne
+                        // Loeschen und Neuanlegen.
+                        $element['add'] = false;
                         // Enthält $languageLimit als Variable in EINER Caption, gemeinsam mit
                         // dem umgebenden Satz - anders als beim Lizenz-Infobereich (siehe
                         // "LicenseInfoLanguageLimitNumberLabel" unten, dort in ein eigenes,
@@ -2885,6 +2892,21 @@ class SimpleLocale extends IPSModuleStrict
 
         if ($filtered === $rows) {
             return;
+        }
+
+        // Build 202 (live gemeldet): die Kuerzung nicht mehr stillschweigend
+        // vornehmen. Wer das Formular oeffnet, solange noch Platz ist, kann darin
+        // beliebig viele Zeilen anlegen - der ausgeblendete "Hinzufuegen"-Knopf
+        // wird erst beim naechsten Formularaufbau neu bewertet. Beim Speichern
+        // verschwanden die ueberzaehligen Zeilen dann kommentarlos.
+        $entfernt = count($rows) - count($filtered);
+        if ($entfernt > 0) {
+            $this->LogTranslateMessage(sprintf(
+                '%d Zielsprache(n) wurden beim Speichern entfernt: das Limit von %d Zielsprache(n) ist erreicht '
+                    . '(die Scan-Sprache zaehlt dabei nicht mit).',
+                $entfernt,
+                $this->GetLicensedLanguageLimit()
+            ));
         }
 
         IPS_SetProperty($this->InstanceID, self::propertyTargetLanguages, json_encode($filtered));
