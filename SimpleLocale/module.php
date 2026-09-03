@@ -1062,9 +1062,13 @@ class SimpleLocale extends IPSModuleStrict
                     // Zeile mit in der Liste (EnsureSourceLanguageIsTarget), belegt aber
                     // keinen Platz - sonst waere die Liste bei Limit 1 schon gesperrt,
                     // bevor ueberhaupt eine Zielsprache gewaehlt werden konnte.
+                    // Build 203: dieselbe Ausnahme wie bei der Kuerzung - in Gebrauch
+                    // befindliche Quellsprachen belegen keinen Platz.
+                    $geschuetzteSprachen = array_flip($this->GetUsedSourceLanguages());
                     $zielsprachen = array_filter(
                         $targetLanguages,
                         static fn (string $code): bool => $code !== $sourceLanguage
+                            && !isset($geschuetzteSprachen[$code])
                     );
                     $limitReached = $languageLimit > 0 && count($zielsprachen) >= $languageLimit;
                     $hasUsableLanguageList = $this->GetProviderChain() === ['free'] || $this->HasCachedLanguages();
@@ -1121,6 +1125,26 @@ class SimpleLocale extends IPSModuleStrict
                     } else {
                         $element['enabled'] = true;
                     }
+
+                    // Build 203: Zeilen, deren Sprache irgendwo als Quellsprache in
+                    // Gebrauch ist, gegen Aendern und Loeschen sperren. Symcon kennt
+                    // dafuer "editable"/"deletable" je Zeile.
+                    //
+                    // Ohne das kann der Admin eine Sprache entfernen, auf die
+                    // gescannte Zeilen als Quellsprache verweisen - deren Rohtext
+                    // waere danach im Formular nicht mehr erreichbar. Der Fall ist
+                    // ausdruecklich beworben: fremdsprachige Module in einem eigenen
+                    // Scan-Gang mit abweichender Scan-Sprache.
+                    $inGebrauch = array_flip($this->GetUsedSourceLanguages());
+                    $zeilen = [];
+                    foreach ($this->DecodeRows(self::propertyTargetLanguages) as $row) {
+                        if (isset($inGebrauch[(string) ($row['code'] ?? '')])) {
+                            $row['editable'] = false;
+                            $row['deletable'] = false;
+                        }
+                        $zeilen[] = $row;
+                    }
+                    $element['values'] = $zeilen;
                     break;
 
                 case self::propertyObjectNames:
@@ -2872,12 +2896,19 @@ class SimpleLocale extends IPSModuleStrict
         // EnsureSourceLanguageIsTarget() traegt sie ohnehin selbst ein. Vorher
         // wurde sie mitgezaehlt: eine Edition mit Limit 3 lieferte damit nur zwei
         // tatsaechliche Zielsprachen, obwohl der Shop "Zielsprachen" bewirbt.
+        // Build 203: Sprachen, die als Zeilen-Quellsprache in Gebrauch sind, sind
+        // strukturell noetig (siehe GetUsedSourceLanguages) - sie werden weder
+        // gezaehlt noch entfernt. Sonst risse eine Kuerzung genau den Zeilen die
+        // Spalte weg, die sie brauchen.
+        $geschuetzt = array_flip($this->GetUsedSourceLanguages());
+
         $limit = $this->GetLicensedLanguageLimit();
         if ($limit > 0) {
             $behalten = [];
             $ziele = 0;
             foreach ($filtered as $row) {
-                if (($row['code'] ?? '') === $sourceLanguage) {
+                $code = (string) ($row['code'] ?? '');
+                if ($code === $sourceLanguage || isset($geschuetzt[$code])) {
                     $behalten[] = $row;
                     continue;
                 }
@@ -5268,17 +5299,53 @@ class SimpleLocale extends IPSModuleStrict
     // tatsaechlich etwas geaendert hat (neue/entfernte Zeile zaehlt ebenfalls als
     // Aenderung, absichtlich - eine neue Zeile hat immer eine frisch gestempelte
     // Quellsprache, siehe WalkTree/Scan*, die exakt einmal mitreconciled werden soll).
+    // Build 203: alle Listen, deren Zeilen eine eigene Quellsprache tragen
+    // koennen (fieldRowSourceLanguage). Gemeinsame Quelle fuer den Fingerprint
+    // und fuer GetUsedSourceLanguages().
+    private const ROW_SOURCE_LANGUAGE_PROPERTIES = [
+        self::propertyObjectNames,
+        self::propertyObjectTexts,
+        self::propertyEnumerationOptions,
+        self::propertyObjectAutomations,
+        self::propertyObjectCharts,
+        self::propertyObjectGreeting,
+        self::propertyManualTranslations,
+    ];
+
+    // Build 203 (Nutzer-Hinweis): jede Sprache, die irgendwo als QUELLSPRACHE
+    // einer Zeile in Gebrauch ist - plus die aktuelle Scan-Sprache.
+    //
+    // Diese Sprachen sind keine frei waehlbaren Zielsprachen, sondern strukturell
+    // noetig: verschwindet so eine Sprache aus propertyTargetLanguages, verliert
+    // JEDE Zeile mit dieser Zeilen-Quellsprache ihre Spalte - der Rohtext waere
+    // im Formular nicht mehr erreichbar, und BuildRowSourceLanguageOptions()
+    // boete den gespeicherten Wert nicht mehr an, was Symcon das Speichern
+    // verweigern laesst (derselbe Fehler wie in Build 142 bei der aktiven
+    // Sprache).
+    //
+    // Der Fall ist ausdruecklich beworben: wer ein fremdsprachiges Modul in einem
+    // eigenen Scan-Gang mit abweichender Scan-Sprache erfasst, hat danach Zeilen
+    // mit genau so einer Quellsprache.
+    //
+    // Bewusst aus den DATEN abgeleitet statt mitgeschrieben: so stimmt die Liste
+    // auch fuer Zeilen, die vor dieser Aenderung entstanden sind, und kann nicht
+    // auseinanderlaufen.
+    private function GetUsedSourceLanguages(): array
+    {
+        $codes = [$this->ReadPropertyString(self::propertySourceLanguage)];
+        foreach (self::ROW_SOURCE_LANGUAGE_PROPERTIES as $property) {
+            foreach ($this->DecodeRows($property) as $row) {
+                $codes[] = (string) ($row[self::fieldRowSourceLanguage] ?? '');
+            }
+        }
+
+        return array_values(array_unique(array_filter($codes, static fn (string $c): bool => $c !== '')));
+    }
+
     private function ComputeRowSourceLanguageFingerprint(): string
     {
         $parts = [];
-        foreach ([
-            self::propertyObjectNames,
-            self::propertyObjectTexts,
-            self::propertyEnumerationOptions,
-            self::propertyObjectAutomations,
-            self::propertyObjectCharts,
-            self::propertyObjectGreeting,
-        ] as $property) {
+        foreach (self::ROW_SOURCE_LANGUAGE_PROPERTIES as $property) {
             foreach ($this->DecodeRows($property) as $row) {
                 $parts[] = (string) ($row[self::fieldRowSourceLanguage] ?? '');
             }
