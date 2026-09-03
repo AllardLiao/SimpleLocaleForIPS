@@ -126,7 +126,6 @@
             "Trial version - expires as soon as this instance has been applied for the first time.": "Testversion - läuft ab, sobald diese Instanz zum ersten Mal übernommen wurde.",
             "Trial version - expires on": "Testversion - läuft ab am",
             "day(s) remaining": "Tag(e) verbleibend",
-            "Full functionality until then, but only with the 5 languages unlocked for testing (Icelandic, Welsh, Zulu, Maori, Latin).": "Bis dahin voller Funktionsumfang, aber nur mit den 5 testweise freigeschalteten Sprachen (Isländisch, Walisisch, Zulu, Maori, Latein).",
             "Trial version expired on": "Testversion abgelaufen am",
             "The tile now shows users the unedited original text again; a further rescan is blocked until a valid license key has been activated.": "Die Kachel zeigt Anwendern ab jetzt wieder den unbearbeiteten Original-Text, ein weiterer Rescan ist blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.",
             "Purchase a license:": "Lizenz erwerben:",
@@ -140,7 +139,6 @@
             "Removing or bypassing the license check is not permitted, even with AI assistance, and violates copyright and license terms (see LICENSE in the repository).": "Das Entfernen oder Umgehen der Lizenzprüfung ist auch mit KI-Unterstützung nicht gestattet und verstößt gegen Urheberrecht und Lizenzbedingungen (siehe LICENSE im Repository).",
             "Product page: https://www.synergetix.de/simplelocale/": "Produktseite: https://www.synergetix.de/simplelocale/",
             "Purchase a license: https://www.synergetix.de/simplelocale/pricing.php": "Lizenz erwerben: https://www.synergetix.de/simplelocale/pricing.php",
-            "Language limit of this license reached, max.": "Sprachlimit dieser Lizenz erreicht, max.",
             "Pro Edition required": "Pro Edition erforderlich",
             "Type": "Typ",
             "Expiry": "Ablauf",
@@ -216,7 +214,11 @@
             "Glossary: units and compass directions, supplied with the module. Unlike the table above there is no source language here - every column can be the source, and the entry in one column translates to the entry in any other. A term therefore needs one row only, no matter which source language a part of your visualization uses.": "Glossar: mitgelieferte Einheiten und Kompassrichtungen. Anders als in der Tabelle darüber gibt es hier keine Quellsprache - jede Spalte kann die Quelle sein, und der Eintrag einer Spalte übersetzt sich in den jeder anderen. Ein Begriff braucht deshalb nur eine Zeile, ganz gleich welche Quellsprache ein Teil deiner Visualisierung verwendet.",
             "✓ Glossary - units and compass directions prefilled": "✓ Glossar - Einheiten & Kompass vorbefüllt",
             "✓ Translation switchable off per object": "✓ Übersetzung je Objekt abschaltbar",
-            "Catalog": "Katalog"
+            "Catalog": "Katalog",
+            "Full functionality until then, with one freely chosen target language - changeable at any time during the trial.": "Bis dahin voller Funktionsumfang, mit einer frei wählbaren Zielsprache - jederzeit während der Testphase wechselbar.",
+            "target-language limit of this license reached, max.": "Zielsprachen-Limit dieser Lizenz erreicht, max.",
+            "trial version: one target language, more with a license": "Testphase: eine Zielsprache, mehr mit einer Lizenz",
+            "Some languages are shown greyed out and cannot be edited or deleted. Those are in use as a source language: either the scan language itself, or the source language of individual rows - for example after scanning a foreign-language module in its own pass. Removing such a language would take its column out of every table below, leaving the original text of those rows unreachable, and the instance could no longer be saved. They also do not count towards the language limit, since they are structurally required rather than a target language you chose.": "Einige Sprachen sind ausgegraut und lassen sich weder ändern noch löschen. Sie sind als Quellsprache in Gebrauch: entweder als Scan-Sprache selbst oder als Quellsprache einzelner Zeilen - etwa nachdem ein fremdsprachiges Modul in einem eigenen Scan-Gang erfasst wurde. Würde so eine Sprache entfernt, fiele ihre Spalte aus allen Tabellen unten weg, der Originaltext dieser Zeilen wäre nicht mehr erreichbar, und die Instanz ließe sich nicht mehr speichern. Sie zählen auch nicht gegen das Sprachlimit, da sie strukturell nötig sind und keine von dir gewählte Zielsprache."
         },
         "es": {
             "Active": "Activo",
@@ -344,7 +346,6 @@
             "Trial version - expires as soon as this instance has been applied for the first time.": "Versión de prueba - caduca en cuanto esta instancia se guarde por primera vez.",
             "Trial version - expires on": "Versión de prueba - caduca el",
             "day(s) remaining": "día(s) restante(s)",
-            "Full functionality until then, but only with the 5 languages unlocked for testing (Icelandic, Welsh, Zulu, Maori, Latin).": "Funcionalidad completa hasta entonces, pero solo con los 5 idiomas habilitados para pruebas (islandés, galés, zulú, maorí, latín).",
             "Trial version expired on": "Versión de prueba caducada el",
             "The tile now shows users the unedited original text again; a further rescan is blocked until a valid license key has been activated.": "El widget vuelve a mostrar a los usuarios el texto original sin editar; un nuevo rescaneo está bloqueado hasta que se active una clave de licencia válida.",
             "Purchase a license:": "Adquirir una licencia:",
@@ -358,7 +359,6 @@
             "Removing or bypassing the license check is not permitted, even with AI assistance, and violates copyright and license terms (see LICENSE in the repository).": "Eliminar o eludir la verificación de la licencia no está permitido, ni siquiera con la ayuda de IA, y vulnera los derechos de autor y las condiciones de la licencia (véase LICENSE en el repositorio).",
             "Product page: https://www.synergetix.de/simplelocale/": "Página del producto: https://www.synergetix.de/simplelocale/",
             "Purchase a license: https://www.synergetix.de/simplelocale/pricing.php": "Adquirir una licencia: https://www.synergetix.de/simplelocale/pricing.php",
-            "Language limit of this license reached, max.": "Límite de idiomas de esta licencia alcanzado, máx.",
             "Pro Edition required": "Se requiere la edición Pro",
             "Type": "Tipo",
             "Expiry": "Vencimiento",
@@ -434,7 +434,11 @@
             "Glossary: units and compass directions, supplied with the module. Unlike the table above there is no source language here - every column can be the source, and the entry in one column translates to the entry in any other. A term therefore needs one row only, no matter which source language a part of your visualization uses.": "Glosario: unidades y direcciones de la brújula incluidas con el módulo. A diferencia de la tabla anterior, aquí no hay idioma de origen: cualquier columna puede ser el origen, y la entrada de una columna se traduce a la de cualquier otra. Por eso un término solo necesita una fila, sea cual sea el idioma de origen de una parte de tu visualización.",
             "✓ Glossary - units and compass directions prefilled": "✓ Glosario: unidades y direcciones de la brújula predefinidas",
             "✓ Translation switchable off per object": "✓ Traducción desactivable por objeto",
-            "Catalog": "Catálogo"
+            "Catalog": "Catálogo",
+            "Full functionality until then, with one freely chosen target language - changeable at any time during the trial.": "Hasta entonces, funcionalidad completa con un idioma de destino de libre elección, cambiable en cualquier momento durante la prueba.",
+            "target-language limit of this license reached, max.": "límite de idiomas de destino de esta licencia alcanzado, máx.",
+            "trial version: one target language, more with a license": "versión de prueba: un idioma de destino, más con una licencia",
+            "Some languages are shown greyed out and cannot be edited or deleted. Those are in use as a source language: either the scan language itself, or the source language of individual rows - for example after scanning a foreign-language module in its own pass. Removing such a language would take its column out of every table below, leaving the original text of those rows unreachable, and the instance could no longer be saved. They also do not count towards the language limit, since they are structurally required rather than a target language you chose.": "Algunos idiomas aparecen atenuados y no se pueden editar ni eliminar. Están en uso como idioma de origen: como idioma de escaneo o como origen de filas concretas, por ejemplo tras escanear un módulo en otro idioma en su propia pasada. Si se eliminara uno de ellos, su columna desaparecería de todas las tablas inferiores, el texto original de esas filas dejaría de ser accesible y la instancia ya no podría guardarse. Tampoco cuentan para el límite de idiomas, ya que son necesarios estructuralmente y no son un idioma de destino elegido por ti."
         },
         "it": {
             "Active": "Attivo",
@@ -562,7 +566,6 @@
             "Trial version - expires as soon as this instance has been applied for the first time.": "Versione di prova - scade non appena questa istanza viene salvata per la prima volta.",
             "Trial version - expires on": "Versione di prova - scade il",
             "day(s) remaining": "giorno/i rimanente/i",
-            "Full functionality until then, but only with the 5 languages unlocked for testing (Icelandic, Welsh, Zulu, Maori, Latin).": "Piena funzionalità fino ad allora, ma solo con le 5 lingue sbloccate per il test (islandese, gallese, zulu, maori, latino).",
             "Trial version expired on": "Versione di prova scaduta il",
             "The tile now shows users the unedited original text again; a further rescan is blocked until a valid license key has been activated.": "Il riquadro torna a mostrare agli utenti il testo originale non modificato; un'ulteriore nuova scansione è bloccata finché non viene attivata una chiave di licenza valida.",
             "Purchase a license:": "Acquista una licenza:",
@@ -576,7 +579,6 @@
             "Removing or bypassing the license check is not permitted, even with AI assistance, and violates copyright and license terms (see LICENSE in the repository).": "La rimozione o l'elusione del controllo della licenza non è consentita, nemmeno con l'assistenza dell'IA, e viola il copyright e i termini di licenza (vedi LICENSE nel repository).",
             "Product page: https://www.synergetix.de/simplelocale/": "Pagina del prodotto: https://www.synergetix.de/simplelocale/",
             "Purchase a license: https://www.synergetix.de/simplelocale/pricing.php": "Acquista una licenza: https://www.synergetix.de/simplelocale/pricing.php",
-            "Language limit of this license reached, max.": "Limite di lingue di questa licenza raggiunto, massimo",
             "Pro Edition required": "Edizione Pro richiesta",
             "Type": "Tipo",
             "Expiry": "Scadenza",
@@ -652,7 +654,11 @@
             "Glossary: units and compass directions, supplied with the module. Unlike the table above there is no source language here - every column can be the source, and the entry in one column translates to the entry in any other. A term therefore needs one row only, no matter which source language a part of your visualization uses.": "Glossario: unità e direzioni della bussola fornite con il modulo. A differenza della tabella sopra, qui non esiste una lingua di origine: ogni colonna può essere l'origine e la voce di una colonna si traduce in quella di qualsiasi altra. Un termine richiede quindi una sola riga, qualunque sia la lingua di origine di una parte della tua visualizzazione.",
             "✓ Glossary - units and compass directions prefilled": "✓ Glossario: unità e direzioni della bussola precompilate",
             "✓ Translation switchable off per object": "✓ Traduzione disattivabile per singolo oggetto",
-            "Catalog": "Catalogo"
+            "Catalog": "Catalogo",
+            "Full functionality until then, with one freely chosen target language - changeable at any time during the trial.": "Fino ad allora funzionalità completa, con una lingua di destinazione a scelta, modificabile in qualsiasi momento durante la prova.",
+            "target-language limit of this license reached, max.": "limite di lingue di destinazione di questa licenza raggiunto, max.",
+            "trial version: one target language, more with a license": "versione di prova: una lingua di destinazione, di più con una licenza",
+            "Some languages are shown greyed out and cannot be edited or deleted. Those are in use as a source language: either the scan language itself, or the source language of individual rows - for example after scanning a foreign-language module in its own pass. Removing such a language would take its column out of every table below, leaving the original text of those rows unreachable, and the instance could no longer be saved. They also do not count towards the language limit, since they are structurally required rather than a target language you chose.": "Alcune lingue appaiono in grigio e non possono essere modificate né eliminate. Sono in uso come lingua di origine: come lingua di scansione oppure come origine di singole righe, ad esempio dopo aver scansionato un modulo in un'altra lingua in un passaggio dedicato. Rimuovendone una, la sua colonna sparirebbe da tutte le tabelle sottostanti, il testo originale di quelle righe non sarebbe più raggiungibile e l'istanza non potrebbe più essere salvata. Non contano nemmeno per il limite di lingue, poiché sono strutturalmente necessarie e non una lingua di destinazione da te scelta."
         },
         "fr": {
             "Active": "Actif",
@@ -780,7 +786,6 @@
             "Trial version - expires as soon as this instance has been applied for the first time.": "Version d'essai - expire dès que cette instance a été appliquée pour la première fois.",
             "Trial version - expires on": "Version d'essai - expire le",
             "day(s) remaining": "jour(s) restant(s)",
-            "Full functionality until then, but only with the 5 languages unlocked for testing (Icelandic, Welsh, Zulu, Maori, Latin).": "Fonctionnalité complète jusque-là, mais uniquement avec les 5 langues débloquées pour les tests (islandais, gallois, zoulou, maori, latin).",
             "Trial version expired on": "Version d'essai expirée le",
             "The tile now shows users the unedited original text again; a further rescan is blocked until a valid license key has been activated.": "La tuile affiche à nouveau aux utilisateurs le texte original non modifié ; un nouveau balayage est bloqué tant qu'une clé de licence valide n'a pas été activée.",
             "Purchase a license:": "Acheter une licence :",
@@ -794,7 +799,6 @@
             "Removing or bypassing the license check is not permitted, even with AI assistance, and violates copyright and license terms (see LICENSE in the repository).": "La suppression ou le contournement de la vérification de licence n'est pas autorisé, même avec l'aide de l'IA, et constitue une violation du droit d'auteur et des conditions de licence (voir LICENSE dans le dépôt).",
             "Product page: https://www.synergetix.de/simplelocale/": "Page produit : https://www.synergetix.de/simplelocale/",
             "Purchase a license: https://www.synergetix.de/simplelocale/pricing.php": "Acheter une licence : https://www.synergetix.de/simplelocale/pricing.php",
-            "Language limit of this license reached, max.": "Limite de langues de cette licence atteinte, max.",
             "Pro Edition required": "Édition Pro requise",
             "Type": "Type",
             "Expiry": "Expiration",
@@ -870,7 +874,11 @@
             "Glossary: units and compass directions, supplied with the module. Unlike the table above there is no source language here - every column can be the source, and the entry in one column translates to the entry in any other. A term therefore needs one row only, no matter which source language a part of your visualization uses.": "Glossaire : unités et directions de boussole fournies avec le module. Contrairement au tableau ci-dessus, il n'y a pas de langue source ici - chaque colonne peut être la source, et l'entrée d'une colonne se traduit dans celle de n'importe quelle autre. Un terme ne nécessite donc qu'une seule ligne, quelle que soit la langue source d'une partie de votre visualisation.",
             "✓ Glossary - units and compass directions prefilled": "✓ Glossaire - unités et directions de boussole préremplies",
             "✓ Translation switchable off per object": "✓ Traduction désactivable par objet",
-            "Catalog": "Catalogue"
+            "Catalog": "Catalogue",
+            "Full functionality until then, with one freely chosen target language - changeable at any time during the trial.": "Jusque-là, toutes les fonctions, avec une langue cible librement choisie - modifiable à tout moment pendant la période d'essai.",
+            "target-language limit of this license reached, max.": "limite de langues cibles de cette licence atteinte, max.",
+            "trial version: one target language, more with a license": "version d'essai : une langue cible, plus avec une licence",
+            "Some languages are shown greyed out and cannot be edited or deleted. Those are in use as a source language: either the scan language itself, or the source language of individual rows - for example after scanning a foreign-language module in its own pass. Removing such a language would take its column out of every table below, leaving the original text of those rows unreachable, and the instance could no longer be saved. They also do not count towards the language limit, since they are structurally required rather than a target language you chose.": "Certaines langues apparaissent en grisé et ne peuvent être ni modifiées ni supprimées. Elles sont utilisées comme langue source : soit comme langue d'analyse, soit comme source de lignes particulières - par exemple après avoir analysé un module en langue étrangère lors d'un passage dédié. Supprimer une telle langue ferait disparaître sa colonne de tous les tableaux ci-dessous, le texte d'origine de ces lignes deviendrait inaccessible et l'instance ne pourrait plus être enregistrée. Elles ne comptent pas non plus dans la limite de langues, car elles sont structurellement nécessaires et non une langue cible que vous avez choisie."
         }
     }
 }

@@ -9,6 +9,110 @@ Build 53 bis Build 107 - ausgelagert aus Abschnitt 2, das dadurch als reine,
 aktuelle Liste bestehen bleibt. Jeder Eintrag ist unverändert (verbatim) aus
 der ursprünglichen Fassung übernommen.
 
+* **Build 205: der Erklärtext neben der Zielsprachen-Tabelle ist breiter
+  (420 → 540 px).**
+  Der Platz rechts neben der Tabelle war noch da, der Text brach unnötig um.
+
+* **Build 204 (live gemeldet): der "Hinzufügen"-Knopf reagiert jetzt sofort, und
+  die Sperre wird im Formular erklärt.**
+  Bisher wurde der Knopf nur beim Formularaufbau bewertet. Wer das Formular
+  öffnete, solange noch Platz war, konnte beliebig viele Zeilen anlegen; beim
+  Speichern wurden sie gekürzt. Build 202 hat das immerhin gemeldet - soweit soll
+  es aber gar nicht erst kommen.
+
+  Jetzt melden `onAdd` und `onDelete` jede Änderung an das Modul, das den Knopf
+  per `UpdateFormField` nachführt. Der Umweg über einen mitlaufenden Zähler ist
+  nötig, weil Symcon diesen Skripten **nur die betroffene Zeile** übergibt, nicht
+  die aktuelle Liste - und der Stand im offenen Formular steht noch nicht in der
+  Property. Der Zähler startet beim Formularaufbau und wird danach
+  fortgeschrieben.
+
+  Zwei Einschränkungen, die in der Sache liegen: Symcon kennt für den Knopf nur
+  "da" oder "nicht da" - ein sichtbarer, aber grauer Knopf ist im List-Element
+  nicht vorgesehen. Und der Zähler ist bewusst transient: bei zwei gleichzeitig
+  offenen Formularen derselben Instanz laufen die Stände auseinander. Der Schaden
+  bleibt begrenzt, weil beim Speichern ohnehin korrekt gekürzt und gemeldet wird
+  - der Zähler steuert nur, ob der Knopf angeboten wird.
+
+  Dazu steht rechts neben der Tabelle jetzt eine Erklärung, warum einzelne
+  Sprachen ausgegraut sind und nicht gegen das Limit zählen (siehe Build 203).
+
+* **Build 203 (Nutzer-Hinweis): Sprachen, die als Quellsprache einer Zeile in
+  Gebrauch sind, lassen sich nicht mehr entfernen oder ändern.**
+  Der Fall ist ausdrücklich beworben: ein fremdsprachiges IPS-Modul in einem
+  eigenen Scan-Gang mit abweichender Scan-Sprache erfassen. Danach tragen diese
+  Zeilen z. B. `en` als Zeilen-Quellsprache, während die Instanz weiter auf `de`
+  scannt.
+
+  Verschwand `en` dann aus den Zielsprachen - von Hand gelöscht oder durch die
+  Kürzung am Sprachlimit -, hatte das zwei Folgen, und beide waren bisher
+  ungeschützt:
+
+  * Die Spalte `en` fiel aus allen Listen weg. Der **Rohtext** dieser Zeilen war
+    damit im Formular nicht mehr erreichbar.
+  * `BuildRowSourceLanguageOptions()` bot den gespeicherten Wert nicht mehr an -
+    und Symcon verweigert dann das Speichern der Instanz
+    (`Current value ... is not available`), derselbe Fehler wie in Build 142 bei
+    der aktiven Sprache.
+
+  Solche Sprachen sind jetzt in der Zielsprachen-Tabelle weder änderbar noch
+  löschbar (Symcon kennt dafür `editable`/`deletable` je Zeile), werden von der
+  Kürzung übersprungen und **zählen nicht gegen das Sprachlimit** - sie sind
+  strukturell nötig, keine frei gewählte Zielsprache. Ohne diese Ausnahme
+  blockierte die Struktur die freie Wahl: bei Limit 1 wäre nach so einem
+  Scan-Gang gar keine Zielsprache mehr möglich gewesen.
+
+  Die Menge wird aus den **Daten** abgeleitet, nicht mitgeschrieben - so stimmt
+  sie auch für Zeilen, die vor dieser Änderung entstanden sind, und kann nicht
+  auseinanderlaufen.
+
+  Regressionstest `test_used_source_languages_protected.php` (6 Fälle, darunter
+  die Gegenprobe, dass eine frei gewählte Zielsprache bedienbar bleibt).
+
+* **Build 202 (live gemeldet): bei erreichtem Sprachlimit ließ sich die bereits
+  gewählte Zielsprache weder ändern noch löschen.**
+  Die Sperre setzte `enabled = false` auf die **ganze** Liste. Damit saß der
+  Nutzer auf seiner ersten Wahl fest - und das widerspricht direkt der Zusage,
+  die Zielsprache sei in der Testphase jederzeit wechselbar. Jetzt fällt nur der
+  "Hinzufügen"-Knopf weg (`add = false`, was Symcon ausblendet - deaktiviert
+  bietet es dort nicht an). Die Zeile selbst bleibt bedienbar, und der Wechsel
+  läuft ohnehin natürlicher über das Umstellen der Zeile als über Löschen und
+  Neuanlegen.
+
+  Zweitens wird eine **Kürzung beim Speichern jetzt gemeldet**. Der ausgeblendete
+  Knopf wird erst beim nächsten Formularaufbau neu bewertet: wer das Formular
+  öffnet, solange noch Platz ist, kann darin beliebig viele Zeilen anlegen - und
+  verlor sie beim Speichern kommentarlos. Das Meldungs-Log nennt jetzt Anzahl und
+  Grund.
+
+* **Build 201 (live gemeldet): das Zielsprachen-Feld meldete "Sprachlimit dieser
+  Lizenz erreicht, max. 1" - in der Testphase, in der es gar keine Lizenz gibt.**
+  Zwei Fehler an einer Stelle:
+
+  * Die Sperre des Auswahlfelds zählte weiter die **Quellsprache** mit. Build 199
+    hatte das nur in `EnforceLicensedLanguageLimit()` korrigiert; die Sperre im
+    Formular ist ein zweiter, unabhängiger Pfad. Bei Limit 1 wäre die Liste damit
+    gesperrt gewesen, **bevor** überhaupt eine Zielsprache gewählt werden konnte.
+  * Der Hinweistext sprach von einer Lizenz. In der Testphase gibt es keine,
+    deren Limit erreicht sein könnte - dort ist es die Testphase selbst. Der Text
+    unterscheidet jetzt beide Fälle.
+
+  Regressionstest um zwei Fälle erweitert - ausdrücklich mit der Zusicherung,
+  dass die Liste allein mit der Quellsprache **nicht** gesperrt ist.
+
+* **Build 200: die Beschreibung der Testphase im Konfigurationsformular stimmte
+  nach Build 199 nicht mehr.**
+  Dort stand weiterhin "voller Funktionsumfang, aber nur mit den 5 zum Testen
+  freigeschalteten Sprachen (Isländisch, Walisisch, Zulu, Maori, Latein)" -
+  genau das, was Build 199 abgeschafft hat. Jetzt: "voller Funktionsumfang, mit
+  einer frei wählbaren Zielsprache - jederzeit während der Testphase
+  wechselbar", in allen vier Sprachen.
+
+  Der Qualitäts-Hinweis in [Abschnitt 2](README.md#2-bekannte-einschränkungen)
+  nannte dieselben fünf Sprachen als "Testphasen-Sprachen". Sachlich stimmt der
+  Hinweis weiterhin - die Übersetzungsqualität ist für selten unterstützte
+  Sprachen schwerer einzuschätzen -, nur der Bezug zur Testphase ist entfallen.
+
 * **Build 199 (Nutzer-Entscheidung): die Testphase ist "Pro mit einer
   Zielsprache" statt fünf praxisferner Sprachen.**
   Bisher waren es Isländisch, Walisisch, Zulu, Maori und Latein - bewusst

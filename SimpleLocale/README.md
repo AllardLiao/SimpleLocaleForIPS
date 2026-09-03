@@ -249,10 +249,9 @@ Beschreibung des Moduls.
   Bei einer häufig extern aktualisierten Variable also am besten zügig
   speichern bzw. genau diese Zelle meiden, solange der Hinweis oben im
   Formular eine anstehende Persistierung anzeigt.
-* **Qualitäts-Hinweis:** für die fünf Testphasen-Sprachen (is/cy/zu/mi/la)
-  gibt es keine Konsolensprachen-Referenz zum Abgleich, und die
-  Übersetzungsqualität für diese seltener unterstützten Sprachen -
-  insbesondere Zulu und Māori - ist spürbar weniger zuverlässig
+* **Qualitäts-Hinweis:** für selten unterstützte Sprachen (z. B. Isländisch,
+  Walisisch, Zulu, Māori, Latein) gibt es keine Konsolensprachen-Referenz zum
+  Abgleich, und die Übersetzungsqualität ist dort spürbar weniger zuverlässig
   einzuschätzen als für die verbreiteten Sprachen. Vor produktivem
   Live-Einsatz wird eine Prüfung durch Muttersprachler empfohlen. Diese
   Zeilen sind (wie alle `propertyOwnUiTexts`-Zeilen) bewusst NICHT über das

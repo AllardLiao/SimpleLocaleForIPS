@@ -103,4 +103,92 @@ assert(strpos($optionen, 'restrictToTrialLanguages') === false,
     'DIE OEFFNUNG: kein Filter auf feste Testsprachen mehr');
 echo "Test 7 (jede Sprache ist wählbar) OK\n";
 
-echo "\nAlle Tests OK (Build 199: Testphase mit einer echten Zielsprache).\n";
+// Test 8 (Build 201, live gemeldet): dieselbe Zaehlung noch einmal im FORMULAR.
+// EnforceLicensedLanguageLimit() kuerzt die gespeicherte Liste, die Sperre des
+// Auswahlfelds ist ein ZWEITER, unabhaengiger Pfad - der zaehlte weiterhin die
+// Quellsprache mit. Bei Limit 1 waere die Liste damit schon gesperrt gewesen,
+// bevor ueberhaupt eine Zielsprache gewaehlt werden konnte.
+function gesperrt(array $codes, string $quelle, int $limit): bool
+{
+    $ziele = array_filter($codes, static fn (string $c): bool => $c !== $quelle);
+
+    return $limit > 0 && count($ziele) >= $limit;
+}
+assert(gesperrt(['de'], 'de', 1) === false,
+    'DER FALLSTRICK: allein mit der Quellsprache darf die Liste NICHT gesperrt sein');
+assert(gesperrt(['de', 'en'], 'de', 1) === true, 'nach der ersten Zielsprache aber schon');
+assert(gesperrt(['de', 'en', 'fr'], 'de', 3) === false, 'bei Limit 3 bleibt Platz');
+$module = (string) file_get_contents(dirname(__DIR__) . '/SimpleLocale/module.php');
+assert(strpos($module, '$limitReached = $languageLimit > 0 && count($zielsprachen) >= $languageLimit;') !== false,
+    'die Formular-Sperre muss ueber die gefilterten Zielsprachen zaehlen');
+echo "Test 8 (auch die Formular-Sperre zählt nur Zielsprachen) OK\n";
+
+// Test 9: der Text daneben darf in der Testphase nicht von einer "Lizenz"
+// sprechen - es gibt keine, deren Limit erreicht sein koennte.
+assert(strpos($module, "trial version: one target language, more with a license") !== false,
+    'DIE BESCHRIFTUNG: eigener Text fuer die Testphase');
+assert(strpos($module, "\$grund = (\$this->GetLicenseInfo()['valid'] ?? false)") !== false,
+    'die Unterscheidung haengt an einer gueltigen Lizenz');
+echo "Test 9 (der Hinweis spricht in der Testphase nicht von einer Lizenz) OK\n";
+
+// Test 10 (Build 202, live gemeldet): bei erreichtem Limit darf NUR das
+// Hinzufuegen wegfallen, nicht die ganze Liste. Mit 'enabled' => false liess
+// sich die bereits gewaehlte Zielsprache weder aendern noch loeschen - der
+// Nutzer sass auf seiner ersten Wahl fest, obwohl sie laut Zusage jederzeit
+// wechselbar ist. Umgestellt wird sie einfach in der Zeile.
+$populate = substr($module, (int) strpos($module, 'private function PopulateFormElements'), 40000);
+$zweig = substr($populate, (int) strpos($populate, 'elseif ($limitReached)'), 900);
+assert(strpos($zweig, "\$element['add'] = false;") !== false,
+    'DER BLOCKER: nur der Hinzufuegen-Knopf faellt weg');
+assert(strpos($zweig, "\$element['enabled'] = false;") === false,
+    'die Liste selbst muss bedienbar bleiben');
+echo "Test 10 (bei erreichtem Limit bleibt die Zeile änderbar) OK\n";
+
+// Test 11: eine Kuerzung beim Speichern darf nicht stillschweigend passieren.
+// Der ausgeblendete Knopf wird erst beim naechsten Formularaufbau neu bewertet -
+// wer das Formular oeffnet, solange Platz ist, kann darin beliebig viele Zeilen
+// anlegen und verlor sie beim Speichern kommentarlos.
+$enforce = $fenster('private function EnforceLicensedLanguageLimit');
+assert(strpos($enforce, '$entfernt = count($rows) - count($filtered);') !== false,
+    'die Zahl der entfernten Zeilen muss ermittelt werden');
+assert(strpos($enforce, 'LogTranslateMessage(') !== false, 'und gemeldet werden');
+echo "Test 11 (eine Kürzung wird gemeldet, nicht verschwiegen) OK\n";
+
+// Test 12 (Build 204, live gemeldet): der "Hinzufuegen"-Knopf muss SOFORT
+// reagieren, nicht erst beim naechsten Formularaufbau. Vorher konnte der Nutzer
+// beliebig viele Zeilen anlegen und verlor sie beim Speichern.
+//
+// Symcon uebergibt den onAdd-/onDelete-Skripten nur die BETROFFENE Zeile, nicht
+// die Liste - deshalb ein mitlaufender Zaehler im Modul.
+function darfHinzufuegen(int $count, int $limit): bool
+{
+    return $limit <= 0 || $count < $limit;
+}
+assert(darfHinzufuegen(0, 1) === true, 'ohne Zielsprache ist Platz');
+assert(darfHinzufuegen(1, 1) === false, 'nach der ersten ist Schluss');
+assert(darfHinzufuegen(2, 3) === true, 'bei Limit 3 ist nach zweien noch Platz');
+assert(darfHinzufuegen(9, 0) === true, 'Limit 0 heisst unbegrenzt');
+echo "Test 12 (die Platzberechnung stimmt) OK\n";
+
+// Test 13: das Formular meldet BEIDE Richtungen - loeschen muss den Knopf
+// zurueckbringen, sonst bliebe er nach dem Entfernen einer Sprache verschwunden.
+$form = (string) file_get_contents(dirname(__DIR__) . '/SimpleLocale/form.json');
+// Einfache Anfuehrungszeichen: in doppelten wuerde PHP das $id im Suchtext
+// selbst interpolieren und damit ins Leere greifen.
+assert(strpos($form, 'IPS_RequestAction($id, \'TargetLanguagesChanged\', 1);') !== false, 'onAdd meldet +1');
+assert(strpos($form, '"onDelete": "IPS_RequestAction($id, \'TargetLanguagesChanged\', -1);"') !== false,
+    'DER RUECKWEG: onDelete meldet -1');
+assert(strpos($module, 'case self::identTargetLanguagesChanged:') !== false, 'das Modul verarbeitet die Meldung');
+$delta = substr($module, (int) strpos($module, 'private function ApplyTargetLanguageCountDelta'), 700);
+assert(strpos($delta, 'max(0,') !== false, 'der Zaehler darf nicht negativ werden');
+assert(strpos($delta, "UpdateFormField(self::propertyTargetLanguages, 'add'") !== false,
+    'und schiebt den Knopf-Zustand ins offene Formular');
+echo "Test 13 (Hinzufügen und Löschen melden beide) OK\n";
+
+// Test 14: der Ausgangswert kommt aus dem Formularaufbau - ohne ihn zaehlte der
+// Delta-Mechanismus ab einem beliebigen Stand.
+assert(strpos($module, 'WriteAttributeInteger(self::attributeFormTargetLanguageCount, count($zielsprachen));') !== false,
+    'beim Aufbau wird der Zaehler auf die zaehlenden Zielsprachen gesetzt');
+echo "Test 14 (der Zähler startet beim Formularaufbau) OK\n";
+
+echo "\nAlle Tests OK (Build 204: Testphase mit einer echten Zielsprache).\n";

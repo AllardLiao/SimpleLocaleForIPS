@@ -407,6 +407,7 @@ class SimpleLocale extends IPSModuleStrict
         $this->RegisterAttributeString(self::attributeGuestLanguageNamesCache, '{}');
         $this->RegisterAttributeString(self::attributeTranslationCache, '{}');
         $this->RegisterAttributeString(self::attributeSeededGlossaryKeys, '{}');
+        $this->RegisterAttributeInteger(self::attributeFormTargetLanguageCount, 0);
         $this->RegisterAttributeString(self::attributeLastRunTranslationFailures, '{}');
         $this->RegisterAttributeString(self::attributeUnnamedObjects, '[]');
         $this->RegisterAttributeInteger(self::attributeLastCleanupRemovedCount, -1);
@@ -923,6 +924,16 @@ class SimpleLocale extends IPSModuleStrict
                 }
                 break;
 
+            // Build 204: das Formular meldet jedes Hinzufuegen/Loeschen einer
+            // Zielsprache, damit der "Hinzufuegen"-Knopf sofort verschwindet, sobald
+            // das Limit erreicht ist - und wieder erscheint, sobald wieder Platz ist.
+            // Ohne das wurde er erst beim naechsten Formularaufbau neu bewertet: der
+            // Nutzer konnte beliebig viele Zeilen anlegen und verlor sie beim
+            // Speichern.
+            case self::identTargetLanguagesChanged:
+                $this->ApplyTargetLanguageCountDelta((int) $Value);
+                break;
+
             case self::identRescan:
                 $this->Rescan();
                 break;
@@ -1058,7 +1069,19 @@ class SimpleLocale extends IPSModuleStrict
                     // der eingebaute Zeilen-Editor-Popup nur den Platzhalter zur Auswahl
                     // anbietet und dessen "OK" eine Fake-Zeile in die Liste einträgt.
                     $languageLimit = $this->GetLicensedLanguageLimit();
-                    $limitReached = $languageLimit > 0 && count($targetLanguages) >= $languageLimit;
+                    // Build 201: nur ZIELsprachen zaehlen. Die Quellsprache steht als
+                    // Zeile mit in der Liste (EnsureSourceLanguageIsTarget), belegt aber
+                    // keinen Platz - sonst waere die Liste bei Limit 1 schon gesperrt,
+                    // bevor ueberhaupt eine Zielsprache gewaehlt werden konnte.
+                    // Build 203: dieselbe Ausnahme wie bei der Kuerzung - in Gebrauch
+                    // befindliche Quellsprachen belegen keinen Platz.
+                    $geschuetzteSprachen = array_flip($this->GetUsedSourceLanguages());
+                    $zielsprachen = array_filter(
+                        $targetLanguages,
+                        static fn (string $code): bool => $code !== $sourceLanguage
+                            && !isset($geschuetzteSprachen[$code])
+                    );
+                    $limitReached = $languageLimit > 0 && count($zielsprachen) >= $languageLimit;
                     $hasUsableLanguageList = $this->GetProviderChain() === ['free'] || $this->HasCachedLanguages();
 
                     // Build 148 (Nutzer-Vorgabe zum Abo-Modell): bei abgelaufener
@@ -1085,7 +1108,14 @@ class SimpleLocale extends IPSModuleStrict
                         // bleibt daher unübersetzt (unabhängig von der Konsolensprache).
                         $element['caption'] = 'Target languages (please save a valid API key first and reopen the form)';
                     } elseif ($limitReached) {
-                        $element['enabled'] = false;
+                        // Build 202 (live gemeldet): NUR das Hinzufuegen sperren, nicht
+                        // die ganze Liste. Mit 'enabled' => false liess sich die bereits
+                        // gewaehlte Zielsprache weder aendern noch loeschen - der Nutzer
+                        // sass auf seiner ersten Wahl fest. Genau das widerspricht der
+                        // Zusage, die Zielsprache sei in der Testphase jederzeit
+                        // wechselbar: sie wird schlicht in der Zeile umgestellt, ganz ohne
+                        // Loeschen und Neuanlegen.
+                        $element['add'] = false;
                         // Enthält $languageLimit als Variable in EINER Caption, gemeinsam mit
                         // dem umgebenden Satz - anders als beim Lizenz-Infobereich (siehe
                         // "LicenseInfoLanguageLimitNumberLabel" unten, dort in ein eigenes,
@@ -1097,10 +1127,41 @@ class SimpleLocale extends IPSModuleStrict
                         // Konsolensprache des Betrachters gebundener) Text entsteht - exakt
                         // dieselbe, dokumentierte Einschränkung wie bei BuildTrialInfoText
                         // (siehe README Abschnitt 8).
-                        $element['caption'] = $this->Translate('Target languages') . ' (' . $this->Translate('Language limit of this license reached, max.') . " $languageLimit)";
+                        // Build 201: in der Testphase gibt es keine Lizenz, deren Limit
+                        // erreicht sein koennte - dort ist es die Testphase selbst.
+                        $grund = ($this->GetLicenseInfo()['valid'] ?? false)
+                            ? $this->Translate('target-language limit of this license reached, max.') . " $languageLimit"
+                            : $this->Translate('trial version: one target language, more with a license');
+                        $element['caption'] = $this->Translate('Target languages') . ' (' . $grund . ')';
                     } else {
                         $element['enabled'] = true;
+                        $element['add'] = true;
                     }
+
+                    // Build 204: Ausgangswert fuer den mitlaufenden Zaehler, den
+                    // onAdd/onDelete danach fortschreiben (siehe
+                    // ApplyTargetLanguageCountDelta).
+                    $this->WriteAttributeInteger(self::attributeFormTargetLanguageCount, count($zielsprachen));
+
+                    // Build 203: Zeilen, deren Sprache irgendwo als Quellsprache in
+                    // Gebrauch ist, gegen Aendern und Loeschen sperren. Symcon kennt
+                    // dafuer "editable"/"deletable" je Zeile.
+                    //
+                    // Ohne das kann der Admin eine Sprache entfernen, auf die
+                    // gescannte Zeilen als Quellsprache verweisen - deren Rohtext
+                    // waere danach im Formular nicht mehr erreichbar. Der Fall ist
+                    // ausdruecklich beworben: fremdsprachige Module in einem eigenen
+                    // Scan-Gang mit abweichender Scan-Sprache.
+                    $inGebrauch = array_flip($this->GetUsedSourceLanguages());
+                    $zeilen = [];
+                    foreach ($this->DecodeRows(self::propertyTargetLanguages) as $row) {
+                        if (isset($inGebrauch[(string) ($row['code'] ?? '')])) {
+                            $row['editable'] = false;
+                            $row['deletable'] = false;
+                        }
+                        $zeilen[] = $row;
+                    }
+                    $element['values'] = $zeilen;
                     break;
 
                 case self::propertyObjectNames:
@@ -2852,12 +2913,19 @@ class SimpleLocale extends IPSModuleStrict
         // EnsureSourceLanguageIsTarget() traegt sie ohnehin selbst ein. Vorher
         // wurde sie mitgezaehlt: eine Edition mit Limit 3 lieferte damit nur zwei
         // tatsaechliche Zielsprachen, obwohl der Shop "Zielsprachen" bewirbt.
+        // Build 203: Sprachen, die als Zeilen-Quellsprache in Gebrauch sind, sind
+        // strukturell noetig (siehe GetUsedSourceLanguages) - sie werden weder
+        // gezaehlt noch entfernt. Sonst risse eine Kuerzung genau den Zeilen die
+        // Spalte weg, die sie brauchen.
+        $geschuetzt = array_flip($this->GetUsedSourceLanguages());
+
         $limit = $this->GetLicensedLanguageLimit();
         if ($limit > 0) {
             $behalten = [];
             $ziele = 0;
             foreach ($filtered as $row) {
-                if (($row['code'] ?? '') === $sourceLanguage) {
+                $code = (string) ($row['code'] ?? '');
+                if ($code === $sourceLanguage || isset($geschuetzt[$code])) {
                     $behalten[] = $row;
                     continue;
                 }
@@ -2872,6 +2940,21 @@ class SimpleLocale extends IPSModuleStrict
 
         if ($filtered === $rows) {
             return;
+        }
+
+        // Build 202 (live gemeldet): die Kuerzung nicht mehr stillschweigend
+        // vornehmen. Wer das Formular oeffnet, solange noch Platz ist, kann darin
+        // beliebig viele Zeilen anlegen - der ausgeblendete "Hinzufuegen"-Knopf
+        // wird erst beim naechsten Formularaufbau neu bewertet. Beim Speichern
+        // verschwanden die ueberzaehligen Zeilen dann kommentarlos.
+        $entfernt = count($rows) - count($filtered);
+        if ($entfernt > 0) {
+            $this->LogTranslateMessage(sprintf(
+                '%d Zielsprache(n) wurden beim Speichern entfernt: das Limit von %d Zielsprache(n) ist erreicht '
+                    . '(die Scan-Sprache zaehlt dabei nicht mit).',
+                $entfernt,
+                $this->GetLicensedLanguageLimit()
+            ));
         }
 
         IPS_SetProperty($this->InstanceID, self::propertyTargetLanguages, json_encode($filtered));
@@ -5233,17 +5316,75 @@ class SimpleLocale extends IPSModuleStrict
     // tatsaechlich etwas geaendert hat (neue/entfernte Zeile zaehlt ebenfalls als
     // Aenderung, absichtlich - eine neue Zeile hat immer eine frisch gestempelte
     // Quellsprache, siehe WalkTree/Scan*, die exakt einmal mitreconciled werden soll).
+    // Build 203: alle Listen, deren Zeilen eine eigene Quellsprache tragen
+    // koennen (fieldRowSourceLanguage). Gemeinsame Quelle fuer den Fingerprint
+    // und fuer GetUsedSourceLanguages().
+    private const ROW_SOURCE_LANGUAGE_PROPERTIES = [
+        self::propertyObjectNames,
+        self::propertyObjectTexts,
+        self::propertyEnumerationOptions,
+        self::propertyObjectAutomations,
+        self::propertyObjectCharts,
+        self::propertyObjectGreeting,
+        self::propertyManualTranslations,
+    ];
+
+    // Build 204: schreibt den Zaehler der zaehlenden Zielsprachen fort und
+    // aktualisiert den "Hinzufuegen"-Knopf im offenen Formular.
+    //
+    // Symcon kennt fuer den Knopf nur "da" oder "nicht da" - ein sichtbarer, aber
+    // grauer Knopf ist nicht vorgesehen (siehe Doku zum List-Element, Attribut
+    // "add").
+    private function ApplyTargetLanguageCountDelta(int $Delta): void
+    {
+        $count = max(0, $this->ReadAttributeInteger(self::attributeFormTargetLanguageCount) + $Delta);
+        $this->WriteAttributeInteger(self::attributeFormTargetLanguageCount, $count);
+
+        $this->UpdateFormField(self::propertyTargetLanguages, 'add', $this->MayAddTargetLanguage($count));
+    }
+
+    // Build 204: ist noch Platz fuer eine weitere Zielsprache? 0 = kein Limit.
+    private function MayAddTargetLanguage(int $CurrentCount): bool
+    {
+        $limit = $this->GetLicensedLanguageLimit();
+
+        return $limit <= 0 || $CurrentCount < $limit;
+    }
+
+    // Build 203 (Nutzer-Hinweis): jede Sprache, die irgendwo als QUELLSPRACHE
+    // einer Zeile in Gebrauch ist - plus die aktuelle Scan-Sprache.
+    //
+    // Diese Sprachen sind keine frei waehlbaren Zielsprachen, sondern strukturell
+    // noetig: verschwindet so eine Sprache aus propertyTargetLanguages, verliert
+    // JEDE Zeile mit dieser Zeilen-Quellsprache ihre Spalte - der Rohtext waere
+    // im Formular nicht mehr erreichbar, und BuildRowSourceLanguageOptions()
+    // boete den gespeicherten Wert nicht mehr an, was Symcon das Speichern
+    // verweigern laesst (derselbe Fehler wie in Build 142 bei der aktiven
+    // Sprache).
+    //
+    // Der Fall ist ausdruecklich beworben: wer ein fremdsprachiges Modul in einem
+    // eigenen Scan-Gang mit abweichender Scan-Sprache erfasst, hat danach Zeilen
+    // mit genau so einer Quellsprache.
+    //
+    // Bewusst aus den DATEN abgeleitet statt mitgeschrieben: so stimmt die Liste
+    // auch fuer Zeilen, die vor dieser Aenderung entstanden sind, und kann nicht
+    // auseinanderlaufen.
+    private function GetUsedSourceLanguages(): array
+    {
+        $codes = [$this->ReadPropertyString(self::propertySourceLanguage)];
+        foreach (self::ROW_SOURCE_LANGUAGE_PROPERTIES as $property) {
+            foreach ($this->DecodeRows($property) as $row) {
+                $codes[] = (string) ($row[self::fieldRowSourceLanguage] ?? '');
+            }
+        }
+
+        return array_values(array_unique(array_filter($codes, static fn (string $c): bool => $c !== '')));
+    }
+
     private function ComputeRowSourceLanguageFingerprint(): string
     {
         $parts = [];
-        foreach ([
-            self::propertyObjectNames,
-            self::propertyObjectTexts,
-            self::propertyEnumerationOptions,
-            self::propertyObjectAutomations,
-            self::propertyObjectCharts,
-            self::propertyObjectGreeting,
-        ] as $property) {
+        foreach (self::ROW_SOURCE_LANGUAGE_PROPERTIES as $property) {
             foreach ($this->DecodeRows($property) as $row) {
                 $parts[] = (string) ($row[self::fieldRowSourceLanguage] ?? '');
             }
