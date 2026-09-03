@@ -9,6 +9,34 @@ Build 53 bis Build 107 - ausgelagert aus Abschnitt 2, das dadurch als reine,
 aktuelle Liste bestehen bleibt. Jeder Eintrag ist unverändert (verbatim) aus
 der ursprünglichen Fassung übernommen.
 
+* **Build 206 (live gemeldet): die Automations der Kachel-Visualisierung wurden
+  nicht mehr eingelesen.**
+  Selbst verursacht in Build 185. Bei der Umstellung auf Englisch als Quellsprache
+  wurden alle deutschen Literale mechanisch durch ihre englische Übersetzung
+  ersetzt - und `AutomationID` war zufällig **beides**: die deutsche Übersetzung
+  der Beschriftung "Automation ID" und der Name eines **Datenfeldes**. Aus dem
+  Feld wurde dadurch `Automation ID`, mit Leerzeichen.
+
+  `ScanAutomationsByID()` las die `Automations`-Property der Visu-Instanz damit
+  unter einem Schlüssel, den es dort nicht gibt: jeder Eintrag fiel durch, die
+  Liste blieb leer. Zusätzlich passten gespeicherte Zeilen, Merge, "Aufräumen"
+  und Formularspalte nicht mehr zusammen.
+
+  Der Datenschlüssel heißt wieder `AutomationID`, die Beschriftung bleibt
+  englisch "Automation ID" - beides ist jetzt sauber getrennt, in `module.php`
+  wie in `form.json`.
+
+  **Bereits gespeicherte Automations-Zeilen aus den Builds 185-205 tragen den
+  falschen Schlüssel** und werden nach dem Update mit ID 0 geführt. Ein Klick auf
+  "Übersetzungen gelöschter Elemente entfernen" räumt sie weg, der nächste Rescan
+  legt sie korrekt neu an.
+
+  Regressionstest `test_automation_id_is_a_data_key.php` (4 Fälle) - darunter die
+  eigentliche Lehre: **kein Datenschlüssel darf zugleich Übersetzungsschlüssel
+  sein**, sonst trifft ihn die nächste mechanische Ersetzung wieder. Geprüft für
+  `AutomationID`, `ORIGINAL_IMPORT`, `ObjectID`, `ChartID`, `VariableID` und
+  `Quellsprache`.
+
 * **Build 205: der Erklärtext neben der Zielsprachen-Tabelle ist breiter
   (420 → 540 px).**
   Der Platz rechts neben der Tabelle war noch da, der Text brach unnötig um.
@@ -29,7 +57,8 @@ der ursprünglichen Fassung übernommen.
 
   Zwei Einschränkungen, die in der Sache liegen: Symcon kennt für den Knopf nur
   "da" oder "nicht da" - ein sichtbarer, aber grauer Knopf ist im List-Element
-  nicht vorgesehen. Und der Zähler ist bewusst transient: bei zwei gleichzeitig
+  nicht vorgesehen. (Dass `UpdateFormField` das Attribut `add` zur Laufzeit
+  annimmt, ist nicht dokumentiert, aber live bestätigt.) Und der Zähler ist bewusst transient: bei zwei gleichzeitig
   offenen Formularen derselben Instanz laufen die Stände auseinander. Der Schaden
   bleibt begrenzt, weil beim Speichern ohnehin korrekt gekürzt und gemeldet wird
   - der Zähler steuert nur, ob der Knopf angeboten wird.
