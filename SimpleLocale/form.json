@@ -381,7 +381,7 @@
                             "type": "Label",
                             "name": "TargetLanguagesLockedHint",
                             "caption": "Some languages are shown greyed out and cannot be edited or deleted. Those are in use as a source language: either the scan language itself, or the source language of individual rows - for example after scanning a foreign-language module in its own pass. Removing such a language would take its column out of every table below, leaving the original text of those rows unreachable, and the instance could no longer be saved. They also do not count towards the language limit, since they are structurally required rather than a target language you chose.",
-                            "width": "420px"
+                            "width": "540px"
                         }
                     ]
                 },
