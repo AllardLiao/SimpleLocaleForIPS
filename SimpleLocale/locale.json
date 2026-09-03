@@ -139,7 +139,6 @@
             "Removing or bypassing the license check is not permitted, even with AI assistance, and violates copyright and license terms (see LICENSE in the repository).": "Das Entfernen oder Umgehen der Lizenzprüfung ist auch mit KI-Unterstützung nicht gestattet und verstößt gegen Urheberrecht und Lizenzbedingungen (siehe LICENSE im Repository).",
             "Product page: https://www.synergetix.de/simplelocale/": "Produktseite: https://www.synergetix.de/simplelocale/",
             "Purchase a license: https://www.synergetix.de/simplelocale/pricing.php": "Lizenz erwerben: https://www.synergetix.de/simplelocale/pricing.php",
-            "Language limit of this license reached, max.": "Sprachlimit dieser Lizenz erreicht, max.",
             "Pro Edition required": "Pro Edition erforderlich",
             "Type": "Typ",
             "Expiry": "Ablauf",
@@ -216,7 +215,9 @@
             "✓ Glossary - units and compass directions prefilled": "✓ Glossar - Einheiten & Kompass vorbefüllt",
             "✓ Translation switchable off per object": "✓ Übersetzung je Objekt abschaltbar",
             "Catalog": "Katalog",
-            "Full functionality until then, with one freely chosen target language - changeable at any time during the trial.": "Bis dahin voller Funktionsumfang, mit einer frei wählbaren Zielsprache - jederzeit während der Testphase wechselbar."
+            "Full functionality until then, with one freely chosen target language - changeable at any time during the trial.": "Bis dahin voller Funktionsumfang, mit einer frei wählbaren Zielsprache - jederzeit während der Testphase wechselbar.",
+            "target-language limit of this license reached, max.": "Zielsprachen-Limit dieser Lizenz erreicht, max.",
+            "trial version: one target language, more with a license": "Testphase: eine Zielsprache, mehr mit einer Lizenz"
         },
         "es": {
             "Active": "Activo",
@@ -357,7 +358,6 @@
             "Removing or bypassing the license check is not permitted, even with AI assistance, and violates copyright and license terms (see LICENSE in the repository).": "Eliminar o eludir la verificación de la licencia no está permitido, ni siquiera con la ayuda de IA, y vulnera los derechos de autor y las condiciones de la licencia (véase LICENSE en el repositorio).",
             "Product page: https://www.synergetix.de/simplelocale/": "Página del producto: https://www.synergetix.de/simplelocale/",
             "Purchase a license: https://www.synergetix.de/simplelocale/pricing.php": "Adquirir una licencia: https://www.synergetix.de/simplelocale/pricing.php",
-            "Language limit of this license reached, max.": "Límite de idiomas de esta licencia alcanzado, máx.",
             "Pro Edition required": "Se requiere la edición Pro",
             "Type": "Tipo",
             "Expiry": "Vencimiento",
@@ -434,7 +434,9 @@
             "✓ Glossary - units and compass directions prefilled": "✓ Glosario: unidades y direcciones de la brújula predefinidas",
             "✓ Translation switchable off per object": "✓ Traducción desactivable por objeto",
             "Catalog": "Catálogo",
-            "Full functionality until then, with one freely chosen target language - changeable at any time during the trial.": "Hasta entonces, funcionalidad completa con un idioma de destino de libre elección, cambiable en cualquier momento durante la prueba."
+            "Full functionality until then, with one freely chosen target language - changeable at any time during the trial.": "Hasta entonces, funcionalidad completa con un idioma de destino de libre elección, cambiable en cualquier momento durante la prueba.",
+            "target-language limit of this license reached, max.": "límite de idiomas de destino de esta licencia alcanzado, máx.",
+            "trial version: one target language, more with a license": "versión de prueba: un idioma de destino, más con una licencia"
         },
         "it": {
             "Active": "Attivo",
@@ -575,7 +577,6 @@
             "Removing or bypassing the license check is not permitted, even with AI assistance, and violates copyright and license terms (see LICENSE in the repository).": "La rimozione o l'elusione del controllo della licenza non è consentita, nemmeno con l'assistenza dell'IA, e viola il copyright e i termini di licenza (vedi LICENSE nel repository).",
             "Product page: https://www.synergetix.de/simplelocale/": "Pagina del prodotto: https://www.synergetix.de/simplelocale/",
             "Purchase a license: https://www.synergetix.de/simplelocale/pricing.php": "Acquista una licenza: https://www.synergetix.de/simplelocale/pricing.php",
-            "Language limit of this license reached, max.": "Limite di lingue di questa licenza raggiunto, massimo",
             "Pro Edition required": "Edizione Pro richiesta",
             "Type": "Tipo",
             "Expiry": "Scadenza",
@@ -652,7 +653,9 @@
             "✓ Glossary - units and compass directions prefilled": "✓ Glossario: unità e direzioni della bussola precompilate",
             "✓ Translation switchable off per object": "✓ Traduzione disattivabile per singolo oggetto",
             "Catalog": "Catalogo",
-            "Full functionality until then, with one freely chosen target language - changeable at any time during the trial.": "Fino ad allora funzionalità completa, con una lingua di destinazione a scelta, modificabile in qualsiasi momento durante la prova."
+            "Full functionality until then, with one freely chosen target language - changeable at any time during the trial.": "Fino ad allora funzionalità completa, con una lingua di destinazione a scelta, modificabile in qualsiasi momento durante la prova.",
+            "target-language limit of this license reached, max.": "limite di lingue di destinazione di questa licenza raggiunto, max.",
+            "trial version: one target language, more with a license": "versione di prova: una lingua di destinazione, di più con una licenza"
         },
         "fr": {
             "Active": "Actif",
@@ -793,7 +796,6 @@
             "Removing or bypassing the license check is not permitted, even with AI assistance, and violates copyright and license terms (see LICENSE in the repository).": "La suppression ou le contournement de la vérification de licence n'est pas autorisé, même avec l'aide de l'IA, et constitue une violation du droit d'auteur et des conditions de licence (voir LICENSE dans le dépôt).",
             "Product page: https://www.synergetix.de/simplelocale/": "Page produit : https://www.synergetix.de/simplelocale/",
             "Purchase a license: https://www.synergetix.de/simplelocale/pricing.php": "Acheter une licence : https://www.synergetix.de/simplelocale/pricing.php",
-            "Language limit of this license reached, max.": "Limite de langues de cette licence atteinte, max.",
             "Pro Edition required": "Édition Pro requise",
             "Type": "Type",
             "Expiry": "Expiration",
@@ -870,7 +872,9 @@
             "✓ Glossary - units and compass directions prefilled": "✓ Glossaire - unités et directions de boussole préremplies",
             "✓ Translation switchable off per object": "✓ Traduction désactivable par objet",
             "Catalog": "Catalogue",
-            "Full functionality until then, with one freely chosen target language - changeable at any time during the trial.": "Jusque-là, toutes les fonctions, avec une langue cible librement choisie - modifiable à tout moment pendant la période d'essai."
+            "Full functionality until then, with one freely chosen target language - changeable at any time during the trial.": "Jusque-là, toutes les fonctions, avec une langue cible librement choisie - modifiable à tout moment pendant la période d'essai.",
+            "target-language limit of this license reached, max.": "limite de langues cibles de cette licence atteinte, max.",
+            "trial version: one target language, more with a license": "version d'essai : une langue cible, plus avec une licence"
         }
     }
 }

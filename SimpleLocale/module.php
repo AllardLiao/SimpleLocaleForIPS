@@ -1058,7 +1058,15 @@ class SimpleLocale extends IPSModuleStrict
                     // der eingebaute Zeilen-Editor-Popup nur den Platzhalter zur Auswahl
                     // anbietet und dessen "OK" eine Fake-Zeile in die Liste einträgt.
                     $languageLimit = $this->GetLicensedLanguageLimit();
-                    $limitReached = $languageLimit > 0 && count($targetLanguages) >= $languageLimit;
+                    // Build 201: nur ZIELsprachen zaehlen. Die Quellsprache steht als
+                    // Zeile mit in der Liste (EnsureSourceLanguageIsTarget), belegt aber
+                    // keinen Platz - sonst waere die Liste bei Limit 1 schon gesperrt,
+                    // bevor ueberhaupt eine Zielsprache gewaehlt werden konnte.
+                    $zielsprachen = array_filter(
+                        $targetLanguages,
+                        static fn (string $code): bool => $code !== $sourceLanguage
+                    );
+                    $limitReached = $languageLimit > 0 && count($zielsprachen) >= $languageLimit;
                     $hasUsableLanguageList = $this->GetProviderChain() === ['free'] || $this->HasCachedLanguages();
 
                     // Build 148 (Nutzer-Vorgabe zum Abo-Modell): bei abgelaufener
@@ -1097,7 +1105,12 @@ class SimpleLocale extends IPSModuleStrict
                         // Konsolensprache des Betrachters gebundener) Text entsteht - exakt
                         // dieselbe, dokumentierte Einschränkung wie bei BuildTrialInfoText
                         // (siehe README Abschnitt 8).
-                        $element['caption'] = $this->Translate('Target languages') . ' (' . $this->Translate('Language limit of this license reached, max.') . " $languageLimit)";
+                        // Build 201: in der Testphase gibt es keine Lizenz, deren Limit
+                        // erreicht sein koennte - dort ist es die Testphase selbst.
+                        $grund = ($this->GetLicenseInfo()['valid'] ?? false)
+                            ? $this->Translate('target-language limit of this license reached, max.') . " $languageLimit"
+                            : $this->Translate('trial version: one target language, more with a license');
+                        $element['caption'] = $this->Translate('Target languages') . ' (' . $grund . ')';
                     } else {
                         $element['enabled'] = true;
                     }

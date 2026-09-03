@@ -9,6 +9,21 @@ Build 53 bis Build 107 - ausgelagert aus Abschnitt 2, das dadurch als reine,
 aktuelle Liste bestehen bleibt. Jeder Eintrag ist unverändert (verbatim) aus
 der ursprünglichen Fassung übernommen.
 
+* **Build 201 (live gemeldet): das Zielsprachen-Feld meldete "Sprachlimit dieser
+  Lizenz erreicht, max. 1" - in der Testphase, in der es gar keine Lizenz gibt.**
+  Zwei Fehler an einer Stelle:
+
+  * Die Sperre des Auswahlfelds zählte weiter die **Quellsprache** mit. Build 199
+    hatte das nur in `EnforceLicensedLanguageLimit()` korrigiert; die Sperre im
+    Formular ist ein zweiter, unabhängiger Pfad. Bei Limit 1 wäre die Liste damit
+    gesperrt gewesen, **bevor** überhaupt eine Zielsprache gewählt werden konnte.
+  * Der Hinweistext sprach von einer Lizenz. In der Testphase gibt es keine,
+    deren Limit erreicht sein könnte - dort ist es die Testphase selbst. Der Text
+    unterscheidet jetzt beide Fälle.
+
+  Regressionstest um zwei Fälle erweitert - ausdrücklich mit der Zusicherung,
+  dass die Liste allein mit der Quellsprache **nicht** gesperrt ist.
+
 * **Build 200: die Beschreibung der Testphase im Konfigurationsformular stimmte
   nach Build 199 nicht mehr.**
   Dort stand weiterhin "voller Funktionsumfang, aber nur mit den 5 zum Testen

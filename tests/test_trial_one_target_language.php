@@ -103,4 +103,32 @@ assert(strpos($optionen, 'restrictToTrialLanguages') === false,
     'DIE OEFFNUNG: kein Filter auf feste Testsprachen mehr');
 echo "Test 7 (jede Sprache ist wählbar) OK\n";
 
-echo "\nAlle Tests OK (Build 199: Testphase mit einer echten Zielsprache).\n";
+// Test 8 (Build 201, live gemeldet): dieselbe Zaehlung noch einmal im FORMULAR.
+// EnforceLicensedLanguageLimit() kuerzt die gespeicherte Liste, die Sperre des
+// Auswahlfelds ist ein ZWEITER, unabhaengiger Pfad - der zaehlte weiterhin die
+// Quellsprache mit. Bei Limit 1 waere die Liste damit schon gesperrt gewesen,
+// bevor ueberhaupt eine Zielsprache gewaehlt werden konnte.
+function gesperrt(array $codes, string $quelle, int $limit): bool
+{
+    $ziele = array_filter($codes, static fn (string $c): bool => $c !== $quelle);
+
+    return $limit > 0 && count($ziele) >= $limit;
+}
+assert(gesperrt(['de'], 'de', 1) === false,
+    'DER FALLSTRICK: allein mit der Quellsprache darf die Liste NICHT gesperrt sein');
+assert(gesperrt(['de', 'en'], 'de', 1) === true, 'nach der ersten Zielsprache aber schon');
+assert(gesperrt(['de', 'en', 'fr'], 'de', 3) === false, 'bei Limit 3 bleibt Platz');
+$module = (string) file_get_contents(dirname(__DIR__) . '/SimpleLocale/module.php');
+assert(strpos($module, '$limitReached = $languageLimit > 0 && count($zielsprachen) >= $languageLimit;') !== false,
+    'die Formular-Sperre muss ueber die gefilterten Zielsprachen zaehlen');
+echo "Test 8 (auch die Formular-Sperre zählt nur Zielsprachen) OK\n";
+
+// Test 9: der Text daneben darf in der Testphase nicht von einer "Lizenz"
+// sprechen - es gibt keine, deren Limit erreicht sein koennte.
+assert(strpos($module, "trial version: one target language, more with a license") !== false,
+    'DIE BESCHRIFTUNG: eigener Text fuer die Testphase');
+assert(strpos($module, "\$grund = (\$this->GetLicenseInfo()['valid'] ?? false)") !== false,
+    'die Unterscheidung haengt an einer gueltigen Lizenz');
+echo "Test 9 (der Hinweis spricht in der Testphase nicht von einer Lizenz) OK\n";
+
+echo "\nAlle Tests OK (Build 201: Testphase mit einer echten Zielsprache).\n";
