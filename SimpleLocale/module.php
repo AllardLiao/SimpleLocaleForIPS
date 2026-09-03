@@ -149,7 +149,7 @@ class SimpleLocale extends IPSModuleStrict
 
     // Marketing: zeitlich begrenzte Aktionen, die für ALLE Installationen
     // gleichzeitig zusätzliche Sprachen kostenfrei freischalten (zusätzlich zu
-    // TRIAL_LANGUAGE_CODES, siehe GetFreeLanguageCodes) - bewusst hart im
+    // siehe GetFreeLanguageCodes) - bewusst hart im
     // Modul-Code hinterlegt statt irgendwo konfigurierbar, damit "für alle
     // Installationen gleich" auch wirklich stimmt: jede Instanz bekommt die Aktion
     // automatisch mit dem nächsten Update, ganz ohne eigenes Zutun des Nutzers.
@@ -2676,7 +2676,17 @@ class SimpleLocale extends IPSModuleStrict
 
         $info = $this->GetLicenseInfo();
         if (!($info['valid'] ?? false)) {
-            return 0;
+            // Build 199: die laufende Testphase ist "Pro mit EINER Zielsprache" -
+            // frei waehlbar und in den 30 Tagen jederzeit wechselbar. Damit sieht
+            // der Interessent seine EIGENEN Texte in einer Sprache, die er liest,
+            // und erlebt beim Ablauf den Verlust. Vorher gab es stattdessen fuenf
+            // bewusst praxisferne Sprachen - damit liess sich zwar der Mechanismus
+            // pruefen, aber nie die Uebersetzungsqualitaet der eigenen Inhalte,
+            // und der Rueckfall aufs Original fiel niemandem auf.
+            //
+            // Nach Ablauf greift ohnehin IsTrialLocked() und sperrt jede Sprache
+            // ausser der Quellsprache - dort zaehlt dieses Limit nicht mehr.
+            return $this->IsTrialExpired() ? 0 : 1;
         }
 
         return (int) ($info['languageLimit'] ?? 0);
@@ -2837,9 +2847,27 @@ class SimpleLocale extends IPSModuleStrict
                 return $code === $sourceLanguage || in_array($code, $allowed, true);
             }));
 
+        // Build 199: das Limit zaehlt ZIELsprachen - die Quellsprache belegt keinen
+        // Platz. Sie ist kein Ziel, sondern das Original, und
+        // EnsureSourceLanguageIsTarget() traegt sie ohnehin selbst ein. Vorher
+        // wurde sie mitgezaehlt: eine Edition mit Limit 3 lieferte damit nur zwei
+        // tatsaechliche Zielsprachen, obwohl der Shop "Zielsprachen" bewirbt.
         $limit = $this->GetLicensedLanguageLimit();
-        if ($limit > 0 && count($filtered) > $limit) {
-            $filtered = array_slice($filtered, 0, $limit);
+        if ($limit > 0) {
+            $behalten = [];
+            $ziele = 0;
+            foreach ($filtered as $row) {
+                if (($row['code'] ?? '') === $sourceLanguage) {
+                    $behalten[] = $row;
+                    continue;
+                }
+                if ($ziele >= $limit) {
+                    continue;
+                }
+                $ziele++;
+                $behalten[] = $row;
+            }
+            $filtered = $behalten;
         }
 
         if ($filtered === $rows) {
@@ -2880,14 +2908,16 @@ class SimpleLocale extends IPSModuleStrict
         return $codes;
     }
 
-    // Alle aktuell ohne Lizenz nutzbaren Sprachen: die dauerhaften TRIAL_LANGUAGE_CODES
+    // Alle aktuell ohne gueltige Lizenz nutzbaren Sprachen
     // plus gerade laufende Marketing-Aktionen (siehe PROMOTIONAL_LANGUAGE_CAMPAIGNS).
     private function GetFreeLanguageCodes(): array
     {
-        return array_values(array_unique(array_merge(
-            self::TRIAL_LANGUAGE_CODES,
-            $this->GetActivePromotionalLanguageCodes()
-        )));
+        // Build 199: nach Ablauf der Testphase gibt es KEINE dauerhaft freien
+        // Sprachen mehr - es bleibt nur, was eine laufende Marketing-Aktion
+        // freigibt. Die frueheren fuenf Demo-Sprachen sind entfallen: der
+        // Testkunde bekommt jetzt waehrend der Testphase eine echte Sprache, und
+        // danach faellt alles aufs Original zurueck.
+        return array_values(array_unique($this->GetActivePromotionalLanguageCodes()));
     }
 
     // Ob ein Sprachwechsel-Versuch des Gasts an der abgelaufenen Testphase scheitert.
@@ -3247,7 +3277,7 @@ class SimpleLocale extends IPSModuleStrict
     // Build 85 (Nutzer-Wunsch): fest im Modul mitgelieferte Uebersetzungen der
     // eigenen Gast-Oberflaechentexte (siehe GetOwnUiTextDefinitions/
     // MergeOwnUiTextRows) fuer die Sprachen, die praktisch jede Installation
-    // ohnehin nutzt (en/es/it/fr/nl) sowie fuer alle TRIAL_LANGUAGE_CODES - so
+    // ohnehin nutzt (en/es/it/fr/nl) sowie fuer is/cy/zu/mi/la - so
     // steht die Uebersetzung dieser Texte in genau diesen Sprachen SOFORT bereit,
     // ganz ohne einen einzigen API-Aufruf bei irgendeinem Provider zu verbrauchen,
     // selbst direkt nach einer frischen Installation. en/es/it/fr uebernehmen
@@ -3255,7 +3285,7 @@ class SimpleLocale extends IPSModuleStrict
     // Uebersetzungen derselben deutschen Quelltexte (z.B. "Stündlich:" ->
     // "Hourly:"), damit Konsolen- und Gast-Oberflaeche konsistent klingen.
     //
-    // Qualitaets-Hinweis: fuer is/cy/zu/mi/la (die TRIAL_LANGUAGE_CODES) gibt es
+    // Qualitaets-Hinweis: fuer is/cy/zu/mi/la gibt es
     // KEINE Konsolensprachen-Referenz zum Abgleich, und die Uebersetzungsqualitaet
     // fuer diese eher selten unterstuetzten Sprachen (insbesondere zu/mi) ist
     // spuerbar weniger zuverlaessig als fuer die grossen Sprachen - eine Pruefung
@@ -3344,7 +3374,7 @@ class SimpleLocale extends IPSModuleStrict
             'statsTotalLabel'      => 'Totaal:',
             'statsCacheSavedLabel' => 'Bespaard door de cache:',
         ],
-        // TRIAL_LANGUAGE_CODES - siehe Qualitaets-Hinweis oben.
+        // is/cy/zu/mi/la - siehe Qualitaets-Hinweis oben.
         'is' => [
             'infoText0'            => 'Valið tungumál gildir fyrir alla gesti þessarar síðu samtímis - ekki fyrir hvern og einn einstakling.',
             'trialNoticePrefix'    => 'Prufuleyfi gildir til',
@@ -11858,11 +11888,10 @@ HTML;
             ]];
         }
 
-        // Testversion: nur die bewusst wenig praxisrelevanten TRIAL_LANGUAGE_CODES
+        // Testversion: jede Sprache waehlbar, begrenzt auf EINE Zielsprache
         // plus gerade laufende Marketing-Aktionen anbieten (siehe GetFreeLanguageCodes),
         // damit der komplette Mechanismus testbar bleibt, ohne die Vollversion
         // vorwegzunehmen.
-        $restrictToTrialLanguages = self::IS_TRIAL_BUILD && !$this->HasFullLicense();
         $freeLanguageCodes = $this->GetFreeLanguageCodes();
         // Promo-Lizenzen mit gezielter Sprachbindung (z.B. "Finnisch zu
         // Nikolaus") - [] = keine Einschränkung, siehe GetLicensedAllowedLanguages.
@@ -11881,9 +11910,6 @@ HTML;
         foreach ($this->BuildLanguageOptions() as $option) {
             if ($option['value'] === $SourceLanguage) {
                 $options[] = $option;
-                continue;
-            }
-            if ($restrictToTrialLanguages && !in_array($option['value'], $freeLanguageCodes, true)) {
                 continue;
             }
             if ($allowedLanguages !== [] && !in_array($option['value'], $allowedLanguages, true)) {

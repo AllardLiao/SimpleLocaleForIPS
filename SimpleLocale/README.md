@@ -1099,10 +1099,12 @@ realisieren, siehe [Abschnitt 8](#8-lizenz-und-testversion).
 Simple Locale gibt es als Testversion (aktuell installierte Variante) und als
 Vollversion:
 
-* **Testversion:** voller Funktionsumfang, aber auf 5 bewusst wenig
-  praxisrelevante Sprachen begrenzt (Isländisch, Walisisch, Zulu, Maori,
-  Latein) - genug, um den kompletten Mechanismus zu testen, ohne die in der
-  Praxis benötigten Sprachen vorwegzunehmen. Die Testphase beginnt mit der
+* **Testversion:** voller Funktionsumfang, begrenzt auf **eine Zielsprache** -
+  frei wählbar und während der Testphase jederzeit wechselbar. Damit lässt sich
+  am eigenen Bestand beurteilen, wie gut die eigenen Texte übersetzt werden,
+  auch die dynamischen. Die Quellsprache zählt dabei nicht mit. Alles
+  Mehrsprachige - also der eigentliche Zweck des Moduls - bleibt der Vollversion
+  vorbehalten. Die Testphase beginnt mit der
   ersten gespeicherten Einrichtung der Instanz und läuft 30 Tage; die
   verbleibende Zeit bzw. das Ablaufdatum steht direkt im
   Konfigurationsformular ("Testversion - läuft ab am ..."). Nach Ablauf

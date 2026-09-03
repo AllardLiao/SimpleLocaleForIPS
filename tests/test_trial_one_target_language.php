@@ -1,0 +1,106 @@
+<?php
+declare(strict_types=1);
+// Standalone replica test for build 199 (2026-09-02, Nutzer-Entscheidung): die
+// Testphase ist "Pro mit EINER Zielsprache" statt fuenf praxisfernen Sprachen.
+//
+// VORHER: is/cy/zu/mi/la - Islaendisch, Walisisch, Zulu, Maori, Latein. Damit
+// liess sich der Mechanismus pruefen, aber nie die Uebersetzungsqualitaet der
+// EIGENEN Inhalte: niemand laesst Maori vor Gaesten laufen. Und weil die Kachel
+// ohnehin nie live war, fiel der Rueckfall aufs Original nach 30 Tagen niemandem
+// auf - der wirksamste Kaufanreiz verpuffte.
+//
+// JETZT: jede Sprache waehlbar, genau EINE Zielsprache, in den 30 Tagen
+// jederzeit wechselbar. Nach Ablauf faellt alles aufs Original zurueck, ohne
+// dauerhaft freie Sprachen.
+
+$module = (string) file_get_contents(dirname(__DIR__) . '/SimpleLocale/module.php');
+$konstanten = (string) file_get_contents(dirname(__DIR__) . '/libs/SimpleLocaleConstants.php');
+$fenster = function (string $von) use ($module): string {
+    $a = (int) strpos($module, $von);
+    $b = (int) strpos($module, "\n    private function ", $a + 10);
+
+    return substr($module, $a, $b - $a);
+};
+
+// Repliziert GetLicensedLanguageLimit().
+function limit(bool $lizenzGueltig, bool $abgelaufen, int $ausLizenz = 0): int
+{
+    if (!$lizenzGueltig) {
+        return $abgelaufen ? 0 : 1;
+    }
+
+    return $ausLizenz;
+}
+
+// Repliziert die Kuerzung aus EnforceLicensedLanguageLimit() NACH dem Fix.
+function kuerzen(array $codes, string $quelle, int $limit): array
+{
+    if ($limit <= 0) {
+        return $codes;
+    }
+    $behalten = [];
+    $ziele = 0;
+    foreach ($codes as $code) {
+        if ($code === $quelle) {
+            $behalten[] = $code;
+            continue;
+        }
+        if ($ziele >= $limit) {
+            continue;
+        }
+        $ziele++;
+        $behalten[] = $code;
+    }
+
+    return $behalten;
+}
+
+// Test 1: DIE ENTSCHEIDUNG - laufende Testphase erlaubt genau eine Zielsprache.
+assert(limit(false, false) === 1, 'DIE ENTSCHEIDUNG: eine Zielsprache in der Testphase');
+echo "Test 1 (Testphase: genau eine Zielsprache) OK\n";
+
+// Test 2: DER FALLSTRICK - die Quellsprache darf keinen Platz belegen.
+// EnsureSourceLanguageIsTarget() traegt sie IMMER selbst ein; zaehlte sie mit,
+// bliebe bei Limit 1 keine einzige echte Zielsprache uebrig.
+assert(kuerzen(['de'], 'de', 1) === ['de'], 'die Quellsprache allein bleibt');
+assert(kuerzen(['de', 'en'], 'de', 1) === ['de', 'en'],
+    'DER FALLSTRICK: bei Limit 1 muss genau EINE Zielsprache neben der Quellsprache moeglich sein');
+assert(kuerzen(['de', 'en', 'fr'], 'de', 1) === ['de', 'en'], 'die zweite wird gekuerzt');
+echo "Test 2 (die Quellsprache belegt keinen Platz) OK\n";
+
+// Test 3: dieselbe Korrektur gilt fuer BEZAHLTE Lizenzen - der Shop bewirbt
+// "Zielsprachen". Eine Edition mit Limit 3 lieferte vorher nur zwei.
+assert(kuerzen(['de', 'en', 'fr', 'es', 'it'], 'de', 3) === ['de', 'en', 'fr', 'es'],
+    'Limit 3 heisst drei Zielsprachen, nicht zwei');
+echo "Test 3 (bezahlte Limits meinen Zielsprachen) OK\n";
+
+// Test 4: die Quellsprache bleibt auch dann, wenn sie NICHT vorne steht.
+assert(kuerzen(['en', 'fr', 'de'], 'de', 1) === ['en', 'de'], 'die Quellsprache ueberlebt an jeder Position');
+echo "Test 4 (Position der Quellsprache ist egal) OK\n";
+
+// Test 5: NACH ABLAUF gibt es kein Limit mehr, sondern die Sperre - jede Sprache
+// ausser der Quellsprache ist blockiert, die Kachel faellt aufs Original zurueck.
+assert(limit(false, true) === 0, 'nach Ablauf greift das Limit nicht mehr, sondern IsTrialLocked()');
+$blocked = $fenster('private function IsLanguageBlockedByTrial');
+assert(strpos($blocked, 'IsTrialLocked()') !== false, 'die Sperre haengt am Ablauf');
+assert(strpos($blocked, 'propertySourceLanguage') !== false, 'nur die Quellsprache bleibt erlaubt');
+echo "Test 5 (nach Ablauf sperrt alles außer der Quellsprache) OK\n";
+
+// Test 6: KEINE dauerhaft freien Demo-Sprachen mehr. Die fuenf Exoten sind weg -
+// sonst haette der Kunde nach Ablauf weiter etwas, das ihm nichts nuetzt, und der
+// Verlust waere wieder unsichtbar.
+assert(strpos($konstanten, 'TRIAL_LANGUAGE_CODES') === false, 'die Konstante ist entfallen');
+assert(strpos($module, 'TRIAL_LANGUAGE_CODES') === false, 'und wird nirgends mehr benutzt');
+$frei = $fenster('private function GetFreeLanguageCodes');
+assert(strpos($frei, 'GetActivePromotionalLanguageCodes()') !== false,
+    'frei ist nur noch, was eine laufende Marketing-Aktion freigibt');
+echo "Test 6 (keine dauerhaft freien Demo-Sprachen mehr) OK\n";
+
+// Test 7: die Auswahl ist nicht mehr auf eine feste Liste gefiltert - waehlbar
+// ist jede Sprache, die Begrenzung macht allein das Limit.
+$optionen = $fenster('private function BuildTargetLanguageOptions');
+assert(strpos($optionen, 'restrictToTrialLanguages') === false,
+    'DIE OEFFNUNG: kein Filter auf feste Testsprachen mehr');
+echo "Test 7 (jede Sprache ist wählbar) OK\n";
+
+echo "\nAlle Tests OK (Build 199: Testphase mit einer echten Zielsprache).\n";

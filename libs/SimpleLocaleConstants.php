@@ -713,10 +713,9 @@ trait SimpleLocaleConstants
     // siehe FetchLanguageNames) - deshalb bewusst breiter als frueher, nicht nur ein
     // Mini-Platzhalter. MyMemory akzeptiert praktisch jeden ISO-639-1-Code, diese
     // Auswahl deckt die in der Praxis haeufigsten Zielsprachen ab. Enthaelt bewusst
-    // auch die 5 TRIAL_LANGUAGE_CODES (is/cy/zu/mi/la, siehe unten) - sonst waere in
-    // der Testphase ganz ohne Google/DeepL-Key (nur kostenfreier Anbieter) ueberhaupt
-    // keine Zielsprache waehlbar, da BuildTargetLanguageOptions() im Testphase-Build
-    // auf genau diese 5 Codes filtert.
+    // auch is/cy/zu/mi/la - die waren bis Build 198 die Testphasen-Sprachen und
+    // bleiben als gewoehnliche Zielsprachen waehlbar; entfernt man sie hier, faellt
+    // die Auswahl ganz ohne Google/DeepL-Key kleiner aus als noetig.
     // Build 186: Anbieter liefern denselben Sprachcode in unterschiedlicher
     // Schreibweise - Google klein und ohne Region ("de", "en"), DeepL gross und
     // fuer Englisch/Portugiesisch nur mit Region ("DE", "EN-GB", "PT-BR"). Roh
@@ -765,8 +764,7 @@ trait SimpleLocaleConstants
         ['code' => 'ko', 'name' => '한국어'],
         ['code' => 'hi', 'name' => 'हिन्दी'],
         ['code' => 'id', 'name' => 'Bahasa Indonesia'],
-        // TRIAL_LANGUAGE_CODES (siehe unten) - siehe Kommentar oben, warum die hier
-        // mit aufgefuehrt sind.
+        // Siehe Kommentar oben, warum die folgenden fuenf hier mit aufgefuehrt sind.
         ['code' => 'is', 'name' => 'Íslenska'],
         ['code' => 'cy', 'name' => 'Cymraeg'],
         ['code' => 'zu', 'name' => 'isiZulu'],
@@ -782,11 +780,6 @@ trait SimpleLocaleConstants
         ['code' => 'sl', 'name' => 'Slovenščina'],
     ];
 
-    // Isländisch, Walisisch, Zulu, Maori, Latein - alle von Google Cloud Translate
-    // unterstützt, aber für die allermeisten Gäste-Visualisierungen (Ferienwohnung,
-    // Showroom) kaum praxisrelevant. Voll funktionsfähig zum Testen des kompletten
-    // Mechanismus, aber ohne die Sprachen, die man in der Praxis tatsächlich braucht.
-    private const TRIAL_LANGUAGE_CODES = ['is', 'cy', 'zu', 'mi', 'la'];
 
     // Öffentlicher Ed25519-Schlüssel zur Prüfung von Lizenzschlüsseln (asymmetrische
     // Signatur, siehe ValidateLicenseKey) - base64-kodiert, 32 Rohbytes.
