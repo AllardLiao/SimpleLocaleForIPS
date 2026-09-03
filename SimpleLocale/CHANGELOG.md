@@ -9,6 +9,10 @@ Build 53 bis Build 107 - ausgelagert aus Abschnitt 2, das dadurch als reine,
 aktuelle Liste bestehen bleibt. Jeder Eintrag ist unverändert (verbatim) aus
 der ursprünglichen Fassung übernommen.
 
+* **Build 205: der Erklärtext neben der Zielsprachen-Tabelle ist breiter
+  (420 → 540 px).**
+  Der Platz rechts neben der Tabelle war noch da, der Text brach unnötig um.
+
 * **Build 204 (live gemeldet): der "Hinzufügen"-Knopf reagiert jetzt sofort, und
   die Sperre wird im Formular erklärt.**
   Bisher wurde der Knopf nur beim Formularaufbau bewertet. Wer das Formular
