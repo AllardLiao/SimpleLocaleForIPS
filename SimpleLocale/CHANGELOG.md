@@ -9,6 +9,32 @@ Build 53 bis Build 107 - ausgelagert aus Abschnitt 2, das dadurch als reine,
 aktuelle Liste bestehen bleibt. Jeder Eintrag ist unverändert (verbatim) aus
 der ursprünglichen Fassung übernommen.
 
+* **Build 199 (Nutzer-Entscheidung): die Testphase ist "Pro mit einer
+  Zielsprache" statt fünf praxisferner Sprachen.**
+  Bisher waren es Isländisch, Walisisch, Zulu, Maori und Latein - bewusst
+  praxisfern, damit sich die Testversion nicht produktiv nutzen lässt. Damit
+  ließ sich zwar der Mechanismus prüfen, aber nie die Übersetzungsqualität der
+  **eigenen** Inhalte: niemand lässt Maori vor Gästen laufen. Und weil die
+  Kachel ohnehin nie live war, fiel der Rückfall aufs Original nach 30 Tagen
+  niemandem auf - der wirksamste Kaufanreiz verpuffte.
+
+  Jetzt: jede Sprache wählbar, genau **eine Zielsprache**, in den 30 Tagen
+  jederzeit wechselbar. Nach Ablauf greift wie bisher die Sperre - alles außer
+  der Quellsprache ist blockiert, die Kachel fällt aufs Original zurück. Die
+  fünf Demo-Sprachen entfallen dabei ersatzlos: frei ist nur noch, was eine
+  laufende Marketing-Aktion freigibt.
+
+  **Dabei ist ein Fehler aufgefallen, der auch bezahlte Lizenzen betraf.** Das
+  Sprachlimit zählte die Quellsprache mit, und `EnsureSourceLanguageIsTarget()`
+  trägt sie immer selbst ein - eine Edition mit Limit 3 lieferte damit nur zwei
+  tatsächliche Zielsprachen, obwohl der Shop "Zielsprachen" bewirbt. Ohne diese
+  Korrektur wäre das Testlimit 1 sogar wertlos gewesen: es hätte die
+  Quellsprache belegt und keine einzige Zielsprache übrig gelassen. Das Limit
+  zählt jetzt ausschließlich Zielsprachen; **bestehende Lizenzen erlauben
+  dadurch je eine Sprache mehr als bisher.**
+
+  Regressionstest `test_trial_one_target_language.php` (7 Fälle).
+
 * **Build 198: der Change-Log steht in einer eigenen Datei, die Dokumentation
   ist von Build-Archäologie befreit.**
   Mit 145 Einträgen über 4.400 Zeilen war er dreimal so lang wie die
