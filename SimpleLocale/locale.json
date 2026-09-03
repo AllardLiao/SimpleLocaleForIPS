@@ -126,7 +126,6 @@
             "Trial version - expires as soon as this instance has been applied for the first time.": "Testversion - läuft ab, sobald diese Instanz zum ersten Mal übernommen wurde.",
             "Trial version - expires on": "Testversion - läuft ab am",
             "day(s) remaining": "Tag(e) verbleibend",
-            "Full functionality until then, but only with the 5 languages unlocked for testing (Icelandic, Welsh, Zulu, Maori, Latin).": "Bis dahin voller Funktionsumfang, aber nur mit den 5 testweise freigeschalteten Sprachen (Isländisch, Walisisch, Zulu, Maori, Latein).",
             "Trial version expired on": "Testversion abgelaufen am",
             "The tile now shows users the unedited original text again; a further rescan is blocked until a valid license key has been activated.": "Die Kachel zeigt Anwendern ab jetzt wieder den unbearbeiteten Original-Text, ein weiterer Rescan ist blockiert, bis ein gültiger Lizenzschlüssel aktiviert wurde.",
             "Purchase a license:": "Lizenz erwerben:",
@@ -216,7 +215,8 @@
             "Glossary: units and compass directions, supplied with the module. Unlike the table above there is no source language here - every column can be the source, and the entry in one column translates to the entry in any other. A term therefore needs one row only, no matter which source language a part of your visualization uses.": "Glossar: mitgelieferte Einheiten und Kompassrichtungen. Anders als in der Tabelle darüber gibt es hier keine Quellsprache - jede Spalte kann die Quelle sein, und der Eintrag einer Spalte übersetzt sich in den jeder anderen. Ein Begriff braucht deshalb nur eine Zeile, ganz gleich welche Quellsprache ein Teil deiner Visualisierung verwendet.",
             "✓ Glossary - units and compass directions prefilled": "✓ Glossar - Einheiten & Kompass vorbefüllt",
             "✓ Translation switchable off per object": "✓ Übersetzung je Objekt abschaltbar",
-            "Catalog": "Katalog"
+            "Catalog": "Katalog",
+            "Full functionality until then, with one freely chosen target language - changeable at any time during the trial.": "Bis dahin voller Funktionsumfang, mit einer frei wählbaren Zielsprache - jederzeit während der Testphase wechselbar."
         },
         "es": {
             "Active": "Activo",
@@ -344,7 +344,6 @@
             "Trial version - expires as soon as this instance has been applied for the first time.": "Versión de prueba - caduca en cuanto esta instancia se guarde por primera vez.",
             "Trial version - expires on": "Versión de prueba - caduca el",
             "day(s) remaining": "día(s) restante(s)",
-            "Full functionality until then, but only with the 5 languages unlocked for testing (Icelandic, Welsh, Zulu, Maori, Latin).": "Funcionalidad completa hasta entonces, pero solo con los 5 idiomas habilitados para pruebas (islandés, galés, zulú, maorí, latín).",
             "Trial version expired on": "Versión de prueba caducada el",
             "The tile now shows users the unedited original text again; a further rescan is blocked until a valid license key has been activated.": "El widget vuelve a mostrar a los usuarios el texto original sin editar; un nuevo rescaneo está bloqueado hasta que se active una clave de licencia válida.",
             "Purchase a license:": "Adquirir una licencia:",
@@ -434,7 +433,8 @@
             "Glossary: units and compass directions, supplied with the module. Unlike the table above there is no source language here - every column can be the source, and the entry in one column translates to the entry in any other. A term therefore needs one row only, no matter which source language a part of your visualization uses.": "Glosario: unidades y direcciones de la brújula incluidas con el módulo. A diferencia de la tabla anterior, aquí no hay idioma de origen: cualquier columna puede ser el origen, y la entrada de una columna se traduce a la de cualquier otra. Por eso un término solo necesita una fila, sea cual sea el idioma de origen de una parte de tu visualización.",
             "✓ Glossary - units and compass directions prefilled": "✓ Glosario: unidades y direcciones de la brújula predefinidas",
             "✓ Translation switchable off per object": "✓ Traducción desactivable por objeto",
-            "Catalog": "Catálogo"
+            "Catalog": "Catálogo",
+            "Full functionality until then, with one freely chosen target language - changeable at any time during the trial.": "Hasta entonces, funcionalidad completa con un idioma de destino de libre elección, cambiable en cualquier momento durante la prueba."
         },
         "it": {
             "Active": "Attivo",
@@ -562,7 +562,6 @@
             "Trial version - expires as soon as this instance has been applied for the first time.": "Versione di prova - scade non appena questa istanza viene salvata per la prima volta.",
             "Trial version - expires on": "Versione di prova - scade il",
             "day(s) remaining": "giorno/i rimanente/i",
-            "Full functionality until then, but only with the 5 languages unlocked for testing (Icelandic, Welsh, Zulu, Maori, Latin).": "Piena funzionalità fino ad allora, ma solo con le 5 lingue sbloccate per il test (islandese, gallese, zulu, maori, latino).",
             "Trial version expired on": "Versione di prova scaduta il",
             "The tile now shows users the unedited original text again; a further rescan is blocked until a valid license key has been activated.": "Il riquadro torna a mostrare agli utenti il testo originale non modificato; un'ulteriore nuova scansione è bloccata finché non viene attivata una chiave di licenza valida.",
             "Purchase a license:": "Acquista una licenza:",
@@ -652,7 +651,8 @@
             "Glossary: units and compass directions, supplied with the module. Unlike the table above there is no source language here - every column can be the source, and the entry in one column translates to the entry in any other. A term therefore needs one row only, no matter which source language a part of your visualization uses.": "Glossario: unità e direzioni della bussola fornite con il modulo. A differenza della tabella sopra, qui non esiste una lingua di origine: ogni colonna può essere l'origine e la voce di una colonna si traduce in quella di qualsiasi altra. Un termine richiede quindi una sola riga, qualunque sia la lingua di origine di una parte della tua visualizzazione.",
             "✓ Glossary - units and compass directions prefilled": "✓ Glossario: unità e direzioni della bussola precompilate",
             "✓ Translation switchable off per object": "✓ Traduzione disattivabile per singolo oggetto",
-            "Catalog": "Catalogo"
+            "Catalog": "Catalogo",
+            "Full functionality until then, with one freely chosen target language - changeable at any time during the trial.": "Fino ad allora funzionalità completa, con una lingua di destinazione a scelta, modificabile in qualsiasi momento durante la prova."
         },
         "fr": {
             "Active": "Actif",
@@ -780,7 +780,6 @@
             "Trial version - expires as soon as this instance has been applied for the first time.": "Version d'essai - expire dès que cette instance a été appliquée pour la première fois.",
             "Trial version - expires on": "Version d'essai - expire le",
             "day(s) remaining": "jour(s) restant(s)",
-            "Full functionality until then, but only with the 5 languages unlocked for testing (Icelandic, Welsh, Zulu, Maori, Latin).": "Fonctionnalité complète jusque-là, mais uniquement avec les 5 langues débloquées pour les tests (islandais, gallois, zoulou, maori, latin).",
             "Trial version expired on": "Version d'essai expirée le",
             "The tile now shows users the unedited original text again; a further rescan is blocked until a valid license key has been activated.": "La tuile affiche à nouveau aux utilisateurs le texte original non modifié ; un nouveau balayage est bloqué tant qu'une clé de licence valide n'a pas été activée.",
             "Purchase a license:": "Acheter une licence :",
@@ -870,7 +869,8 @@
             "Glossary: units and compass directions, supplied with the module. Unlike the table above there is no source language here - every column can be the source, and the entry in one column translates to the entry in any other. A term therefore needs one row only, no matter which source language a part of your visualization uses.": "Glossaire : unités et directions de boussole fournies avec le module. Contrairement au tableau ci-dessus, il n'y a pas de langue source ici - chaque colonne peut être la source, et l'entrée d'une colonne se traduit dans celle de n'importe quelle autre. Un terme ne nécessite donc qu'une seule ligne, quelle que soit la langue source d'une partie de votre visualisation.",
             "✓ Glossary - units and compass directions prefilled": "✓ Glossaire - unités et directions de boussole préremplies",
             "✓ Translation switchable off per object": "✓ Traduction désactivable par objet",
-            "Catalog": "Catalogue"
+            "Catalog": "Catalogue",
+            "Full functionality until then, with one freely chosen target language - changeable at any time during the trial.": "Jusque-là, toutes les fonctions, avec une langue cible librement choisie - modifiable à tout moment pendant la période d'essai."
         }
     }
 }

@@ -698,7 +698,7 @@
                 {
                     "type": "Label",
                     "name": "TrialInfoRunningFeaturesLabel",
-                    "caption": "Full functionality until then, but only with the 5 languages unlocked for testing (Icelandic, Welsh, Zulu, Maori, Latin).",
+                    "caption": "Full functionality until then, with one freely chosen target language - changeable at any time during the trial.",
                     "visible": false
                 },
                 {

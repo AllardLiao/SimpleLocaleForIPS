@@ -9,6 +9,19 @@ Build 53 bis Build 107 - ausgelagert aus Abschnitt 2, das dadurch als reine,
 aktuelle Liste bestehen bleibt. Jeder Eintrag ist unverändert (verbatim) aus
 der ursprünglichen Fassung übernommen.
 
+* **Build 200: die Beschreibung der Testphase im Konfigurationsformular stimmte
+  nach Build 199 nicht mehr.**
+  Dort stand weiterhin "voller Funktionsumfang, aber nur mit den 5 zum Testen
+  freigeschalteten Sprachen (Isländisch, Walisisch, Zulu, Maori, Latein)" -
+  genau das, was Build 199 abgeschafft hat. Jetzt: "voller Funktionsumfang, mit
+  einer frei wählbaren Zielsprache - jederzeit während der Testphase
+  wechselbar", in allen vier Sprachen.
+
+  Der Qualitäts-Hinweis in [Abschnitt 2](README.md#2-bekannte-einschränkungen)
+  nannte dieselben fünf Sprachen als "Testphasen-Sprachen". Sachlich stimmt der
+  Hinweis weiterhin - die Übersetzungsqualität ist für selten unterstützte
+  Sprachen schwerer einzuschätzen -, nur der Bezug zur Testphase ist entfallen.
+
 * **Build 199 (Nutzer-Entscheidung): die Testphase ist "Pro mit einer
   Zielsprache" statt fünf praxisferner Sprachen.**
   Bisher waren es Isländisch, Walisisch, Zulu, Maori und Latein - bewusst
