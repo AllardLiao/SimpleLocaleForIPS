@@ -9,6 +9,30 @@ Build 53 bis Build 107 - ausgelagert aus Abschnitt 2, das dadurch als reine,
 aktuelle Liste bestehen bleibt. Jeder Eintrag ist unverändert (verbatim) aus
 der ursprünglichen Fassung übernommen.
 
+* **Build 204 (live gemeldet): der "Hinzufügen"-Knopf reagiert jetzt sofort, und
+  die Sperre wird im Formular erklärt.**
+  Bisher wurde der Knopf nur beim Formularaufbau bewertet. Wer das Formular
+  öffnete, solange noch Platz war, konnte beliebig viele Zeilen anlegen; beim
+  Speichern wurden sie gekürzt. Build 202 hat das immerhin gemeldet - soweit soll
+  es aber gar nicht erst kommen.
+
+  Jetzt melden `onAdd` und `onDelete` jede Änderung an das Modul, das den Knopf
+  per `UpdateFormField` nachführt. Der Umweg über einen mitlaufenden Zähler ist
+  nötig, weil Symcon diesen Skripten **nur die betroffene Zeile** übergibt, nicht
+  die aktuelle Liste - und der Stand im offenen Formular steht noch nicht in der
+  Property. Der Zähler startet beim Formularaufbau und wird danach
+  fortgeschrieben.
+
+  Zwei Einschränkungen, die in der Sache liegen: Symcon kennt für den Knopf nur
+  "da" oder "nicht da" - ein sichtbarer, aber grauer Knopf ist im List-Element
+  nicht vorgesehen. Und der Zähler ist bewusst transient: bei zwei gleichzeitig
+  offenen Formularen derselben Instanz laufen die Stände auseinander. Der Schaden
+  bleibt begrenzt, weil beim Speichern ohnehin korrekt gekürzt und gemeldet wird
+  - der Zähler steuert nur, ob der Knopf angeboten wird.
+
+  Dazu steht rechts neben der Tabelle jetzt eine Erklärung, warum einzelne
+  Sprachen ausgegraut sind und nicht gegen das Limit zählen (siehe Build 203).
+
 * **Build 203 (Nutzer-Hinweis): Sprachen, die als Quellsprache einer Zeile in
   Gebrauch sind, lassen sich nicht mehr entfernen oder ändern.**
   Der Fall ist ausdrücklich beworben: ein fremdsprachiges IPS-Modul in einem

@@ -346,32 +346,44 @@
             "expanded": false,
             "items": [
                 {
-                    "type": "List",
-                    "name": "TargetLanguages",
-                    "caption": "Target languages",
-                    "width": "100%",
-                    "add": true,
-                    "delete": true,
-                    "rowCount": 5,
-                    "onAdd": "if ($TargetLanguages['code'] == '') { IPS_RequestAction($id, 'ShowApiKeyWarning', true); }",
-                    "columns": [
+                    "type": "RowLayout",
+                    "items": [
                         {
-                            "caption": "Language",
-                            "name": "code",
-                            "width": "300px",
-                            "add": "",
-                            "edit": {
-                                "type": "Select",
-                                "options": [
-                                    {
-                                        "caption": "English",
-                                        "value": "en"
+                            "type": "List",
+                            "name": "TargetLanguages",
+                            "caption": "Target languages",
+                            "width": "100%",
+                            "add": true,
+                            "delete": true,
+                            "rowCount": 5,
+                            "onAdd": "if ($TargetLanguages['code'] == '') { IPS_RequestAction($id, 'ShowApiKeyWarning', true); } IPS_RequestAction($id, 'TargetLanguagesChanged', 1);",
+                            "onDelete": "IPS_RequestAction($id, 'TargetLanguagesChanged', -1);",
+                            "columns": [
+                                {
+                                    "caption": "Language",
+                                    "name": "code",
+                                    "width": "300px",
+                                    "add": "",
+                                    "edit": {
+                                        "type": "Select",
+                                        "options": [
+                                            {
+                                                "caption": "English",
+                                                "value": "en"
+                                            }
+                                        ]
                                     }
-                                ]
-                            }
+                                }
+                            ],
+                            "values": []
+                        },
+                        {
+                            "type": "Label",
+                            "name": "TargetLanguagesLockedHint",
+                            "caption": "Some languages are shown greyed out and cannot be edited or deleted. Those are in use as a source language: either the scan language itself, or the source language of individual rows - for example after scanning a foreign-language module in its own pass. Removing such a language would take its column out of every table below, leaving the original text of those rows unreachable, and the instance could no longer be saved. They also do not count towards the language limit, since they are structurally required rather than a target language you chose.",
+                            "width": "420px"
                         }
-                    ],
-                    "values": []
+                    ]
                 },
                 {
                     "type": "Label",

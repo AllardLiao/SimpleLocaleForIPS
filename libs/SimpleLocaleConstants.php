@@ -524,6 +524,21 @@ trait SimpleLocaleConstants
     // Damit entfaellt die Dopplung, die vorher noetig war, sobald Teile der
     // Visualisierung eine andere Quellsprache hatten: "km/h" musste je
     // Quellsprache eine eigene Zeile bekommen.
+    // Build 204: Anzahl der ZAEHLENDEN Zielsprachen im gerade offenen Formular.
+    //
+    // Noetig, weil Symcon den onAdd-/onDelete-Skripten nur die BETROFFENE Zeile
+    // uebergibt, nicht die aktuelle Liste - und der Stand im offenen Formular
+    // steht noch nicht in der Property. Der Zaehler wird beim Formularaufbau
+    // gesetzt und danach je Hinzufuegen/Loeschen fortgeschrieben.
+    //
+    // Bewusst transient: bei zwei gleichzeitig offenen Formularen derselben
+    // Instanz laufen die Staende auseinander. Der Schaden ist begrenzt - beim
+    // Speichern kuerzt EnforceLicensedLanguageLimit() ohnehin korrekt und meldet
+    // es; der Zaehler steuert nur, ob der Knopf angeboten wird.
+    private const attributeFormTargetLanguageCount = 'FormTargetLanguageCount';
+
+    private const identTargetLanguagesChanged = 'TargetLanguagesChanged';
+
     private const propertyGlossary = 'Glossary';
 
     // Build 195: technischer Schluessel einer mitgelieferten Glossar-Zeile -

@@ -407,6 +407,7 @@ class SimpleLocale extends IPSModuleStrict
         $this->RegisterAttributeString(self::attributeGuestLanguageNamesCache, '{}');
         $this->RegisterAttributeString(self::attributeTranslationCache, '{}');
         $this->RegisterAttributeString(self::attributeSeededGlossaryKeys, '{}');
+        $this->RegisterAttributeInteger(self::attributeFormTargetLanguageCount, 0);
         $this->RegisterAttributeString(self::attributeLastRunTranslationFailures, '{}');
         $this->RegisterAttributeString(self::attributeUnnamedObjects, '[]');
         $this->RegisterAttributeInteger(self::attributeLastCleanupRemovedCount, -1);
@@ -923,6 +924,16 @@ class SimpleLocale extends IPSModuleStrict
                 }
                 break;
 
+            // Build 204: das Formular meldet jedes Hinzufuegen/Loeschen einer
+            // Zielsprache, damit der "Hinzufuegen"-Knopf sofort verschwindet, sobald
+            // das Limit erreicht ist - und wieder erscheint, sobald wieder Platz ist.
+            // Ohne das wurde er erst beim naechsten Formularaufbau neu bewertet: der
+            // Nutzer konnte beliebig viele Zeilen anlegen und verlor sie beim
+            // Speichern.
+            case self::identTargetLanguagesChanged:
+                $this->ApplyTargetLanguageCountDelta((int) $Value);
+                break;
+
             case self::identRescan:
                 $this->Rescan();
                 break;
@@ -1124,7 +1135,13 @@ class SimpleLocale extends IPSModuleStrict
                         $element['caption'] = $this->Translate('Target languages') . ' (' . $grund . ')';
                     } else {
                         $element['enabled'] = true;
+                        $element['add'] = true;
                     }
+
+                    // Build 204: Ausgangswert fuer den mitlaufenden Zaehler, den
+                    // onAdd/onDelete danach fortschreiben (siehe
+                    // ApplyTargetLanguageCountDelta).
+                    $this->WriteAttributeInteger(self::attributeFormTargetLanguageCount, count($zielsprachen));
 
                     // Build 203: Zeilen, deren Sprache irgendwo als Quellsprache in
                     // Gebrauch ist, gegen Aendern und Loeschen sperren. Symcon kennt
@@ -5311,6 +5328,28 @@ class SimpleLocale extends IPSModuleStrict
         self::propertyObjectGreeting,
         self::propertyManualTranslations,
     ];
+
+    // Build 204: schreibt den Zaehler der zaehlenden Zielsprachen fort und
+    // aktualisiert den "Hinzufuegen"-Knopf im offenen Formular.
+    //
+    // Symcon kennt fuer den Knopf nur "da" oder "nicht da" - ein sichtbarer, aber
+    // grauer Knopf ist nicht vorgesehen (siehe Doku zum List-Element, Attribut
+    // "add").
+    private function ApplyTargetLanguageCountDelta(int $Delta): void
+    {
+        $count = max(0, $this->ReadAttributeInteger(self::attributeFormTargetLanguageCount) + $Delta);
+        $this->WriteAttributeInteger(self::attributeFormTargetLanguageCount, $count);
+
+        $this->UpdateFormField(self::propertyTargetLanguages, 'add', $this->MayAddTargetLanguage($count));
+    }
+
+    // Build 204: ist noch Platz fuer eine weitere Zielsprache? 0 = kein Limit.
+    private function MayAddTargetLanguage(int $CurrentCount): bool
+    {
+        $limit = $this->GetLicensedLanguageLimit();
+
+        return $limit <= 0 || $CurrentCount < $limit;
+    }
 
     // Build 203 (Nutzer-Hinweis): jede Sprache, die irgendwo als QUELLSPRACHE
     // einer Zeile in Gebrauch ist - plus die aktuelle Scan-Sprache.

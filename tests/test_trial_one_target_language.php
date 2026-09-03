@@ -154,4 +154,41 @@ assert(strpos($enforce, '$entfernt = count($rows) - count($filtered);') !== fals
 assert(strpos($enforce, 'LogTranslateMessage(') !== false, 'und gemeldet werden');
 echo "Test 11 (eine Kürzung wird gemeldet, nicht verschwiegen) OK\n";
 
-echo "\nAlle Tests OK (Build 202: Testphase mit einer echten Zielsprache).\n";
+// Test 12 (Build 204, live gemeldet): der "Hinzufuegen"-Knopf muss SOFORT
+// reagieren, nicht erst beim naechsten Formularaufbau. Vorher konnte der Nutzer
+// beliebig viele Zeilen anlegen und verlor sie beim Speichern.
+//
+// Symcon uebergibt den onAdd-/onDelete-Skripten nur die BETROFFENE Zeile, nicht
+// die Liste - deshalb ein mitlaufender Zaehler im Modul.
+function darfHinzufuegen(int $count, int $limit): bool
+{
+    return $limit <= 0 || $count < $limit;
+}
+assert(darfHinzufuegen(0, 1) === true, 'ohne Zielsprache ist Platz');
+assert(darfHinzufuegen(1, 1) === false, 'nach der ersten ist Schluss');
+assert(darfHinzufuegen(2, 3) === true, 'bei Limit 3 ist nach zweien noch Platz');
+assert(darfHinzufuegen(9, 0) === true, 'Limit 0 heisst unbegrenzt');
+echo "Test 12 (die Platzberechnung stimmt) OK\n";
+
+// Test 13: das Formular meldet BEIDE Richtungen - loeschen muss den Knopf
+// zurueckbringen, sonst bliebe er nach dem Entfernen einer Sprache verschwunden.
+$form = (string) file_get_contents(dirname(__DIR__) . '/SimpleLocale/form.json');
+// Einfache Anfuehrungszeichen: in doppelten wuerde PHP das $id im Suchtext
+// selbst interpolieren und damit ins Leere greifen.
+assert(strpos($form, 'IPS_RequestAction($id, \'TargetLanguagesChanged\', 1);') !== false, 'onAdd meldet +1');
+assert(strpos($form, '"onDelete": "IPS_RequestAction($id, \'TargetLanguagesChanged\', -1);"') !== false,
+    'DER RUECKWEG: onDelete meldet -1');
+assert(strpos($module, 'case self::identTargetLanguagesChanged:') !== false, 'das Modul verarbeitet die Meldung');
+$delta = substr($module, (int) strpos($module, 'private function ApplyTargetLanguageCountDelta'), 700);
+assert(strpos($delta, 'max(0,') !== false, 'der Zaehler darf nicht negativ werden');
+assert(strpos($delta, "UpdateFormField(self::propertyTargetLanguages, 'add'") !== false,
+    'und schiebt den Knopf-Zustand ins offene Formular');
+echo "Test 13 (Hinzufügen und Löschen melden beide) OK\n";
+
+// Test 14: der Ausgangswert kommt aus dem Formularaufbau - ohne ihn zaehlte der
+// Delta-Mechanismus ab einem beliebigen Stand.
+assert(strpos($module, 'WriteAttributeInteger(self::attributeFormTargetLanguageCount, count($zielsprachen));') !== false,
+    'beim Aufbau wird der Zaehler auf die zaehlenden Zielsprachen gesetzt');
+echo "Test 14 (der Zähler startet beim Formularaufbau) OK\n";
+
+echo "\nAlle Tests OK (Build 204: Testphase mit einer echten Zielsprache).\n";
