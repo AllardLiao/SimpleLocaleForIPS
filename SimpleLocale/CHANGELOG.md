@@ -9,6 +9,39 @@ Build 53 bis Build 107 - ausgelagert aus Abschnitt 2, das dadurch als reine,
 aktuelle Liste bestehen bleibt. Jeder Eintrag ist unverändert (verbatim) aus
 der ursprünglichen Fassung übernommen.
 
+* **Build 207 (live gemeldet): der Rescan brach mit einem Fatal Error ab - und
+  die Übersetzung der Begrüßung schaltete sich selbst ab. Eine Ursache für
+  beides.**
+  Änderte sich der Rohtext der Begrüßung von außen, lief an zwei Stellen dieselbe
+  Schleife: *leere jedes Feld außer Rohtext, ValueObjectID und Quellsprache*. Die
+  Absicht war richtig - veraltete Übersetzungen sollen weg -, sie traf aber auch
+  die Buchhaltungsfelder:
+
+  * `UebersetztAm` ist eine **Zuordnung** Sprache → Zeitstempel. Als `''`
+    zurückgesetzt war es danach ein String, und der nächste Schreibzugriff brach
+    ab: `Cannot access offset of type string on string`, mitten im Rescan. Der
+    Lesezugriff war durch `??` abgesichert und meldete brav 0 - deshalb fiel es
+    erst beim Schreiben auf.
+  * `TranslationActive` ist die **Einstellung des Nutzers**. Als `''` gilt sie als
+    aus (siehe `GetEffectiveSelectedLanguage`). Bei einer automatischen Begrüßung
+    ändert sich der Text regelmäßig - deshalb trat die stille Abschaltung
+    wiederholt auf, ohne dass jemand etwas umgestellt hätte.
+  * `QuelleGeaendertAm` wurde ebenfalls geleert. Als 0 hätte
+    `IsRowLanguageTranslationCurrent()` jede Sprache als aktuell gemeldet und die
+    Neuübersetzung übersprungen - frischer Rohtext, alte Übersetzung.
+
+  Beide Stellen gehen jetzt über eine gemeinsame Funktion, die nur die
+  Übersetzungszellen leert; die Einstellung bleibt unangetastet, die Zuordnung
+  wird als leeres **Array** gesetzt und der Änderungszeitpunkt auf jetzt.
+
+  **Bestehende Instanzen tragen den kaputten Wert bereits gespeichert.** Der
+  Schreibzugriff fängt einen String jetzt ab und ersetzt ihn - die Zeile heilt
+  beim nächsten Schreiben von selbst, eine Migration ist nicht nötig. Die
+  Einstellung "Übersetzung aktiv" musst du bei der Begrüßung einmalig wieder
+  setzen, falls sie inzwischen aus ist.
+
+  Regressionstest `test_greeting_source_change_keeps_bookkeeping.php` (6 Fälle).
+
 * **Build 206 (live gemeldet): die Automations der Kachel-Visualisierung wurden
   nicht mehr eingelesen.**
   Selbst verursacht in Build 185. Bei der Umstellung auf Englisch als Quellsprache
