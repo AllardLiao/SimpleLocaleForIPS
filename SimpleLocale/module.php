@@ -4722,11 +4722,7 @@ class SimpleLocale extends IPSModuleStrict
         // Genau wie in MergeGreetingRows: der Rohtext hat sich geaendert, die
         // bisherigen Uebersetzungen sind damit hinfaellig und werden geleert, statt
         // veraltet stehenzubleiben.
-        foreach (array_keys($rows[0]) as $field) {
-            if (!in_array($field, [self::langOriginalImport, 'ValueObjectID', self::fieldRowSourceLanguage], true)) {
-                $rows[0][$field] = '';
-            }
-        }
+        $rows[0] = $this->ClearRowTranslationsAfterSourceChange($rows[0]);
         $rows[0][self::langOriginalImport] = $newRawText;
         $rows[0][self::fieldTranslatedAgainstSourceLanguage] = $this->GetRowSourceLanguage(
             $rows[0],
@@ -5253,16 +5249,75 @@ class SimpleLocale extends IPSModuleStrict
             return true;
         }
 
-        $translatedAt = (int) ($Row[self::fieldTranslatedAtByLanguage][$Language] ?? 0);
+        $translatedAt = (int) ($this->GetRowTranslatedAtMap($Row)[$Language] ?? 0);
 
         return $translatedAt >= $sourceChangedAt;
+    }
+
+    // Build 207 (live gemeldet): leert die Uebersetzungszellen einer Zeile, deren
+    // Rohtext sich geaendert hat - und NUR die.
+    //
+    // Vorher stand an beiden Aufrufstellen dieselbe Schleife: "leere jedes Feld
+    // ausser Rohtext, ValueObjectID und Quellsprache". Sie traf damit auch die
+    // Buchhaltungsfelder, mit zwei Folgen:
+    //
+    //   - fieldTranslatedAtByLanguage ist eine ZUORDNUNG Sprache => Zeitstempel.
+    //     Als '' zurueckgesetzt war es danach ein String, und der naechste
+    //     Schreibzugriff (MarkRowLanguageTranslated) brach den Rescan mit einem
+    //     Fatal Error ab: "Cannot access offset of type string on string".
+    //   - fieldTranslationActive ist die Einstellung des Nutzers. Als '' gilt sie
+    //     als AUS (siehe GetEffectiveSelectedLanguage) - die Uebersetzung der
+    //     Begruessung schaltete sich dadurch bei jeder externen Textaenderung
+    //     stillschweigend selbst ab.
+    //
+    // fieldSourceChangedAt wird bewusst auf JETZT gesetzt statt geleert: der
+    // Rohtext hat sich gerade geaendert, genau das bedeutet das Feld. Als ''
+    // (also 0) haette IsRowLanguageTranslationCurrent() jede Sprache als aktuell
+    // gemeldet und die Neuuebersetzung uebersprungen.
+    private function ClearRowTranslationsAfterSourceChange(array $Row): array
+    {
+        $behalten = [
+            self::langOriginalImport,
+            'ValueObjectID',
+            self::fieldRowSourceLanguage,
+            // Einstellung des Nutzers - die wird hier nicht angefasst.
+            self::fieldTranslationActive,
+        ];
+
+        foreach (array_keys($Row) as $field) {
+            if (!in_array($field, $behalten, true)) {
+                $Row[$field] = '';
+            }
+        }
+
+        // Buchhaltung mit dem richtigen TYP statt einem leeren String.
+        $Row[self::fieldTranslatedAtByLanguage] = [];
+        $Row[self::fieldSourceChangedAt] = time();
+
+        return $Row;
     }
 
     // Gegenstück zu IsRowLanguageTranslationCurrent: nach einer erfolgreichen
     // (Neu-)Übersetzung einer einzelnen Sprache wird deren Zeitstempel aktualisiert.
     private function MarkRowLanguageTranslated(array &$Row, string $Language): void
     {
+        $Row[self::fieldTranslatedAtByLanguage] = $this->GetRowTranslatedAtMap($Row);
         $Row[self::fieldTranslatedAtByLanguage][$Language] = time();
+    }
+
+    // Build 207: die Zuordnung Sprache => Zeitstempel, notfalls leer.
+    //
+    // Bestehende Instanzen tragen hier moeglicherweise einen leeren STRING statt
+    // einer Zuordnung - hinterlassen von der frueheren Leer-Schleife (siehe
+    // ClearRowTranslationsAfterSourceChange). Ein String laesst sich in PHP 8
+    // nicht mit einem Sprachcode indizieren, das brach den Rescan mit einem Fatal
+    // Error ab. Dieser Zugriff faengt das ab und heilt die Zeile beim naechsten
+    // Schreiben von selbst - eine Migration ist dafuer nicht noetig.
+    private function GetRowTranslatedAtMap(array $Row): array
+    {
+        $map = $Row[self::fieldTranslatedAtByLanguage] ?? [];
+
+        return is_array($map) ? $map : [];
     }
 
     // Markiert, dass sich der Rohtext/die Quellsprache dieser Zeile JETZT inhaltlich
@@ -6826,11 +6881,7 @@ class SimpleLocale extends IPSModuleStrict
             // wird dagegen mit auf denselben Wert gesetzt - die gerade geleerten
             // Übersetzungsspalten sind "gegen nichts" übersetzt, ein Abgleich in
             // ReconcileRowSourceLanguageChanges soll hier nicht unnötig nochmal anspringen.
-            foreach (array_keys($row) as $field) {
-                if (!in_array($field, [self::langOriginalImport, 'ValueObjectID', self::fieldRowSourceLanguage], true)) {
-                    $row[$field] = '';
-                }
-            }
+            $row = $this->ClearRowTranslationsAfterSourceChange($row);
             $row[self::langOriginalImport] = $newRawText;
             $row[self::fieldTranslatedAgainstSourceLanguage] = $row[self::fieldRowSourceLanguage];
         }
