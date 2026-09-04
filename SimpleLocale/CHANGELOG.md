@@ -9,6 +9,30 @@ Build 53 bis Build 107 - ausgelagert aus Abschnitt 2, das dadurch als reine,
 aktuelle Liste bestehen bleibt. Jeder Eintrag ist unverändert (verbatim) aus
 der ursprünglichen Fassung übernommen.
 
+* **Build 208 (Nutzer-Frage): "Wenn der Rescan nichts zu tun hat - bekommt der
+  Nutzer das überhaupt mit?" Nein. Jetzt schon.**
+  Der Rescan zeigte ausschließlich Fortschrittstexte, die am Ende wieder geleert
+  werden. Ein Lauf ohne Änderung war damit von einem gar nicht ausgeführten nicht
+  zu unterscheiden: es blitzt kurz etwas auf, danach steht das Formular da wie
+  zuvor. "Aufräumen" hatte seit jeher ein Ergebnis-Popup, der Rescan nicht.
+
+  Gemeldet wird **ausdrücklich nur dieser Fall**: hat der Rescan etwas geändert,
+  zeigt das neu geladene Formular die neuen Zeilen ohnehin - ein Popup wäre dort
+  nur ein zusätzlicher Klick. Der Text sagt zugleich, was viele vermuten:
+  bereits Bekanntes behält seine Übersetzungen, ein Rescan überschreibt sie nie.
+
+  "Nichts zu tun" heißt dabei **inhaltlich unverändert**, nicht "keine neuen
+  Zeilen". Verglichen wird ein Fingerabdruck über den Inhalt der gescannten
+  Listen - ein Lauf, der bloß fehlende Übersetzungen nachträgt, hat sehr wohl
+  etwas getan. Glossar und eigene Oberflächentexte bleiben außen vor: die wachsen
+  durch Nachbefüllung und haben mit dem Scan-Ergebnis nichts zu tun.
+
+  Nur der manuelle Lauf meldet. Ein Hintergrund-Rescan würde das Popup sonst
+  irgendwann aufpoppen lassen, ohne dass jemand etwas angestoßen hat - derselbe
+  Fehler, den Build 155 beim Aufräumen behoben hat.
+
+  Regressionstest `test_rescan_result_popup.php` (6 Fälle).
+
 * **Build 207 (live gemeldet): der Rescan brach mit einem Fatal Error ab - und
   die Übersetzung der Begrüßung schaltete sich selbst ab. Eine Ursache für
   beides.**

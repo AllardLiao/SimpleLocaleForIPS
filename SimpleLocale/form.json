@@ -21,6 +21,21 @@
             ]
         },
         {
+            "name": "RescanResultPopup",
+            "type": "PopupAlert",
+            "visible": false,
+            "popup": {
+                "caption": "Result of \"Rescan\"",
+                "closeCaption": "OK",
+                "items": [
+                    {
+                        "type": "Label",
+                        "caption": "Nothing changed - no new objects, and every translation was already up to date. Anything already known keeps its translations; a rescan never overwrites them."
+                    }
+                ]
+            }
+        },
+        {
             "name": "CleanupResultPopup",
             "type": "PopupAlert",
             "visible": false,
