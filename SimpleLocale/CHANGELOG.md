@@ -9,6 +9,32 @@ Build 53 bis Build 107 - ausgelagert aus Abschnitt 2, das dadurch als reine,
 aktuelle Liste bestehen bleibt. Jeder Eintrag ist unverändert (verbatim) aus
 der ursprünglichen Fassung übernommen.
 
+* **Build 209 (Nutzer-Wunsch): der Fortschrittsbalken erscheint sofort, die
+  Knöpfe sind während eines Laufs gesperrt, und die Balken sind breiter.**
+  Der Balken wurde erst **nach** den Vorprüfungen eingeblendet: Root-Abruf über
+  die Visu-Instanz, Lizenzprüfung, `EnsureSourceLanguageIsTarget()` und - seit
+  Build 208 - der Fingerabdruck über die gespeicherten Zeilen. Je nach Größe der
+  Installation vergehen dabei mehrere Sekunden, in denen sichtbar nichts
+  geschieht. Balken und Sperre stehen jetzt in der **ersten Zeile**, noch vor
+  jeder Prüfung; bricht eine davon ab, werden beide sofort wieder aufgehoben.
+
+  Dasselbe gilt für "Aufräumen" und "Übersetzungsanbieter prüfen". Die
+  Lizenzaktivierung bekommt keine Anzeige, aber die Sperre - sie spricht den
+  Lizenzserver mit 15 Sekunden Zeitlimit an.
+
+  **Voraussetzung dafür war, dass die Knöpfe überhaupt ansprechbar sind:** keiner
+  der sechs hatte bisher einen `name`, ohne den `UpdateFormField()` sie nicht
+  erreicht. Das Freigeben ist unkritisch - Symcons Konsole baut das Formular nach
+  jedem `RequestAction` ohnehin neu auf und stellt den Zustand aus `form.json`
+  wieder her. Selbst ein Abbruch mit Fehler lässt die Knöpfe also nicht dauerhaft
+  gesperrt zurück.
+
+  Die drei Balken hatten bisher gar keine Breitenangabe und liefen auf der
+  Voreinstellung; sie stehen jetzt ausdrücklich auf 600 px.
+
+  Regressionstest `test_action_feedback_immediate.php` (5 Fälle, darunter die
+  Bilanz: jeder vorzeitige Ausstieg muss die Knöpfe wieder freigeben).
+
 * **Build 208 (Nutzer-Frage): "Wenn der Rescan nichts zu tun hat - bekommt der
   Nutzer das überhaupt mit?" Nein. Jetzt schon.**
   Der Rescan zeigte ausschließlich Fortschrittstexte, die am Ende wieder geleert

@@ -436,6 +436,7 @@
                     "items": [
                         {
                             "type": "Button",
+                            "name": "NameUnnamedLinksButton",
                             "caption": "Name links automatically after their target",
                             "onClick": "IPS_RequestAction($id, 'NameUnnamedLinks', true);"
                         },
@@ -913,17 +914,19 @@
     ],
     "actions": [
         {
-            "type": "Button",
-            "caption": "Activate/update license",
-            "onClick": "IPS_RequestAction($id, 'ActivateLicense', true);"
+                            "type": "Button",
+                            "name": "ActivateLicenseButton",
+                            "caption": "Activate/update license",
+                            "onClick": "IPS_RequestAction($id, 'ActivateLicense', true);"
         },
         {
             "type": "RowLayout",
             "items": [
                 {
-                    "type": "Button",
-                    "caption": "Rescan visualization and complete missing translations",
-                    "onClick": "IPS_RequestAction($id, 'Rescan', true);"
+                            "type": "Button",
+                            "name": "RescanButton",
+                            "caption": "Rescan visualization and complete missing translations",
+                            "onClick": "IPS_RequestAction($id, 'Rescan', true);"
                 },
                 {
                     "type": "PopupButton",
@@ -944,6 +947,7 @@
         {
             "type": "ProgressBar",
             "name": "RescanProgressBar",
+                            "width": "600px",
             "indeterminate": true,
             "caption": "",
             "visible": false
@@ -972,9 +976,10 @@
             "type": "RowLayout",
             "items": [
                 {
-                    "type": "Button",
-                    "caption": "Remove translations of elements no longer in the visualization",
-                    "onClick": "IPS_RequestAction($id, 'CleanupOrphanedRows', true);"
+                            "type": "Button",
+                            "name": "CleanupButton",
+                            "caption": "Remove translations of elements no longer in the visualization",
+                            "onClick": "IPS_RequestAction($id, 'CleanupOrphanedRows', true);"
                 },
                 {
                     "type": "PopupButton",
@@ -995,6 +1000,7 @@
         {
             "type": "ProgressBar",
             "name": "CleanupProgressBar",
+                            "width": "600px",
             "indeterminate": true,
             "caption": "",
             "visible": false
@@ -1003,9 +1009,10 @@
             "type": "RowLayout",
             "items": [
                 {
-                    "type": "Button",
-                    "caption": "Clear translation cache",
-                    "onClick": "IPS_RequestAction($id, 'ClearTranslationCache', true);"
+                            "type": "Button",
+                            "name": "ClearCacheButton",
+                            "caption": "Clear translation cache",
+                            "onClick": "IPS_RequestAction($id, 'ClearTranslationCache', true);"
                 },
                 {
                     "type": "PopupButton",
@@ -1027,9 +1034,10 @@
             "type": "RowLayout",
             "items": [
                 {
-                    "type": "Button",
-                    "caption": "Check translation providers",
-                    "onClick": "IPS_RequestAction($id, 'CheckProviders', true);"
+                            "type": "Button",
+                            "name": "CheckProvidersButton",
+                            "caption": "Check translation providers",
+                            "onClick": "IPS_RequestAction($id, 'CheckProviders', true);"
                 },
                 {
                     "type": "PopupButton",
@@ -1050,6 +1058,7 @@
         {
             "type": "ProgressBar",
             "name": "ProviderCheckProgressBar",
+                            "width": "600px",
             "indeterminate": true,
             "caption": "",
             "visible": false

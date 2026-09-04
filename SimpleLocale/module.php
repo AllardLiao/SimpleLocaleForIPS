@@ -1890,8 +1890,15 @@ class SimpleLocale extends IPSModuleStrict
     // Bedingungen genauso ausbleiben.
     private function CleanupOrphanedRows(): void
     {
+        // Build 209: wie beim Rescan zuerst Balken und Knopfsperre - der
+        // Root-Abruf und die Lizenzpruefung darunter kosten bereits Zeit.
+        $this->SetButtonProgress('CleanupProgressBar', 'Looking for orphaned entries…');
+        $this->SetActionButtonsEnabled(false);
+
         if (!$this->ReadPropertyBoolean(self::propertyActive)) {
             $this->SetStatus(IS_INACTIVE);
+            $this->SetButtonProgress('CleanupProgressBar', '');
+            $this->SetActionButtonsEnabled(true);
 
             return;
         }
@@ -1899,12 +1906,16 @@ class SimpleLocale extends IPSModuleStrict
         $rootID = $this->GetEffectiveRootCategoryID();
         if ($rootID === 0 || !@IPS_ObjectExists($rootID)) {
             $this->SetStatus(self::STATUS_ROOT_CATEGORY_MISSING);
+            $this->SetButtonProgress('CleanupProgressBar', '');
+            $this->SetActionButtonsEnabled(true);
 
             return;
         }
 
         if ($this->IsTrialLocked()) {
             $this->SetStatus(self::STATUS_TRIAL_EXPIRED);
+            $this->SetButtonProgress('CleanupProgressBar', '');
+            $this->SetActionButtonsEnabled(true);
 
             return;
         }
@@ -1914,8 +1925,6 @@ class SimpleLocale extends IPSModuleStrict
         // schneller (keine Uebersetzungs-API-Aufrufe), soll dem Nutzer aber trotzdem
         // sichtbar bestaetigen, dass der Klick tatsaechlich etwas ausloest, auch wenn
         // es nur ein kurzes Aufblitzen ist.
-        $this->SetButtonProgress('CleanupProgressBar', 'Looking for orphaned entries…');
-
         $liveNames = [];
         $liveTexts = [];
         $liveOptions = [];
@@ -1995,6 +2004,7 @@ class SimpleLocale extends IPSModuleStrict
         // verbraucht diesen Wert einmalig, siehe dort.
         $this->WriteAttributeInteger(self::attributeLastCleanupRemovedCount, $removedCount);
         $this->SetButtonProgress('CleanupProgressBar', '');
+        $this->SetActionButtonsEnabled(true);
 
         // Build 155 (Nutzer-Wunsch): KEIN Live-Einblenden per UpdateFormField mehr.
         // Bis Build 154 wurde das Popup hier sofort auf dem noch offenen Formular
@@ -2055,11 +2065,14 @@ class SimpleLocale extends IPSModuleStrict
     // zu müssen.
     private function CheckProviders(): void
     {
+        // Build 209: Balken und Knopfsperre zuerst, siehe ScanRootTree.
+        $this->SetButtonProgress('ProviderCheckProgressBar', 'Checking translation providers…');
+        $this->SetActionButtonsEnabled(false);
+
         // Build 96 (Nutzer-Wunsch): mehrere echte Netzwerk-Anfragen nacheinander
         // (siehe Schleife unten) koennen spuerbar dauern - dieselbe Live-Rueckmeldung
         // wie beim Rescan, damit der Klick sichtbar etwas ausloest statt scheinbar
         // nichts zu tun, bis das Ergebnis-Popup ganz am Ende erscheint.
-        $this->SetButtonProgress('ProviderCheckProgressBar', 'Checking translation providers…');
 
         $testText = 'Testabfrage';
 
@@ -2185,6 +2198,7 @@ class SimpleLocale extends IPSModuleStrict
         $this->UpdateFormField('ProviderCheckFallbackPairRow', 'visible', $usedFallbackPair);
 
         $this->SetButtonProgress('ProviderCheckProgressBar', '');
+        $this->SetActionButtonsEnabled(true);
         $this->UpdateFormField('ProviderCheckResultPopup', 'visible', true);
     }
 
@@ -2194,6 +2208,11 @@ class SimpleLocale extends IPSModuleStrict
     // hier wird nur der bereits gespeicherte Schlüssel geprüft.
     private function ActivateLicense(): void
     {
+        // Build 209: die Aktivierung spricht den Lizenzserver an (Zeitlimit 15 s) -
+        // auch hier soll niemand zwischendurch auf den naechsten Knopf klicken.
+        // Kein eigener Balken: das Formular wird nach dem RequestAction ohnehin neu
+        // aufgebaut und zeigt dann den Lizenzblock mit dem Ergebnis.
+        $this->SetActionButtonsEnabled(false);
         $info = $this->GetLicenseInfo();
 
         if ($info['valid']) {
@@ -2237,6 +2256,8 @@ class SimpleLocale extends IPSModuleStrict
         }
 
         $this->ReloadForm();
+
+        $this->SetActionButtonsEnabled(true);
     }
 
     // Protokolliert eine Aktivierung auch dann, wenn der Lizenzschlüssel nur eingetragen
@@ -5704,6 +5725,30 @@ class SimpleLocale extends IPSModuleStrict
     // nicht erst nach Skriptende) und die bereits bestehenden UpdateFormField()-Aufrufe
     // in CheckProviders()/BufferPendingTrackedRowUpdate. $Message = '' blendet die
     // Anzeige wieder aus (Rescan beendet/abgebrochen).
+    // Build 209 (Nutzer-Wunsch): alle Aktionsknoepfe fuer die Dauer eines Laufs
+    // sperren. Ein Rescan kann Minuten dauern; ohne Sperre klickt man in der
+    // Zwischenzeit auf den naechsten Knopf, weil scheinbar nichts passiert.
+    //
+    // Das Freigeben ist bewusst unkritisch: Symcons Konsole baut das Formular nach
+    // jedem RequestAction ohnehin neu auf (siehe Build 116) und stellt dabei den
+    // Zustand aus form.json wieder her. Bricht ein Lauf mit einem Fehler ab,
+    // bleiben die Knoepfe also nicht dauerhaft gesperrt.
+    private const ACTION_BUTTON_NAMES = [
+        'ActivateLicenseButton',
+        'RescanButton',
+        'CleanupButton',
+        'ClearCacheButton',
+        'CheckProvidersButton',
+        'NameUnnamedLinksButton',
+    ];
+
+    private function SetActionButtonsEnabled(bool $Enabled): void
+    {
+        foreach (self::ACTION_BUTTON_NAMES as $name) {
+            $this->UpdateFormField($name, 'enabled', $Enabled);
+        }
+    }
+
     private function SetRescanProgress(string $Message): void
     {
         $this->WriteAttributeString(self::attributeRescanProgressMessage, $Message);
@@ -5751,11 +5796,22 @@ class SimpleLocale extends IPSModuleStrict
     // naechsten regulaeren "Uebernehmen" auf).
     private function ScanRootTree(bool $IsInteractive = false): void
     {
+        // Build 209 (Nutzer-Wunsch): Balken und Knopfsperre ZUERST, noch vor den
+        // Pruefungen. Bis dahin lagen dazwischen der Root-Abruf ueber die
+        // Visu-Instanz, die Lizenzpruefung, EnsureSourceLanguageIsTarget() und der
+        // Fingerabdruck ueber die gespeicherten Zeilen - je nach Groesse der
+        // Installation vergingen so mehrere Sekunden, in denen sichtbar nichts
+        // geschah und der Balken noch fehlte.
+        $this->SetRescanProgress('Reading the tree…');
+        $this->SetActionButtonsEnabled(false);
+
         // Notaus-Schalter (siehe propertyActive/ApplyChanges) - deckt sowohl den
         // manuellen Rescan-Button als auch den Auto-Rescan-Timer ab (beide laufen
         // über diese Funktion).
         if (!$this->ReadPropertyBoolean(self::propertyActive)) {
             $this->SetStatus(IS_INACTIVE);
+            $this->SetRescanProgress('');
+            $this->SetActionButtonsEnabled(true);
 
             return;
         }
@@ -5763,6 +5819,8 @@ class SimpleLocale extends IPSModuleStrict
         $rootID = $this->GetEffectiveRootCategoryID();
         if ($rootID === 0 || !@IPS_ObjectExists($rootID)) {
             $this->SetStatus(self::STATUS_ROOT_CATEGORY_MISSING);
+            $this->SetRescanProgress('');
+            $this->SetActionButtonsEnabled(true);
             return;
         }
 
@@ -5772,6 +5830,8 @@ class SimpleLocale extends IPSModuleStrict
         // aktiven Sprache stehen zu bleiben (siehe ResetToOriginalLanguageIfNeeded).
         if ($this->IsTrialLocked()) {
             $this->SetStatus(self::STATUS_TRIAL_EXPIRED);
+            $this->SetRescanProgress('');
+            $this->SetActionButtonsEnabled(true);
             $this->ResetToOriginalLanguageIfNeeded();
 
             return;
@@ -5805,8 +5865,6 @@ class SimpleLocale extends IPSModuleStrict
         // die wachsen durch Nachbefuellung und haben mit dem Scan-Ergebnis nichts
         // zu tun.
         $standVorher = $this->ComputeScannedRowsFingerprint();
-
-        $this->SetRescanProgress('Reading the tree…');
 
         $scannedNames = [];
         $scannedTexts = [];
@@ -6044,6 +6102,7 @@ class SimpleLocale extends IPSModuleStrict
         // laeuft - dieselbe Art von Stale-Anzeige-Bug wie der zuvor behobene
         // haengenbleibende Pause-Hinweis (siehe Build 87).
         $this->SetRescanProgress('');
+        $this->SetActionButtonsEnabled(true);
 
         // Build 116: kein eigener ReloadForm()-Aufruf mehr hier (siehe Kommentar an
         // der Funktion) - ein manueller Rescan-Klick bekommt seinen
