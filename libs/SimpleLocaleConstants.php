@@ -422,6 +422,12 @@ trait SimpleLocaleConstants
     // Anzeigen wieder auf -1 zurückgesetzt, damit ein SPÄTERES, unabhängiges Öffnen
     // des Formulars nicht denselben alten Treffer erneut zeigt. -1 = nichts
     // anzuzeigen, >= 0 = genau einmal anzuzeigende Anzahl.
+    // Build 208: Bilanz des letzten MANUELLEN Rescans - Anzahl neu gefundener
+    // Zeilen, -1 = nichts anzuzeigen. Ohne sie war ein Lauf ohne Funde von einem
+    // gar nicht ausgefuehrten nicht zu unterscheiden: die Fortschrittstexte
+    // blitzen nur kurz auf, und danach steht das Formular wieder da wie zuvor.
+    private const attributeLastRescanAddedCount = 'LastRescanAddedCount';
+
     private const attributeLastCleanupRemovedCount = 'LastCleanupRemovedCount';
 
     // Sprachnamen (+ das Label der "Original"-Pseudo-Sprache) live in die gerade

@@ -21,6 +21,35 @@
             ]
         },
         {
+            "name": "RescanResultPopup",
+            "type": "PopupAlert",
+            "visible": false,
+            "popup": {
+                "caption": "Result of \"Rescan\"",
+                "closeCaption": "OK",
+                "items": [
+                    {
+                        "type": "RowLayout",
+                        "items": [
+                            {
+                                "type": "Label",
+                                "caption": "Newly found:"
+                            },
+                            {
+                                "type": "Label",
+                                "name": "RescanResultCountLabel",
+                                "caption": ""
+                            },
+                            {
+                                "type": "Label",
+                                "caption": "row(s). Everything already known keeps its translations - a rescan never overwrites them."
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
             "name": "CleanupResultPopup",
             "type": "PopupAlert",
             "visible": false,

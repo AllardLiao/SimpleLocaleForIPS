@@ -411,6 +411,7 @@ class SimpleLocale extends IPSModuleStrict
         $this->RegisterAttributeString(self::attributeLastRunTranslationFailures, '{}');
         $this->RegisterAttributeString(self::attributeUnnamedObjects, '[]');
         $this->RegisterAttributeInteger(self::attributeLastCleanupRemovedCount, -1);
+        $this->RegisterAttributeInteger(self::attributeLastRescanAddedCount, -1);
         $this->RegisterAttributeInteger(self::attributeTrialStartedAt, 0);
         $this->RegisterAttributeString(self::attributeActivationLog, '[]');
         $this->RegisterAttributeString(self::attributeBlockedLicenseKeyHash, '');
@@ -1008,8 +1009,14 @@ class SimpleLocale extends IPSModuleStrict
             $this->WriteAttributeInteger(self::attributeLastCleanupRemovedCount, -1);
         }
 
+        // Build 208: dasselbe Einmal-Muster fuer die Rescan-Bilanz.
+        $rescanResultCount = $this->ReadAttributeInteger(self::attributeLastRescanAddedCount);
+        if ($rescanResultCount >= 0) {
+            $this->WriteAttributeInteger(self::attributeLastRescanAddedCount, -1);
+        }
+
         $form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
-        $this->PopulateFormElements($form['elements'], $cleanupResultCount);
+        $this->PopulateFormElements($form['elements'], $cleanupResultCount, $rescanResultCount);
 
         return json_encode($form);
     }
@@ -1020,7 +1027,7 @@ class SimpleLocale extends IPSModuleStrict
     // nicht mehr direkt auf oberster Ebene von $form['elements']. $CleanupResultCount
     // wird nur durchgereicht (siehe GetConfigurationForm für den Grund, warum das
     // NICHT hier selbst aus dem Attribut gelesen wird).
-    private function PopulateFormElements(array &$Elements, int $CleanupResultCount = -1): void
+    private function PopulateFormElements(array &$Elements, int $CleanupResultCount = -1, int $RescanResultCount = -1): void
     {
         $sourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
         $targetLanguages = $this->GetSelectedTargetLanguages();
@@ -1032,7 +1039,7 @@ class SimpleLocale extends IPSModuleStrict
 
         foreach ($Elements as &$element) {
             if (isset($element['items']) && is_array($element['items'])) {
-                $this->PopulateFormElements($element['items'], $CleanupResultCount);
+                $this->PopulateFormElements($element['items'], $CleanupResultCount, $RescanResultCount);
             }
 
             // Build 155 (live gemeldet): die Inhalte eines PopupAlert stecken NICHT
@@ -1046,7 +1053,7 @@ class SimpleLocale extends IPSModuleStrict
             // Zahl noch drin - UpdateFormField adressiert ein Feld ueber seinen Namen
             // und erreicht es unabhaengig von der Verschachtelung.
             if (isset($element['popup']['items']) && is_array($element['popup']['items'])) {
-                $this->PopulateFormElements($element['popup']['items'], $CleanupResultCount);
+                $this->PopulateFormElements($element['popup']['items'], $CleanupResultCount, $RescanResultCount);
             }
 
             switch ($element['name'] ?? '') {
@@ -1475,6 +1482,17 @@ class SimpleLocale extends IPSModuleStrict
                 // Build 76: einmaliges Ergebnis-Popup nach "Aufräumen" (siehe
                 // CleanupOrphanedRows) - $CleanupResultCount kommt bereits fertig
                 // gelesen+zurückgesetzt von GetConfigurationForm() rein (siehe dort).
+                // Build 208: Abschlussmeldung des manuellen Rescans. Ohne sie war ein
+                // Lauf ohne Funde nicht von einem gar nicht ausgefuehrten zu
+                // unterscheiden - die Fortschrittstexte blitzen nur kurz auf.
+                case 'RescanResultPopup':
+                    $element['visible'] = $RescanResultCount >= 0;
+                    break;
+
+                case 'RescanResultCountLabel':
+                    $element['caption'] = $RescanResultCount >= 0 ? (string) $RescanResultCount : '';
+                    break;
+
                 case 'CleanupResultPopup':
                     $element['visible'] = $CleanupResultCount >= 0;
                     break;
@@ -5440,6 +5458,25 @@ class SimpleLocale extends IPSModuleStrict
         return array_values(array_unique(array_filter($codes, static fn (string $c): bool => $c !== '')));
     }
 
+    // Build 208: Anzahl der Zeilen in den aus dem Baum gescannten Listen.
+    // Grundlage der Abschlussmeldung eines manuellen Rescans.
+    private function CountScannedRows(): int
+    {
+        $count = 0;
+        foreach ([
+            self::propertyObjectNames,
+            self::propertyObjectTexts,
+            self::propertyEnumerationOptions,
+            self::propertyObjectAutomations,
+            self::propertyObjectCharts,
+            self::propertyObjectGreeting,
+        ] as $property) {
+            $count += count($this->DecodeRows($property));
+        }
+
+        return $count;
+    }
+
     private function ComputeRowSourceLanguageFingerprint(): string
     {
         $parts = [];
@@ -5764,6 +5801,12 @@ class SimpleLocale extends IPSModuleStrict
         // Formular soll immer den aktuellen Durchlauf widerspiegeln.
         $this->ResetTranslationFailureReport();
 
+        // Build 208: Ausgangsstand fuer die Abschlussmeldung. Gezaehlt werden nur
+        // die aus dem Baum GESCANNTEN Listen - Glossar und eigene
+        // Oberflaechentexte wachsen durch Nachbefuellung und haetten in einer
+        // Meldung "so viel Neues gefunden" nichts zu suchen.
+        $zeilenVorher = $this->CountScannedRows();
+
         $this->SetRescanProgress('Reading the tree…');
 
         $scannedNames = [];
@@ -5984,6 +6027,16 @@ class SimpleLocale extends IPSModuleStrict
         IPS_SetProperty($this->InstanceID, self::propertyOwnUiTexts, json_encode(array_values($ownUiTexts)));
         IPS_SetProperty($this->InstanceID, self::propertyGlossary, json_encode(array_values($glossary)));
         IPS_ApplyChanges($this->InstanceID);
+
+        // Build 208: Bilanz nur beim MANUELLEN Rescan merken. Ein Hintergrund-Lauf
+        // (AutoRescan) wuerde das Popup sonst irgendwann spaeter aufpoppen lassen,
+        // ohne dass jemand etwas angestossen hat.
+        if ($IsInteractive) {
+            $this->WriteAttributeInteger(
+                self::attributeLastRescanAddedCount,
+                max(0, $this->CountScannedRows() - $zeilenVorher)
+            );
+        }
 
         // Build 88: unabhaengig davon geleert, ob ein Reload folgt - ein Hintergrund-
         // Rescan (AutoRescan(), kein RequestAction, daher kein automatischer
