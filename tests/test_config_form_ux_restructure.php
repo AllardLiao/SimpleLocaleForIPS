@@ -167,7 +167,7 @@ echo "Test 7 (Lizenz-Panel klappt nicht mehr allein wegen eines eingetragenen Sc
 // eigenem Kommentar generisch durch JEDE Verschachtelungstiefe laufen - das
 // neue TileSettingsPanel wird also automatisch mitverarbeitet, ohne eigene
 // Sonderbehandlung im Code zu benötigen.
-assert(strpos($moduleSource, "\$this->PopulateFormElements(\$element['items'], \$CleanupResultCount, \$RescanResultCount);") !== false,
+assert(strpos($moduleSource, "\$this->PopulateFormElements(\$element['items'], \$CleanupResultCount, \$RescanFoundNothing);") !== false,
     'PopulateFormElements() muss generisch in jede verschachtelte items-Liste hinabsteigen, damit das neue Panel korrekt verarbeitet wird');
 echo "Test 8 (die generische Formular-Rekursion verarbeitet das neue Panel automatisch mit, keine Sonderbehandlung nötig) OK\n";
 

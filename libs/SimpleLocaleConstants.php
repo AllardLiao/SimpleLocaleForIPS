@@ -422,11 +422,16 @@ trait SimpleLocaleConstants
     // Anzeigen wieder auf -1 zurückgesetzt, damit ein SPÄTERES, unabhängiges Öffnen
     // des Formulars nicht denselben alten Treffer erneut zeigt. -1 = nichts
     // anzuzeigen, >= 0 = genau einmal anzuzeigende Anzahl.
-    // Build 208: Bilanz des letzten MANUELLEN Rescans - Anzahl neu gefundener
-    // Zeilen, -1 = nichts anzuzeigen. Ohne sie war ein Lauf ohne Funde von einem
-    // gar nicht ausgefuehrten nicht zu unterscheiden: die Fortschrittstexte
-    // blitzen nur kurz auf, und danach steht das Formular wieder da wie zuvor.
-    private const attributeLastRescanAddedCount = 'LastRescanAddedCount';
+    // Build 208: 1 = der letzte MANUELLE Rescan hat NICHTS geaendert, 0 = nichts
+    // anzuzeigen.
+    //
+    // Gemeldet wird ausdruecklich nur dieser Fall. Hat der Rescan etwas
+    // geaendert, zeigt das neu geladene Formular die neuen Zeilen ohnehin - ein
+    // Popup waere dort nur ein zusaetzlicher Klick. Ohne die Meldung war ein Lauf
+    // ohne Funde aber von einem gar nicht ausgefuehrten nicht zu unterscheiden:
+    // die Fortschrittstexte blitzen kurz auf, danach steht das Formular da wie
+    // zuvor.
+    private const attributeRescanFoundNothing = 'RescanFoundNothing';
 
     private const attributeLastCleanupRemovedCount = 'LastCleanupRemovedCount';
 

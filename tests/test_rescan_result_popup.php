@@ -16,32 +16,36 @@ $locale = json_decode((string) file_get_contents(dirname(__DIR__) . '/SimpleLoca
 // Repliziert das Einmal-Muster aus GetConfigurationForm().
 function abholen(int $gespeichert): array
 {
-    return [$gespeichert, $gespeichert >= 0 ? -1 : $gespeichert];
+    return [$gespeichert === 1, $gespeichert === 1 ? 0 : $gespeichert];
 }
 
-// Test 1: DER FALL - auch NULL Funde muessen gemeldet werden. Genau das ist die
-// Frage, die der Nutzer hatte.
+// Test 1: DER FALL - hat der Rescan nichts geaendert, wird genau das gemeldet.
+// Das ist die Antwort auf "ich druecke den Knopf und es passiert nichts".
+[$zeige, $rest] = abholen(1);
+assert($zeige === true, 'DER FALL: ein Lauf ohne Aenderung wird gemeldet');
+assert($rest === 0, 'und danach verbraucht, damit es nicht bei jedem Oeffnen wiederkommt');
+echo "Test 1 (ein Lauf ohne Änderung wird gemeldet) OK\n";
+
+// Test 2: DIE ABGRENZUNG - hat der Rescan etwas geaendert, gibt es KEIN Popup.
+// Das neu geladene Formular zeigt die neuen Zeilen ohnehin; ein Popup waere dort
+// nur ein zusaetzlicher Klick.
 [$zeige, $rest] = abholen(0);
-assert($zeige === 0, 'DER FALL: null Funde wird angezeigt, nicht verschwiegen');
-assert($rest === -1, 'und danach verbraucht, damit es nicht bei jedem Oeffnen wiederkommt');
-echo "Test 1 (auch null Funde werden gemeldet) OK\n";
+assert($zeige === false && $rest === 0, 'DIE ABGRENZUNG: mit Aenderung kein Popup');
+echo "Test 2 (mit Änderung kein Popup) OK\n";
 
-// Test 2: ohne gelaufenen Rescan bleibt das Popup weg.
-[$zeige, $rest] = abholen(-1);
-assert($zeige === -1 && $rest === -1, 'ohne Lauf kein Popup');
-echo "Test 2 (ohne Lauf kein Popup) OK\n";
-
-// Test 3: die Zaehlung erfasst nur die GESCANNTEN Listen. Glossar und eigene
-// Oberflaechentexte wachsen durch Nachbefuellung - sie als "neu gefunden" zu
-// melden waere schlicht falsch.
-$zaehler = substr($module, (int) strpos($module, 'private function CountScannedRows'), 900);
+// Test 3: verglichen wird der INHALT der GESCANNTEN Listen. Ein Lauf, der bloss
+// fehlende Uebersetzungen nachtraegt, hat sehr wohl etwas getan - eine reine
+// Zeilenzaehlung haette ihn faelschlich als "nichts geaendert" gemeldet. Glossar
+// und eigene Oberflaechentexte bleiben aussen vor: die wachsen durch
+// Nachbefuellung und haben mit dem Scan-Ergebnis nichts zu tun.
+$zaehler = substr($module, (int) strpos($module, 'private function ComputeScannedRowsFingerprint'), 900);
 foreach (['propertyObjectNames', 'propertyObjectTexts', 'propertyEnumerationOptions',
           'propertyObjectAutomations', 'propertyObjectCharts', 'propertyObjectGreeting'] as $p) {
-    assert(strpos($zaehler, $p) !== false, "$p muss mitgezaehlt werden");
+    assert(strpos($zaehler, $p) !== false, "$p muss in den Fingerabdruck eingehen");
 }
-assert(strpos($zaehler, 'propertyGlossary') === false, 'das Glossar gehoert NICHT in die Bilanz');
+assert(strpos($zaehler, 'propertyGlossary') === false, 'das Glossar gehoert NICHT hinein');
 assert(strpos($zaehler, 'propertyOwnUiTexts') === false, 'die eigenen Oberflaechentexte ebenso wenig');
-echo "Test 3 (gezählt wird nur, was aus dem Baum kommt) OK\n";
+echo "Test 3 (verglichen wird nur, was aus dem Baum kommt) OK\n";
 
 // Test 4: nur der MANUELLE Rescan hinterlaesst eine Bilanz. Ein Hintergrund-Lauf
 // wuerde das Popup sonst irgendwann aufpoppen lassen, ohne dass jemand etwas
@@ -73,7 +77,7 @@ echo "Test 5 (das Popup ist angelegt und anfangs unsichtbar) OK\n";
 
 // Test 6: seine Texte sind in allen vier Sprachen hinterlegt - sonst stuende ein
 // deutscher Nutzer vor einer englischen Meldung.
-foreach (['Result of "Rescan"', 'Newly found:'] as $text) {
+foreach (['Result of "Rescan"'] as $text) {
     foreach (['de', 'es', 'it', 'fr'] as $sprache) {
         assert(isset($locale['translations'][$sprache][$text]),
             "\"$text\" fehlt in \"$sprache\"");

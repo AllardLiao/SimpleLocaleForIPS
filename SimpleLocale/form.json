@@ -29,22 +29,8 @@
                 "closeCaption": "OK",
                 "items": [
                     {
-                        "type": "RowLayout",
-                        "items": [
-                            {
-                                "type": "Label",
-                                "caption": "Newly found:"
-                            },
-                            {
-                                "type": "Label",
-                                "name": "RescanResultCountLabel",
-                                "caption": ""
-                            },
-                            {
-                                "type": "Label",
-                                "caption": "row(s). Everything already known keeps its translations - a rescan never overwrites them."
-                            }
-                        ]
+                        "type": "Label",
+                        "caption": "Nothing changed - no new objects, and every translation was already up to date. Anything already known keeps its translations; a rescan never overwrites them."
                     }
                 ]
             }
