@@ -9,6 +9,23 @@ Build 53 bis Build 107 - ausgelagert aus Abschnitt 2, das dadurch als reine,
 aktuelle Liste bestehen bleibt. Jeder Eintrag ist unverändert (verbatim) aus
 der ursprünglichen Fassung übernommen.
 
+* **Version 1.2, Build 211: ein Sprachwechsel wird nur noch einmal angewendet.**
+  Beim Neuladen des Moduls auf der SymBox lief `ApplyChanges()` dreimal
+  ineinander und brauchte 3,5 Sekunden; dasselbe Muster steckte in jedem
+  Sprachwechsel eines Gastes. `ApplyLanguage()` stößt beim Speichern der
+  Sprache und beim Nachtragen fehlender Übersetzungen selbst ein
+  `IPS_ApplyChanges()` an. Der dadurch ausgelöste innere Durchlauf wendete die
+  Sprache schon komplett an - danach tat der äußere alles noch einmal. Der
+  äußere Durchlauf erkennt das jetzt und hört auf.
+
+  Außerdem speicherte `ApplyChanges()` den Fingerabdruck des angezeigten
+  Inhalts vom Stand **vor** dem Anwenden. Wurden dabei Übersetzungen
+  nachgetragen, sah der nächste Durchlauf eine längst angewendete Änderung und
+  wendete erneut an. Gespeichert wird jetzt der Stand danach.
+
+  Im Test mit nachzutragenden Übersetzungen: vier vollständige Durchläufe
+  vorher, einer jetzt.
+
 * **Version 1.2, Build 210 (live gemeldet): Simple Locale blockierte den Start von IP-Symcon.**
   Symcon ruft `ApplyChanges()` schon während des eigenen Starts auf. Dort lief
   sofort der Quellsprachen-Abgleich an - auf einer SymBox mit rund 630

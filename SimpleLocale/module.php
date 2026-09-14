@@ -798,6 +798,11 @@ class SimpleLocale extends IPSModuleStrict
 
         if ($rowSourceLanguagesReconciled || $activeLanguageContentChanged || $currentLanguage !== $this->ReadAttributeString(self::attributeLastAppliedLanguage)) {
             $this->ApplyLanguage($currentLanguage);
+            // Build 210: ApplyLanguage() traegt fehlende Uebersetzungen selbst nach
+            // und veraendert damit genau den Inhalt, den der Fingerabdruck abbildet.
+            // Mit dem Stand von VORHER gespeichert, sah der naechste Durchlauf eine
+            // Aenderung, die laengst angewendet war, und wendete erneut an.
+            $activeLanguageContentFingerprint = $this->ComputeActiveLanguageContentFingerprint($this->ReadPropertyString(self::propertyCurrentLanguage));
         }
         $this->WriteAttributeString(self::attributeLastActiveLanguageContentFingerprint, $activeLanguageContentFingerprint);
     }
@@ -3142,7 +3147,9 @@ class SimpleLocale extends IPSModuleStrict
         // ein zweites Mal ApplyLanguage() mit der alten Sprache anstossen.
         if ($this->ReadPropertyString(self::propertyCurrentLanguage) !== $Language) {
             IPS_SetProperty($this->InstanceID, self::propertyCurrentLanguage, $Language);
-            IPS_ApplyChanges($this->InstanceID);
+            if ($this->ReenterApplyChangesAppliedLanguage($Language)) {
+                return;
+            }
         }
 
         // Build 71: ein Sprachwechsel braucht IMMER den neuesten Rohtext einer extern
@@ -3152,7 +3159,9 @@ class SimpleLocale extends IPSModuleStrict
         // StagePendingLanguageTranslations() gleich anschliessend die Zeilen liest.
         // propertyCurrentLanguage ist an dieser Stelle bereits konsistent mit
         // attributeLastAppliedLanguage (siehe oben), der Reentry ist daher sicher.
-        $this->FlushPendingTrackedRowUpdates();
+        if ($this->StagePendingTrackedRowUpdates() && $this->ReenterApplyChangesAppliedLanguage($Language)) {
+            return;
+        }
 
         // Build 70: BEVOR die Sprache tatsächlich aktiv geschaltet/angezeigt wird, holt
         // EnsureLanguageTranslationsCurrent() genau die Zeilen nach, deren Übersetzung
@@ -3160,8 +3169,9 @@ class SimpleLocale extends IPSModuleStrict
         // - gebündelt in maximal 5 API-Aufrufen (einer je Zeilen-Property), einmalig pro
         // tatsächlich betroffenem Text. Läuft bewusst NICHT für die Pseudo-Sprache
         // ORIGINAL_IMPORT (die braucht keine Übersetzung).
-        if ($Language !== self::langOriginalImport && $this->StagePendingLanguageTranslations($Language)) {
-            IPS_ApplyChanges($this->InstanceID);
+        if ($Language !== self::langOriginalImport && $this->StagePendingLanguageTranslations($Language)
+            && $this->ReenterApplyChangesAppliedLanguage($Language)) {
+            return;
         }
         $this->PushVisualizationUpdate();
 
@@ -3257,6 +3267,26 @@ class SimpleLocale extends IPSModuleStrict
         $this->ApplyGreetingLanguage($Language, $sourceLanguage, $writtenValueObjectIDs);
 
         $this->SyncCurrentLanguageIntoCache($Language, $sourceLanguage);
+
+        // Build 210: erst ganz am Ende - nur ein vollstaendiger Durchlauf zaehlt.
+        $run = explode('|', $this->GetBuffer(self::bufferLanguageApplyRuns), 2);
+        $this->SetBuffer(self::bufferLanguageApplyRuns, ((int) $run[0] + 1) . '|' . $Language);
+    }
+
+    // Build 210 (live gemessen: ein Neuladen des Moduls wendete die Sprache
+    // dreimal ineinander komplett an): ApplyLanguage() stoesst an drei Stellen
+    // ein IPS_ApplyChanges() auf die eigene Instanz an. Der innere Durchlauf sieht
+    // dabei einen geaenderten Inhalt und wendet die Sprache SELBST komplett an -
+    // danach tat der aeussere alles noch einmal. Liefert true, wenn der innere
+    // Durchlauf $Language vollstaendig angewendet hat; der Aufrufer kann dann
+    // aufhoeren.
+    private function ReenterApplyChangesAppliedLanguage(string $Language): bool
+    {
+        $before = $this->GetBuffer(self::bufferLanguageApplyRuns);
+        IPS_ApplyChanges($this->InstanceID);
+        $after = $this->GetBuffer(self::bufferLanguageApplyRuns);
+
+        return $after !== $before && (explode('|', $after, 2)[1] ?? '') === $Language;
     }
 
     // Build 125 (Nutzer-Wunsch, direkter Nachbericht der Automations/Objektnamen-
