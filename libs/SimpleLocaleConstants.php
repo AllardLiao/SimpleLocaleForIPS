@@ -691,6 +691,13 @@ trait SimpleLocaleConstants
     // Attribute fasst das Formular nicht an.
     private const attributeReconciledRowSourceLanguages = 'ReconciledRowSourceLanguages';
 
+    // Build 210: Laufzeit-Puffer (kein Attribut - gilt nur, solange Symcon laeuft).
+    // Zaehlt vollstaendig abgeschlossene ApplyLanguage()-Durchlaeufe samt Sprache,
+    // Format "<Zaehler>|<Sprache>". Damit erkennt ein aeusserer Durchlauf, dass ein
+    // durch ihn angestossener innerer ApplyChanges()-Durchlauf die Sprache bereits
+    // komplett angewendet hat, und bricht ab, statt alles ein zweites Mal zu tun.
+    private const bufferLanguageApplyRuns = 'LanguageApplyRuns';
+
     // Build 104 (Nutzer-Wunsch): guenstiger Kurzschluss-Vergleich (kein API-Aufruf,
     // reiner md5() ueber die bereits gespeicherten Zellwerte), damit ApplyChanges()
     // erkennt, ob sich der fuer die AKTUELL AKTIVE Gast-Sprache relevante Zellinhalt
