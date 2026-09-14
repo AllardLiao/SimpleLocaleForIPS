@@ -9,6 +9,23 @@ Build 53 bis Build 107 - ausgelagert aus Abschnitt 2, das dadurch als reine,
 aktuelle Liste bestehen bleibt. Jeder Eintrag ist unverändert (verbatim) aus
 der ursprünglichen Fassung übernommen.
 
+* **Version 1.2, Build 213 (Nutzer-Wunsch): fremde Module finden die richtige
+  Instanz.** Das Beispiel für Modulentwickler nahm bisher immer die erste
+  Simple-Locale-Instanz. Bei mehreren Visualisierungen - etwa "Admin" und
+  "Wohnung" - traf das dauerhaft die falsche, weil die Reihenfolge stabil ist.
+
+  - **`SLOC_IsResponsibleFor(InstanzID, ObjektID)`** beantwortet, ob ein Objekt
+    im Visualisierungs-Baum dieser Instanz liegt, auch über eine Verknüpfung.
+    Ein fremdes Modul fragt alle Instanzen und nimmt die eine, die ja sagt.
+    Grundlage ist die Tabelle "Objektnamen", zwischengespeichert bis zum
+    nächsten `ApplyChanges()`.
+  - **`SLOC_TranslateExternalTexts(InstanzID, Texte)`** übersetzt viele Texte
+    in einem Aufruf und behält die Schlüssel. Einzeln aufgerufen las jeder
+    Aufruf den Übersetzungs-Cache neu ein.
+  - Abschnitt 10 der README zeigt das vollständige Muster: Instanz finden,
+    Ergebnis merken, bei `IM_CHANGESETTINGS` neu rendern, Texte gesammelt
+    übersetzen.
+
 * **Version 1.2, Build 212 (Nutzer-Wunsch): umbenannte Objekte behalten ihren
   neuen Namen.** Eine im Visu-Baum umbenannte Kategorie bekam ihren alten Namen
   bei jedem Anwenden einer Sprache zurück - Objektnamen werden nicht

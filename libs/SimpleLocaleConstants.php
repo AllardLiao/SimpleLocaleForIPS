@@ -698,6 +698,12 @@ trait SimpleLocaleConstants
     // komplett angewendet hat, und bricht ab, statt alles ein zweites Mal zu tun.
     private const bufferLanguageApplyRuns = 'LanguageApplyRuns';
 
+    // Build 213: Laufzeit-Puffer mit allen Objekt-IDs, fuer die diese Instanz
+    // zustaendig ist (siehe IsResponsibleFor) - JSON-Objekt ID => true. Leer =
+    // noch nicht berechnet; ApplyChanges() leert ihn, weil sich die Tabelle
+    // "Objektnamen" geaendert haben kann.
+    private const bufferResponsibleObjectIDs = 'ResponsibleObjectIDs';
+
     // Build 104 (Nutzer-Wunsch): guenstiger Kurzschluss-Vergleich (kein API-Aufruf,
     // reiner md5() ueber die bereits gespeicherten Zellwerte), damit ApplyChanges()
     // erkennt, ob sich der fuer die AKTUELL AKTIVE Gast-Sprache relevante Zellinhalt
