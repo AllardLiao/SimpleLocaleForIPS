@@ -149,4 +149,26 @@ assert(nameRows()[1]['ORIGINAL_IMPORT'] === 'Küche', 'eine vorhandene Uebersetz
 assert(IPS_GetName($kitchen) === 'Küche', 'der Name muss auf den Originaltext zurueckgesetzt werden');
 echo "Test 5 (eigene Uebersetzung wird nicht als Umbenennung gewertet) OK\n";
 
+// Test 6: der Rescan wendet dieselbe Regel an, mit den Namen aus dem Scan.
+$rows = [
+    ['ObjectID' => 901, 'ORIGINAL_IMPORT' => 'Wohnzimmer', 'Quellsprache' => 'de', 'TranslationActive' => true, 'de' => 'Wohnzimmer', 'en' => 'Living room'],
+    ['ObjectID' => 902, 'ORIGINAL_IMPORT' => 'Küche', 'Quellsprache' => 'de', 'TranslationActive' => true, 'de' => 'Küche', 'en' => 'Kitchen'],
+];
+$scannedNames = [901 => 'Wohnbereich', 902 => 'Küche'];
+$adopted = false;
+$ref = new ReflectionMethod(SimpleLocale::class, 'AdoptRenamedObjectNames');
+$ref->setAccessible(true);
+$result = $ref->invokeArgs($instance, [$rows, 'de', $scannedNames, &$adopted]);
+assert($adopted === true && $result[0]['ORIGINAL_IMPORT'] === 'Wohnbereich' && $result[0]['en'] === '', 'der Rescan muss den neuen Namen uebernehmen');
+assert($result[1] === $rows[1], 'unveraenderte Zeilen bleiben unberuehrt');
+$adopted = false;
+$result = $ref->invokeArgs($instance, [$rows, 'en', [901 => 'Wohnbereich', 902 => 'Kitchen'], &$adopted]);
+assert($adopted === false && $result === $rows, 'bei angezeigter Uebersetzung darf der Rescan nichts uebernehmen');
+
+$source = file_get_contents(dirname(__DIR__) . '/SimpleLocale/module.php');
+$scanStart = strpos($source, 'private function ScanRootTree(');
+$scanBody = substr($source, $scanStart, strpos($source, "\n    private function ", $scanStart + 10) - $scanStart);
+assert(preg_match('/AdoptRenamedObjectNames\(\s*\$this->MergeRows\(\$this->DecodeRows\(self::propertyObjectNames\), \$scannedNames\),.*?self::attributeLastAppliedLanguage/s', $scanBody) === 1, 'DER BUG: der Rescan muss die Objektnamen nach dem Zusammenfuehren durch AdoptRenamedObjectNames schicken, mit der zuletzt angewendeten Sprache');
+echo "Test 6 (Rescan uebernimmt umbenannte Objekte nach derselben Regel) OK\n";
+
 echo "\nAll tests passed.\n";

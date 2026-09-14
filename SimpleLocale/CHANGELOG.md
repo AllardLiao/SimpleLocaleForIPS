@@ -19,6 +19,12 @@ der ursprünglichen Fassung übernommen.
   Übersetzungen des alten Texts werden geleert. Stand eine Übersetzung, bleibt
   es beim Zurücksetzen, weil nicht erkennbar ist, was gemeint war.
 
+  Dieselbe Regel gilt für "Baum neu einlesen": der Rescan fror den
+  Originaltext bekannter Objekte bisher grundsätzlich ein und übernimmt einen
+  neuen Namen jetzt ebenfalls. Nach einer Umbenennung ist er der naheliegende
+  Klick; ohne ihn wurde der neue Name erst beim nächsten Anwenden einer
+  Sprache sichtbar.
+
   Bewusst ohne Beobachtung per `OM_CHANGENAME`: jeder Sprachwechsel benennt
   alle Objekte um, das wären hunderte zusätzliche Aufrufe pro Wechsel.
   Außerdem werden Objekte nur noch umbenannt, wenn sich ihr Name tatsächlich

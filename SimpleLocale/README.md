@@ -205,6 +205,9 @@ Beschreibung des Moduls.
   Übersetzung, lässt sich nicht erkennen, ob der Originaltext oder nur diese
   eine Übersetzung gemeint war - der Name wird dann auf den Tabellenwert
   zurückgesetzt. Umbenennen also bei aktiver Quellsprache.
+
+  Übernommen wird beim nächsten Anwenden einer Sprache oder sofort mit
+  "Baum neu einlesen" - das Öffnen des Formulars allein genügt nicht.
 * **Sehr häufig aktualisierte Variablen können viele API-Aufrufe erzeugen.**
   Jede externe Aktualisierung einer verfolgten "Eigene Texte"-Variable löst
   eine eigene Live-Nachübersetzung aus (siehe oben) - bei einer Variable, die
