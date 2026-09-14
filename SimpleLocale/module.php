@@ -442,6 +442,7 @@ class SimpleLocale extends IPSModuleStrict
         $this->RegisterAttributeString(self::attributeReportedLicenseKeyHash, '');
         $this->RegisterAttributeString(self::attributeTileAssetBundle, '[]');
         $this->RegisterAttributeString(self::attributeLastRowSourceLanguageFingerprint, '');
+        $this->RegisterAttributeString(self::attributeReconciledRowSourceLanguages, '');
         $this->RegisterAttributeString(self::attributeLastActiveLanguageContentFingerprint, '');
         $this->RegisterAttributeString(self::attributeProviderPausedUntil, '{}');
         $this->RegisterAttributeString(self::attributeLastSeenProviderCredentialsHash, '{}');
@@ -540,6 +541,16 @@ class SimpleLocale extends IPSModuleStrict
     {
         //Never delete this line!
         parent::ApplyChanges();
+
+        // Build 210 (live: SymBox startete neun Tage lang nicht mehr): Symcon ruft
+        // ApplyChanges() schon waehrend des eigenen Starts auf. Alles, was hier
+        // folgt, kann dauern (Abgleich, Uebersetzungen, Umbenennen) - und solange es
+        // laeuft, wird Symcon nicht fertig. Beim Start deshalb nur auf
+        // IPS_KERNELSTARTED warten; MessageSink holt den Durchlauf danach nach.
+        $this->RegisterMessage(0, IPS_KERNELSTARTED);
+        if (IPS_GetKernelRunlevel() !== KR_READY) {
+            return;
+        }
 
         // Build 71: gepufferte VM_UPDATE-Zeilenaenderungen (siehe
         // BufferPendingTrackedRowUpdate/StagePendingTrackedRowUpdates) zuerst
@@ -801,6 +812,13 @@ class SimpleLocale extends IPSModuleStrict
     {
         //Never delete this line!
         parent::MessageSink($TimeStamp, $SenderID, $Message, $Data);
+
+        // Build 210: der beim Start zurueckgestellte ApplyChanges()-Durchlauf.
+        if ($Message === IPS_KERNELSTARTED) {
+            $this->ApplyChanges();
+
+            return;
+        }
 
         if ($Message === IM_CHANGESETTINGS) {
             $this->isInMessageSinkDispatch = true;
@@ -2032,7 +2050,7 @@ class SimpleLocale extends IPSModuleStrict
     }
 
     // Manueller Reset des Uebersetzungs-Caches (attributeTranslationCache,
-    // siehe GetCachedTranslation/StoreCachedTranslation/
+    // siehe GetCachedTranslationsBatch/StoreCachedTranslationsBatch/
     // TRANSLATION_CACHE_SCHEMA_VERSION) - Sicherheitsventil fuer den Fall,
     // dass ein Rohtext weiterhin eine falsche/veraltete Uebersetzung zeigt,
     // ohne auf ein neues Modul-Build (mit automatischer Versions-basierter
@@ -3244,7 +3262,7 @@ class SimpleLocale extends IPSModuleStrict
     // Build 125 (Nutzer-Wunsch, direkter Nachbericht der Automations/Objektnamen-
     // Korruptions-Untersuchung): eine manuelle Korrektur einer Zielsprachen-Zelle
     // im Formular landet nur in der jeweiligen Zeilen-Property, NIE im
-    // persistenten Übersetzungs-Cache (siehe StoreCachedTranslation - wird
+    // persistenten Übersetzungs-Cache (siehe StoreCachedTranslationsBatch - wird
     // ausschließlich nach einem frischen Anbieter-Aufruf befüllt). Wird eine
     // Zeile später aus irgendeinem Grund erneut als "veraltet" erkannt (siehe
     // ReconcileRowFields/FillMissingTranslations), liefert ein Cache-Treffer für
@@ -3288,7 +3306,7 @@ class SimpleLocale extends IPSModuleStrict
             return;
         }
 
-        // Build 126: derselbe Sperrbereich wie Get-/StoreCachedTranslation (siehe
+        // Build 126: derselbe Sperrbereich wie Get-/StoreCachedTranslationsBatch (siehe
         // dort) - auch dieser Lese-/Schreibvorgang auf attributeTranslationCache
         // muss gegen ueberlappende VM_UPDATE-Skriptausfuehrungen geschuetzt sein.
         $ident = $this->GetTranslationCacheSemaphoreIdent();
@@ -3327,7 +3345,7 @@ class SimpleLocale extends IPSModuleStrict
                 return;
             }
 
-            // Dieselbe Verdraengungslogik wie StoreCachedTranslation - siehe dort
+            // Dieselbe Verdraengungslogik wie StoreCachedTranslationsBatch - siehe dort
             // fuer die Begruendung (haeufig genutzte Eintraege ueberleben, nicht
             // die zuletzt eingefuegten).
             if (count($cache) > self::TRANSLATION_CACHE_MAX_ENTRIES) {
@@ -4973,7 +4991,7 @@ class SimpleLocale extends IPSModuleStrict
             && ($Rows[$RowIndex][self::fieldTranslationActive] ?? true)) {
             // Build 127 (Nutzer-Wunsch): ValueObjectID statt eines leeren
             // DebugContext mitgeben - macht die GoogleTranslate_Request/
-            // Get-/StoreCachedTranslation-Debug-Zeilen eindeutig einem
+            // Get-/StoreCachedTranslationsBatch-Debug-Zeilen eindeutig einem
             // konkreten Objekt im Baum zuordenbar, statt nur den Text zu zeigen.
             $translated = $this->TranslateBatch([$NewValue], $rowSourceLanguage, $currentLanguage, 'ValueObjectID=' . $ValueObjectID, $IsHtml);
             // TranslateBatch liefert bei einem fehlgeschlagenen/pausierten Anbieter
@@ -5381,11 +5399,22 @@ class SimpleLocale extends IPSModuleStrict
     // $Changed wird per Referenz auf true gesetzt, wenn diese Zeile tatsächlich
     // reconciled wurde - steuert in ReconcileRowSourceLanguageChanges, ob die Property
     // überhaupt neu gespeichert werden muss.
-    private function ReconcileRowFields(array $Row, bool &$Changed): array
+    //
+    // Build 210: $KnownSourceLanguage ist die Quellsprache, gegen die diese Zeile
+    // zuletzt abgeglichen wurde (siehe attributeReconciledRowSourceLanguages).
+    // Sie springt ein, wenn das Zeilenfeld fehlt - nach jedem "Uebernehmen" im
+    // Formular der Normalfall. Ist beides unbekannt, gilt die Zeile als
+    // unveraendert: ein Wechsel laesst sich nur gegen einen bekannten Stand
+    // feststellen, und ein falscher Alarm markiert alle Uebersetzungen als
+    // veraltet.
+    private function ReconcileRowFields(array $Row, bool &$Changed, string $KnownSourceLanguage = ''): array
     {
         $newSourceLanguage = $this->GetRowSourceLanguage($Row, '');
         $reconciledAgainst = (string) ($Row[self::fieldTranslatedAgainstSourceLanguage] ?? '');
-        if ($newSourceLanguage === '' || $newSourceLanguage === $reconciledAgainst) {
+        if ($reconciledAgainst === '') {
+            $reconciledAgainst = $KnownSourceLanguage;
+        }
+        if ($newSourceLanguage === '' || $reconciledAgainst === '' || $newSourceLanguage === $reconciledAgainst) {
             return $Row;
         }
 
@@ -5571,6 +5600,13 @@ class SimpleLocale extends IPSModuleStrict
         $targetLanguages = $this->GetSelectedTargetLanguages();
         $anyChanged = false;
 
+        // Build 210: siehe attributeReconciledRowSourceLanguages.
+        $known = json_decode($this->ReadAttributeString(self::attributeReconciledRowSourceLanguages), true);
+        if (!is_array($known)) {
+            $known = [];
+        }
+        $current = [];
+
         foreach ($this->GetTranslatableFieldGroupsByProperty() as $property => $fieldGroups) {
             $rows = $this->DecodeRows($property);
             if ($rows === []) {
@@ -5579,7 +5615,9 @@ class SimpleLocale extends IPSModuleStrict
 
             $propertyChanged = false;
             foreach ($rows as $index => $row) {
-                $rows[$index] = $this->ReconcileRowFields($row, $propertyChanged);
+                $identity = $this->BuildRowIdentityKey($row, $fieldGroups);
+                $rows[$index] = $this->ReconcileRowFields($row, $propertyChanged, (string) ($known[$property][$identity] ?? ''));
+                $current[$property][$identity] = $this->GetRowSourceLanguage($rows[$index], '');
             }
 
             if ($propertyChanged) {
@@ -5595,7 +5633,40 @@ class SimpleLocale extends IPSModuleStrict
             }
         }
 
+        $this->WriteAttributeString(self::attributeReconciledRowSourceLanguages, json_encode($current));
+
         return $anyChanged;
+    }
+
+    // Build 210: woran eine Zeile ueber mehrere Speichervorgaenge hinweg
+    // wiedererkannt wird - ihre Objekt-Bezuege und ihr Rohtext, also genau die
+    // Felder, die man im Formular nicht bearbeiten kann. Quellsprache,
+    // Uebersetzungen und die Checkbox gehoeren bewusst nicht dazu: sie sind es
+    // ja, die sich zwischen zwei Abgleichen aendern.
+    private const ROW_IDENTITY_FIELDS = [
+        'ObjectID',
+        'ValueObjectID',
+        'ValueObjectIDs',
+        'SourceKey',
+        'FieldPath',
+        'AutomationID',
+        'ChartID',
+        'VariableID',
+    ];
+
+    private function BuildRowIdentityKey(array $Row, array $FieldGroups): string
+    {
+        $parts = [];
+        foreach (self::ROW_IDENTITY_FIELDS as $field) {
+            if (array_key_exists($field, $Row)) {
+                $parts[$field] = $Row[$field];
+            }
+        }
+        foreach ($FieldGroups as $group) {
+            $parts[$group['raw']] = (string) ($Row[$group['raw']] ?? '');
+        }
+
+        return md5(json_encode($parts));
     }
 
     // Einzige Quelle des Root der Visualisierung (bewusst NICHT "Root-Kategorie"
@@ -7940,11 +8011,17 @@ class SimpleLocale extends IPSModuleStrict
     // aufgeloest werden konnte. $CharacterCount ist hier immer die Laenge des
     // (unuebersetzten) Quelltexts, da fuer einen Cache-Treffer nie eine Anfrage
     // an einen Anbieter gestellt wird.
-    private function RecordCacheSavingsStats(int $CharacterCount): void
+    // Build 210: zaehlt mehrere eingesparte Anfragen in einem Schreibvorgang
+    // (vorher RecordCacheSavingsStats, einmal je Treffer).
+    private function RecordCacheSavingsStatsBatch(int $RequestCount, int $CharacterCount): void
     {
+        if ($RequestCount <= 0) {
+            return;
+        }
+
         $this->WriteAttributeString(
             self::attributeStatsCacheSavedRequestCount,
-            (string) ((int) $this->ReadAttributeString(self::attributeStatsCacheSavedRequestCount) + 1)
+            (string) ((int) $this->ReadAttributeString(self::attributeStatsCacheSavedRequestCount) + $RequestCount)
         );
         if ($CharacterCount > 0) {
             $this->WriteAttributeString(
@@ -8227,7 +8304,7 @@ class SimpleLocale extends IPSModuleStrict
     // Instanzen mit sehr vielen unterschiedlichen, sich staendig aendernden Texten.
     // Build 72: 500 -> 1000 erhoeht, gemeinsam mit der Umstellung von reiner
     // Einfuegereihenfolge (FIFO) auf Hit-Zaehler-basierte Verdraengung (siehe
-    // GetCachedTranslation/StoreCachedTranslation) - beides zusammen macht den Cache
+    // GetCachedTranslationsBatch/StoreCachedTranslationsBatch) - beides zusammen macht den Cache
     // deutlich widerstandsfaehiger gegen einen Schwung einmaliger Texte, der sonst
     // haeufig wiederverwendete Kern-Inhalte hinausdraengen wuerde.
     // Build 128 (Nutzer-Report, live bestaetigt: Cache staendig bei genau 1000
@@ -8246,7 +8323,7 @@ class SimpleLocale extends IPSModuleStrict
     // Medienplayer-Widgets - durchlaufen ueberhaupt TranslateBatch(); bereits
     // gefuellte statische Zeilen wie Objektnamen/Automations werden ueber
     // ResolveRowValue() DIREKT aus der Property gelesen, nie ueber den Cache -
-    // siehe dort, kein einziger GetCachedTranslation()-Aufruf). Grob geschaetzt
+    // siehe dort, kein einziger GetCachedTranslationsBatch()-Aufruf). Grob geschaetzt
     // 50-150 wirklich wiederkehrende Rohtexte (Wochentags-Kuerzel, gaengige
     // Wetterbeschreibungen, feste Widget-Label) x 2-3 Zielsprachen ergeben
     // etwa 100-450 Eintraege "harten Kern". Da der Cache (ein einzelner JSON-
@@ -8264,7 +8341,7 @@ class SimpleLocale extends IPSModuleStrict
 
     // Build 72: "Treffer der letzten 24 Stunden" wird ueber einen Decay-Zaehler
     // angenaehert statt ueber eine vollstaendige Historie einzelner Zeitstempel
-    // (die pro Eintrag unbegrenzt wachsen wuerde) - siehe GetCachedTranslation.
+    // (die pro Eintrag unbegrenzt wachsen wuerde) - siehe GetCachedTranslationsBatch.
     private const TRANSLATION_CACHE_HIT_DECAY_SECONDS = 86400;
 
     // Teil des Cache-Schluessels (siehe BuildTranslationCacheKey) - wird
@@ -8308,8 +8385,8 @@ class SimpleLocale extends IPSModuleStrict
     // Build 72: erneut erhoeht (3 -> 4) - die gespeicherte FORM eines Cache-Eintrags
     // hat sich geaendert, von einem blossen String (nur das Uebersetzungsergebnis)
     // zu einem kleinen Objekt {v: Ergebnis, h: Hit-Zaehler, t: letzter Zugriff} fuer
-    // die neue Hit-Zaehler-basierte Verdraengung (siehe GetCachedTranslation/
-    // StoreCachedTranslation). Ohne diese Erhoehung wuerden alte, noch als reiner
+    // die neue Hit-Zaehler-basierte Verdraengung (siehe GetCachedTranslationsBatch/
+    // StoreCachedTranslationsBatch). Ohne diese Erhoehung wuerden alte, noch als reiner
     // String gespeicherte Eintraege unter denselben Schluesseln weiterhin gefunden,
     // aber vom neuen Code als Objekt interpretiert - kostet einmalig einen frischen
     // Uebersetzungsversuch pro bereits gecachtem Text, dafuer keine Sonderbehandlung
@@ -8330,6 +8407,40 @@ class SimpleLocale extends IPSModuleStrict
     // exakter (nicht getrimmter) String-Vergleich - ein Leerzeichen-Unterschied
     // soll den Admin nicht durch einen scheinbar wirkungslosen Glossar-Eintrag
     // verwirren, sondern sichtbar zum Nicht-Treffer fuehren.
+    // Build 210: dieselbe Suche wie FindManualTranslation, aber als fertiges
+    // Nachschlagewerk fuer einen ganzen Aufruf (Text => Uebersetzung). Eigene
+    // Uebersetzungen gehen dem Glossar vor, innerhalb beider gilt der erste
+    // Treffer mit nicht leerer Uebersetzung - genau wie bei der Einzelsuche.
+    private function BuildManualTranslationIndex(array $ManualTranslationRows, array $GlossaryRows, string $SourceLanguage, string $TargetLanguage): array
+    {
+        $manual = [];
+        foreach ($ManualTranslationRows as $row) {
+            if ((string) ($row[self::fieldRowSourceLanguage] ?? '') !== $SourceLanguage) {
+                continue;
+            }
+            $sourceText = (string) ($row[self::langOriginalImport] ?? '');
+            $translation = (string) ($row[$TargetLanguage] ?? '');
+            if ($translation === '' || array_key_exists($sourceText, $manual)) {
+                continue;
+            }
+            $manual[$sourceText] = $translation;
+        }
+
+        $glossary = [];
+        if ($SourceLanguage !== '' && $TargetLanguage !== '') {
+            foreach ($GlossaryRows as $row) {
+                $sourceText = (string) ($row[$SourceLanguage] ?? '');
+                $translation = (string) ($row[$TargetLanguage] ?? '');
+                if ($sourceText === '' || $translation === '' || array_key_exists($sourceText, $glossary)) {
+                    continue;
+                }
+                $glossary[$sourceText] = $translation;
+            }
+        }
+
+        return $manual + $glossary;
+    }
+
     private function FindManualTranslation(array $ManualTranslationRows, array $GlossaryRows, string $SourceLanguage, string $TargetLanguage, string $Text): ?string
     {
         foreach ($ManualTranslationRows as $row) {
@@ -8358,7 +8469,7 @@ class SimpleLocale extends IPSModuleStrict
 
 
     // Uebersetzt (Quelle, Ziel, Text) IMMER zuerst gegen den lokalen Cache
-    // (attributeTranslationCache, siehe GetCachedTranslation/StoreCachedTranslation)
+    // (attributeTranslationCache, siehe GetCachedTranslationsBatch/StoreCachedTranslationsBatch)
     // - identischer Text + identisches Sprachpaar liefert deterministisch dasselbe
     // Ergebnis, ein erneuter API-Aufruf waere reine Verschwendung. Besonders wirksam
     // bei Texten, die sich zyklisch wiederholen (z.B. eine tageszeitabhaengige
@@ -8397,7 +8508,7 @@ class SimpleLocale extends IPSModuleStrict
         // Texts (z.B. mehrere Text-Knoten eines HTML-Widgets mit identischem
         // Inhalt, wie mehrere Tage einer Wettervorhersage mit derselben
         // Beschreibung "Überwiegend bewölkt") ebenfalls in $freshTexts, weil der
-        // persistente Cache (GetCachedTranslation) erst NACH Abschluss des
+        // persistente Cache (GetCachedTranslationsBatch) erst NACH Abschluss des
         // GESAMTEN Batches befuellt wird (siehe unten) - fuer Anbieter ohne
         // echten Batch-Aufruf (MyMemory: ein HTTP-Request pro Text, siehe
         // TranslateChunkFree) bedeutete das einen komplett unnoetigen,
@@ -8407,7 +8518,7 @@ class SimpleLocale extends IPSModuleStrict
         // HTML-Dokument) - seit Build 127 wird so ein Text nie mehr im Cache
         // gespeichert (nur noch seine einzelnen Knoten, siehe
         // TranslateBatchUncached/StoreCachedTranslationsBatch). Ein
-        // GetCachedTranslation()-Aufruf dafuer ist also strukturell IMMER ein
+        // GetCachedTranslationsBatch()-Aufruf dafuer ist also strukturell IMMER ein
         // Fehlschlag - kostet aber trotzdem Semaphor-Erwerb, das Lesen/
         // Dekodieren des gesamten (jetzt bis zu 10.000 Eintraege grossen)
         // Caches und eine Hash-Berechnung ueber das komplette Dokument, live
@@ -8416,19 +8527,34 @@ class SimpleLocale extends IPSModuleStrict
         // komplett uebersprungen.
         $textToFreshPosition = [];
         $duplicateFreshPositions = [];
+
+        // Build 210 (live: SymBox-Start blieb minutenlang haengen): eigene
+        // Uebersetzungen, Glossar und Cache wurden bis hierhin fuer JEDEN Text
+        // einzeln durchsucht - der Cache dabei jedes Mal komplett dekodiert und
+        // neu geschrieben. Bei 4.000 Cache-Eintraegen und ein paar tausend Texten
+        // waren das Gigabytes an JSON. Jetzt einmal pro Aufruf.
+        $manualIndex = $this->BuildManualTranslationIndex($manualTranslations, $glossaryRows, $Source, $Target);
+        $cacheCandidates = [];
         foreach ($Texts as $i => $text) {
-            $manual = $this->FindManualTranslation($manualTranslations, $glossaryRows, $Source, $Target, $text);
-            if ($manual !== null) {
-                $results[$i] = $manual;
+            if (array_key_exists($text, $manualIndex)) {
+                $results[$i] = $manualIndex[$text];
+            } elseif (!$IsHtml) {
+                $cacheCandidates[$i] = $text;
+            }
+        }
+        $cachedHits = $this->GetCachedTranslationsBatch($Source, $Target, $cacheCandidates);
+        $savedRequests = 0;
+        $savedCharacters = 0;
+
+        foreach ($Texts as $i => $text) {
+            if (array_key_exists($i, $results)) {
                 continue;
             }
-            if (!$IsHtml) {
-                $cached = $this->GetCachedTranslation($Source, $Target, $text);
-                if ($cached !== null) {
-                    $results[$i] = $cached;
-                    $this->RecordCacheSavingsStats(mb_strlen($text, 'UTF-8'));
-                    continue;
-                }
+            if (array_key_exists($i, $cachedHits)) {
+                $results[$i] = $cachedHits[$i];
+                $savedRequests++;
+                $savedCharacters += mb_strlen($text, 'UTF-8');
+                continue;
             }
             if (isset($textToFreshPosition[$text])) {
                 $duplicateFreshPositions[$i] = $textToFreshPosition[$text];
@@ -8441,6 +8567,7 @@ class SimpleLocale extends IPSModuleStrict
 
         if ($freshTexts !== []) {
             $freshlyTranslated = $this->TranslateBatchUncached($freshTexts, $Source, $Target, $DebugContext, $IsHtml);
+            $freshEntriesForCache = [];
             foreach ($freshIndexes as $position => $originalIndex) {
                 $item = $freshlyTranslated[$position] ?? ['text' => '', 'failed' => true];
                 // Build 87-Nachbesserung (Nutzer-Wunsch, live gefunden): TranslateBatchUncached
@@ -8480,9 +8607,11 @@ class SimpleLocale extends IPSModuleStrict
                 // vorhandene) Knoten-Cache - die ganze Zeile wird nicht mehr
                 // zusaetzlich gecacht.
                 if ($translated !== '' && !$IsHtml) {
-                    $this->StoreCachedTranslation($Source, $Target, $freshTexts[$position], $translated);
+                    $freshEntriesForCache[] = ['text' => $freshTexts[$position], 'translated' => $translated];
                 }
             }
+            // Build 210: in einem Schreibvorgang, siehe StoreCachedTranslationsBatch.
+            $this->StoreCachedTranslationsBatch($Source, $Target, $freshEntriesForCache);
 
             // Build 117: jedes weitere Vorkommen desselben Rohtexts im selben Batch
             // uebernimmt das bereits aufgeloeste Ergebnis seines ersten Vorkommens -
@@ -8493,9 +8622,11 @@ class SimpleLocale extends IPSModuleStrict
             // Batch stammt.
             foreach ($duplicateFreshPositions as $originalIndex => $freshPosition) {
                 $results[$originalIndex] = $results[$freshIndexes[$freshPosition]] ?? '';
-                $this->RecordCacheSavingsStats(mb_strlen($Texts[$originalIndex], 'UTF-8'));
+                $savedRequests++;
+                $savedCharacters += mb_strlen($Texts[$originalIndex], 'UTF-8');
             }
         }
+        $this->RecordCacheSavingsStatsBatch($savedRequests, $savedCharacters);
 
         ksort($results);
 
@@ -8503,7 +8634,7 @@ class SimpleLocale extends IPSModuleStrict
     }
 
     // Build 72: liest nicht mehr nur, sondern schreibt bei jedem Treffer auch den
-    // Hit-Zaehler/Zeitstempel dieses EINEN Eintrags fort (siehe StoreCachedTranslation
+    // Hit-Zaehler/Zeitstempel dieses EINEN Eintrags fort (siehe StoreCachedTranslationsBatch
     // fuer die Verdraengungslogik, die darauf aufbaut) - ein lokaler Attribut-
     // Schreibvorgang, verschwindend billig gegenüber der API-Anfrage, die dieser
     // Cache-Treffer gerade eingespart hat.
@@ -8535,85 +8666,58 @@ class SimpleLocale extends IPSModuleStrict
         return 'SLOC_TranslationCache_' . $this->InstanceID;
     }
 
-    private function GetCachedTranslation(string $SourceLanguage, string $TargetLanguage, string $SourceText): ?string
+    // Build 210: fuer viele Texte auf einmal (vorher GetCachedTranslationsBatch, je
+    // Text) - der Cache wird einmal gelesen und hoechstens einmal geschrieben.
+    // Liefert nur die Treffer, mit denselben Schluesseln wie $SourceTexts.
+    private function GetCachedTranslationsBatch(string $SourceLanguage, string $TargetLanguage, array $SourceTexts): array
     {
-        $ident = $this->GetTranslationCacheSemaphoreIdent();
-        $locked = IPS_SemaphoreEnter($ident, 1000);
-
-        try {
-            $cache = json_decode($this->ReadAttributeString(self::attributeTranslationCache), true);
-            if (!is_array($cache)) {
-                return null;
-            }
-
-            $key = $this->BuildTranslationCacheKey($SourceLanguage, $TargetLanguage, $SourceText);
-            if (!isset($cache[$key]) || !is_array($cache[$key])) {
-                return null;
-            }
-
-            $entry = $cache[$key];
-            $now = time();
-            // Naehert "Treffer der letzten 24 Stunden" an, ohne eine unbegrenzt
-            // wachsende Historie einzelner Zeitstempel je Eintrag speichern zu
-            // muessen: war der letzte Zugriff laenger als
-            // TRANSLATION_CACHE_HIT_DECAY_SECONDS her, gilt der Eintrag als "neu
-            // wieder aufgewaermt" (Zaehler auf 1 zurueckgesetzt) statt seinen alten
-            // Zaehler auf ewig fortzuschreiben - sonst wuerde ein frueher einmal
-            // populaerer, inzwischen laengst nicht mehr gebrauchter Eintrag bei der
-            // naechsten Verdraengung (siehe StoreCachedTranslation) faelschlich
-            // einen frisch aktiven Eintrag verdraengen.
-            $cache[$key]['h'] = ($now - ($entry['t'] ?? 0)) > self::TRANSLATION_CACHE_HIT_DECAY_SECONDS
-                ? 1
-                : (int) ($entry['h'] ?? 0) + 1;
-            $cache[$key]['t'] = $now;
-            $this->WriteAttributeString(self::attributeTranslationCache, json_encode($cache));
-
-            return $entry['v'] ?? null;
-        } finally {
-            if ($locked) {
-                IPS_SemaphoreLeave($ident);
-            }
+        if ($SourceTexts === []) {
+            return [];
         }
-    }
 
-    private function StoreCachedTranslation(string $SourceLanguage, string $TargetLanguage, string $SourceText, string $TranslatedText): void
-    {
         $ident = $this->GetTranslationCacheSemaphoreIdent();
         $locked = IPS_SemaphoreEnter($ident, 1000);
 
         try {
             $cache = json_decode($this->ReadAttributeString(self::attributeTranslationCache), true);
             if (!is_array($cache)) {
-                $cache = [];
+                return [];
             }
 
-            $storeKey = $this->BuildTranslationCacheKey($SourceLanguage, $TargetLanguage, $SourceText);
-            $cache[$storeKey] = [
-                'v' => $TranslatedText,
-                'h' => 1,
-                't' => time(),
-            ];
+            $hits = [];
+            $touched = false;
+            $now = time();
+            foreach ($SourceTexts as $index => $sourceText) {
+                $key = $this->BuildTranslationCacheKey($SourceLanguage, $TargetLanguage, (string) $sourceText);
+                if (!isset($cache[$key]) || !is_array($cache[$key])) {
+                    continue;
+                }
 
-            if (count($cache) > self::TRANSLATION_CACHE_MAX_ENTRIES) {
-                // Build 72: statt bisher der aeltesten (reine Einfuegereihenfolge,
-                // FIFO) werden jetzt die Eintraege mit dem GERINGSTEN Hit-Zaehler
-                // zuerst verdraengt (siehe GetCachedTranslation) - schuetzt haeufig
-                // wiederverwendete Kern-Inhalte (z.B. feste Objektnamen/Automations-
-                // Beschriftungen) davor, durch einen Schwung einmaliger, nie wieder
-                // vorkommender Texte verdraengt zu werden, nur weil diese zufaellig
-                // zuletzt eingefuegt wurden. Bei gleichem Hit-Zaehler entscheidet der
-                // Zeitpunkt des letzten Zugriffs (sekundaeres Sortierkriterium) - ein
-                // aelterer, unter der vorigen Schema-Version noch als reiner String
-                // gespeicherter Eintrag hat dabei ueber ?? 0 sicher Hit-Zaehler 0 und
-                // wird dadurch garantiert zuerst verdraengt (siehe
-                // TRANSLATION_CACHE_SCHEMA_VERSION).
-                uasort($cache, static function ($a, $b): int {
-                    return (($a['h'] ?? 0) <=> ($b['h'] ?? 0)) ?: (($a['t'] ?? 0) <=> ($b['t'] ?? 0));
-                });
-                $cache = array_slice($cache, count($cache) - self::TRANSLATION_CACHE_MAX_ENTRIES, null, true);
+                $entry = $cache[$key];
+                // Naehert "Treffer der letzten 24 Stunden" an, ohne eine unbegrenzt
+                // wachsende Historie einzelner Zeitstempel je Eintrag speichern zu
+                // muessen: war der letzte Zugriff laenger als
+                // TRANSLATION_CACHE_HIT_DECAY_SECONDS her, gilt der Eintrag als "neu
+                // wieder aufgewaermt" (Zaehler auf 1 zurueckgesetzt) statt seinen alten
+                // Zaehler auf ewig fortzuschreiben - sonst wuerde ein frueher einmal
+                // populaerer, inzwischen laengst nicht mehr gebrauchter Eintrag bei der
+                // naechsten Verdraengung (siehe StoreCachedTranslationsBatch) faelschlich
+                // einen frisch aktiven Eintrag verdraengen.
+                $cache[$key]['h'] = ($now - ($entry['t'] ?? 0)) > self::TRANSLATION_CACHE_HIT_DECAY_SECONDS
+                    ? 1
+                    : (int) ($entry['h'] ?? 0) + 1;
+                $cache[$key]['t'] = $now;
+                $touched = true;
+                if (isset($entry['v'])) {
+                    $hits[$index] = $entry['v'];
+                }
             }
 
-            $this->WriteAttributeString(self::attributeTranslationCache, json_encode($cache));
+            if ($touched) {
+                $this->WriteAttributeString(self::attributeTranslationCache, json_encode($cache));
+            }
+
+            return $hits;
         } finally {
             if ($locked) {
                 IPS_SemaphoreLeave($ident);
@@ -8625,7 +8729,7 @@ class SimpleLocale extends IPSModuleStrict
     // einzelnes HTML-Widget uebersetzt oft MEHRERE brandneue Knoten auf einmal
     // (z.B. "Überwiegend Klar" + Sonnenauf-/-untergang + Windgeschwindigkeit +
     // Windrichtung, alle zum ersten Mal gesehen). TranslateBatchUncached() rief
-    // dafuer StoreCachedTranslation() bisher EINZELN je Knoten auf - da der
+    // dafuer StoreCachedTranslationsBatch() bisher EINZELN je Knoten auf - da der
     // Cache voll ist (alle 1000 bestehenden Eintraege haben bereits mindestens
     // einen Treffer, siehe Build 127), loeste JEDER einzelne Aufruf sofort
     // seine EIGENE Verdraengung aus. Alle Knoten DESSELBEN Batches haben aber
@@ -8667,8 +8771,18 @@ class SimpleLocale extends IPSModuleStrict
             }
 
             if (count($cache) > self::TRANSLATION_CACHE_MAX_ENTRIES) {
-                // Dieselbe Verdraengungslogik wie StoreCachedTranslation - siehe
-                // dort fuer die Begruendung.
+                // Build 72: statt bisher der aeltesten (reine Einfuegereihenfolge,
+                // FIFO) werden jetzt die Eintraege mit dem GERINGSTEN Hit-Zaehler
+                // zuerst verdraengt (siehe GetCachedTranslationsBatch) - schuetzt haeufig
+                // wiederverwendete Kern-Inhalte (z.B. feste Objektnamen/Automations-
+                // Beschriftungen) davor, durch einen Schwung einmaliger, nie wieder
+                // vorkommender Texte verdraengt zu werden, nur weil diese zufaellig
+                // zuletzt eingefuegt wurden. Bei gleichem Hit-Zaehler entscheidet der
+                // Zeitpunkt des letzten Zugriffs (sekundaeres Sortierkriterium) - ein
+                // aelterer, unter der vorigen Schema-Version noch als reiner String
+                // gespeicherter Eintrag hat dabei ueber ?? 0 sicher Hit-Zaehler 0 und
+                // wird dadurch garantiert zuerst verdraengt (siehe
+                // TRANSLATION_CACHE_SCHEMA_VERSION).
                 uasort($cache, static function ($a, $b): int {
                     return (($a['h'] ?? 0) <=> ($b['h'] ?? 0)) ?: (($a['t'] ?? 0) <=> ($b['t'] ?? 0));
                 });
@@ -8971,7 +9085,7 @@ class SimpleLocale extends IPSModuleStrict
         //
         // Build 119 (Nutzer-Wunsch, direkt im Anschluss): Build 118 vermied nur
         // DOPPELTE Anfragen INNERHALB dieses einen Aufrufs - der persistente Cache
-        // (GetCachedTranslation/StoreCachedTranslation) und die "Eigene
+        // (GetCachedTranslationsBatch/StoreCachedTranslationsBatch) und die "Eigene
         // Übersetzungstabelle" (FindManualTranslation) wurden in TranslateBatch()
         // bisher nur auf der Ebene ganzer Zeilen-Rohtexte geprüft, NIE auf dieser
         // Knotenebene. Für ein Wetter-Widget, dessen GESAMTER HTML-Roh-Inhalt sich
@@ -8993,22 +9107,31 @@ class SimpleLocale extends IPSModuleStrict
             : [];
         $glossaryRowsForNodes = $this->GetGlossaryRowsForLookup();
 
+        // Build 210: Nachschlagen einmal pro Aufruf, siehe TranslateBatch.
+        $manualIndexForNodes = $this->BuildManualTranslationIndex($manualTranslationsForNodes, $glossaryRowsForNodes, $Source, $Target);
         $translatedByText = [];
-        $freshNodes = [];
-        foreach ($uniqueTranslatable as $node) {
-            $manual = $this->FindManualTranslation($manualTranslationsForNodes, $glossaryRowsForNodes, $Source, $Target, $node);
-            if ($manual !== null) {
-                $translatedByText[$node] = $manual;
-                continue;
+        $nodeCacheCandidates = [];
+        foreach ($uniqueTranslatable as $position => $node) {
+            if (array_key_exists($node, $manualIndexForNodes)) {
+                $translatedByText[$node] = $manualIndexForNodes[$node];
+            } else {
+                $nodeCacheCandidates[$position] = $node;
             }
-            $cached = $this->GetCachedTranslation($Source, $Target, $node);
-            if ($cached !== null) {
-                $translatedByText[$node] = $cached;
-                $this->RecordCacheSavingsStats(mb_strlen($node, 'UTF-8'));
+        }
+        $nodeCacheHits = $this->GetCachedTranslationsBatch($Source, $Target, $nodeCacheCandidates);
+        $nodeSavedRequests = 0;
+        $nodeSavedCharacters = 0;
+        $freshNodes = [];
+        foreach ($nodeCacheCandidates as $position => $node) {
+            if (array_key_exists($position, $nodeCacheHits)) {
+                $translatedByText[$node] = $nodeCacheHits[$position];
+                $nodeSavedRequests++;
+                $nodeSavedCharacters += mb_strlen($node, 'UTF-8');
                 continue;
             }
             $freshNodes[] = $node;
         }
+        $this->RecordCacheSavingsStatsBatch($nodeSavedRequests, $nodeSavedCharacters);
 
         $freshNodesTranslated = [];
         foreach (array_chunk($freshNodes, self::translateMaxTextsPerRequest) as $chunk) {

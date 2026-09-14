@@ -682,6 +682,15 @@ trait SimpleLocaleConstants
     // API-Kontingent in kuerzester Zeit aufbrauchen koennen.
     private const attributeLastRowSourceLanguageFingerprint = 'LastRowSourceLanguageFingerprint';
 
+    // Build 210 (live: SymBox-Start blieb haengen): die Quellsprache jeder Zeile,
+    // gegen die zuletzt abgeglichen wurde - pro Liste, Schluessel ist die
+    // Zeilen-Identitaet (siehe BuildRowIdentityKey). Stand bis dahin nur im
+    // Zeilenfeld fieldTranslatedAgainstSourceLanguage. Ein "Uebernehmen" im
+    // Formular speichert aber nur die Spalten der Liste - das Feld fehlte danach
+    // in JEDER Zeile, und der naechste Abgleich hielt alle Zeilen fuer geaendert.
+    // Attribute fasst das Formular nicht an.
+    private const attributeReconciledRowSourceLanguages = 'ReconciledRowSourceLanguages';
+
     // Build 104 (Nutzer-Wunsch): guenstiger Kurzschluss-Vergleich (kein API-Aufruf,
     // reiner md5() ueber die bereits gespeicherten Zellwerte), damit ApplyChanges()
     // erkennt, ob sich der fuer die AKTUELL AKTIVE Gast-Sprache relevante Zellinhalt
