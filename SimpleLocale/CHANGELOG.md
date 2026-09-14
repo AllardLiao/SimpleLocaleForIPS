@@ -9,6 +9,34 @@ Build 53 bis Build 107 - ausgelagert aus Abschnitt 2, das dadurch als reine,
 aktuelle Liste bestehen bleibt. Jeder Eintrag ist unverändert (verbatim) aus
 der ursprünglichen Fassung übernommen.
 
+* **Version 1.2, Build 210 (live gemeldet): Simple Locale blockierte den Start von IP-Symcon.**
+  Symcon ruft `ApplyChanges()` schon während des eigenen Starts auf. Dort lief
+  sofort der Quellsprachen-Abgleich an - auf einer SymBox mit rund 630
+  Tabellenzeilen dauerte das mehrere Minuten. Symcon wurde nicht fertig, nach
+  etwa zwei Minuten neu gestartet und speicherte nichts; beim nächsten Start
+  begann alles von vorn. Die Konsole meldete dabei `JSON parsing failed`, weil
+  der Kern nie bereit wurde. Drei Ursachen, drei Korrekturen:
+
+  - **Beim Start wartet die Instanz jetzt auf den Kernel.** `ApplyChanges()`
+    meldet sich während des Starts nur auf `IPS_KERNELSTARTED` an und erledigt
+    die eigentliche Arbeit danach. Simple Locale kann den Start von Symcon damit
+    nicht mehr aufhalten.
+  - **Ein "Übernehmen" im Formular löst keinen Voll-Abgleich mehr aus.** Gegen
+    welche Quellsprache eine Zeile zuletzt übersetzt wurde, stand bisher in
+    einem internen Zeilenfeld. Symcon speichert aus einer Liste aber nur deren
+    Spalten - das Feld fehlte danach in jeder Zeile, und der nächste Abgleich
+    hielt sämtliche Zeilen für geändert. Die Buchführung liegt jetzt in einem
+    Attribut, das das Formular nicht berührt. Echte Quellsprachen-Wechsel
+    werden weiterhin erkannt, und zwar genau für die geänderte Zeile.
+  - **Cache und eigene Übersetzungen werden pro Durchlauf nur noch einmal
+    gelesen.** Bisher wurde für jeden einzelnen Text der komplette
+    Übersetzungs-Cache dekodiert, geändert und neu geschrieben. Mit der
+    betroffenen Konfiguration sank der Abgleich dadurch von 27 Sekunden auf
+    0,3 Sekunden (gemessen auf einem Mac, ohne Netzwerk).
+
+  Bestehende Übersetzungen gingen dabei nie verloren: der Abgleich markiert
+  Zellen als veraltet, er löscht sie nicht.
+
 * **Build 209 (Nutzer-Wunsch): der Fortschrittsbalken erscheint sofort, die
   Knöpfe sind während eines Laufs gesperrt, und die Balken sind breiter.**
   Der Balken wurde erst **nach** den Vorprüfungen eingeblendet: Root-Abruf über

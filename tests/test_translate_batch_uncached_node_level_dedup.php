@@ -84,7 +84,7 @@ $funcStart = strpos($moduleSource, 'private function TranslateBatchUncached(');
 $funcEnd = strpos($moduleSource, "\n    }\n", strpos($moduleSource, 'return $result;', $funcStart));
 $funcBody = substr($moduleSource, $funcStart, $funcEnd - $funcStart);
 assert(strpos($funcBody, '$uniqueTranslatable = array_values(array_unique($translatable));') !== false, 'TranslateBatchUncached() muss $translatable (die flache Knotenliste) vor dem Anbieter-Aufruf deduplizieren');
-assert(strpos($funcBody, '$translatedByText[$node] = $manual;') !== false || strpos($funcBody, 'foreach ($uniqueTranslatable as $node)') !== false, 'Die eindeutige Knotenliste muss weiterhin die Grundlage für die nachgelagerte Verarbeitung (Cache/Manuell/Anbieter, siehe Build 119) sein');
+assert(strpos($funcBody, '$translatedByText[$node] = $manual;') !== false || strpos($funcBody, 'foreach ($uniqueTranslatable as $node)') !== false || strpos($funcBody, 'foreach ($uniqueTranslatable as $position => $node)') !== false, 'Die eindeutige Knotenliste muss weiterhin die Grundlage für die nachgelagerte Verarbeitung (Cache/Manuell/Anbieter, siehe Build 119) sein');
 echo "Test 3 (die Knoten-Ebenen-Deduplizierung ist tatsächlich in der realen TranslateBatchUncached() verdrahtet, eine Ebene unterhalb von Build 117s TranslateBatch()-Fix) OK\n";
 
 echo "\nAll tests passed.\n";

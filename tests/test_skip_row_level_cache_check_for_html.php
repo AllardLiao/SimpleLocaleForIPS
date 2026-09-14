@@ -65,7 +65,10 @@ $moduleSource = file_get_contents(dirname(__DIR__) . '/SimpleLocale/module.php')
 $funcStart = strpos($moduleSource, 'private function TranslateBatch(');
 $funcEnd = strpos($moduleSource, 'private function TranslateBatchUncached(');
 $funcBody = substr($moduleSource, $funcStart, $funcEnd - $funcStart);
-assert(strpos($funcBody, "if (!\$IsHtml) {\n                \$cached = \$this->GetCachedTranslation(") !== false, 'DER BUG: TranslateBatch() muss den äußeren Zeilen-Ebene-Cache-Check für $IsHtml-Inhalte tatsächlich überspringen');
+// Build 210: der Cache wird seither einmal pro Aufruf abgefragt
+// (GetCachedTranslationsBatch) - HTML-Texte kommen gar nicht erst auf die
+// Kandidatenliste.
+assert(strpos($funcBody, "} elseif (!\$IsHtml) {\n                \$cacheCandidates[\$i] = \$text;") !== false, 'DER BUG: TranslateBatch() muss den äußeren Zeilen-Ebene-Cache-Check für $IsHtml-Inhalte tatsächlich überspringen');
 echo "Test 3 (der \$IsHtml-Schutz um den Zeilen-Ebene-Cache-Check ist tatsächlich in der realen TranslateBatch() verdrahtet) OK\n";
 
 echo "\nAll tests passed.\n";
