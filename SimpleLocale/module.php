@@ -552,6 +552,9 @@ class SimpleLocale extends IPSModuleStrict
             return;
         }
 
+        // Build 213: siehe IsResponsibleFor.
+        $this->SetBuffer(self::bufferResponsibleObjectIDs, '');
+
         // Build 71: gepufferte VM_UPDATE-Zeilenaenderungen (siehe
         // BufferPendingTrackedRowUpdate/StagePendingTrackedRowUpdates) zuerst
         // einspielen, BEVOR der Rest von ApplyChanges() (insbesondere ein evtl.
@@ -1733,23 +1736,81 @@ class SimpleLocale extends IPSModuleStrict
     // bewusst nie ein Fehler/Absturz für den aufrufenden Fremdcode.
     public function TranslateExternalText(string $Text, string $SourceLanguage = ''): string
     {
+        return $this->TranslateExternalTexts([$Text], $SourceLanguage)[0];
+    }
+
+    // Build 213: wie TranslateExternalText, aber fuer viele Texte in einem Aufruf -
+    // gedacht fuer Kacheln mit vielen Beschriftungen. Einzeln aufgerufen liest jeder
+    // Aufruf den Uebersetzungs-Cache neu ein; hier geschieht das einmal fuer alle.
+    // Die Schluessel von $Texts bleiben erhalten. Leere Texte und Texte, fuer die
+    // keine Uebersetzung zustande kommt, kommen unveraendert zurueck.
+    public function TranslateExternalTexts(array $Texts, string $SourceLanguage = ''): array
+    {
         if ($SourceLanguage === '') {
             $SourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
         }
 
         $currentLanguage = $this->ResolveDisplayLanguageCode($this->ReadPropertyString(self::propertyCurrentLanguage));
-
-        if ($Text === '' || $SourceLanguage === $currentLanguage) {
-            return $Text;
+        if ($SourceLanguage === $currentLanguage || $this->IsLanguageBlockedByTrial($currentLanguage)) {
+            return array_map('strval', $Texts);
         }
 
-        if ($this->IsLanguageBlockedByTrial($currentLanguage)) {
-            return $Text;
+        $result = [];
+        $toTranslate = [];
+        foreach ($Texts as $key => $text) {
+            $result[$key] = (string) $text;
+            if ($result[$key] !== '') {
+                $toTranslate[$key] = $result[$key];
+            }
+        }
+        if ($toTranslate === []) {
+            return $result;
         }
 
-        $translated = $this->TranslateBatch([$Text], $SourceLanguage, $currentLanguage);
+        $translated = $this->TranslateBatch(array_values($toTranslate), $SourceLanguage, $currentLanguage);
+        foreach (array_keys($toTranslate) as $position => $key) {
+            if (($translated[$position] ?? '') !== '') {
+                $result[$key] = $translated[$position];
+            }
+        }
 
-        return ($translated[0] ?? '') !== '' ? $translated[0] : $Text;
+        return $result;
+    }
+
+    // Build 213: ist diese Instanz fuer das Objekt zustaendig, also liegt es in
+    // ihrem Visualisierungs-Baum? Fuer fremde Module, die ihre eigene Kachel
+    // uebersetzen wollen: sie fragen alle Simple-Locale-Instanzen und nehmen die
+    // eine, die ja sagt (Muster siehe README, Abschnitt "Integration fuer
+    // Modulentwickler"). Ohne das nahm das bisherige Beispiel immer die erste
+    // Instanz - bei zwei Visualisierungen dauerhaft die falsche.
+    //
+    // Grundlage ist die Tabelle "Objektnamen": der Rescan legt dort fuer jedes
+    // Objekt im Baum eine Zeile an. Verknuepfungen verfolgt er in ihr Ziel, eine
+    // Zeile bekommt aber nur die Verknuepfung selbst - deshalb zaehlen deren Ziele
+    // hier mit. Ein Objekt, das erst nach dem letzten Rescan in den Baum kam, ist
+    // entsprechend noch unbekannt.
+    public function IsResponsibleFor(int $ObjectID): bool
+    {
+        $known = json_decode($this->GetBuffer(self::bufferResponsibleObjectIDs), true);
+        if (!is_array($known)) {
+            $known = [];
+            foreach ($this->DecodeRows(self::propertyObjectNames) as $row) {
+                $rowObjectID = (int) ($row['ObjectID'] ?? 0);
+                if ($rowObjectID === 0) {
+                    continue;
+                }
+                $known[$rowObjectID] = true;
+                if (@IPS_LinkExists($rowObjectID)) {
+                    $targetID = (int) (@IPS_GetLink($rowObjectID)['TargetID'] ?? 0);
+                    if ($targetID !== 0) {
+                        $known[$targetID] = true;
+                    }
+                }
+            }
+            $this->SetBuffer(self::bufferResponsibleObjectIDs, json_encode($known));
+        }
+
+        return isset($known[$ObjectID]);
     }
 
     // Ergänzend zu TranslateExternalText(): der aktuell aktive Gast-Sprachcode, falls

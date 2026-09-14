@@ -1427,6 +1427,26 @@ Beispiel (Scan-Sprache dieser Instanz, z. B. Deutsch):
 Beispiel (abweichende, explizit angegebene Quellsprache):
 `SLOC_TranslateExternalText(12345, 'Good day', 'en');`
 
+`array SLOC_TranslateExternalTexts(integer $InstanzID, array $Texte, string $Quellsprache = "");`
+Wie `SLOC_TranslateExternalText`, aber für viele Texte in einem Aufruf -
+gedacht für Kacheln mit vielen Beschriftungen. Einzeln aufgerufen liest
+jeder Aufruf den Übersetzungs-Cache neu ein, hier geschieht das einmal. Die
+Schlüssel des Arrays bleiben erhalten; leere oder nicht übersetzbare Texte
+kommen unverändert zurück.
+
+Beispiel:
+`SLOC_TranslateExternalTexts(12345, ['licht' => 'Licht', 'heizung' => 'Heizung']);`
+
+`bool SLOC_IsResponsibleFor(integer $InstanzID, integer $ObjektID);`
+Liegt das Objekt im Visualisierungs-Baum dieser Instanz - direkt oder über
+eine Verknüpfung? Damit findet ein fremdes Modul die Instanz, die für seine
+Kachel zuständig ist, siehe [Abschnitt 10](#10-integration-für-modulentwickler).
+Grundlage ist der letzte Rescan: ein erst danach eingehängtes Objekt ist
+noch unbekannt.
+
+Beispiel:
+`SLOC_IsResponsibleFor(12345, 54321);`
+
 `string SLOC_GetCurrentLanguageCode(integer $InstanzID);`
 Liefert den aktuell aktiven Sprachcode dieser Instanz (z. B. `"en"`) - 
 nützlich, um eigene Inhalte nur bei einem tatsächlichen
@@ -1461,40 +1481,99 @@ Beispiel:
 ### 10. Integration für Modulentwickler
 
 Liefert dein eigenes Modul eine eigene HTML-Kachel aus
-(via `GetVisualizationTile()`), lässt sich dessen Text-Inhalt live in die
-gerade aktive Sprache einer Visualisierung mit Simple-Locale-Instanz übersetzen - ganz
-ohne eigenen Google-Account, da `SLOC_TranslateExternalText()` den
-Google-API-Key der jeweiligen Simple-Locale-Instanz mitverwendet.
+(via `GetVisualizationTile()`), lassen sich deren Texte live in die gerade
+aktive Sprache der Visualisierung übersetzen - ohne eigenen Übersetzungsdienst,
+denn Simple Locale verwendet dafür seine eigenen Anbieter und seinen Cache.
 
-Da die meisten Nutzer (noch) keine Simple-Locale-Instanz installiert haben,
-sollte der Aufruf immer defensiv erfolgen - mit `function_exists()` und
-einer eigenen Suche nach einer passenden Instanz, statt die Instanz-ID fest
-zu verdrahten:
+Drei Dinge braucht dein Modul dafür.
+
+**1. Die zuständige Instanz finden.** Eine Installation kann mehrere
+Simple-Locale-Instanzen haben, eine pro Visualisierung (etwa "Admin" und
+"Wohnung"), jede mit eigener aktiver Sprache. Zuständig ist die Instanz, in
+deren Visualisierungs-Baum deine Kachel liegt. Frag dazu jede Instanz einmal:
 
 ```php
-private function TranslateViaSimpleLocale(string $Text, string $SourceLanguage): string
+private const SIMPLE_LOCALE_MODULE_ID = '{1A2E3892-FE35-9E4E-A3A8-B983B0C41F64}';
+
+private function FindSimpleLocaleInstance(): int
 {
-    if (!function_exists('SLOC_TranslateExternalText')) {
-        // Simple Locale ist beim Nutzer nicht installiert - Text unverändert
-        // anzeigen, kein Fehler.
-        return $Text;
+    if (!function_exists('SLOC_IsResponsibleFor')) {
+        return 0; // Simple Locale ist nicht installiert.
     }
 
-    $instanceIDs = IPS_GetInstanceListByModuleID('{1A2E3892-FE35-9E4E-A3A8-B983B0C41F64}');
-    if ($instanceIDs === []) {
-        // Modul installiert, aber keine Instanz angelegt/konfiguriert.
-        return $Text;
+    $responsible = [];
+    foreach (IPS_GetInstanceListByModuleID(self::SIMPLE_LOCALE_MODULE_ID) as $id) {
+        if (SLOC_IsResponsibleFor($id, $this->InstanceID)) {
+            $responsible[] = $id;
+        }
     }
 
-    // Läuft eine einzelne SimpleLocale-Instanz beim Nutzer (üblicher Fall), reicht die
-    // erste gefundene - bei mehreren Instanzen ggf. eine eigene Auswahl anbieten.
-    return SLOC_TranslateExternalText($instanceIDs[0], $Text, $SourceLanguage);
+    // Genau eine: eindeutig. Keine oder mehrere: nicht raten, nicht übersetzen.
+    return count($responsible) === 1 ? $responsible[0] : 0;
 }
 ```
 
-Am besten bei jedem Aufruf von `GetVisualizationTile()` aufgerufen - dort
-gibt es (anders als bei Variablen-Werten) kein Caching-/Veraltungsproblem,
-da die Kachel ohnehin bei jedem Aufruf neu gerendert wird.
+Nimm nie einfach die erste Instanz aus der Liste. Die Reihenfolge ist
+stabil - bei zwei Visualisierungen erwischst du damit dauerhaft die falsche.
+
+Mehrere Zuständige bedeutet: deine Kachel liegt in mehreren
+Visualisierungen. Eine Kachel wird pro Instanz nur einmal gerendert und an
+alle Visualisierungen geschickt, sie kann also nur eine Sprache haben. Für
+diesen Fall kannst du ein optionales Auswahlfeld anbieten; ist es gesetzt,
+gilt es vor der Suche.
+
+`SLOC_IsResponsibleFor` stützt sich auf den letzten Rescan. Wird eine Kachel
+neu in den Baum gelegt, kennt Simple Locale sie erst nach "Baum neu einlesen".
+
+**2. Das Ergebnis merken und rechtzeitig neu rendern.** Such die Instanz
+nicht bei jedem Rendern, sondern in `ApplyChanges()`, und leg sie in einem
+Puffer ab. Registriere dich dort außerdem auf `IM_CHANGESETTINGS` aller
+Simple-Locale-Instanzen: Diese Nachricht kommt bei jedem Sprachwechsel und
+nach jedem Rescan. Such dann neu und render deine Kachel neu.
+
+```php
+public function ApplyChanges(): void
+{
+    parent::ApplyChanges();
+    // ... dein bisheriger Code ...
+
+    foreach (IPS_GetInstanceListByModuleID(self::SIMPLE_LOCALE_MODULE_ID) as $id) {
+        $this->RegisterMessage($id, IM_CHANGESETTINGS);
+    }
+    $this->SetBuffer('SimpleLocaleInstance', (string) $this->FindSimpleLocaleInstance());
+}
+
+public function MessageSink(int $TimeStamp, int $SenderID, int $Message, array $Data): void
+{
+    parent::MessageSink($TimeStamp, $SenderID, $Message, $Data);
+
+    if ($Message === IM_CHANGESETTINGS && in_array($SenderID, IPS_GetInstanceListByModuleID(self::SIMPLE_LOCALE_MODULE_ID), true)) {
+        $this->SetBuffer('SimpleLocaleInstance', (string) $this->FindSimpleLocaleInstance());
+        // Kachel neu rendern, z.B. per UpdateVisualizationValue(...)
+    }
+}
+```
+
+**3. Alle Texte einer Kachel in einem Aufruf übersetzen.**
+`SLOC_TranslateExternalTexts` nimmt ein Array und behält dessen Schlüssel.
+Kommt keine Übersetzung zustande, erhältst du den Text unverändert zurück -
+nie einen Fehler.
+
+```php
+private function TranslateTexts(array $Texts): array
+{
+    $id = (int) $this->GetBuffer('SimpleLocaleInstance');
+    if ($id === 0 || !@IPS_InstanceExists($id)) {
+        return $Texts;
+    }
+
+    return SLOC_TranslateExternalTexts($id, $Texts);
+}
+```
+
+Die Texte werden in der Quellsprache der Simple-Locale-Instanz erwartet.
+Liegen sie in einer anderen Sprache vor, gib sie als dritten Parameter an,
+z. B. `SLOC_TranslateExternalTexts($id, $Texts, 'en')`.
 
 ### 11. Change-Log
 
