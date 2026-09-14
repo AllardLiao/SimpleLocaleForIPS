@@ -3132,7 +3132,13 @@ class SimpleLocale extends IPSModuleStrict
         // VOR einem moeglichen IPS_ApplyChanges()-Reentry unten setzen (siehe
         // ApplyChanges) - sonst wuerde der dortige Vergleich beim erneuten
         // Hineinlaufen wieder "ungleich" sehen und in eine Endlosschleife laufen.
+        $previousLanguage = $this->ReadAttributeString(self::attributeLastAppliedLanguage);
         $this->WriteAttributeString(self::attributeLastAppliedLanguage, $Language);
+
+        // Build 212: umbenannte Objekte zuerst sichern, BEVOR irgendetwas die Namen
+        // ueberschreibt - auch ein innerer ApplyChanges()-Durchlauf unten wuerde das
+        // sonst tun. Braucht die Sprache, die bis eben angezeigt wurde.
+        $renamedObjectsAdopted = $this->StageRenamedObjectNames($previousLanguage);
 
         // Wie Rescan(): direktes IPS_SetProperty + IPS_ApplyChanges, damit die neue
         // Sprache sofort persistiert ist und im Konfigurationsformular korrekt
@@ -3150,6 +3156,8 @@ class SimpleLocale extends IPSModuleStrict
             if ($this->ReenterApplyChangesAppliedLanguage($Language)) {
                 return;
             }
+        } elseif ($renamedObjectsAdopted && $this->ReenterApplyChangesAppliedLanguage($Language)) {
+            return;
         }
 
         // Build 71: ein Sprachwechsel braucht IMMER den neuesten Rohtext einer extern
@@ -3199,7 +3207,12 @@ class SimpleLocale extends IPSModuleStrict
             // @ wie bei WriteTrackedValueString: gesperrte Objekte lehnen auch das
             // Umbenennen ab (live gefunden), soll aber nicht die ganze
             // Sprachumschaltung abbrechen.
-            @IPS_SetName($objectID, $this->ResolveRowValue($row, $this->GetEffectiveSelectedLanguage($row, $Language), $Language, $this->GetRowSourceLanguage($row, $sourceLanguage), self::langOriginalImport));
+            // Build 212: nur umbenennen, was sich wirklich aendert - bei ein paar
+            // hundert Objekten spart das ebenso viele Schreibvorgaenge im Kernel.
+            $targetName = $this->ResolveRowValue($row, $this->GetEffectiveSelectedLanguage($row, $Language), $Language, $this->GetRowSourceLanguage($row, $sourceLanguage), self::langOriginalImport);
+            if ((string) @IPS_GetName($objectID) !== $targetName) {
+                @IPS_SetName($objectID, $targetName);
+            }
         }
 
         // Schutz gegen zwei Zeilen, die (z.B. durch zwei unterschiedliche
@@ -3271,6 +3284,108 @@ class SimpleLocale extends IPSModuleStrict
         // Build 210: erst ganz am Ende - nur ein vollstaendiger Durchlauf zaehlt.
         $run = explode('|', $this->GetBuffer(self::bufferLanguageApplyRuns), 2);
         $this->SetBuffer(self::bufferLanguageApplyRuns, ((int) $run[0] + 1) . '|' . $Language);
+    }
+
+    // Build 212 (Nutzer-Wunsch): Objektnamen werden nicht beobachtet - wer eine
+    // Kategorie im Visu-Baum umbenannte, sah seinen Namen beim naechsten
+    // ApplyLanguage() wieder verschwinden, denn geschrieben wird immer der Wert
+    // aus der Tabelle. Hier wird eine solche Umbenennung erkannt, bevor sie
+    // ueberschrieben wird.
+    //
+    // Eindeutig ist das nur, wenn fuer die Zeile bis eben der ORIGINALTEXT zu
+    // sehen war (Quellsprache aktiv, oder Uebersetzung der Zeile abgeschaltet):
+    // dann ist der neue Name ein neuer Originaltext. Stand eine Uebersetzung,
+    // bleibt offen, ob der Nutzer den Originaltext oder nur diese eine
+    // Uebersetzung aendern wollte - dann bleibt es beim Zuruecksetzen.
+    //
+    // Bewusst ohne OM_CHANGENAME: jeder Sprachwechsel benennt alle Objekte um,
+    // das waeren hunderte MessageSink-Aufrufe pro Wechsel. Die Pruefung laeuft
+    // genau dort, wo die Namen sonst ueberschrieben wuerden.
+    //
+    // Ein Name gilt nicht als Umbenennung, wenn er dem Originaltext oder einer
+    // Uebersetzung der Zeile entspricht (das hat das Modul selbst geschrieben)
+    // oder ein Platzhalter fuer unbenannte Objekte ist. Uebernommen wird er als
+    // neuer Originaltext; die Uebersetzungen der Zeile gehoeren zum alten Text
+    // und werden geleert, damit sie neu entstehen.
+    private function StageRenamedObjectNames(string $PreviousLanguage): bool
+    {
+        $rows = $this->DecodeRows(self::propertyObjectNames);
+        if ($rows === []) {
+            return false;
+        }
+
+        $liveNames = [];
+        foreach ($rows as $row) {
+            $objectID = (int) ($row['ObjectID'] ?? 0);
+            if ($objectID !== 0 && @IPS_ObjectExists($objectID)) {
+                $liveNames[$objectID] = (string) @IPS_GetName($objectID);
+            }
+        }
+
+        $adopted = false;
+        $rows = $this->AdoptRenamedObjectNames($rows, $PreviousLanguage, $liveNames, $adopted);
+        if ($adopted) {
+            IPS_SetProperty($this->InstanceID, self::propertyObjectNames, json_encode(array_values($rows)));
+        }
+
+        return $adopted;
+    }
+
+    // Build 212: die eigentliche Regel, gemeinsam fuer ApplyLanguage() (Namen live
+    // gelesen) und den Rescan (Namen aus dem gerade durchlaufenen Baum).
+    // $ShownLanguage ist die Sprache, die fuer die Zeilen zuletzt angewendet wurde,
+    // $LiveNames ordnet Objekt-IDs ihren aktuellen Namen zu. Setzt $Adopted auf
+    // true, sobald mindestens eine Zeile uebernommen wurde.
+    private function AdoptRenamedObjectNames(array $Rows, string $ShownLanguage, array $LiveNames, bool &$Adopted): array
+    {
+        $instanceSourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
+        $languageCodes = $this->GetSelectedTargetLanguages();
+
+        foreach ($Rows as $index => $row) {
+            $objectID = (int) ($row['ObjectID'] ?? 0);
+            if (!isset($LiveNames[$objectID])) {
+                continue;
+            }
+
+            $rowSourceLanguage = $this->GetRowSourceLanguage($row, $instanceSourceLanguage);
+            $shownLanguage = $this->GetEffectiveSelectedLanguage($row, $ShownLanguage);
+            if ($shownLanguage !== self::langOriginalImport && $shownLanguage !== $rowSourceLanguage) {
+                continue;
+            }
+
+            $currentName = (string) $LiveNames[$objectID];
+            $sourceText = (string) ($row[self::langOriginalImport] ?? '');
+            if ($currentName === $sourceText || $this->IsUnnamedObject($objectID, $currentName)) {
+                continue;
+            }
+
+            $knownTranslation = false;
+            foreach ($languageCodes as $code) {
+                if ((string) ($row[$code] ?? '') === $currentName) {
+                    $knownTranslation = true;
+                    break;
+                }
+            }
+            if ($knownTranslation) {
+                continue;
+            }
+
+            $row[self::langOriginalImport] = $currentName;
+            foreach ($languageCodes as $code) {
+                $row[$code] = $code === $rowSourceLanguage ? $currentName : '';
+            }
+            $this->MarkRowSourceChanged($row);
+            $Rows[$index] = $row;
+            $Adopted = true;
+
+            $this->SendDebug(
+                'SLOC_Language',
+                sprintf('Objekt #%d wurde umbenannt: "%s" ist jetzt der Originaltext (vorher "%s").', $objectID, $currentName, $sourceText),
+                0
+            );
+        }
+
+        return $Rows;
     }
 
     // Build 210 (live gemessen: ein Neuladen des Moduls wendete die Sprache
@@ -6017,11 +6132,21 @@ class SimpleLocale extends IPSModuleStrict
             return;
         }
 
+        $renamedObjectsAdoptedByScan = false;
         $objectNames = array_map(
             fn ($row) => $this->AutoDeactivateTranslationForJsonContent($row, self::langOriginalImport),
             array_map(
                 [$this, 'BackfillTranslationActiveFlag'],
-                $this->MergeRows($this->DecodeRows(self::propertyObjectNames), $scannedNames)
+                $this->AdoptRenamedObjectNames(
+                    $this->MergeRows($this->DecodeRows(self::propertyObjectNames), $scannedNames),
+                    // Build 212 (Nutzer-Wunsch): MergeRows friert den Originaltext
+                    // bekannter Objekte ein. Ein im Baum umbenanntes Objekt, dessen
+                    // Zeile gerade den Originaltext zeigt, uebernimmt der Rescan
+                    // trotzdem - nach einer Umbenennung ist er der naheliegende Klick.
+                    $this->ReadAttributeString(self::attributeLastAppliedLanguage),
+                    array_map(static fn (array $scanned): string => (string) ($scanned[self::langOriginalImport] ?? ''), $scannedNames),
+                    $renamedObjectsAdoptedByScan
+                )
             )
         );
         $objectTexts = array_map(

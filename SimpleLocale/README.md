@@ -196,6 +196,18 @@ Beschreibung des Moduls.
 
   Dieser Punkt ist auch direkt in der Kachel über das Info-Symbol (ⓘ)
   neben dem Dropdown einsehbar, live in der jeweils aktiven Sprache.
+* **Ein im Objektbaum umbenanntes Objekt wird nur bei sichtbarem Originaltext
+  übernommen.** Simple Locale setzt die Namen bei jedem Anwenden einer Sprache
+  aus der Tabelle "Objektnamen". War für das Objekt gerade der Originaltext zu
+  sehen - also die Quellsprache aktiv oder die Übersetzung dieser Zeile
+  abgeschaltet -, wird ein neuer Name als neuer Originaltext übernommen; seine
+  bisherigen Übersetzungen werden geleert und neu erstellt. Stand dagegen eine
+  Übersetzung, lässt sich nicht erkennen, ob der Originaltext oder nur diese
+  eine Übersetzung gemeint war - der Name wird dann auf den Tabellenwert
+  zurückgesetzt. Umbenennen also bei aktiver Quellsprache.
+
+  Übernommen wird beim nächsten Anwenden einer Sprache oder sofort mit
+  "Baum neu einlesen" - das Öffnen des Formulars allein genügt nicht.
 * **Sehr häufig aktualisierte Variablen können viele API-Aufrufe erzeugen.**
   Jede externe Aktualisierung einer verfolgten "Eigene Texte"-Variable löst
   eine eigene Live-Nachübersetzung aus (siehe oben) - bei einer Variable, die
