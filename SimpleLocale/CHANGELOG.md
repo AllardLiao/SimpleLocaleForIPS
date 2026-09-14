@@ -9,6 +9,21 @@ Build 53 bis Build 107 - ausgelagert aus Abschnitt 2, das dadurch als reine,
 aktuelle Liste bestehen bleibt. Jeder Eintrag ist unverändert (verbatim) aus
 der ursprünglichen Fassung übernommen.
 
+* **Version 1.2, Build 212 (Nutzer-Wunsch): umbenannte Objekte behalten ihren
+  neuen Namen.** Eine im Visu-Baum umbenannte Kategorie bekam ihren alten Namen
+  bei jedem Anwenden einer Sprache zurück - Objektnamen werden nicht
+  beobachtet, und geschrieben wird immer der Wert aus "Objektnamen". Vor dem
+  Umbenennen prüft Simple Locale jetzt den aktuellen Namen. Weicht er vom
+  Originaltext und von allen Übersetzungen ab, und war für die Zeile bis eben
+  der Originaltext zu sehen, wird er als neuer Originaltext übernommen; die
+  Übersetzungen des alten Texts werden geleert. Stand eine Übersetzung, bleibt
+  es beim Zurücksetzen, weil nicht erkennbar ist, was gemeint war.
+
+  Bewusst ohne Beobachtung per `OM_CHANGENAME`: jeder Sprachwechsel benennt
+  alle Objekte um, das wären hunderte zusätzliche Aufrufe pro Wechsel.
+  Außerdem werden Objekte nur noch umbenannt, wenn sich ihr Name tatsächlich
+  ändert.
+
 * **Version 1.2, Build 211: ein Sprachwechsel wird nur noch einmal angewendet.**
   Beim Neuladen des Moduls auf der SymBox lief `ApplyChanges()` dreimal
   ineinander und brauchte 3,5 Sekunden; dasselbe Muster steckte in jedem
