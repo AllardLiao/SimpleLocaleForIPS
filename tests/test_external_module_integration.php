@@ -114,11 +114,11 @@ foreach (['Licht' => 'Light', 'Heizung' => 'Heating'] as $german => $english) {
 }
 setAttribute($apartmentModule, 'TranslationCache', json_encode($cache));
 
-$result = $apartment->TranslateExternalTexts(['switch1' => 'Licht', 'switch2' => '', 'info' => 'Heizung', 'x' => 'Unbekannt']);
+$result = $apartment->TranslateExternalTexts(['switch1' => 'Licht', 'switch2' => '', 'info' => 'Heizung', 'x' => 'Unbekannt'], '');
 assert($result === ['switch1' => 'Light', 'switch2' => '', 'info' => 'Heating', 'x' => 'Unbekannt'], 'Schluessel, Uebersetzungen und Rueckfall muessen stimmen: ' . json_encode($result));
-assert($apartment->TranslateExternalText('Licht') === 'Light', 'die Einzelvariante muss dasselbe liefern');
+assert($apartment->TranslateExternalText('Licht', '') === 'Light', 'die Einzelvariante muss dasselbe liefern');
 setProperty($apartmentModule, 'CurrentLanguage', 'de');
-assert($apartment->TranslateExternalTexts(['a' => 'Licht']) === ['a' => 'Licht'], 'in der Quellsprache bleibt alles unveraendert');
+assert($apartment->TranslateExternalTexts(['a' => 'Licht'], '') === ['a' => 'Licht'], 'in der Quellsprache bleibt alles unveraendert');
 echo "Test 3 (Sammeluebersetzung behaelt Schluessel und faellt sauber zurueck) OK\n";
 
 echo "\nAll tests passed.\n";

@@ -1725,16 +1725,21 @@ class SimpleLocale extends IPSModuleStrict
     // Nutzer ohne Simple Locale: siehe README, Abschnitt "Integration für
     // Modulentwickler".
     //
-    // $SourceLanguage ist optional (Default '') - wird sie weggelassen, greift die in
-    // dieser Instanz konfigurierte Basissprache (propertySourceLanguage). Deckt den
-    // Regelfall ab, dass das aufrufende Fremdmodul seinen Text ohnehin in genau dieser
-    // Basissprache verfasst - eine eigene Sprachangabe bleibt für den selteneren Fall
-    // nötig, dass der Fremdtext in einer ANDEREN Sprache vorliegt.
+    // $SourceLanguage '' steht für die in dieser Instanz konfigurierte Basissprache
+    // (propertySourceLanguage) - der Regelfall, dass das aufrufende Fremdmodul seinen
+    // Text ohnehin in genau dieser Basissprache verfasst. Eine eigene Sprachangabe
+    // bleibt für den selteneren Fall nötig, dass der Fremdtext in einer ANDEREN
+    // Sprache vorliegt.
+    //
+    // Build 214 (live gefunden): bewusst OHNE Standardwert. Symcon erzeugt die
+    // SLOC_-Funktionen ohne optionale Parameter - ein Aufruf mit zwei Argumenten
+    // scheiterte trotz "= ''" mit ArgumentCountError. Der Standardwert täuschte
+    // nur vor, man dürfe den Parameter weglassen.
     //
     // Leerer Text, Quellsprache == aktive Sprache, oder eine durch abgelaufene
     // Testphase gerade nicht kostenfreie Sprache liefern den Text unverändert zurück -
     // bewusst nie ein Fehler/Absturz für den aufrufenden Fremdcode.
-    public function TranslateExternalText(string $Text, string $SourceLanguage = ''): string
+    public function TranslateExternalText(string $Text, string $SourceLanguage): string
     {
         return $this->TranslateExternalTexts([$Text], $SourceLanguage)[0];
     }
@@ -1744,7 +1749,7 @@ class SimpleLocale extends IPSModuleStrict
     // Aufruf den Uebersetzungs-Cache neu ein; hier geschieht das einmal fuer alle.
     // Die Schluessel von $Texts bleiben erhalten. Leere Texte und Texte, fuer die
     // keine Uebersetzung zustande kommt, kommen unveraendert zurueck.
-    public function TranslateExternalTexts(array $Texts, string $SourceLanguage = ''): array
+    public function TranslateExternalTexts(array $Texts, string $SourceLanguage): array
     {
         if ($SourceLanguage === '') {
             $SourceLanguage = $this->ReadPropertyString(self::propertySourceLanguage);
