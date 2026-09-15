@@ -1409,25 +1409,25 @@ gefundene oder noch unübersetzte Einträge. Entspricht dem Button
 Beispiel:
 `SLOC_Rescan(12345);`
 
-`string SLOC_TranslateExternalText(integer $InstanzID, string $Text, string $Quellsprache = "");`
+`string SLOC_TranslateExternalText(integer $InstanzID, string $Text, string $Quellsprache);`
 Übersetzt beliebigen Text live in die aktuell aktive Sprache dieser
 Instanz - für Modulentwickler, deren eigenes Modul eine eigene HTML-Kachel
 ausliefert (`GetVisualizationTile()`) statt Text in einer von Simple Locale
 beobachtbaren Variable zu halten, siehe
-[Abschnitt 10](#10-integration-für-modulentwickler). `$Quellsprache` ist
-optional - weggelassen (oder `""`), greift die in dieser Instanz
-konfigurierte Scan-Sprache; nur bei abweichender Fremdtext-Sprache explizit
-angeben. Leerer Text, Quellsprache = aktive Sprache, oder eine wegen
+[Abschnitt 10](#10-integration-für-modulentwickler). `$Quellsprache`
+muss immer übergeben werden - Symcon-Modulfunktionen kennen keine optionalen
+Parameter. `""` steht für die in dieser Instanz konfigurierte Scan-Sprache;
+nur bei abweichender Fremdtext-Sprache einen Sprachcode angeben. Leerer Text, Quellsprache = aktive Sprache, oder eine wegen
 abgelaufener Testphase gerade nicht kostenfreie Sprache liefern den Text
 unverändert zurück - nie ein Fehler.
 
 Beispiel (Scan-Sprache dieser Instanz, z. B. Deutsch):
-`SLOC_TranslateExternalText(12345, 'Guten Tag');`
+`SLOC_TranslateExternalText(12345, 'Guten Tag', '');`
 
 Beispiel (abweichende, explizit angegebene Quellsprache):
 `SLOC_TranslateExternalText(12345, 'Good day', 'en');`
 
-`array SLOC_TranslateExternalTexts(integer $InstanzID, array $Texte, string $Quellsprache = "");`
+`array SLOC_TranslateExternalTexts(integer $InstanzID, array $Texte, string $Quellsprache);`
 Wie `SLOC_TranslateExternalText`, aber für viele Texte in einem Aufruf -
 gedacht für Kacheln mit vielen Beschriftungen. Einzeln aufgerufen liest
 jeder Aufruf den Übersetzungs-Cache neu ein, hier geschieht das einmal. Die
@@ -1435,7 +1435,7 @@ Schlüssel des Arrays bleiben erhalten; leere oder nicht übersetzbare Texte
 kommen unverändert zurück.
 
 Beispiel:
-`SLOC_TranslateExternalTexts(12345, ['licht' => 'Licht', 'heizung' => 'Heizung']);`
+`SLOC_TranslateExternalTexts(12345, ['licht' => 'Licht', 'heizung' => 'Heizung'], '');`
 
 `bool SLOC_IsResponsibleFor(integer $InstanzID, integer $ObjektID);`
 Liegt das Objekt im Visualisierungs-Baum dieser Instanz - direkt oder über
@@ -1567,13 +1567,15 @@ private function TranslateTexts(array $Texts): array
         return $Texts;
     }
 
-    return SLOC_TranslateExternalTexts($id, $Texts);
+    return SLOC_TranslateExternalTexts($id, $Texts, '');
 }
 ```
 
-Die Texte werden in der Quellsprache der Simple-Locale-Instanz erwartet.
-Liegen sie in einer anderen Sprache vor, gib sie als dritten Parameter an,
-z. B. `SLOC_TranslateExternalTexts($id, $Texts, 'en')`.
+Der dritte Parameter ist die Sprache deiner Texte und muss immer mitgegeben
+werden: Symcon erzeugt die `SLOC_`-Funktionen ohne optionale Parameter, ein
+Aufruf mit zwei Argumenten scheitert mit `ArgumentCountError`. `''` steht für
+die Quellsprache der Simple-Locale-Instanz. Liegen deine Texte in einer anderen
+Sprache vor, gib deren Code an, z. B. `SLOC_TranslateExternalTexts($id, $Texts, 'en')`.
 
 ### 11. Change-Log
 

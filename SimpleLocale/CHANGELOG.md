@@ -9,6 +9,19 @@ Build 53 bis Build 107 - ausgelagert aus Abschnitt 2, das dadurch als reine,
 aktuelle Liste bestehen bleibt. Jeder Eintrag ist unverändert (verbatim) aus
 der ursprünglichen Fassung übernommen.
 
+* **Version 1.2, Build 214 (live gefunden): die Quellsprache muss bei
+  `SLOC_TranslateExternalText(s)` immer übergeben werden.** Symcon erzeugt die
+  `SLOC_`-Funktionen ohne optionale Parameter. Der Standardwert `''` für die
+  Quellsprache wirkte deshalb nur innerhalb des Moduls; ein Aufruf mit zwei
+  Argumenten - so, wie ihn die README zeigte - scheiterte mit
+  `ArgumentCountError`. Aufgefallen ist das bei der Anbindung von da8ters
+  Room-Kachel: Sie fing den Fehler ab, und die Texte blieben unübersetzt.
+
+  Die Standardwerte sind entfernt, Funktionsreferenz und Beispiele in der
+  README übergeben die Quellsprache jetzt immer (`''` für die der Instanz). Ein
+  neuer Test stellt sicher, dass keine öffentliche Modulfunktion mehr einen
+  Standardwert hat.
+
 * **Version 1.2, Build 213 (Nutzer-Wunsch): fremde Module finden die richtige
   Instanz.** Das Beispiel für Modulentwickler nahm bisher immer die erste
   Simple-Locale-Instanz. Bei mehreren Visualisierungen - etwa "Admin" und
