@@ -1592,9 +1592,8 @@ wird zu "Right", "Links" bleibt "Links" - im Englischen die Mehrzahl von
 
 Das ist kein Fehler deines Moduls und auch keiner von Simple Locale: Der
 Aufruf liefert, was der Übersetzungsdienst liefert. Abhilfe schafft ein Eintrag
-in der **Eigenen Übersetzungstabelle** der Simple-Locale-Instanz (im Formular
-als "eigenes Glossar" beschrieben): Quellsprache "de", Quelltext "Links", in
-der englischen Spalte "Left". Solche Einträge haben Vorrang vor Cache und
+in der **Eigenen Übersetzungstabelle** der Simple-Locale-Instanz: Quellsprache
+"de", Quelltext "Links", in der englischen Spalte "Left". Solche Einträge haben Vorrang vor Cache und
 Übersetzungsdienst und gelten für alle Texte dieser Instanz - für Objektnamen
 genauso wie für Texte, die fremde Module per `SLOC_TranslateExternalTexts`
 übersetzen lassen.
@@ -1612,15 +1611,8 @@ Dabei gilt:
   Cache und Übersetzungsdienst und kann dort am selben Problem scheitern. Einen
   leeren Text bekommst du dabei nie zurück.
 
-Alternativ lässt sich ein Eintrag im darunterliegenden **Glossar** anlegen, das
-für mitgelieferte Einheiten und Kompassrichtungen gedacht ist. Es hat keine
-Spalte für die Quellsprache: Gesucht wird der Text in der Spalte der Sprache,
-in der er vorliegt, die Übersetzung kommt aus der Spalte der aktiven Sprache.
-Die Eigene Übersetzungstabelle wird vor dem Glossar ausgewertet.
-
-Stehen dir diese Tabellen nicht zur Verfügung (z. B. in der Light-Edition),
-hilft ein eindeutigerer Text mit etwas Zusammenhang, z. B. "Licht links" statt
-"Links".
+Ist die Eigene Übersetzungstabelle in deiner Edition nicht verfügbar, hilft ein
+eindeutigerer Text mit etwas Zusammenhang, z. B. "Licht links" statt "Links".
 
 ### 11. Change-Log
 
