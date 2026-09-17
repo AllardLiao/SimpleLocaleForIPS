@@ -1437,6 +1437,10 @@ kommen unverändert zurück.
 Beispiel:
 `SLOC_TranslateExternalTexts(12345, ['licht' => 'Licht', 'heizung' => 'Heizung'], '');`
 
+Einzelne kurze Wörter können unübersetzt zurückkommen, wenn es sie in der
+Zielsprache genauso gibt (z. B. "Links"). Abhilfe schafft ein Glossar-Eintrag,
+siehe [Abschnitt 10](#10-integration-für-modulentwickler), "Stolperstein".
+
 `bool SLOC_IsResponsibleFor(integer $InstanzID, integer $ObjektID);`
 Liegt das Objekt im Visualisierungs-Baum dieser Instanz - direkt oder über
 eine Verknüpfung? Damit findet ein fremdes Modul die Instanz, die für seine
@@ -1576,6 +1580,26 @@ werden: Symcon erzeugt die `SLOC_`-Funktionen ohne optionale Parameter, ein
 Aufruf mit zwei Argumenten scheitert mit `ArgumentCountError`. `''` steht für
 die Quellsprache der Simple-Locale-Instanz. Liegen deine Texte in einer anderen
 Sprache vor, gib deren Code an, z. B. `SLOC_TranslateExternalTexts($id, $Texts, 'en')`.
+
+**Stolperstein: Wörter, die es in der Zielsprache auch gibt.** Kacheln
+übersetzen meist kurze Beschriftungen ohne Zusammenhang - "Licht", "Heizung",
+"Links". Gibt es ein solches Wort in der Zielsprache ebenfalls, hält der
+Übersetzungsdienst es für bereits übersetzt und gibt es unverändert zurück.
+Beispiel aus der Praxis: Zwei Lichter heißen "Links" und "Rechts". "Rechts"
+wird zu "Right", "Links" bleibt "Links" - im Englischen die Mehrzahl von
+"link". Ähnlich gefährdet sind etwa "Gift", "Hut" oder "Rock".
+
+Das ist kein Fehler deines Moduls und auch keiner von Simple Locale: Der
+Aufruf liefert, was der Übersetzungsdienst liefert. Abhilfe schafft ein
+**Glossar-Eintrag** in der Simple-Locale-Instanz, im Beispiel "Links" in der
+deutschen und "Left" in der englischen Spalte. Glossar-Einträge haben Vorrang
+vor Cache und Übersetzungsdienst und gelten für alle Texte dieser Instanz -
+für Objektnamen genauso wie für Texte, die fremde Module per
+`SLOC_TranslateExternalTexts` übersetzen lassen. Da das Glossar keine
+Quellsprache kennt, reicht eine Zeile für alle Sprachen.
+
+In der Light-Edition gibt es kein Glossar. Dort hilft ein eindeutigerer Text
+mit etwas Zusammenhang, z. B. "Licht links" statt "Links".
 
 ### 11. Change-Log
 
