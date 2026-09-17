@@ -1438,8 +1438,8 @@ Beispiel:
 `SLOC_TranslateExternalTexts(12345, ['licht' => 'Licht', 'heizung' => 'Heizung'], '');`
 
 Einzelne kurze Wörter können unübersetzt zurückkommen, wenn es sie in der
-Zielsprache genauso gibt (z. B. "Links"). Abhilfe schafft ein Eintrag in "Eigene
-Übersetzungen" oder im Glossar, siehe
+Zielsprache genauso gibt (z. B. "Links"). Abhilfe schafft ein Eintrag in der
+Eigenen Übersetzungstabelle, siehe
 [Abschnitt 10](#10-integration-für-modulentwickler), "Stolperstein".
 
 `bool SLOC_IsResponsibleFor(integer $InstanzID, integer $ObjektID);`
@@ -1592,24 +1592,31 @@ wird zu "Right", "Links" bleibt "Links" - im Englischen die Mehrzahl von
 
 Das ist kein Fehler deines Moduls und auch keiner von Simple Locale: Der
 Aufruf liefert, was der Übersetzungsdienst liefert. Abhilfe schafft ein Eintrag
-in der Simple-Locale-Instanz, entweder in **"Eigene Übersetzungen"** oder im
-**Glossar**. Beide haben Vorrang vor Cache und Übersetzungsdienst und gelten
-für alle Texte dieser Instanz - für Objektnamen genauso wie für Texte, die
-fremde Module per `SLOC_TranslateExternalTexts` übersetzen lassen:
+in der **Eigenen Übersetzungstabelle** der Simple-Locale-Instanz (im Formular
+als "eigenes Glossar" beschrieben): Quellsprache "de", Quelltext "Links", in
+der englischen Spalte "Left". Solche Einträge haben Vorrang vor Cache und
+Übersetzungsdienst und gelten für alle Texte dieser Instanz - für Objektnamen
+genauso wie für Texte, die fremde Module per `SLOC_TranslateExternalTexts`
+übersetzen lassen.
 
-* **Eigene Übersetzungen:** Quellsprache "de", Quelltext "Links", in der
-  englischen Spalte "Left". Diese Tabelle wird zuerst ausgewertet.
-* **Glossar:** Es hat keine Spalte für die Quellsprache. Gesucht wird der Text
-  in der Spalte der Sprache, in der er vorliegt (bei `''` die Quellsprache der
-  Instanz), die Übersetzung kommt aus der Spalte der aktiven Sprache. Im
-  Beispiel also "Links" in der deutschen und "Left" in der englischen Spalte.
+Dasselbe hilft bei Abkürzungen, mit denen kein Übersetzungsdienst etwas
+anfangen kann: Quellsprache "de", Quelltext "WZ", in der deutschen Spalte
+"Wohnzimmer", in der englischen "Living room".
 
-In beiden Tabellen gilt: Der Text muss exakt übereinstimmen, auch in Groß- und
-Kleinschreibung ("links" trifft "Links" nicht). Und jede Zielsprache braucht
-ihre eigene Zelle. Ist die Zelle der gerade aktiven Sprache leer, greift der
-Eintrag nicht - der Text geht den normalen Weg über Cache und
-Übersetzungsdienst und kann dort am selben Problem scheitern. Einen leeren Text
-bekommst du dabei nie zurück.
+Dabei gilt:
+
+* Der Quelltext muss exakt übereinstimmen, auch in Groß- und Kleinschreibung
+  ("links" trifft "Links" nicht).
+* Jede Zielsprache braucht ihre eigene Zelle. Ist die Zelle der gerade aktiven
+  Sprache leer, greift der Eintrag nicht - der Text geht den normalen Weg über
+  Cache und Übersetzungsdienst und kann dort am selben Problem scheitern. Einen
+  leeren Text bekommst du dabei nie zurück.
+
+Alternativ lässt sich ein Eintrag im darunterliegenden **Glossar** anlegen, das
+für mitgelieferte Einheiten und Kompassrichtungen gedacht ist. Es hat keine
+Spalte für die Quellsprache: Gesucht wird der Text in der Spalte der Sprache,
+in der er vorliegt, die Übersetzung kommt aus der Spalte der aktiven Sprache.
+Die Eigene Übersetzungstabelle wird vor dem Glossar ausgewertet.
 
 Stehen dir diese Tabellen nicht zur Verfügung (z. B. in der Light-Edition),
 hilft ein eindeutigerer Text mit etwas Zusammenhang, z. B. "Licht links" statt
