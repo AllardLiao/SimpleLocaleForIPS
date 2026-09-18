@@ -24,9 +24,12 @@ Beschreibung des Moduls.
   per `SetValueString`. `<style>`- und `<script>`-Blöcke innerhalb solcher
   Werte werden dabei nie an Google geschickt und bleiben beim Übersetzen
   unverändert (verhindert kaputtes CSS/JS durch mitübersetzte Eigenschaften).
-* Automatische Übersetzung über die Google Cloud Translate API, inkl.
-  persistentem Cache – Google wird nur für neue oder noch unübersetzte Einträge
-  aufgerufen, nie für bereits vorhandene (auch manuell korrigierte) Werte.
+* Automatische Übersetzung ab Werk über einen kostenfreien Anbieter
+  (MyMemory), optional über Google Cloud Translate und/oder DeepL mit eigenem
+  API-Key (siehe [Abschnitt 5](#5-einrichten-der-instanzen-in-symcon)), inkl.
+  persistentem Cache – ein Anbieter wird nur für neue oder noch unübersetzte
+  Einträge aufgerufen, nie für bereits vorhandene (auch manuell korrigierte)
+  Werte.
 * **Pro-Feature:** In "Objektnamen", "Eigene Texte", "Aufzählungen", "Charts",
   "Automations" und "Begrüßung" lässt sich pro Zeile per Checkbox "Übersetzung
   aktiv" (standardmäßig angehakt, nur mit Pro-Lizenz überhaupt sichtbar)
