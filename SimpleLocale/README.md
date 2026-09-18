@@ -451,8 +451,9 @@ Beschreibung des Moduls.
 
 ### 4. Software-Installation
 
-* Über den Module Store das 'Simple Locale'-Modul installieren.
-* Alternativ über das Module Control folgende URL hinzufügen
+* Über den Module Store das Modul 'Simple Locale' installieren.
+* Alternativ über das Module Control folgende URL hinzufügen:
+  `https://github.com/AllardLiao/SimpleLocaleForIPS`
 
 ### 5. Einrichten der Instanzen in Symcon
 
@@ -1128,14 +1129,12 @@ Vollversion:
   Lizenzschlüssel aktiviert wurde.
 * **Vollversion:** keine Sprach- oder Zeitbeschränkung. Freigeschaltet über
   einen Lizenzschlüssel im Konfigurationsformular (Feld "Lizenzschlüssel" +
-  Button "Lizenz aktivieren"). Ein Lizenzschlüssel deckt sowohl einen
-  Einmalkauf (läuft nie ab) als auch ein Abo (läuft zu einem festen Zeitpunkt
-  ab, sofern nicht verlängert) ab - welche Variante angeboten wird, steht zum
-  Zeitpunkt dieses Dokuments noch nicht fest. Der Schlüssel wird komplett
-  offline geprüft (signiert, keine Internetverbindung zur Prüfung nötig).
+  Button "Lizenz aktivieren"). Die Vollversion ist ein **Einmalkauf** - der
+  Lizenzschlüssel läuft nicht ab. Der Schlüssel wird komplett offline geprüft
+  (signiert, keine Internetverbindung zur Prüfung nötig).
 
-**Zeitlich begrenzte Marketing-Aktionen:** Zusätzlich zu den 5 dauerhaft
-kostenfreien Testversion-Sprachen können für alle Installationen gleichzeitig
+**Zeitlich begrenzte Marketing-Aktionen:** Zusätzlich zur einen Zielsprache
+der Testversion können für alle Installationen gleichzeitig
 weitere Sprachen für einen festgelegten Zeitraum kostenfrei freigeschaltet
 werden (z. B. "die Sprachen aller teilnehmenden Nationen sind während der
 Fußball-Weltmeisterschaft kostenfrei"). Das gilt sowohl für noch laufende als
@@ -1152,9 +1151,8 @@ neben Typ und Ablaufdatum auch ein `languageLimit`-Feld (0 = unbegrenzt, N =
 maximal N frei wählbare Zielsprachen). Damit lassen sich günstigere Varianten
 verkaufen, z. B. eine Rabattaktion "kaufe Simple Locale mit einer Sprache
 deiner Wahl für 50 % Rabatt - nur diese Woche, zum Tag der Deutschen
-Einheit!". Anders als bei den Testversion-Sprachen ist die Sprache dabei frei
-wählbar (nicht auf eine feste Liste beschränkt) - nur die Anzahl ist
-gedeckelt. Ist das Limit erreicht, wird die Zielsprachen-Liste im Formular
+Einheit!". Wie bei der Testversion ist die Sprache dabei frei wählbar - nur
+die Anzahl ist gedeckelt. Ist das Limit erreicht, wird die Zielsprachen-Liste im Formular
 ausgegraut (wie bei fehlendem API-Key); zusätzlich kappt jedes "Übernehmen"
 serverseitig auf die ersten N bereits konfigurierten Sprachen, falls z. B.
 nach Ablauf einer befristeten Lizenz gegen eine mit kleinerem Limit
@@ -1306,8 +1304,8 @@ Zwei mögliche Antworten, beide **eigenständig** neben dem bestehenden
 - `{"active": true, "expiresAt": <Unix-Timestamp>}` - Bestätigung plus das
   aktuell effektive Ablaufdatum laut Shop. Dieser Wert **überschreibt** das
   im Schlüssel selbst signierte `expiresAt` vollständig (siehe
-  `attributeLicenseExpiresAtOverride`) - ein Admin kann ein Abo damit
-  verlängern ODER verkürzen, ohne einen neuen signierten Schlüssel
+  `attributeLicenseExpiresAtOverride`) - ein Admin kann eine befristete
+  Lizenz (etwa eine Aktionslizenz) damit verlängern ODER verkürzen, ohne einen neuen signierten Schlüssel
   auszustellen und zuzusenden. Der Override gilt nur für genau den
   Schlüssel, für den er zuletzt gemeldet wurde (Hash-Vergleich) - ein
   später eingetragener anderer Schlüssel erbt ihn nicht.

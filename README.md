@@ -4,7 +4,7 @@ Mehrsprachigkeit für einzelne Kachel-Visualisierungen in [IP-Symcon](https://ww
 z. B. eine separate "Gäste"-Oberfläche (Ferienwohnung, Airbnb, Showroom), während andere
 Visualisierungen (Admin, eigene Steuerung) unverändert bleiben.
 
-> ⚠️ Status: In Entwicklung. Noch nicht für den produktiven Einsatz oder den Module Store geeignet.
+> Im IP-Symcon Module Store verfügbar.
 
 ## Funktionsweise
 
@@ -27,8 +27,9 @@ Root der Visualisierung beschränkt.
 
 ## Installation
 
-Noch nicht im Module Store verfügbar. Für Tests: Repo-URL in der Symcon-Konsole unter
-**Kern Instanzen → Module Control** als eigene Quelle hinzufügen.
+Über den Module Store das Modul **Simple Locale** installieren. Alternativ die Repo-URL
+`https://github.com/AllardLiao/SimpleLocaleForIPS` in der Symcon-Konsole unter
+**Kern Instanzen → Module Control** hinzufügen.
 
 Folgende Module beinhaltet das Simple Locale for IP Symcon Repository:
 
